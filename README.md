@@ -5,5 +5,5 @@
 ```
 pipenv install
 pipenv shell
-./uvicorn refinance.app:app --reload
+uvicorn refinance.app:app --reload
 ```
