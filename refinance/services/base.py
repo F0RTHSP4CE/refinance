@@ -1,3 +1,5 @@
+"""Base service with repository"""
+
 from typing import Generic, Type, TypeVar
 
 from refinance.models.base import BaseModel

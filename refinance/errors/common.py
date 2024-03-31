@@ -1,3 +1,5 @@
+"""Common application errors, may be raised from several services and repositories"""
+
 from refinance.errors.base import ApplicationError
 
 

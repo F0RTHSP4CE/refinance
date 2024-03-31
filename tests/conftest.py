@@ -1,3 +1,5 @@
+"""Test configuration and shared fixtures"""
+
 import os
 import sys
 from pathlib import Path

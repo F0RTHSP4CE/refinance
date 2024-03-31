@@ -1,3 +1,5 @@
+"""Tests for Entity API endpoints"""
+
 from fastapi import status
 
 

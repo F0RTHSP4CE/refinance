@@ -1,4 +1,6 @@
 class ApplicationError(Exception):
+    """General application error"""
+
     error_code: int
     error: str
 
