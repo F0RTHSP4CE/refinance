@@ -1,3 +1,6 @@
+"""Application configuration"""
+
+
 class Config:
     app_name: str
     app_version: str

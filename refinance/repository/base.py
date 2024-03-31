@@ -1,3 +1,5 @@
+"""Base repository with CRUD methods, suitable for simple objects"""
+
 from typing import Generic, Iterable, Mapping, Type, TypeVar
 
 from fastapi import Depends

@@ -1,3 +1,5 @@
+"""API routes for Entity manipulation"""
+
 from fastapi import APIRouter, Depends
 
 from refinance.schemas.entity import (

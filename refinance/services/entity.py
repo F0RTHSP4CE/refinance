@@ -1,3 +1,5 @@
+"""Entity service"""
+
 from typing import Iterable
 
 from fastapi import Depends

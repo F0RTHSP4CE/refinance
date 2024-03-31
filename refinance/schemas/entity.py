@@ -1,3 +1,5 @@
+"""DTO for Entity"""
+
 from refinance.schemas.base import BaseReadSchema, BaseUpdateSchema
 
 
