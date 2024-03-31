@@ -1,12 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./refinance.db"
+from refinance.config import config
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-
+engine = create_engine(config.database_url, connect_args={"check_same_thread": False})
 session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
