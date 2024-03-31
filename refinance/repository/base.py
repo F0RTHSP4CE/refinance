@@ -4,6 +4,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from refinance.db import get_db
+from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
 
 M = TypeVar("M", bound=BaseModel)  # model
@@ -23,16 +24,17 @@ class BaseRepository(Generic[M]):
         self.db.refresh(obj)
         return obj
 
-    def get(self, obj_id: K) -> M | None:
-        return self.db.query(self.model).filter(self.model.id == obj_id).first()
+    def get(self, obj_id: K) -> M:
+        db_obj = self.db.query(self.model).filter(self.model.id == obj_id).first()
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
+        return db_obj
 
     def get_all(self, skip=0, limit=10) -> Iterable[M]:
         return self.db.query(self.model).offset(skip).limit(limit).all()
 
     def update(self, obj_id: K, new_attrs: Mapping) -> M:
         obj = self.get(obj_id)
-        if not obj:
-            raise Exception
         for key, value in new_attrs.items():
             setattr(obj, key, value)
         self.db.commit()

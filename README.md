@@ -2,16 +2,16 @@
 
 ## develop
 ```
-pipenv install
+pipenv install --dev
 pipenv shell
 uvicorn refinance.app:app --reload
 ```
 
 ## todo
 - [x] base classes
-- [ ] errors
+- [x] errors
+- [x] unit tests base
 - [ ] pagination
-- [ ] unit tests
 - [ ] transactions
 - [ ] tags
 - [ ] complex search
