@@ -1,6 +1,6 @@
 """DTO for Entity"""
 
-from refinance.schemas.base import BaseReadSchema, BaseUpdateSchema
+from refinance.schemas.base import BaseFilterSchema, BaseReadSchema, BaseUpdateSchema
 
 
 class EntitySchema(BaseReadSchema):
@@ -13,5 +13,10 @@ class EntityCreateSchema(BaseUpdateSchema):
 
 
 class EntityUpdateSchema(BaseUpdateSchema):
+    name: str | None = None
+    active: bool | None = None
+
+
+class EntityFiltersSchema(BaseFilterSchema):
     name: str | None = None
     active: bool | None = None

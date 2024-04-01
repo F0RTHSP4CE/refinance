@@ -10,10 +10,11 @@ uvicorn refinance.app:app --reload
 ## todo
 - [x] base classes
 - [x] errors
-- [x] unit tests base
+- [x] unit tests
+- [x] complex search
+- [ ] logging
 - [ ] pagination
 - [ ] transactions
 - [ ] tags
-- [ ] complex search
 - [ ] docker
 - [ ] grafana, statistics

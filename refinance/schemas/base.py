@@ -21,3 +21,7 @@ class BaseReadSchema(BaseSchema):
 
 class BaseUpdateSchema(BaseSchema):
     comment: Optional[str] = None
+
+
+class BaseFilterSchema(BaseSchema):
+    pass

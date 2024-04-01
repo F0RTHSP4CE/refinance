@@ -3,14 +3,16 @@
 from typing import Generic, Iterable, Mapping, Type, TypeVar
 
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
+from refinance.schemas.base import BaseFilterSchema
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
+F = TypeVar("F", bound=BaseFilterSchema)  # filters
 
 
 class BaseRepository(Generic[M]):
@@ -32,8 +34,13 @@ class BaseRepository(Generic[M]):
             raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
         return db_obj
 
-    def get_all(self, skip=0, limit=10) -> Iterable[M]:
-        return self.db.query(self.model).offset(skip).limit(limit).all()
+    def _apply_filters(self, query: Query, filters: F) -> Query: ...
+
+    def get_all(self, filters: F | None = None, skip=0, limit=10) -> Iterable[M]:
+        query = self.db.query(self.model)
+        if filters:
+            query = self._apply_filters(query, filters)
+        return query.offset(skip).limit(limit).all()
 
     def update(self, obj_id: K, new_attrs: Mapping) -> M:
         obj = self.get(obj_id)
