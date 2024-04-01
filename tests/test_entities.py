@@ -11,10 +11,10 @@ from refinance.schemas.entity import (
 )
 from refinance.services.entity import EntityService
 
-"""Test API endpoints"""
-
 
 class TestEntityEndpoints:
+    """Test API endpoints"""
+
     def test_create_entity(self, test_app):
         # create a new entity, resident
         response = test_app.post(
@@ -67,10 +67,9 @@ class TestEntityEndpoints:
         assert "not found" in data["error"].lower()
 
 
-"""Test filter logic"""
-
-
 class TestEntityFilters:
+    """Test filter logic"""
+
     @pytest.fixture
     def entity_service(self, db_session):
         return EntityService(repo=EntityRepository(db=db_session), db=db_session)
