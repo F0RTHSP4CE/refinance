@@ -1,6 +1,6 @@
 """Base repository with CRUD methods, suitable for simple objects"""
 
-from typing import Generic, Iterable, Mapping, Type, TypeVar
+from typing import Generic, Mapping, Type, TypeVar
 
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
@@ -8,11 +8,10 @@ from sqlalchemy.orm import Query, Session
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
-from refinance.schemas.base import BaseFilterSchema
+from refinance.schemas.base import PaginationSchema
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
-F = TypeVar("F", bound=BaseFilterSchema)  # filters
 
 
 class BaseRepository(Generic[M]):
@@ -34,13 +33,17 @@ class BaseRepository(Generic[M]):
             raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
         return db_obj
 
-    def _apply_filters(self, query: Query, filters: F) -> Query: ...
+    def _apply_filters(self, query: Query, filters: object) -> Query: ...
 
-    def get_all(self, filters: F | None = None, skip=0, limit=10) -> Iterable[M]:
+    def get_all(
+        self, filters: object | None = None, skip=0, limit=100
+    ) -> PaginationSchema[M]:
         query = self.db.query(self.model)
         if filters:
             query = self._apply_filters(query, filters)
-        return query.offset(skip).limit(limit).all()
+        total = query.count()
+        items = query.offset(skip).limit(limit).all()
+        return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
 
     def update(self, obj_id: K, new_attrs: Mapping) -> M:
         obj = self.get(obj_id)

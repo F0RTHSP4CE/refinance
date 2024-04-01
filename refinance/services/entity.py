@@ -1,6 +1,5 @@
 """Entity service"""
 
-from typing import Iterable
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 from refinance.db import get_db
 from refinance.models.entity import Entity
 from refinance.repository.entity import EntityRepository
+from refinance.schemas.base import PaginationSchema
 from refinance.schemas.entity import (
     EntityCreateSchema,
     EntityFiltersSchema,
@@ -33,8 +33,8 @@ class EntityService(BaseService[Entity]):
         return self.repo.get(entity_id)
 
     def get_all(
-        self, filters: EntityFiltersSchema | None = None, skip=0, limit=10
-    ) -> Iterable[Entity]:
+        self, filters: EntityFiltersSchema | None = None, skip=0, limit=100
+    ) -> PaginationSchema[Entity]:
         return self.repo.get_all(filters, skip, limit)
 
     def update(self, entity_id, entity_update: EntityUpdateSchema) -> Entity:

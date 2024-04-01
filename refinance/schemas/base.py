@@ -1,13 +1,13 @@
 """Base DTOs for API endpoints"""
 
-from typing import Optional
+from typing import Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
 
 class BaseSchema(BaseModel):
     # needed for ORM
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
     # default dump options to deserialize pydantic models
     def dump(self):
@@ -25,3 +25,13 @@ class BaseUpdateSchema(BaseSchema):
 
 class BaseFilterSchema(BaseSchema):
     pass
+
+
+M = TypeVar("M")
+
+
+class PaginationSchema(BaseSchema, Generic[M]):
+    items: List[M]
+    total: int
+    skip: int
+    limit: int

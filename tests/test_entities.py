@@ -89,12 +89,13 @@ class TestEntityFilters:
         return entity_service.update(e.id, EntityUpdateSchema(active=False))
 
     def test_entity_filters(
-        self, test_app, entity_service, entity_ordinary, entity_inactive
+        self, test_app, entity_service: EntityService, entity_ordinary, entity_inactive
     ):
         assert (
-            len(entity_service.get_all(filters=EntityFiltersSchema(active=True))) == 1
+            entity_service.get_all(filters=EntityFiltersSchema(active=True)).total == 1
         )
         assert (
-            len(entity_service.get_all(filters=EntityFiltersSchema(active=False))) == 1
+            entity_service.get_all(filters=EntityFiltersSchema(active=False)).total == 1
         )
-        assert len(entity_service.get_all()) == 2
+
+        assert entity_service.get_all().total == 2
