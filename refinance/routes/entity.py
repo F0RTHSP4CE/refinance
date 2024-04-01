@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
+from refinance.schemas.base import PaginationSchema
 from refinance.schemas.entity import (
     EntityCreateSchema,
     EntityFiltersSchema,
@@ -29,11 +30,11 @@ def read_entity(
     return entity_service.get(entity_id)
 
 
-@entity_router.get("/", response_model=list[EntitySchema])
+@entity_router.get("/", response_model=PaginationSchema[EntitySchema])
 def read_entities(
     filters: EntityFiltersSchema = Depends(),
     skip: int = 0,
-    limit: int = 10,
+    limit: int = 100,
     entity_service: EntityService = Depends(),
 ):
     return entity_service.get_all(filters, skip, limit)
