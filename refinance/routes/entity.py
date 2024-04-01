@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from refinance.schemas.entity import (
     EntityCreateSchema,
+    EntityFiltersSchema,
     EntitySchema,
     EntityUpdateSchema,
 )
@@ -30,11 +31,12 @@ def read_entity(
 
 @entity_router.get("/", response_model=list[EntitySchema])
 def read_entities(
+    filters: EntityFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 10,
     entity_service: EntityService = Depends(),
 ):
-    return entity_service.get_all(skip=skip, limit=limit)
+    return entity_service.get_all(filters, skip, limit)
 
 
 @entity_router.patch("/{entity_id}", response_model=EntitySchema)

@@ -7,7 +7,7 @@ from refinance.config import config
 from refinance.errors.base import ApplicationError
 from refinance.routes.entity import entity_router
 
-app = FastAPI(title=config.app_name)
+app = FastAPI(title=config.app_name, version=config.app_version)
 
 
 @app.exception_handler(ApplicationError)
