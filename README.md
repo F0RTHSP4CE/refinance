@@ -4,6 +4,7 @@
 ```
 pipenv install --dev
 pipenv shell
+pytest
 uvicorn refinance.app:app --reload
 ```
 
