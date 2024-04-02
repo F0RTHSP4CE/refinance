@@ -1,7 +1,8 @@
 """Base repository with CRUD methods, suitable for simple objects"""
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Mapping, Type, TypeVar
+from dataclasses import dataclass
+from typing import Any, Generic, Mapping, Sequence, Type, TypeVar
 
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
@@ -9,12 +10,20 @@ from sqlalchemy.orm import Query, Session
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
-from refinance.schemas.base import BaseFilterSchema, PaginationSchema
+from refinance.schemas.base import BaseFilterSchema
 
 _M = TypeVar("_M", bound=BaseModel)  # model
 _K = TypeVar("_K", bound=int | str)  # primary key
 _F = TypeVar("_F", bound=BaseFilterSchema)  # filters
 _Q = TypeVar("_Q", bound=Query[Any])  # query
+
+
+@dataclass(frozen=True, slots=True)
+class PaginationDTO(Generic[_M]):
+    items: Sequence[_M]
+    total: int
+    skip: int
+    limit: int
 
 
 class BaseRepository(ABC, Generic[_K, _M, _F]):
@@ -39,13 +48,13 @@ class BaseRepository(ABC, Generic[_K, _M, _F]):
     @abstractmethod
     def _apply_filters(self, query: _Q, filters: _F) -> _Q: ...
 
-    def get_all(self, filters: _F | None = None, skip: int = 0, limit: int = 100) -> PaginationSchema[_M]:
+    def get_all(self, filters: _F | None = None, skip: int = 0, limit: int = 100) -> PaginationDTO[_M]:
         query = self.db.query(self.model)
         if filters:
             query = self._apply_filters(query, filters)
         total = query.count()
         items = query.offset(skip).limit(limit).all()
-        return PaginationSchema[_M](items=items, total=total, skip=skip, limit=limit)
+        return PaginationDTO(items=items, total=total, skip=skip, limit=limit)
 
     def update(self, obj_id: _K, new_attrs: Mapping[str, Any]) -> _M:
         obj = self.get(obj_id)

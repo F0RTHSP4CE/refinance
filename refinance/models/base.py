@@ -1,6 +1,6 @@
 """Base for all ORM models"""
 
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -23,3 +23,9 @@ class BaseModel(DeclarativeBase):
             attr_strs.append(f"{attr}={value!r}")  # !r calls repr() on the value to get a nice string representation
         attr_str = ", ".join(attr_strs)
         return f"<{model_name}({attr_str})>"
+
+    def model_dump(self) -> dict[str, Any]:
+        """Return the dictionary representation of the model."""
+        d = self.__dict__.copy()
+        d.pop("_sa_instance_state", None)
+        return d

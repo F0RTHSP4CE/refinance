@@ -2,7 +2,6 @@
 
 from fastapi import APIRouter, Depends
 
-from refinance.models.entity import Entity
 from refinance.schemas.base import PaginationSchema
 from refinance.schemas.entity import EntityCreateSchema, EntityFiltersSchema, EntitySchema, EntityUpdateSchema
 from refinance.services.entity import EntityService
@@ -14,7 +13,7 @@ entity_router = APIRouter(prefix="/entities", tags=["Entities"])
 def create_entity(
     entity: EntityCreateSchema,
     entity_service: EntityService = Depends(),
-) -> Entity:
+) -> EntitySchema:
     return entity_service.create(entity)
 
 
@@ -22,7 +21,7 @@ def create_entity(
 def read_entity(
     entity_id: int,
     entity_service: EntityService = Depends(),
-) -> Entity | None:
+) -> EntitySchema:
     return entity_service.get(entity_id)
 
 
@@ -32,7 +31,7 @@ def read_entities(
     skip: int = 0,
     limit: int = 100,
     entity_service: EntityService = Depends(),
-) -> PaginationSchema[Entity]:
+) -> PaginationSchema[EntitySchema]:
     return entity_service.get_all(filters, skip, limit)
 
 
@@ -41,5 +40,5 @@ def update_entity(
     entity_id: int,
     entity_update: EntityUpdateSchema,
     entity_service: EntityService = Depends(),
-) -> Entity:
+) -> EntitySchema:
     return entity_service.update(entity_id, entity_update)
