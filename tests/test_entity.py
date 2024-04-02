@@ -2,14 +2,8 @@
 
 import pytest
 from fastapi import status
+from fastapi.testclient import TestClient
 
-from refinance.repository.entity import EntityRepository
-from refinance.schemas.entity import (
-    EntityCreateSchema,
-    EntityFiltersSchema,
-    EntityUpdateSchema,
-)
-from refinance.services.entity import EntityService
 
 
 class TestEntityEndpoints:
@@ -71,30 +65,24 @@ class TestEntityFilters:
     """Test filter logic"""
 
     @pytest.fixture
-    def entity_service(self, db_session):
-        return EntityService(repo=EntityRepository(db=db_session), db=db_session)
-
-    @pytest.fixture
-    def entity_ordinary(self, entity_service):
-        return entity_service.create(
-            EntityCreateSchema(name="Resident Ordinary", comment="resident")
+    def entity_ordinary(self, test_app):
+        test_app.post(
+            "/entities/", json=dict(name="Resident Ordinary", comment="resident")
         )
 
     @pytest.fixture
-    def entity_inactive(self, entity_service):
-        e = entity_service.create(
-            EntityCreateSchema(name="Resident Inactive", comment="resident (inactive)")
+    def entity_inactive(self, test_app):
+        r = test_app.post(
+            "/entities/", json=dict(name="Resident Inactive", comment="resident")
         )
-        return entity_service.update(e.id, EntityUpdateSchema(active=False))
+        data = r.json()
+        test_app.patch(f"/entities/{data['id']}", json=dict(active=False))
 
     def test_entity_filters(
-        self, test_app, entity_service: EntityService, entity_ordinary, entity_inactive
+        self, test_app: TestClient, entity_ordinary, entity_inactive
     ):
         assert (
-            entity_service.get_all(filters=EntityFiltersSchema(active=True)).total == 1
+            test_app.get("/entities/", params=dict(active=False)).json()["total"] == 1
         )
-        assert (
-            entity_service.get_all(filters=EntityFiltersSchema(active=False)).total == 1
-        )
-
-        assert entity_service.get_all().total == 2
+        assert test_app.get("/entities/", params=dict(active=True)).json()["total"] == 1
+        assert test_app.get("/entities/").json()["total"] == 2
