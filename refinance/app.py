@@ -1,21 +1,16 @@
 """FastAPI app initialization, exception handling"""
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 
 from refinance.config import Config, get_config
-from refinance.errors.base import ApplicationError
+from refinance.errors.handler import regiter_exception_handlers
 from refinance.routes.entity import entity_router
 
-config: Config = get_config()
-app = FastAPI(title=config.app_name, version=config.app_version)
 
-
-@app.exception_handler(ApplicationError)
-def application_exception_handler(request: Request, exc: ApplicationError):
-    return JSONResponse(
-        status_code=500, content={"error_code": exc.error_code, "error": exc.error}
-    )
-
-
-app.include_router(entity_router)
+def app_factory(*, config: Config | None = None) -> FastAPI:
+    config: Config = config or get_config()
+    app = FastAPI(title=config.app_name, version=config.app_version)
+    regiter_exception_handlers(app)
+    app.include_router(entity_router)
+    app.dependency_overrides[get_config] = lambda: config
+    return app

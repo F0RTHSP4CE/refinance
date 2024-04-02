@@ -5,7 +5,6 @@ from fastapi import status
 from fastapi.testclient import TestClient
 
 
-
 class TestEntityEndpoints:
     """Test API endpoints"""
 
@@ -66,23 +65,15 @@ class TestEntityFilters:
 
     @pytest.fixture
     def entity_ordinary(self, test_app):
-        test_app.post(
-            "/entities/", json=dict(name="Resident Ordinary", comment="resident")
-        )
+        test_app.post("/entities/", json=dict(name="Resident Ordinary", comment="resident"))
 
     @pytest.fixture
     def entity_inactive(self, test_app):
-        r = test_app.post(
-            "/entities/", json=dict(name="Resident Inactive", comment="resident")
-        )
+        r = test_app.post("/entities/", json=dict(name="Resident Inactive", comment="resident"))
         data = r.json()
         test_app.patch(f"/entities/{data['id']}", json=dict(active=False))
 
-    def test_entity_filters(
-        self, test_app: TestClient, entity_ordinary, entity_inactive
-    ):
-        assert (
-            test_app.get("/entities/", params=dict(active=False)).json()["total"] == 1
-        )
+    def test_entity_filters(self, test_app: TestClient, entity_ordinary, entity_inactive):
+        assert test_app.get("/entities/", params=dict(active=False)).json()["total"] == 1
         assert test_app.get("/entities/", params=dict(active=True)).json()["total"] == 1
         assert test_app.get("/entities/").json()["total"] == 2

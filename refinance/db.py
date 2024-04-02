@@ -1,5 +1,7 @@
 """Database connection and initialization"""
 
+from typing import Any, Generator
+
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -13,25 +15,21 @@ class DatabaseConnection:
     session_local: sessionmaker[Session]
 
     def __init__(self, config: Config = Depends(get_config)) -> None:
-        self.engine = create_engine(
-            config.database_url, connect_args={"check_same_thread": False}
-        )
-        self.session_local = sessionmaker(
-            autocommit=False, autoflush=False, bind=self.engine
-        )
+        self.engine = create_engine(config.database_url, connect_args={"check_same_thread": False})
+        self.session_local = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         self.create_tables()
 
-    def get_session(self):
+    def get_session(self) -> Session:
         return self.session_local()
 
-    def create_tables(self):
+    def create_tables(self) -> None:
         BaseModel.metadata.create_all(bind=self.engine)
 
-    def drop_tables(self):
+    def drop_tables(self) -> None:
         BaseModel.metadata.drop_all(bind=self.engine)
 
 
-def get_db(db_conn: DatabaseConnection = Depends()):
+def get_db(db_conn: DatabaseConnection = Depends()) -> Generator[Session, Any, None]:
     # return session to be used in services, repos, tests
     db_session = db_conn.get_session()
     try:

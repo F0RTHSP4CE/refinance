@@ -1,3 +1,24 @@
+# Ignore python files
 *.pyc
 __pycache__/
-*.db
+
+# Ignore local sqlite db
+/*.db
+
+# Ignore local versions of env files
+/*.local
+
+# Ignore local venv's
+/venv/
+/.venv/
+
+# Ignore local development test files
+/test.py
+
+# Ignore coverage
+/.coverage
+/htmlcov/
+/coverage.xml
+
+# Ignore caches
+/.*_cache/

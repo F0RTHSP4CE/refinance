@@ -7,20 +7,14 @@ from refinance.db import get_db
 from refinance.models.entity import Entity
 from refinance.repository.entity import EntityRepository
 from refinance.schemas.base import PaginationSchema
-from refinance.schemas.entity import (
-    EntityCreateSchema,
-    EntityFiltersSchema,
-    EntityUpdateSchema,
-)
+from refinance.schemas.entity import EntityCreateSchema, EntityFiltersSchema, EntityUpdateSchema
 from refinance.services.base import BaseService
 
 
-class EntityService(BaseService[Entity]):
+class EntityService(BaseService[int, Entity, EntityFiltersSchema]):
     model = Entity
 
-    def __init__(
-        self, repo: EntityRepository = Depends(), db: Session = Depends(get_db)
-    ):
+    def __init__(self, repo: EntityRepository = Depends(), db: Session = Depends(get_db)):
         super().__init__(repo=repo, db=db)
 
     def create(self, schema: EntityCreateSchema) -> Entity:
@@ -32,9 +26,12 @@ class EntityService(BaseService[Entity]):
         return self.repo.get(entity_id)
 
     def get_all(
-        self, filters: EntityFiltersSchema | None = None, skip=0, limit=100
+        self,
+        filters: EntityFiltersSchema | None = None,
+        skip: int = 0,
+        limit: int = 100,
     ) -> PaginationSchema[Entity]:
         return self.repo.get_all(filters, skip, limit)
 
-    def update(self, entity_id, entity_update: EntityUpdateSchema) -> Entity:
+    def update(self, entity_id: int, entity_update: EntityUpdateSchema) -> Entity:
         return self.repo.update(entity_id, entity_update.dump())

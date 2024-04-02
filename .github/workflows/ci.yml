@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pipenv
+        run: pipx install pipenv
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        id: python
+        with:
+          python-version: "3.11"
+          cache: "pipenv"
+
+      - name: Install dependencies
+        run: pipenv install -d
+
+      - name: Cache mypy
+        id: cache-mypy
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: ${{ runner.os }}-mypy-${{ hashFiles('**/Pipfile.lock') }}-${{ hashFiles('**/setup.cfg') }}
+          restore-keys: |
+            ${{ runner.os }}-mypy-${{ hashFiles('**/Pipfile.lock') }}-
+            ${{ runner.os }}-mypy-
+
+      - name: Install mypy types
+        continue-on-error: true
+        run: pipenv run mypy . --install-types --non-interactive
+
+      - name: Run tests
+        run: |
+          pipenv run make test
