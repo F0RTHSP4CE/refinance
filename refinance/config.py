@@ -5,12 +5,8 @@ from dataclasses import dataclass
 
 @dataclass
 class Config:
-    app_name: str
-    app_version: str
-
-    def __init__(self) -> None:
-        self.app_name = "refinance"
-        self.app_version = "0.1.0"
+    app_name: str = "refinance"
+    app_version: str = "0.1.0"
 
     @property
     def database_path(self):
@@ -21,4 +17,5 @@ class Config:
         return f"sqlite:///{self.database_path}"
 
 
-config = Config()
+def get_config():
+    return Config()

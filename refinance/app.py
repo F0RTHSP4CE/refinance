@@ -3,10 +3,11 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from refinance.config import config
+from refinance.config import Config, get_config
 from refinance.errors.base import ApplicationError
 from refinance.routes.entity import entity_router
 
+config: Config = get_config()
 app = FastAPI(title=config.app_name, version=config.app_version)
 
 
