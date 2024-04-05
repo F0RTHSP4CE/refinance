@@ -4,5 +4,5 @@ class ApplicationError(Exception):
     error_code: int
     error: str
 
-    def __init__(self, details: str):
+    def __init__(self, details: str | None = None):
         self.error = f"{self.error}: {details}"
