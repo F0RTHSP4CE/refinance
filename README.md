@@ -15,9 +15,10 @@ uvicorn refinance.app:app --reload
 - [x] unit tests
 - [x] complex search
 - [x] pagination
+- [x] tags
 - [ ] transactions
 - [ ] recurrent payments
-- [ ] tags
+- [ ] migrations (not alembic)
 - [ ] logging
 - [ ] docker
 - [ ] grafana, statistics

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 from refinance.config import Config, get_config
 from refinance.errors.base import ApplicationError
 from refinance.routes.entity import entity_router
+from refinance.routes.tag import tag_router
 
 config: Config = get_config()
 app = FastAPI(title=config.app_name, version=config.app_version)
@@ -19,3 +20,4 @@ def application_exception_handler(request: Request, exc: ApplicationError):
 
 
 app.include_router(entity_router)
+app.include_router(tag_router)

@@ -13,9 +13,10 @@ from refinance.schemas.entity import (
     EntityUpdateSchema,
 )
 from refinance.services.base import BaseService
+from refinance.services.mixins.taggable_mixin import TaggableServiceMixin
 
 
-class EntityService(BaseService[Entity]):
+class EntityService(TaggableServiceMixin, BaseService[Entity]):
     model = Entity
 
     def __init__(
@@ -28,7 +29,7 @@ class EntityService(BaseService[Entity]):
         db_obj = self.repo.create(new_obj)
         return db_obj
 
-    def get(self, entity_id: int) -> Entity | None:
+    def get(self, entity_id: int) -> Entity:
         return self.repo.get(entity_id)
 
     def get_all(
