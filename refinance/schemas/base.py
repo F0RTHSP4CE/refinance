@@ -1,6 +1,6 @@
 """Base DTOs for API endpoints"""
 
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -31,7 +31,7 @@ M = TypeVar("M")
 
 
 class PaginationSchema(BaseSchema, Generic[M]):
-    items: List[M]
+    items: Iterable[M]
     total: int
     skip: int
     limit: int

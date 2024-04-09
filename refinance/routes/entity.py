@@ -9,6 +9,7 @@ from refinance.schemas.entity import (
     EntitySchema,
     EntityUpdateSchema,
 )
+from refinance.schemas.tag import TagSchema
 from refinance.services.entity import EntityService
 
 entity_router = APIRouter(prefix="/entities", tags=["Entities"])
@@ -47,3 +48,17 @@ def update_entity(
     entity_service: EntityService = Depends(),
 ):
     return entity_service.update(entity_id, entity_update)
+
+
+@entity_router.post("/{entity_id}/tags", response_model=TagSchema)
+def add_tag_to_entity(
+    entity_id: int, tag_id: int, entity_service: EntityService = Depends()
+):
+    return entity_service.add_tag(entity_id, tag_id)
+
+
+@entity_router.delete("/{entity_id}/tags", response_model=TagSchema)
+def remove_tag_from_entity(
+    entity_id: int, tag_id: int, entity_service: EntityService = Depends()
+):
+    return entity_service.remove_tag(entity_id, tag_id)
