@@ -5,4 +5,4 @@ from refinance.errors.base import ApplicationError
 
 class NotFoundError(ApplicationError):
     error_code = 1404
-    error = "Object not found"
+    error = "Not found"
