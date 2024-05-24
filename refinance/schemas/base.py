@@ -11,7 +11,7 @@ class BaseSchema(BaseModel):
 
     # default dump options to deserialize pydantic models
     def dump(self):
-        return self.model_dump(exclude_unset=True)
+        return self.model_dump(exclude_none=True)
 
 
 class BaseReadSchema(BaseSchema):
