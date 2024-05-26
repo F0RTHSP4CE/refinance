@@ -24,7 +24,7 @@ class BaseUpdateSchema(BaseSchema):
 
 
 class BaseFilterSchema(BaseSchema):
-    pass
+    comment: str | None = None
 
 
 M = TypeVar("M")

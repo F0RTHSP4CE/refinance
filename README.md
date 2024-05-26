@@ -16,7 +16,8 @@ uvicorn refinance.app:app --reload
 - [x] complex search
 - [x] pagination
 - [x] tags
-- [ ] transactions
+- [x] transactions
+- [ ] balances
 - [ ] recurrent payments
 - [ ] migrations (not alembic)
 - [ ] logging

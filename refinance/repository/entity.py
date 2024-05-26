@@ -8,7 +8,7 @@ from refinance.repository.mixins.taggable_mixin import TaggableRepositoryMixin
 from refinance.schemas.entity import EntityFiltersSchema
 
 
-class EntityRepository(TaggableRepositoryMixin, BaseRepository[Entity]):
+class EntityRepository(TaggableRepositoryMixin[Entity], BaseRepository[Entity]):
     model = Entity
 
     def delete(self, obj_id):
