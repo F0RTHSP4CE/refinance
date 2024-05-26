@@ -1,5 +1,23 @@
 # refinance
-refined finance system.
+![logo](docs/refinance-logo.jpg)
+
+refined financial system for a hackerspace. simple by design.
+
+## architecture
+
+### entity
+anything that can send or receive money: human, donate-box, rent, utility.
+
+### transaction
+move X from A to B. supports all currencies.
+- non-confirmed
+- confirmed
+
+### balance
+sum of all transactions. both confirmed and not. separated.
+
+### tags
+mark entities and transactions for quick search.
 
 ## develop
 ```
@@ -19,6 +37,7 @@ uvicorn refinance.app:app --reload
 - [x] tags
 - [x] transactions
 - [x] balances
+- [ ] date range search
 - [ ] recurrent payments
 - [ ] migrations (not alembic)
 - [ ] logging
