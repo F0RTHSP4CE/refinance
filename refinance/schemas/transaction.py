@@ -1,7 +1,6 @@
 """DTO for Transaction"""
 
 from decimal import Decimal
-from xml.dom.minidom import Entity
 
 from pydantic import field_validator, model_validator
 

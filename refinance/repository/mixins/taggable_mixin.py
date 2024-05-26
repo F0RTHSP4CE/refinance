@@ -1,3 +1,5 @@
+"""Mixin for taggable models, for example: Entities, Transactions"""
+
 from typing import Generic, Iterable, TypeVar
 
 from fastapi import Depends

@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from refinance.config import Config, get_config
 from refinance.errors.base import ApplicationError
+from refinance.routes.balance import balance_router
 from refinance.routes.entity import entity_router
 from refinance.routes.tag import tag_router
 from refinance.routes.transaction import transaction_router
@@ -23,3 +24,4 @@ def application_exception_handler(request: Request, exc: ApplicationError):
 app.include_router(entity_router)
 app.include_router(tag_router)
 app.include_router(transaction_router)
+app.include_router(balance_router)
