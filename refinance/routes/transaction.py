@@ -32,7 +32,7 @@ def read_transaction(
 
 
 @transaction_router.get("/", response_model=PaginationSchema[TransactionSchema])
-def read_entities(
+def read_transactions(
     filters: TransactionFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 100,
