@@ -1,5 +1,6 @@
 """Base DTOs for API endpoints"""
 
+from datetime import datetime
 from typing import Generic, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict
@@ -17,6 +18,7 @@ class BaseSchema(BaseModel):
 class BaseReadSchema(BaseSchema):
     id: int
     comment: Optional[str] = None
+    created_at: datetime
 
 
 class BaseUpdateSchema(BaseSchema):

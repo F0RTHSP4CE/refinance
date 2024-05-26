@@ -1,9 +1,12 @@
 """Base for all ORM models"""
 
+from datetime import datetime
 from typing import Optional
 
+from sqlalchemy import DateTime
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.sql import func
 
 
 class BaseModel(DeclarativeBase):
@@ -13,6 +16,9 @@ class BaseModel(DeclarativeBase):
     # everything should have an id and a comment
     id: Mapped[int] = mapped_column(primary_key=True)
     comment: Mapped[Optional[str]]
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
 
     def __repr__(self):
         """Automatically generate beautiful __repr__ of a database object (chatgpt4 generated snippet)"""
