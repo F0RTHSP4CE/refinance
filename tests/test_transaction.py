@@ -27,8 +27,8 @@ def create_transaction(test_app: TestClient, entity_one, entity_two):
     response = test_app.post(
         "/transactions/",
         json={
-            "from_id": entity_one,
-            "to_id": entity_two,
+            "from_entity_id": entity_one,
+            "to_entity_id": entity_two,
             "amount": "150.00",
             "currency": "usd",
         },
@@ -44,16 +44,16 @@ class TestTransactionEndpoints:
         response = test_app.post(
             "/transactions/",
             json={
-                "from_id": entity_one,
-                "to_id": entity_two,
+                "from_entity_id": entity_one,
+                "to_entity_id": entity_two,
                 "amount": "200.00",
                 "currency": "usd",
             },
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["from_id"] == entity_one
-        assert data["to_id"] == entity_two
+        assert data["from_entity_id"] == entity_one
+        assert data["to_entity_id"] == entity_two
         assert Decimal(data["amount"]) == Decimal("200.00")
         assert data["currency"] == "usd"
 
@@ -73,29 +73,29 @@ def multiple_transactions(test_app: TestClient, entity_one, entity_two):
     """Create multiple transactions to test filtering."""
     transactions = [
         {
-            "from_id": entity_one,
-            "to_id": entity_two,
+            "from_entity_id": entity_one,
+            "to_entity_id": entity_two,
             "amount": "50.00",
             "currency": "usd",
             "confirmed": True,
         },
         {
-            "from_id": entity_two,
-            "to_id": entity_one,
+            "from_entity_id": entity_two,
+            "to_entity_id": entity_one,
             "amount": "75.00",
             "currency": "eur",
             "confirmed": False,
         },
         {
-            "from_id": entity_one,
-            "to_id": entity_two,
+            "from_entity_id": entity_one,
+            "to_entity_id": entity_two,
             "amount": "150.00",
             "currency": "usd",
             "confirmed": True,
         },
         {
-            "from_id": entity_two,
-            "to_id": entity_one,
+            "from_entity_id": entity_two,
+            "to_entity_id": entity_one,
             "amount": "200.00",
             "currency": "usd",
             "confirmed": False,
@@ -135,20 +135,20 @@ class TestTransactionFiltering:
         data = response.json()
         assert len(data) == 4  # Transactions that are confirmed
 
-    def test_filter_by_from_id(
+    def test_filter_by_from_entity_id(
         self, test_app: TestClient, multiple_transactions, entity_one
     ):
-        # Filter transactions by from_id
-        response = test_app.get("/transactions/", params={"from_id": entity_one})
+        # Filter transactions by from_entity_id
+        response = test_app.get("/transactions/", params={"from_entity_id": entity_one})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions originating from entity_one
 
-    def test_filter_by_to_id(
+    def test_filter_by_to_entity_id(
         self, test_app: TestClient, multiple_transactions, entity_two
     ):
-        # Filter transactions by to_id
-        response = test_app.get("/transactions/", params={"to_id": entity_two})
+        # Filter transactions by to_entity_id
+        response = test_app.get("/transactions/", params={"to_entity_id": entity_two})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions directed to entity_two

@@ -16,11 +16,13 @@ transactions_tags = Table(
 class Transaction(BaseModel):
     __tablename__ = "transactions"
 
-    from_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
-    from_entity: Mapped[Entity] = relationship(foreign_keys=[from_id])
+    from_entity_id: Mapped[int] = mapped_column(
+        ForeignKey("entities.id"), nullable=False
+    )
+    from_entity: Mapped[Entity] = relationship(foreign_keys=[from_entity_id])
 
-    to_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
-    to_entity: Mapped[Entity] = relationship(foreign_keys=[to_id])
+    to_entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
+    to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
 
     amount: Mapped[DECIMAL] = mapped_column(DECIMAL(scale=2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217

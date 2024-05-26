@@ -14,10 +14,10 @@ class TransactionRepository(
     model = Transaction
 
     def _apply_filters(self, query: Query, filters: TransactionFiltersSchema) -> Query:
-        if filters.from_id is not None:
-            query = query.filter(self.model.from_id == filters.from_id)
-        if filters.to_id is not None:
-            query = query.filter(self.model.to_id == filters.to_id)
+        if filters.from_entity_id is not None:
+            query = query.filter(self.model.from_entity_id == filters.from_entity_id)
+        if filters.to_entity_id is not None:
+            query = query.filter(self.model.to_entity_id == filters.to_entity_id)
         if filters.amount_min is not None:
             query = query.filter(self.model.amount >= filters.amount_min)
         if filters.amount_max is not None:
