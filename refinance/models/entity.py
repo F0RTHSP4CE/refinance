@@ -1,4 +1,4 @@
-"""Main unit of refinance system. May receive or send money."""
+"""Entity model. Main unit of refinance system. May receive or send money."""
 
 from typing import List
 

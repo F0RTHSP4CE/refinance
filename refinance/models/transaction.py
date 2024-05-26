@@ -1,3 +1,5 @@
+"""Transaction model"""
+
 from sqlalchemy import DECIMAL, Column, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

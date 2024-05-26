@@ -5,6 +5,7 @@ refined finance system.
 ```
 pipenv install --dev
 pipenv shell
+
 pytest
 uvicorn refinance.app:app --reload
 ```
@@ -17,7 +18,7 @@ uvicorn refinance.app:app --reload
 - [x] pagination
 - [x] tags
 - [x] transactions
-- [ ] balances
+- [x] balances
 - [ ] recurrent payments
 - [ ] migrations (not alembic)
 - [ ] logging
