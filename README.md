@@ -19,11 +19,18 @@ sum of all transactions. both confirmed and not. separated.
 ### tags
 mark entities and transactions for quick search.
 
-## develop
+## run
+```console
+docker compose up
 ```
+http://localhost:8000/docs
+
+## develop
+```console
 pipenv install --dev
 pipenv shell
 
+mkdir data
 pytest
 uvicorn refinance.app:app --reload
 ```
@@ -39,9 +46,9 @@ uvicorn refinance.app:app --reload
 - [x] balances
 - [ ] date range search
 - [ ] recurrent payments
-- [ ] migrations (not alembic)
+- [ ] migrations (not alembic?)
 - [ ] logging
-- [ ] docker
+- [x] docker
 - [ ] grafana, statistics
 
 ## tests notice
