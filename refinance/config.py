@@ -10,7 +10,7 @@ class Config:
 
     @property
     def database_path(self):
-        return f"./{self.app_name}.db"
+        return f"./data/{self.app_name}.db"
 
     @property
     def database_url(self):
