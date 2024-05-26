@@ -8,7 +8,7 @@ from sqlalchemy.orm import Query, Session
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
-from refinance.schemas.base import PaginationSchema
+from refinance.schemas.base import BaseFilterSchema, PaginationSchema
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
@@ -33,13 +33,19 @@ class BaseRepository(Generic[M]):
             raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
         return db_obj
 
+    def _apply_base_filters(self, query: Query, filters: BaseFilterSchema) -> Query:
+        if filters.comment is not None:
+            return query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
+        return query
+
     def _apply_filters(self, query: Query, filters: object) -> Query: ...
 
     def get_all(
-        self, filters: object | None = None, skip=0, limit=100
+        self, filters: BaseFilterSchema | None = None, skip=0, limit=100
     ) -> PaginationSchema[M]:
         query = self.db.query(self.model)
         if filters:
+            query = self._apply_base_filters(query, filters)
             query = self._apply_filters(query, filters)
         total = query.count()
         items = query.offset(skip).limit(limit).all()

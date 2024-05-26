@@ -1,9 +1,7 @@
 """DTO for Entity"""
 
-from fastapi import Query
-from pydantic import Field
-
 from refinance.schemas.base import BaseFilterSchema, BaseReadSchema, BaseUpdateSchema
+from refinance.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from refinance.schemas.tag import TagSchema
 
 
@@ -22,7 +20,6 @@ class EntityUpdateSchema(BaseUpdateSchema):
     active: bool | None = None
 
 
-class EntityFiltersSchema(BaseFilterSchema):
+class EntityFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     name: str | None = None
     active: bool | None = None
-    tags_ids: list[int] = Field(Query([]))

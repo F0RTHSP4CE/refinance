@@ -1,4 +1,4 @@
-from typing import Iterable, TypeVar
+from typing import Generic, Iterable, TypeVar
 
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
@@ -13,7 +13,8 @@ from refinance.repository.tag import TagRepository
 _M = TypeVar("_M", bound=BaseModel)
 
 
-class TaggableRepositoryMixin(BaseRepository):
+class TaggableRepositoryMixin(BaseRepository[_M], Generic[_M]):
+    model: type[_M]
     tag_repository: TagRepository
 
     def __init__(
@@ -27,8 +28,8 @@ class TaggableRepositoryMixin(BaseRepository):
         if not hasattr(db_obj, "tags"):
             raise TagsNotSupported
         tag = self.tag_repository.get(tag_id)
-        if tag not in db_obj.tags:
-            db_obj.tags.append(tag)
+        if tag not in db_obj.tags:  # type: ignore
+            db_obj.tags.append(tag)  # type: ignore
             self.db.commit()
         else:
             raise TagAlreadyAdded
@@ -39,8 +40,8 @@ class TaggableRepositoryMixin(BaseRepository):
         if not hasattr(db_obj, "tags"):
             raise TagsNotSupported
         tag = self.tag_repository.get(tag_id)
-        if tag in db_obj.tags:
-            db_obj.tags.remove(tag)
+        if tag in db_obj.tags:  # type: ignore
+            db_obj.tags.remove(tag)  # type: ignore
             self.db.commit()
         else:
             raise TagAlreadyRemoved
@@ -50,4 +51,4 @@ class TaggableRepositoryMixin(BaseRepository):
         self, query: Query[_M], tags_ids: Iterable[int]
     ) -> Query[_M]:
         tags = [self.tag_repository.get(tag_id) for tag_id in tags_ids]
-        return query.filter(*[self.model.tags.any(id=tag.id) for tag in tags])
+        return query.filter(*[self.model.tags.any(id=tag.id) for tag in tags])  # type: ignore
