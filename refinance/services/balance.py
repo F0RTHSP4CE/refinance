@@ -68,8 +68,6 @@ class BalanceService:
             # Calculate the net balance for each currency
             currencies: dict[str, Decimal] = {}
             all_currencies = set(credit_dict.keys()).union(set(debit_dict.keys()))
-            # For non-confirmed transactions, invert the digit, so transfer of 100 appears as -100
-
             for currency in all_currencies:
                 credit = credit_dict.get(currency, 0)
                 debit = debit_dict.get(currency, 0)
