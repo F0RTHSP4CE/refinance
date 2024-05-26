@@ -45,8 +45,13 @@ class TagService(BaseService[Tag]):
         return self.repo.update(tag_id, tag_update.dump())
 
     def delete(self, tag_id) -> int:
-        if self.entity_service.get_all(
-            filters=EntityFiltersSchema(tags_ids=[tag_id]), limit=1
-        ).items:
+        if (
+            len(
+                self.entity_service.get_all(
+                    filters=EntityFiltersSchema(tags_ids=[tag_id]), limit=1
+                ).items
+            )
+            > 0
+        ):
             raise TagIsBusy
         return self.repo.delete(tag_id)
