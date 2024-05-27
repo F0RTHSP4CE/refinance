@@ -27,6 +27,8 @@ class BaseUpdateSchema(BaseSchema):
 
 class BaseFilterSchema(BaseSchema):
     comment: str | None = None
+    created_before: datetime | None = None
+    created_after: datetime | None = None
 
 
 M = TypeVar("M")

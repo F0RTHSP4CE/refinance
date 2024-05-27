@@ -35,7 +35,11 @@ class BaseRepository(Generic[M]):
 
     def _apply_base_filters(self, query: Query, filters: BaseFilterSchema) -> Query:
         if filters.comment is not None:
-            return query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
+            query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
+        if filters.created_after is not None:
+            query = query.filter(self.model.created_at >= filters.created_after)
+        if filters.created_before is not None:
+            query = query.filter(self.model.created_at <= filters.created_before)
         return query
 
     def _apply_filters(self, query: Query, filters: object) -> Query: ...
