@@ -1,5 +1,7 @@
 """Tests for Balance API and Transaction confirmation"""
 
+import time
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import status
@@ -47,3 +49,37 @@ class TestBalanceEndpoints:
         response = test_app.get(f"/balances/{entity_b_id}")
         balance_b = Decimal(response.json()["confirmed"]["usd"])
         assert balance_b == Decimal("100")
+
+        # Make second transaction to verify that specific_date works correctly
+        time.sleep(1)
+
+        transaction_data = {
+            "from_entity_id": entity_a_id,
+            "to_entity_id": entity_b_id,
+            "amount": "100.00",
+            "currency": "usd",
+        }
+        response = test_app.post("/transactions/", json=transaction_data)
+        transaction_created_at = response.json()["created_at"]
+        transaction_id = response.json()["id"]
+
+        # Confirm the transaction
+        response = test_app.patch(
+            f"/transactions/{transaction_id}", json={"confirmed": True}
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        # Check balance before the transaction
+        check_date = datetime.fromisoformat(transaction_created_at) - timedelta(
+            seconds=1
+        )
+        response = test_app.get(
+            f"/balances/{entity_a_id}?specific_date={check_date.isoformat()}"
+        )
+        balance_a = Decimal(response.json()["confirmed"]["usd"])
+        assert balance_a == Decimal("-100")
+
+        # Check balance after the transaction (just in case)
+        response = test_app.get(f"/balances/{entity_a_id}")
+        balance_a = Decimal(response.json()["confirmed"]["usd"])
+        assert balance_a == Decimal("-200")

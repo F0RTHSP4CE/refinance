@@ -1,5 +1,6 @@
 """Balance service"""
 
+from datetime import datetime
 from decimal import Decimal
 
 from fastapi import Depends
@@ -21,7 +22,9 @@ class BalanceService:
         self.db = db
         self.entity_repository = entity_repository
 
-    def get_balances(self, entity_id: int) -> BalanceSchema:
+    def get_balances(
+        self, entity_id: int, specific_date: datetime | None = None
+    ) -> BalanceSchema:
         """
         Calculates the current balances for a given entity across all currencies.
         Only confirmed transactions are considered.
@@ -32,30 +35,35 @@ class BalanceService:
         # Function to process transactions based on confirmation status
         def sum_transactions(confirmed: bool) -> dict[str, Decimal]:
             # Query to get sum of all incoming transactions grouped by currency
-            credit_query = (
-                select(
-                    Transaction.currency,
-                    func.sum(Transaction.amount).label("total_credit"),
-                )
-                .where(
-                    Transaction.to_entity_id == entity_id,
-                    Transaction.confirmed == confirmed,
-                )
-                .group_by(Transaction.currency)
+            credit_query = select(
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_credit"),
+            ).where(
+                Transaction.to_entity_id == entity_id,
+                Transaction.confirmed == confirmed,
             )
 
             # Query to get sum of all outgoing transactions grouped by currency
-            debit_query = (
-                select(
-                    Transaction.currency,
-                    func.sum(Transaction.amount).label("total_debit"),
-                )
-                .where(
-                    Transaction.from_entity_id == entity_id,
-                    Transaction.confirmed == confirmed,
-                )
-                .group_by(Transaction.currency)
+            debit_query = select(
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_debit"),
+            ).where(
+                Transaction.from_entity_id == entity_id,
+                Transaction.confirmed == confirmed,
             )
+
+            # Date specifier
+            if specific_date is not None:
+                credit_query = credit_query.filter(
+                    Transaction.created_at <= specific_date
+                )
+                debit_query = debit_query.filter(
+                    Transaction.created_at <= specific_date
+                )
+
+            # Group query result by currency
+            credit_query = credit_query.group_by(Transaction.currency)
+            debit_query = debit_query.group_by(Transaction.currency)
 
             # Execute queries
             credits = self.db.execute(credit_query).all()

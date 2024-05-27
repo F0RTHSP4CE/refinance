@@ -44,7 +44,7 @@ uvicorn refinance.app:app --reload
 - [x] tags
 - [x] transactions
 - [x] balances
-- [ ] date range search
+- [x] date range search
 - [ ] recurrent payments
 - [ ] migrations (not alembic?)
 - [ ] logging
