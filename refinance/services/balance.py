@@ -34,7 +34,7 @@ class BalanceService:
 
         # Function to process transactions based on confirmation status
         def sum_transactions(confirmed: bool) -> dict[str, Decimal]:
-            # Query to get sum of all incoming transactions grouped by currency
+            # Query to get sum of all incoming transactions
             credit_query = select(
                 Transaction.currency,
                 func.sum(Transaction.amount).label("total_credit"),
@@ -43,7 +43,7 @@ class BalanceService:
                 Transaction.confirmed == confirmed,
             )
 
-            # Query to get sum of all outgoing transactions grouped by currency
+            # Query to get sum of all outgoing transactions
             debit_query = select(
                 Transaction.currency,
                 func.sum(Transaction.amount).label("total_debit"),
@@ -52,7 +52,7 @@ class BalanceService:
                 Transaction.confirmed == confirmed,
             )
 
-            # Date specifier
+            # Date limiter — don't count transactions after this date
             if specific_date is not None:
                 credit_query = credit_query.filter(
                     Transaction.created_at <= specific_date
@@ -61,7 +61,7 @@ class BalanceService:
                     Transaction.created_at <= specific_date
                 )
 
-            # Group query result by currency
+            # Group sums by currency
             credit_query = credit_query.group_by(Transaction.currency)
             debit_query = debit_query.group_by(Transaction.currency)
 
@@ -70,18 +70,22 @@ class BalanceService:
             debits = self.db.execute(debit_query).all()
 
             # Convert query results to dictionary for easier processing
-            credit_dict = {result.currency: result.total_credit for result in credits}
-            debit_dict = {result.currency: result.total_debit for result in debits}
+            credit_dict: dict[str, Decimal] = {
+                result.currency: result.total_credit for result in credits
+            }
+            debit_dict: dict[str, Decimal] = {
+                result.currency: result.total_debit for result in debits
+            }
 
             # Calculate the net balance for each currency
-            currencies: dict[str, Decimal] = {}
+            total_by_currency: dict[str, Decimal] = {}
             all_currencies = set(credit_dict.keys()).union(set(debit_dict.keys()))
             for currency in all_currencies:
-                credit = credit_dict.get(currency, 0)
-                debit = debit_dict.get(currency, 0)
-                currencies[currency] = credit - debit
+                credit = credit_dict.get(currency, Decimal(0))
+                debit = debit_dict.get(currency, Decimal(0))
+                total_by_currency[currency] = credit - debit
 
-            return currencies
+            return total_by_currency
 
         return BalanceSchema(
             confirmed=sum_transactions(confirmed=True),
