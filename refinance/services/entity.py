@@ -15,7 +15,9 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         """This will break the history, implement it later (maybe)"""
         raise NotImplementedError
 
-    def _apply_filters(self, query: Query, filters: EntityFiltersSchema) -> Query:
+    def _apply_filters(
+        self, query: Query[Entity], filters: EntityFiltersSchema
+    ) -> Query[Entity]:
         if filters.name is not None:
             query = query.filter(self.model.name.ilike(f"%{filters.name}%"))
         if filters.active is not None:

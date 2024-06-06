@@ -11,7 +11,9 @@ from refinance.services.mixins.taggable_mixin import TaggableServiceMixin
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):
     model = Transaction
 
-    def _apply_filters(self, query: Query, filters: TransactionFiltersSchema) -> Query:
+    def _apply_filters(
+        self, query: Query[Transaction], filters: TransactionFiltersSchema
+    ) -> Query[Transaction]:
         if filters.from_entity_id is not None:
             query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
