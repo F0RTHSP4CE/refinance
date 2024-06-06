@@ -1,43 +1,29 @@
 """Transaction service"""
 
-from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query
 
-from refinance.db import get_db
 from refinance.models.transaction import Transaction
-from refinance.repository.transaction import TransactionRepository
-from refinance.schemas.base import PaginationSchema
-from refinance.schemas.transaction import (
-    TransactionCreateSchema,
-    TransactionFiltersSchema,
-    TransactionUpdateSchema,
-)
+from refinance.schemas.transaction import TransactionFiltersSchema
 from refinance.services.base import BaseService
 from refinance.services.mixins.taggable_mixin import TaggableServiceMixin
 
 
-class TransactionService(TaggableServiceMixin, BaseService[Transaction]):
+class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):
     model = Transaction
 
-    def __init__(
-        self, repo: TransactionRepository = Depends(), db: Session = Depends(get_db)
-    ):
-        super().__init__(repo=repo, db=db)
-
-    def create(self, schema: TransactionCreateSchema) -> Transaction:
-        new_obj = self.model(**schema.dump())
-        db_obj = self.repo.create(new_obj)
-        return db_obj
-
-    def get(self, transaction_id: int) -> Transaction:
-        return self.repo.get(transaction_id)
-
-    def get_all(
-        self, filters: TransactionFiltersSchema | None = None, skip=0, limit=100
-    ) -> PaginationSchema[Transaction]:
-        return self.repo.get_all(filters, skip, limit)
-
-    def update(
-        self, transaction_id, transaction_update: TransactionUpdateSchema
-    ) -> Transaction:
-        return self.repo.update(transaction_id, transaction_update.dump())
+    def _apply_filters(self, query: Query, filters: TransactionFiltersSchema) -> Query:
+        if filters.from_entity_id is not None:
+            query = query.filter(self.model.from_entity_id == filters.from_entity_id)
+        if filters.to_entity_id is not None:
+            query = query.filter(self.model.to_entity_id == filters.to_entity_id)
+        if filters.amount_min is not None:
+            query = query.filter(self.model.amount >= filters.amount_min)
+        if filters.amount_max is not None:
+            query = query.filter(self.model.amount <= filters.amount_max)
+        if filters.currency is not None:
+            query = query.filter(self.model.currency == filters.currency)
+        if filters.comment is not None:
+            query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
+        if filters.confirmed is not None:
+            query = query.filter(self.model.confirmed == filters.confirmed)
+        return query

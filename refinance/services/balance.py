@@ -9,18 +9,18 @@ from sqlalchemy.sql import func, select
 
 from refinance.db import get_db
 from refinance.models.transaction import Transaction
-from refinance.repository.entity import EntityRepository
 from refinance.schemas.balance import BalanceSchema
+from refinance.services.entity import EntityService
 
 
 class BalanceService:
     def __init__(
         self,
         db: Session = Depends(get_db),
-        entity_repository: EntityRepository = Depends(),
+        entity_service: EntityService = Depends(),
     ):
         self.db = db
-        self.entity_repository = entity_repository
+        self.entity_service = entity_service
 
     def get_balances(
         self, entity_id: int, specific_date: datetime | None = None
@@ -30,7 +30,7 @@ class BalanceService:
         Only confirmed transactions are considered.
         """
         # Check that entity exists
-        self.entity_repository.get(entity_id)
+        self.entity_service.get(entity_id)
 
         # Function to process transactions based on confirmation status
         def sum_transactions(confirmed: bool) -> dict[str, Decimal]:

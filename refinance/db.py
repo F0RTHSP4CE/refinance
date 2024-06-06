@@ -32,7 +32,7 @@ class DatabaseConnection:
 
 
 def get_db(db_conn: DatabaseConnection = Depends()):
-    # return session to be used in services, repos, tests
+    # return session to be used in services, tests
     db_session = db_conn.get_session()
     try:
         yield db_session
