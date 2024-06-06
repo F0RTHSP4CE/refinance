@@ -1,41 +1,25 @@
 """Entity service"""
 
-from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query
 
-from refinance.db import get_db
 from refinance.models.entity import Entity
-from refinance.repository.entity import EntityRepository
-from refinance.schemas.base import PaginationSchema
-from refinance.schemas.entity import (
-    EntityCreateSchema,
-    EntityFiltersSchema,
-    EntityUpdateSchema,
-)
+from refinance.schemas.entity import EntityFiltersSchema
 from refinance.services.base import BaseService
 from refinance.services.mixins.taggable_mixin import TaggableServiceMixin
 
 
-class EntityService(TaggableServiceMixin, BaseService[Entity]):
+class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
     model = Entity
 
-    def __init__(
-        self, repo: EntityRepository = Depends(), db: Session = Depends(get_db)
-    ):
-        super().__init__(repo=repo, db=db)
+    def delete(self, obj_id):
+        """This will break the history, implement it later (maybe)"""
+        raise NotImplementedError
 
-    def create(self, schema: EntityCreateSchema) -> Entity:
-        new_obj = self.model(**schema.dump())
-        db_obj = self.repo.create(new_obj)
-        return db_obj
-
-    def get(self, entity_id: int) -> Entity:
-        return self.repo.get(entity_id)
-
-    def get_all(
-        self, filters: EntityFiltersSchema | None = None, skip=0, limit=100
-    ) -> PaginationSchema[Entity]:
-        return self.repo.get_all(filters, skip, limit)
-
-    def update(self, entity_id, entity_update: EntityUpdateSchema) -> Entity:
-        return self.repo.update(entity_id, entity_update.dump())
+    def _apply_filters(self, query: Query, filters: EntityFiltersSchema) -> Query:
+        if filters.name is not None:
+            query = query.filter(self.model.name.ilike(f"%{filters.name}%"))
+        if filters.active is not None:
+            query = query.filter(self.model.active == filters.active)
+        if filters.tags_ids:
+            query = self._apply_tag_filters(query, filters.tags_ids)
+        return query
