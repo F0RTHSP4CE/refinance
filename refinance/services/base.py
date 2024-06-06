@@ -8,7 +8,11 @@ from sqlalchemy.orm import Query, Session
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
-from refinance.schemas.base import BaseFilterSchema, PaginationSchema
+from refinance.schemas.base import (
+    BaseFilterSchema,
+    BaseUpdateSchema,
+    PaginationSchema,
+)
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
@@ -34,7 +38,9 @@ class BaseService(Generic[M]):
             raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
         return db_obj
 
-    def _apply_base_filters(self, query: Query, filters: BaseFilterSchema) -> Query:
+    def _apply_base_filters(
+        self, query: Query[M], filters: BaseFilterSchema
+    ) -> Query[M]:
         if filters.comment is not None:
             query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
         if filters.created_after is not None:
@@ -43,7 +49,9 @@ class BaseService(Generic[M]):
             query = query.filter(self.model.created_at <= filters.created_before)
         return query
 
-    def _apply_filters(self, query: Query, filters: object) -> Query: ...
+    def _apply_filters(
+        self, query: Query[M], filters: BaseFilterSchema
+    ) -> Query[M]: ...
 
     def get_all(
         self, filters: BaseFilterSchema | None = None, skip=0, limit=100
@@ -56,7 +64,7 @@ class BaseService(Generic[M]):
         items = query.offset(skip).limit(limit).all()
         return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
 
-    def update(self, obj_id: K, update_schema) -> M:
+    def update(self, obj_id: K, update_schema: BaseUpdateSchema) -> M:
         obj = self.get(obj_id)
         for key, value in update_schema.dump().items():
             setattr(obj, key, value)
