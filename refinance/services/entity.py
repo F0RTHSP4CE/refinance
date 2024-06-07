@@ -2,6 +2,7 @@
 
 from sqlalchemy.orm import Query
 
+from refinance.errors.common import NotFoundError
 from refinance.models.entity import Entity
 from refinance.schemas.entity import EntityFiltersSchema
 from refinance.services.base import BaseService
@@ -27,3 +28,13 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         if filters.tags_ids:
             query = self._apply_tag_filters(query, filters.tags_ids)
         return query
+
+    def get_by_telegram_id(self, telegram_id: int) -> Entity:
+        db_obj = (
+            self.db.query(self.model)
+            .filter(self.model.telegram_id == telegram_id)
+            .first()
+        )
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__}.{telegram_id=}")
+        return db_obj
