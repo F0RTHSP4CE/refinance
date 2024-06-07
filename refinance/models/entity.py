@@ -19,9 +19,9 @@ entities_tags = Table(
 class Entity(BaseModel):
     __tablename__ = "entities"
 
-    name: Mapped[str]
+    name: Mapped[str] = mapped_column(unique=True)
     active: Mapped[bool] = mapped_column(default=True)
     tags: Mapped[List[Tag]] = relationship(secondary=entities_tags)
 
     # authentication
-    telegram_id: Mapped[int] = mapped_column(nullable=True)
+    telegram_id: Mapped[int] = mapped_column(nullable=True, unique=True)

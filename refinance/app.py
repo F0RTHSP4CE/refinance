@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Request, Security
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 from refinance.config import Config, get_config
 from refinance.errors.base import ApplicationError
@@ -24,6 +25,14 @@ def application_exception_handler(request: Request, exc: ApplicationError):
     return JSONResponse(
         status_code=exc.http_code or 500,
         content={"error_code": exc.error_code, "error": exc.error},
+    )
+
+
+@app.exception_handler(SQLAlchemyError)
+def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
+    return JSONResponse(
+        status_code=500,
+        content={"error_code": 4000, "error": exc._message()},
     )
 
 
