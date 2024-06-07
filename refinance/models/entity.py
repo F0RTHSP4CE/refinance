@@ -22,3 +22,6 @@ class Entity(BaseModel):
     name: Mapped[str]
     active: Mapped[bool] = mapped_column(default=True)
     tags: Mapped[List[Tag]] = relationship(secondary=entities_tags)
+
+    # authentication
+    telegram_id: Mapped[int] = mapped_column(nullable=True)

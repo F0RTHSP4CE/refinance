@@ -22,6 +22,8 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
             query = query.filter(self.model.name.ilike(f"%{filters.name}%"))
         if filters.active is not None:
             query = query.filter(self.model.active == filters.active)
+        if filters.telegram_id is not None:
+            query = query.filter(self.model.telegram_id == filters.telegram_id)
         if filters.tags_ids:
             query = self._apply_tag_filters(query, filters.tags_ids)
         return query
