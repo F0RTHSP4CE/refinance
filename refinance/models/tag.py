@@ -8,4 +8,4 @@ from refinance.models.base import BaseModel
 class Tag(BaseModel):
     __tablename__ = "tags"
 
-    name: Mapped[str] = mapped_column()
+    name: Mapped[str] = mapped_column(unique=True)
