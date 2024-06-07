@@ -4,20 +4,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def entity_one(test_app: TestClient):
-    response = test_app.post(
-        "/entities/", json={"name": "Entity One", "comment": "Active Entity"}
-    )
+    response = test_app.post("/entities", json={"name": "User One 1"})
+    assert response.status_code == 200
     data = response.json()
     return data["id"]
 
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def entity_two(test_app: TestClient):
-    response = test_app.post(
-        "/entities/", json={"name": "Entity Two", "comment": "Active Entity"}
-    )
+    response = test_app.post("/entities", json={"name": "User Two 2"})
+    assert response.status_code == 200
     data = response.json()
     return data["id"]
 
@@ -25,7 +23,7 @@ def entity_two(test_app: TestClient):
 @pytest.fixture
 def create_transaction(test_app: TestClient, entity_one, entity_two):
     response = test_app.post(
-        "/transactions/",
+        "/transactions",
         json={
             "from_entity_id": entity_one,
             "to_entity_id": entity_two,
@@ -33,6 +31,7 @@ def create_transaction(test_app: TestClient, entity_one, entity_two):
             "currency": "usd",
         },
     )
+    assert response.status_code == 200
     return response
 
 
@@ -42,7 +41,7 @@ class TestTransactionEndpoints:
     def test_create_transaction(self, test_app: TestClient, entity_one, entity_two):
         # Create a new transaction
         response = test_app.post(
-            "/transactions/",
+            "/transactions",
             json={
                 "from_entity_id": entity_one,
                 "to_entity_id": entity_two,
@@ -64,8 +63,6 @@ class TestTransactionEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == transaction_id
-
-    # Additional test cases...
 
 
 @pytest.fixture
@@ -102,7 +99,8 @@ def multiple_transactions(test_app: TestClient, entity_one, entity_two):
         },
     ]
     for transaction in transactions:
-        test_app.post("/transactions/", json=transaction)
+        response = test_app.post("/transactions", json=transaction)
+        assert response.status_code == 200
 
 
 class TestTransactionFiltering:
@@ -110,7 +108,7 @@ class TestTransactionFiltering:
 
     def test_filter_by_currency(self, test_app: TestClient, multiple_transactions):
         # Filter transactions by currency USD
-        response = test_app.get("/transactions/", params={"currency": "usd"})
+        response = test_app.get("/transactions", params={"currency": "usd"})
         assert response.status_code == 200
         data = response.json()
         assert (
@@ -120,7 +118,7 @@ class TestTransactionFiltering:
     def test_filter_by_amount_range(self, test_app: TestClient, multiple_transactions):
         # Filter transactions where amount is between 100 and 300
         response = test_app.get(
-            "/transactions/", params={"amount_min": "100", "amount_max": "300"}
+            "/transactions", params={"amount_min": "100", "amount_max": "300"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -130,7 +128,7 @@ class TestTransactionFiltering:
         self, test_app: TestClient, multiple_transactions
     ):
         # Filter transactions by confirmed status
-        response = test_app.get("/transactions/", params={"confirmed": True})
+        response = test_app.get("/transactions", params={"confirmed": True})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions that are confirmed
@@ -139,7 +137,7 @@ class TestTransactionFiltering:
         self, test_app: TestClient, multiple_transactions, entity_one
     ):
         # Filter transactions by from_entity_id
-        response = test_app.get("/transactions/", params={"from_entity_id": entity_one})
+        response = test_app.get("/transactions", params={"from_entity_id": entity_one})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions originating from entity_one
@@ -148,7 +146,7 @@ class TestTransactionFiltering:
         self, test_app: TestClient, multiple_transactions, entity_two
     ):
         # Filter transactions by to_entity_id
-        response = test_app.get("/transactions/", params={"to_entity_id": entity_two})
+        response = test_app.get("/transactions", params={"to_entity_id": entity_two})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions directed to entity_two
