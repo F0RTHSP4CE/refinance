@@ -45,7 +45,7 @@ class TestTagEndpoints:
         assert delete_response.status_code == status.HTTP_200_OK
         # Verify the tag is deleted
         get_response = test_app.get(f"/tags/{tag_id}")
-        assert get_response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert get_response.status_code == 418
         assert get_response.json()["error_code"] == NotFoundError.error_code
 
     def test_read_tags_with_filters(self, test_app: TestClient):
