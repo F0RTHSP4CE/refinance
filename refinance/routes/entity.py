@@ -15,7 +15,7 @@ from refinance.services.entity import EntityService
 entity_router = APIRouter(prefix="/entities", tags=["Entities"])
 
 
-@entity_router.post("/", response_model=EntitySchema)
+@entity_router.post("", response_model=EntitySchema)
 def create_entity(
     entity: EntityCreateSchema,
     entity_service: EntityService = Depends(),
@@ -31,7 +31,15 @@ def read_entity(
     return entity_service.get(entity_id)
 
 
-@entity_router.get("/", response_model=PaginationSchema[EntitySchema])
+@entity_router.get("/telegram_id/{telegram_id}", response_model=EntitySchema)
+def get_entity_by_telegram_id(
+    telegram_id: int,
+    entity_service: EntityService = Depends(),
+):
+    return entity_service.get_by_telegram_id(telegram_id)
+
+
+@entity_router.get("", response_model=PaginationSchema[EntitySchema])
 def read_entities(
     filters: EntityFiltersSchema = Depends(),
     skip: int = 0,
