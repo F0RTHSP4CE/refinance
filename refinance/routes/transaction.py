@@ -15,7 +15,7 @@ from refinance.services.transaction import TransactionService
 transaction_router = APIRouter(prefix="/transactions", tags=["Transactions"])
 
 
-@transaction_router.post("/", response_model=TransactionSchema)
+@transaction_router.post("", response_model=TransactionSchema)
 def create_transaction(
     transaction: TransactionCreateSchema,
     transaction_service: TransactionService = Depends(),
@@ -31,7 +31,7 @@ def read_transaction(
     return transaction_service.get(transaction_id)
 
 
-@transaction_router.get("/", response_model=PaginationSchema[TransactionSchema])
+@transaction_router.get("", response_model=PaginationSchema[TransactionSchema])
 def read_transactions(
     filters: TransactionFiltersSchema = Depends(),
     skip: int = 0,

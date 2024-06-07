@@ -14,7 +14,7 @@ from refinance.services.tag import TagService
 tag_router = APIRouter(prefix="/tags", tags=["Tags"])
 
 
-@tag_router.post("/", response_model=TagSchema)
+@tag_router.post("", response_model=TagSchema)
 def create_tag(
     tag: TagCreateSchema,
     tag_service: TagService = Depends(),
@@ -30,7 +30,7 @@ def read_tag(
     return tag_service.get(tag_id)
 
 
-@tag_router.get("/", response_model=PaginationSchema[TagSchema])
+@tag_router.get("", response_model=PaginationSchema[TagSchema])
 def read_tags(
     filters: TagFiltersSchema = Depends(),
     skip: int = 0,

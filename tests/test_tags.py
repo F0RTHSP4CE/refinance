@@ -28,14 +28,14 @@ class TestTagEndpoints:
 
     def test_update_tag(self, test_app: TestClient):
         # Create a tag, then update it
-        create_response = test_app.post("/tags/", json={"name": "Budget"})
+        create_response = test_app.post("/tags/", json={"name": "Something"})
         tag_id = create_response.json()["id"]
         update_response = test_app.patch(
-            f"/tags/{tag_id}", json={"name": "Updated Budget"}
+            f"/tags/{tag_id}", json={"name": "Updated Something"}
         )
         assert update_response.status_code == status.HTTP_200_OK
         updated_data = update_response.json()
-        assert updated_data["name"] == "Updated Budget"
+        assert updated_data["name"] == "Updated Something"
 
     def test_delete_tag(self, test_app: TestClient):
         # Create a tag, then delete it
