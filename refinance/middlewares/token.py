@@ -2,7 +2,7 @@
 
 from fastapi import Depends, Header
 from refinance.config import Config, get_config
-from refinance.errors.token import TokenInvalid
+from refinance.errors.token import TokenInvalid, TokenMissing
 
 
 def get_api_token(
@@ -12,6 +12,8 @@ def get_api_token(
     ),
     config: Config = Depends(get_config),
 ):
+    if not x_token:
+        raise TokenMissing
     if x_token in config.api_tokens:
         return x_token
     else:
