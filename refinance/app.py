@@ -23,7 +23,7 @@ app = FastAPI(
 @app.exception_handler(ApplicationError)
 def application_exception_handler(request: Request, exc: ApplicationError):
     return JSONResponse(
-        status_code=exc.http_code or 500,
+        status_code=exc.http_code or 418,
         content={"error_code": exc.error_code, "error": exc.error},
     )
 
@@ -31,7 +31,7 @@ def application_exception_handler(request: Request, exc: ApplicationError):
 @app.exception_handler(SQLAlchemyError)
 def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
     return JSONResponse(
-        status_code=500,
+        status_code=418,
         content={"error_code": 4000, "error": exc._message()},
     )
 

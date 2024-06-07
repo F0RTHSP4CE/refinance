@@ -54,7 +54,7 @@ class TestEntityEndpoints:
     def test_get_non_existent_entity_error(self, test_app: TestClient):
         # try to get, receive an error
         response = test_app.get("/entities/1111")
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response.status_code == 418
         data = response.json()
         assert data["error_code"] == 1404
         assert "not found" in data["error"].lower()
