@@ -1,20 +1,14 @@
-"""Middleware for authentication, checks for avlid token in request headers"""
+"""Middleware for Entity authentication"""
 
 from fastapi import Depends, Header
-from refinance.config import Config, get_config
-from refinance.errors.token import TokenInvalid, TokenMissing
+
+from refinance.services.token import TokenService
 
 
-def get_api_token(
+def get_entity_from_token(
     x_token: str = Header(
-        default=None,
-        description="API token required for authentication of API client (web-panel, telegram-bot)",
+        description="API token for Entity authentication",
     ),
-    config: Config = Depends(get_config),
+    token_service: TokenService = Depends(),
 ):
-    if not x_token:
-        raise TokenMissing
-    if x_token in config.api_tokens:
-        return x_token
-    else:
-        raise TokenInvalid
+    return token_service.get_entity_from_token(x_token)

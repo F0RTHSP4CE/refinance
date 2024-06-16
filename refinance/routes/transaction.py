@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter, Depends
 
+from refinance.middlewares.token import get_entity_from_token
+from refinance.models.entity import Entity
 from refinance.schemas.base import PaginationSchema
 from refinance.schemas.tag import TagSchema
 from refinance.schemas.transaction import (
@@ -19,6 +21,7 @@ transaction_router = APIRouter(prefix="/transactions", tags=["Transactions"])
 def create_transaction(
     transaction: TransactionCreateSchema,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.create(transaction)
 
@@ -27,6 +30,7 @@ def create_transaction(
 def read_transaction(
     transaction_id: int,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.get(transaction_id)
 
@@ -37,6 +41,7 @@ def read_transactions(
     skip: int = 0,
     limit: int = 100,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.get_all(filters, skip, limit)
 
@@ -46,6 +51,7 @@ def update_transaction(
     transaction_id: int,
     transaction_update: TransactionUpdateSchema,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.update(transaction_id, transaction_update)
 
@@ -55,6 +61,7 @@ def add_tag_to_transaction(
     transaction_id: int,
     tag_id: int,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.add_tag(transaction_id, tag_id)
 
@@ -64,5 +71,6 @@ def remove_tag_from_transaction(
     transaction_id: int,
     tag_id: int,
     transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.remove_tag(transaction_id, tag_id)

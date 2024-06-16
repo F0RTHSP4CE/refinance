@@ -1,6 +1,7 @@
 """Entity service"""
 
 from sqlalchemy.orm import Query
+from sqlalchemy.sql import func
 
 from refinance.errors.common import NotFoundError
 from refinance.models.entity import Entity
@@ -37,4 +38,14 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         )
         if not db_obj:
             raise NotFoundError(f"{self.model.__name__}.{telegram_id=}")
+        return db_obj
+
+    def get_by_name(self, name: str) -> Entity:
+        db_obj = (
+            self.db.query(self.model)
+            .filter(func.lower(self.model.name) == func.lower(name))
+            .first()
+        )
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__} {name=}")
         return db_obj

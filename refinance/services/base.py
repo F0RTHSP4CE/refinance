@@ -8,11 +8,7 @@ from sqlalchemy.orm import Query, Session
 from refinance.db import get_db
 from refinance.errors.common import NotFoundError
 from refinance.models.base import BaseModel
-from refinance.schemas.base import (
-    BaseFilterSchema,
-    BaseUpdateSchema,
-    PaginationSchema,
-)
+from refinance.schemas.base import BaseFilterSchema, BaseUpdateSchema, PaginationSchema
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
@@ -35,7 +31,7 @@ class BaseService(Generic[M]):
     def get(self, obj_id: K) -> M:
         db_obj = self.db.query(self.model).filter(self.model.id == obj_id).first()
         if not db_obj:
-            raise NotFoundError(f"{self.model.__name__}.{obj_id=}")
+            raise NotFoundError(f"{self.model.__name__} id={obj_id}")
         return db_obj
 
     def _apply_base_filters(

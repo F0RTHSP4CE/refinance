@@ -19,6 +19,15 @@ sum of all transactions. both confirmed and not. separated.
 ### tags
 mark entities and transactions for quick search.
 
+## security
+`X-Token` header is used for authentication.
+
+token will be sent to `telegram_id` of an entity. newly generated tokens do not revoke old ones.
+
+you may request a new token any time: with `name`, `id` or `telegram_id` of your entity — anything you remember.
+
+> token — [jwt](http://jwt.io) with entity id & timestamp inside. basically it's a server-signed & verifiable json, base64'd.
+
 ## run
 ```console
 docker compose up
@@ -50,7 +59,7 @@ uvicorn refinance.app:app --reload
 - [ ] logging
 - [x] docker
 - [ ] grafana, statistics
-- [ ] authentication?
+- [x] authentication? (basic api key list)
 - [ ] permissions?
 
 ## tests notice
