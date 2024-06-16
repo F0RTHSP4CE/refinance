@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter, Depends
 
+from refinance.middlewares.token import get_entity_from_token
+from refinance.models.entity import Entity
 from refinance.schemas.base import PaginationSchema
 from refinance.schemas.tag import (
     TagCreateSchema,
@@ -18,6 +20,7 @@ tag_router = APIRouter(prefix="/tags", tags=["Tags"])
 def create_tag(
     tag: TagCreateSchema,
     tag_service: TagService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return tag_service.create(tag)
 
@@ -26,6 +29,7 @@ def create_tag(
 def read_tag(
     tag_id: int,
     tag_service: TagService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return tag_service.get(tag_id)
 
@@ -36,6 +40,7 @@ def read_tags(
     skip: int = 0,
     limit: int = 100,
     tag_service: TagService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return tag_service.get_all(filters, skip, limit)
 
@@ -45,10 +50,15 @@ def update_tag(
     tag_id: int,
     tag_update: TagUpdateSchema,
     tag_service: TagService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return tag_service.update(tag_id, tag_update)
 
 
 @tag_router.delete("/{tag_id}")
-def delete_tag(tag_id: int, tag_service: TagService = Depends()) -> int:
+def delete_tag(
+    tag_id: int,
+    tag_service: TagService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
+) -> int:
     return tag_service.delete(tag_id)
