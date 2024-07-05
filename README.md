@@ -53,13 +53,15 @@ uvicorn refinance.app:app --reload
 - [x] tags
 - [x] transactions
 - [x] balances
+- [ ] balance cache
 - [x] date range search
 - [ ] recurrent payments
+- [ ] donation categories
 - [ ] migrations (not alembic?)
 - [ ] logging
 - [x] docker
 - [ ] grafana, statistics
-- [x] authentication? (basic api key list)
+- [x] authentication?
 - [ ] permissions?
 - [x] pytest ci
 
