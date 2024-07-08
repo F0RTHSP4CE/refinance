@@ -3,6 +3,7 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import Query
 
+from refinance.models.entity import Entity
 from refinance.models.transaction import Transaction
 from refinance.schemas.transaction import TransactionFiltersSchema
 from refinance.services.base import BaseService
@@ -20,8 +21,11 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
                 or_(
                     self.model.from_entity_id == filters.entity_id,
                     self.model.to_entity_id == filters.entity_id,
+                    self.model.actor_entity_id == filters.actor_entity_id,
                 )
             )
+        if filters.actor_entity_id is not None:
+            query = query.filter(self.model.actor_entity_id == filters.actor_entity_id)
         if filters.from_entity_id is not None:
             query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
@@ -37,3 +41,6 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         if filters.confirmed is not None:
             query = query.filter(self.model.confirmed == filters.confirmed)
         return query
+
+    def create(self, schema, actor_entity: Entity) -> Transaction:
+        return super().create(schema, overrides={"actor_entity_id": actor_entity.id})

@@ -18,6 +18,11 @@ transactions_tags = Table(
 class Transaction(BaseModel):
     __tablename__ = "transactions"
 
+    actor_entity_id: Mapped[int] = mapped_column(
+        ForeignKey("entities.id"), nullable=False
+    )
+    actor_entity: Mapped[Entity] = relationship(foreign_keys=[actor_entity_id])
+
     from_entity_id: Mapped[int] = mapped_column(
         ForeignKey("entities.id"), nullable=False
     )

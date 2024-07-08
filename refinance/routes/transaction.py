@@ -23,7 +23,7 @@ def create_transaction(
     transaction_service: TransactionService = Depends(),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
-    return transaction_service.create(transaction)
+    return transaction_service.create(transaction, actor_entity)
 
 
 @transaction_router.get("/{transaction_id}", response_model=TransactionSchema)
