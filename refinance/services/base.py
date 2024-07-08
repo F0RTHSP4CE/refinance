@@ -21,8 +21,10 @@ class BaseService(Generic[M]):
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    def create(self, schema) -> M:
-        new_obj = self.model(**schema.dump())
+    def create(self, schema: BaseUpdateSchema, overrides: dict = {}) -> M:
+        data = schema.dump()
+        data = {**data, **overrides}
+        new_obj = self.model(**data)
         self.db.add(new_obj)
         self.db.commit()
         self.db.refresh(new_obj)
@@ -61,9 +63,13 @@ class BaseService(Generic[M]):
         items = query.offset(skip).limit(limit).all()
         return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
 
-    def update(self, obj_id: K, update_schema: BaseUpdateSchema) -> M:
+    def update(
+        self, obj_id: K, update_schema: BaseUpdateSchema, overrides: dict = {}
+    ) -> M:
         obj = self.get(obj_id)
-        for key, value in update_schema.dump().items():
+        data = update_schema.dump()
+        data = {**data, **overrides}
+        for key, value in data.items():
             setattr(obj, key, value)
         self.db.commit()
         self.db.refresh(obj)

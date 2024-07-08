@@ -11,6 +11,8 @@ from refinance.schemas.tag import TagSchema
 
 
 class TransactionSchema(BaseReadSchema):
+    actor_entity_id: int
+    actor_entity: EntitySchema
     to_entity_id: int
     to_entity: EntitySchema
     from_entity_id: int
@@ -50,6 +52,7 @@ class TransactionUpdateSchema(BaseUpdateSchema):
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     entity_id: int | None = None
+    actor_entity_id: int | None = None
     to_entity_id: int | None = None
     from_entity_id: int | None = None
     amount_min: Decimal | None = None
