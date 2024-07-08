@@ -180,3 +180,18 @@ class TestTransactionFiltering:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 4  # Transactions directed to entity_two
+
+    def test_filter_by_entity_id(
+        self, test_app: TestClient, multiple_transactions, entity_one, entity_two, token
+    ):
+        # Filter transactions by entity_id
+        response = test_app.get(
+            "/transactions",
+            params={"entity_id": entity_one},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert (
+            len(data) == 4
+        )  # Transactions either directed to or originated from entity_one
