@@ -56,6 +56,7 @@ class BaseService(Generic[M]):
         if filters:
             query = self._apply_base_filters(query, filters)
             query = self._apply_filters(query, filters)
+            query = query.order_by(self.model.created_at.desc())
         total = query.count()
         items = query.offset(skip).limit(limit).all()
         return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
