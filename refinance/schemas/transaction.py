@@ -49,6 +49,7 @@ class TransactionUpdateSchema(BaseUpdateSchema):
 
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
+    entity_id: int | None = None
     to_entity_id: int | None = None
     from_entity_id: int | None = None
     amount_min: Decimal | None = None

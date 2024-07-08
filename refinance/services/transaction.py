@@ -1,5 +1,6 @@
 """Transaction service"""
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Query
 
 from refinance.models.transaction import Transaction
@@ -14,6 +15,13 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     def _apply_filters(
         self, query: Query[Transaction], filters: TransactionFiltersSchema
     ) -> Query[Transaction]:
+        if filters.entity_id is not None:
+            query = query.filter(
+                or_(
+                    self.model.from_entity_id == filters.entity_id,
+                    self.model.to_entity_id == filters.entity_id,
+                )
+            )
         if filters.from_entity_id is not None:
             query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
