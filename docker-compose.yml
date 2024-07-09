@@ -1,9 +1,17 @@
 services:
-  refinance-api:
-    build: .
-    container_name: refinance-api
+  api:
+    build: api
     ports:
       - "8000:8000"
+    volumes:
+      - refinance-api-data:/opt/data
+    env_file:
+      - secrets.env
+
+  ui:
+    build: ui
+    ports:
+      - "5000:5000"
     volumes:
       - refinance-api-data:/opt/data
     env_file:

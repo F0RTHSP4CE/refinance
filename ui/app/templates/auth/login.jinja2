@@ -1,0 +1,11 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<form method="post">
+    <label for="token">Token:</label>
+    <input type="text" id="token" name="token" required>
+    <button type="submit">Login</button>
+</form>
+{% endblock %}

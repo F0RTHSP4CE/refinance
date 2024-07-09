@@ -32,17 +32,28 @@ you may request a new token any time: with `name`, `id` or `telegram_id` of your
 ```console
 docker compose up
 ```
-http://localhost:8000/docs
+API: http://localhost:8000/docs
+UI: http://localhost:5000
+
 
 ## develop
 ```console
+cd api
 pipenv install --dev
 pipenv shell
 
 mkdir data
 pytest
-uvicorn refinance.app:app --reload
+uvicorn api.app:app --reload
 ```
+
+```console
+cd ui
+pipenv install --dev
+pipenv shell
+gunicorn --bind 0.0.0.0:5000 ui.app:app
+```
+
 
 ## todo
 - [x] base classes
