@@ -1,0 +1,44 @@
+{% macro transaction_list(transactions) %}
+{% if transactions %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Actor</td>
+                <td>Date</td>
+                <td>From</td>
+                <td>To</td>
+                <td>Amount</td>
+                <td>Currency</td>
+                <td>Comment</td>
+                <td>Confirmed</td>
+            </tr>
+        </thead>
+        {% for transaction in transactions %}
+        <tr>
+            <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
+            <td>
+                <a
+                    href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}">{{transaction.actor_entity.name}}</a>
+            </td>
+            <td>{{ transaction.created_at }}</td>
+            <td>
+                <a
+                    href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
+            </td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
+            </td>
+            <td class="right-align">{{ transaction.amount }}</td>
+            <td>{{ transaction.currency | upper }}</td>
+            <td>{{ transaction.comment or '' }}</td>
+            <td>{{ transaction.confirmed }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<p>No transactions.</p>
+{% endif %}
+{% endmacro %}

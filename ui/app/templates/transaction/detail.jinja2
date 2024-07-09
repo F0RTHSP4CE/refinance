@@ -1,0 +1,39 @@
+{% extends "base.jinja2" %}
+{% block title %}Transaction {{ transaction.id }}{% endblock %}
+{% block content %}
+<table>
+    <tr>
+        <td>ID</td>
+        <td>{{ transaction.id }}</td>
+    </tr>
+    <tr>
+        <td>From</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
+        </td>
+    </tr>
+    <tr>
+        <td>To</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
+        </td>
+    </tr>
+    <tr>
+        <td>Amount</td>
+        <td>{{ transaction.amount }}</a></td>
+    </tr>
+    <tr>
+        <td>Currency</td>
+        <td>{{ transaction.currency | upper }}</a></td>
+    </tr>
+    <tr>
+
+        <td>Comment</td>
+        <td>{{ transaction.comment or '' }}</a></td>
+    </tr>
+    <tr>
+        <td>Confirmed</td>
+        <td>{{ transaction.confirmed }}</a></td>
+    </tr>
+</table>
+{% endblock %}

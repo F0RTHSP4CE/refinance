@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000">
+    <title>refinance</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="message">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <nav>
+        <ul>
+            {% if g.actor_entity %}
+            <li><a href="{{ url_for('transaction.list') }}">Transactions</a></li>
+            <li><a href="{{ url_for('entity.list') }}">Entities</a></li>
+            <li class="user">
+                Welcome, <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name
+                        }}</strong></a>! <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </li>
+            {% else %}
+            <li>Refinance</li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <main>
+        <h1>{% block title %}{% endblock title %}</h1>
+        {% block content %}
+        {% endblock content %}
+    </main>
+</body>
+
+</html>
