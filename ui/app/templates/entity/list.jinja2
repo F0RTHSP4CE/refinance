@@ -1,6 +1,7 @@
 {% extends "base.jinja2" %}
 {% block title %}Entities{% endblock %}
 {% block content %}
+<p><a href="{{ url_for('entity.add') }}">Add</a></p>
 <ul>
     {% for entity in entities %}
     <li><a href="{{ url_for('entity.detail', id=entity.id) }}">{{ entity.name }}</a></li>
