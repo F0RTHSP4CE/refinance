@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 
-from ui.middlewares.auth import token_required
+from app.middlewares.auth import token_required
 
 index_bp = Blueprint("index", __name__)
 

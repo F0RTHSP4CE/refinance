@@ -3,9 +3,9 @@ from flask_wtf import FlaskForm
 from wtforms import BooleanField, StringField, SubmitField
 from wtforms.validators import DataRequired
 
-from ui.external.refinance import get_refinance_api_client
-from ui.middlewares.auth import token_required
-from ui.schemas import Balance, Entity, Transaction
+from app.external.refinance import get_refinance_api_client
+from app.middlewares.auth import token_required
+from app.schemas import Balance, Entity, Transaction
 
 entity_bp = Blueprint("entity", __name__)
 

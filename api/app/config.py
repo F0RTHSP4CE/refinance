@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from os import getenv
+from pathlib import Path
 
 
 @dataclass
@@ -15,8 +16,8 @@ class Config:
     app_version: str = "0.1.0"
 
     @property
-    def database_path(self) -> str:
-        return f"./data/{self.app_name}.db"
+    def database_path(self) -> Path:
+        return Path("./data/") / Path(f"{self.app_name}.db")
 
     @property
     def database_url(self) -> str:

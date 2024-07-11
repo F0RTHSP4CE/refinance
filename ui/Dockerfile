@@ -1,6 +1,7 @@
 FROM python:3.12
 
 COPY . /opt/
+ADD ../Pipfile /opt
 
 WORKDIR /opt/ui
 RUN pip install pipenv

@@ -4,8 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask = "*"
+
+# API
+fastapi = "*"
+uvicorn = "*"
+sqlalchemy = "*"
+pyjwt = "*"
 requests = "*"
+
+# UI
+flask = "*"
 Flask-WTF = "*"
 Flask-CORS = "*"
 gunicorn = "*"
@@ -15,6 +23,8 @@ black = "*"
 isort = "*"
 mypy = "*"
 ruff = "*"
+pytest = "*"
+httpx = "*"
 
 [requires]
 python_version = "3.12"

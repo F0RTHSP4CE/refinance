@@ -12,13 +12,17 @@ from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 config: Config = get_config()
 app = FastAPI(title=config.app_name, version=config.app_version)
 
 
 @app.exception_handler(ApplicationError)
 def application_exception_handler(request: Request, exc: ApplicationError):
-
+    logger.warning(exc)
     return JSONResponse(
         status_code=exc.http_code or 418,
         content={
@@ -31,6 +35,7 @@ def application_exception_handler(request: Request, exc: ApplicationError):
 
 @app.exception_handler(SQLAlchemyError)
 def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
+    logger.warning(exc)
     return JSONResponse(
         status_code=418,
         content={"error_code": 4000, "error": exc._message()},
