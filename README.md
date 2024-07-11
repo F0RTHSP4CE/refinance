@@ -19,7 +19,7 @@ sum of all transactions. both confirmed and not. separated.
 ### tags
 mark entities and transactions for quick search.
 
-## security
+### security
 `X-Token` header is used for authentication.
 
 token will be sent to `telegram_id` of an entity. newly generated tokens do not revoke old ones.
@@ -40,7 +40,6 @@ UI: http://localhost:5000
 ```console
 pipenv install --dev
 pipenv shell
-
 
 cd api
 pytest
