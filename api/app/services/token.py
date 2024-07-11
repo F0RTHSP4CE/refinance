@@ -1,22 +1,19 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
+import logging
 from datetime import datetime, timezone
 
-from fastapi import Depends
 import jwt
-from sqlalchemy.orm import Session
-
+import requests
 from app.config import Config, get_config
 from app.db import get_db
 from app.errors.common import NotFoundError
-from app.models.entity import Entity
-from app.services.entity import EntityService
 from app.errors.token import TokenInvalid
+from app.models.entity import Entity
 from app.schemas.token import TokenSendReportSchema
-
-
-import requests
-import logging
+from app.services.entity import EntityService
+from fastapi import Depends
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 

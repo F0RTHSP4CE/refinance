@@ -1,12 +1,9 @@
 FROM python:3.12
 
 COPY . /opt/api
-ADD ../Pipfile /opt
 
 WORKDIR /opt/api
-RUN pip install pipenv
-RUN pipenv install --system --dev
+RUN pip install -r requirements.txt
 
-WORKDIR /opt
 EXPOSE 8000
-ENTRYPOINT ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000"]

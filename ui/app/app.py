@@ -2,13 +2,12 @@ import re
 
 from flask import Flask, g, redirect, render_template, request, session, url_for
 from flask_cors import CORS
-
-from ui.controllers.auth import auth_bp
-from ui.controllers.entity import entity_bp
-from ui.controllers.index import index_bp
-from ui.controllers.transaction import transaction_bp
-from ui.exceptions.base import ApplicationError
-from ui.external.refinance import get_refinance_api_client
+from app.controllers.auth import auth_bp
+from app.controllers.entity import entity_bp
+from app.controllers.index import index_bp
+from app.controllers.transaction import transaction_bp
+from app.exceptions.base import ApplicationError
+from app.external.refinance import get_refinance_api_client
 
 app = Flask(__name__)
 app.secret_key = "supersecret"

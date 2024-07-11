@@ -1,7 +1,5 @@
 """API routes for Entity manipulation"""
 
-from fastapi import APIRouter, Depends
-
 from app.errors.entity import EntitiesAlreadyPresent
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
@@ -14,6 +12,7 @@ from app.schemas.entity import (
 )
 from app.schemas.tag import TagSchema
 from app.services.entity import EntityService
+from fastapi import APIRouter, Depends
 
 entity_router = APIRouter(prefix="/entities", tags=["Entities"])
 

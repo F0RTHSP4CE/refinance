@@ -3,14 +3,13 @@
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import func, select
-
 from app.db import get_db
 from app.models.transaction import Transaction
 from app.schemas.balance import BalanceSchema
 from app.services.entity import EntityService
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import func, select
 
 
 class BalanceService:

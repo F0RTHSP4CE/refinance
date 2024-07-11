@@ -1,12 +1,9 @@
 FROM python:3.12
 
-COPY . /opt/
-ADD ../Pipfile /opt
+COPY . /opt/ui
 
 WORKDIR /opt/ui
-RUN pip install pipenv
-RUN pipenv install --system --dev
+RUN pip install -r requirements.txt
 
-WORKDIR /opt
 EXPOSE 5000
-ENTRYPOINT ["python3", "-m", "gunicorn", "--bind", "0.0.0.0:5000", "ui.app:app"]
+ENTRYPOINT ["gunicorn", "--bind", "0.0.0.0:5000", "app.app:app"]

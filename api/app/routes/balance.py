@@ -2,12 +2,11 @@
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
-
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.balance import BalanceSchema
 from app.services.balance import BalanceService
+from fastapi import APIRouter, Depends
 
 balance_router = APIRouter(prefix="/balances", tags=["Balances"])
 

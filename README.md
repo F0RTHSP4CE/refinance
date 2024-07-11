@@ -50,6 +50,12 @@ cd ui
 gunicorn --bind 0.0.0.0:5000 ui.app:app --reload
 ```
 
+on Pipfile changes:
+```console
+pipenv requirements --exclude-markers --dev > requirements.txt
+cp requirements.txt ui
+cp requirements.txt api
+```
 
 ## todo
 - [x] base classes
