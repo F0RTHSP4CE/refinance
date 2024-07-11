@@ -3,5 +3,6 @@
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
+<p><a href="{{ url_for('transaction.add') }}">Add</a></p>
 {{ transaction_list(transactions) }}
 {% endblock %}

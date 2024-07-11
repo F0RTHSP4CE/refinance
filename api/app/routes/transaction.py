@@ -55,6 +55,15 @@ def update_transaction(
     return transaction_service.update(transaction_id, transaction_update)
 
 
+@transaction_router.delete("/{transaction_id}")
+def delete_transaction(
+    transaction_id: int,
+    transaction_service: TransactionService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
+) -> int:
+    return transaction_service.delete(transaction_id)
+
+
 @transaction_router.post("/{transaction_id}/tags", response_model=TagSchema)
 def add_tag_to_transaction(
     transaction_id: int,

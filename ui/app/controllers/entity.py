@@ -9,6 +9,14 @@ from wtforms.validators import DataRequired
 entity_bp = Blueprint("entity", __name__)
 
 
+class EntityForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
+    comment = StringField("Comment")
+    telegram_id = StringField("Telegram ID")
+    active = BooleanField("Active", default=True)
+    submit = SubmitField("Submit")
+
+
 @entity_bp.route("/")
 @token_required
 def list():
@@ -17,6 +25,19 @@ def list():
         "entity/list.jinja2",
         entities=[Entity(**x) for x in api.http("GET", "entities").json()["items"]],
     )
+
+
+@entity_bp.route("/add", methods=["GET", "POST"])
+@token_required
+def add():
+    form = EntityForm()
+    if form.validate_on_submit():
+        api = get_refinance_api_client()
+        data = form.data
+        data.pop("csrf_token")
+        api.http("POST", "entities", data=data)
+        return redirect(url_for("entity.list"))
+    return render_template("entity/add.jinja2", form=form)
 
 
 @entity_bp.route("/<int:id>")
@@ -36,14 +57,6 @@ def detail(id):
             ).json()["items"]
         ],
     )
-
-
-class EntityForm(FlaskForm):
-    name = StringField("Name", validators=[DataRequired()])
-    comment = StringField("Comment")
-    telegram_id = StringField("Telegram ID")
-    active = BooleanField("Active", default=True)
-    submit = SubmitField("Save")
 
 
 @entity_bp.route("/<int:id>/edit", methods=["GET", "POST"])

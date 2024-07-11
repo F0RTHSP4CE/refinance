@@ -36,4 +36,8 @@
         <td>{{ transaction.confirmed }}</a></td>
     </tr>
 </table>
+<p><a href="{{ url_for('transaction.edit', id=transaction.id) }}">Edit</a></p>
+{% if not transaction.confirmed %}
+<p><a href="{{ url_for('transaction.delete', id=transaction.id) }}">Delete</a></p>
+{% endif %}
 {% endblock %}

@@ -27,6 +27,7 @@ class TransactionCreateSchema(BaseUpdateSchema):
     from_entity_id: int
     amount: Decimal
     currency: str
+    confirmed: bool | None = False
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):

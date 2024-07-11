@@ -16,13 +16,17 @@ transaction_bp = Blueprint("transaction", __name__)
 
 
 class TransactionForm(FlaskForm):
-    amount = FloatField("Amount", validators=[DataRequired()])
     from_entity_id = IntegerField("From Entity ID", validators=[DataRequired()])
     to_entity_id = IntegerField("To Entity ID", validators=[DataRequired()])
+    amount = FloatField("Amount", validators=[DataRequired()])
     currency = StringField("Currency", validators=[DataRequired()])
-    confirmed = BooleanField("Confirmed", default=False)
     comment = StringField("Comment")
-    submit = SubmitField("Save")
+    confirmed = BooleanField("Confirmed", default=False)
+    submit = SubmitField("Submit")
+
+
+class DeleteConfirmForm(FlaskForm):
+    delete = SubmitField("Delete")
 
 
 @transaction_bp.route("/")
@@ -53,19 +57,37 @@ def add():
     form = TransactionForm()
     if form.validate_on_submit():
         api = get_refinance_api_client()
-        api.http("POST", "transactions", data=form.data)
+        data = form.data
+        data.pop("csrf_token")
+        api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.list"))
     return render_template("transaction/add.jinja2", form=form)
 
 
-@transaction_bp.route("/edit/<int:id>", methods=["GET", "POST"])
+@transaction_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @token_required
 def edit(id):
     api = get_refinance_api_client()
-    transaction_data = api.http("GET", f"transactions/{id}").json()
-    form = TransactionForm(obj=transaction_data)
+    transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
+    form = TransactionForm(**transaction.__dict__)
     if form.validate_on_submit():
-        form.populate_obj(transaction_data)
-        api.http("PATCH", f"transactions/{id}", data=transaction_data)
+        form.populate_obj(transaction)
+        api.http("PATCH", f"transactions/{id}", data=form.data)
         return redirect(url_for("transaction.detail", id=id))
-    return render_template("transaction/edit.jinja2", form=form)
+    return render_template(
+        "transaction/edit.jinja2", form=form, transaction=transaction
+    )
+
+
+@transaction_bp.route("/<int:id>/delete", methods=["GET", "POST"])
+@token_required
+def delete(id):
+    api = get_refinance_api_client()
+    transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
+    form = DeleteConfirmForm()
+    if form.validate_on_submit():
+        api.http("DELETE", f"transactions/{id}")
+        return redirect(url_for("transaction.list"))
+    return render_template(
+        "transaction/delete.jinja2", form=form, transaction=transaction
+    )
