@@ -38,20 +38,16 @@ UI: http://localhost:5000
 
 ## develop
 ```console
+pipenv install --dev
+pipenv shell
+
+
 cd api
-pipenv install --dev
-pipenv shell
-
-mkdir data
 pytest
-uvicorn api.app:app --reload
-```
+uvicorn --host 0.0.0.0 --port 8000 api.app:app --reload
 
-```console
 cd ui
-pipenv install --dev
-pipenv shell
-gunicorn --bind 0.0.0.0:5000 ui.app:app
+gunicorn --bind 0.0.0.0:5000 ui.app:app --reload
 ```
 
 

@@ -1,11 +1,12 @@
 """Database connection and initialization"""
 
-from fastapi import Depends
-from sqlalchemy import Engine, create_engine
-from sqlalchemy.orm import Session, sessionmaker
+import os
 
 from app.config import Config, get_config
 from app.models.base import BaseModel
+from fastapi import Depends
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 
 class DatabaseConnection:
@@ -13,6 +14,7 @@ class DatabaseConnection:
     session_local: sessionmaker[Session]
 
     def __init__(self, config: Config = Depends(get_config)) -> None:
+        os.makedirs(config.database_path.parent, exist_ok=True)
         self.engine = create_engine(
             config.database_url, connect_args={"check_same_thread": False}
         )
