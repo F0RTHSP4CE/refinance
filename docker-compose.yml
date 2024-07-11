@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - refinance-api-data:/opt/data
+      - api-data:/opt/data
     env_file:
       - secrets.env
 
@@ -12,10 +12,8 @@ services:
     build: ui
     ports:
       - "5000:5000"
-    volumes:
-      - refinance-api-data:/opt/data
     env_file:
       - secrets.env
 
 volumes:
-  refinance-api-data:
+  api-data:
