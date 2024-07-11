@@ -1,8 +1,7 @@
 import requests
 from flask import session
-
-from ui.config import Config
-from ui.exceptions.base import ApplicationError
+from app.config import Config
+from app.exceptions.base import ApplicationError
 
 
 class RefinanceAPI:

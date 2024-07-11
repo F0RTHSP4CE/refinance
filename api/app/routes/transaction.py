@@ -1,7 +1,5 @@
 """API routes for Transaction manipulation"""
 
-from fastapi import APIRouter, Depends
-
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -13,6 +11,7 @@ from app.schemas.transaction import (
     TransactionUpdateSchema,
 )
 from app.services.transaction import TransactionService
+from fastapi import APIRouter, Depends
 
 transaction_router = APIRouter(prefix="/transactions", tags=["Transactions"])
 

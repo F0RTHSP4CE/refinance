@@ -1,13 +1,12 @@
 """Transaction service"""
 
-from sqlalchemy import or_
-from sqlalchemy.orm import Query
-
 from app.models.entity import Entity
 from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionFiltersSchema
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from sqlalchemy import or_
+from sqlalchemy.orm import Query
 
 
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):

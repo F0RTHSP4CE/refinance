@@ -1,9 +1,8 @@
 """API routes for Token manipulation"""
 
-from fastapi import APIRouter, Depends
-
 from app.schemas.token import TokenSendReportSchema
 from app.services.token import TokenService
+from fastapi import APIRouter, Depends
 
 token_router = APIRouter(prefix="/tokens", tags=["Tokens"])
 

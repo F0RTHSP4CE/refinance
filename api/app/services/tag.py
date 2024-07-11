@@ -1,10 +1,9 @@
 """Tag service"""
 
-from sqlalchemy.orm import Query
-
 from app.models.tag import Tag
 from app.schemas.tag import TagFiltersSchema
 from app.services.base import BaseService
+from sqlalchemy.orm import Query
 
 
 class TagService(BaseService[Tag]):

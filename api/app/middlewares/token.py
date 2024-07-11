@@ -1,8 +1,7 @@
 """Middleware for Entity authentication"""
 
-from fastapi import Depends, Header
-
 from app.services.token import TokenService
+from fastapi import Depends, Header
 
 
 def get_entity_from_token(
