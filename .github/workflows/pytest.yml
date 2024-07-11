@@ -17,7 +17,7 @@ jobs:
           docker compose up --build -d
       - name: Run pytest
         run: |
-          docker compose exec refinance-api-1 pytest -v -s --log-level DEBUG
+          docker compose exec api pytest -v -s --log-level DEBUG
       - name: Stop and remove containers
         run: |
           docker compose down
