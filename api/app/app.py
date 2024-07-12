@@ -10,6 +10,7 @@ from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -17,6 +18,13 @@ logger = logging.getLogger(__name__)
 
 config: Config = get_config()
 app = FastAPI(title=config.app_name, version=config.app_version)
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(ApplicationError)
