@@ -32,5 +32,5 @@ class RefinanceAPI:
 def get_refinance_api_client() -> RefinanceAPI:
     token = session.get("token")
     if token is None:
-        raise ValueError("Token is required to create RefinanceAPI client")
+        raise ValueError("Token is required")
     return RefinanceAPI(token)

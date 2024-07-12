@@ -1,23 +1,26 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Transaction
-from flask import Blueprint, redirect, render_template, url_for
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     FloatField,
+    HiddenField,
     IntegerField,
     StringField,
     SubmitField,
 )
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, NumberRange
 
 transaction_bp = Blueprint("transaction", __name__)
 
 
 class TransactionForm(FlaskForm):
-    from_entity_id = IntegerField("From Entity ID", validators=[DataRequired()])
-    to_entity_id = IntegerField("To Entity ID", validators=[DataRequired()])
+    from_entity_name = StringField("From")
+    to_entity_name = StringField("To")
+    from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     amount = FloatField("Amount", validators=[DataRequired()])
     currency = StringField("Currency", validators=[DataRequired()])
     comment = StringField("Comment")
@@ -51,16 +54,36 @@ def detail(id):
     )
 
 
+@transaction_bp.route("/hx/search", methods=["GET", "POST"])
+@token_required
+def hx_search():
+    api = get_refinance_api_client()
+    entities = api.http(
+        "GET", "entities", params=dict(name=request.args.get("name"))
+    ).json()["items"]
+    return render_template("transaction/hx_search_results.jinja2", entities=entities)
+
+
+@transaction_bp.route("/hx/entity-name/<int:id>")
+@token_required
+def hx_entity_name(id):
+    api = get_refinance_api_client()
+    r = api.http("GET", f"entities/{id}")
+    if r.status_code == 200:
+        return jsonify(r.json()), 200
+    else:
+        return jsonify({}), 404
+
+
 @transaction_bp.route("/add", methods=["GET", "POST"])
 @token_required
 def add():
     form = TransactionForm()
     if form.validate_on_submit():
         api = get_refinance_api_client()
-        data = form.data
-        data.pop("csrf_token")
-        api.http("POST", "transactions", data=data)
-        return redirect(url_for("transaction.list"))
+        tx = api.http("POST", "transactions", data=form.data)
+        if tx.status_code == 200:
+            return redirect(url_for("transaction.detail", id=tx.json()["id"]))
     return render_template("transaction/add.jinja2", form=form)
 
 
