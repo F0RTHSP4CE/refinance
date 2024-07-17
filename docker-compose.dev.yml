@@ -2,9 +2,13 @@ services:
   api:
     volumes:
       - ./api:/opt/api
+      - api-data:/opt/data
     command: --reload
 
   ui:
     volumes:
       - ./ui:/opt/ui
     command: --reload
+
+volumes:
+  api-data:
