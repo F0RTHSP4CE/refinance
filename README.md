@@ -75,7 +75,7 @@ pytest
 - [x] tags
 - [x] transactions
 - [x] balances
-- [ ] balance cache
+- [x] balance cache
 - [x] date range search
 - [ ] recurrent payments
 - [ ] donation categories
