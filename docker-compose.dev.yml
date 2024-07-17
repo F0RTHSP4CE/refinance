@@ -1,0 +1,10 @@
+services:
+  api:
+    volumes:
+      - ./api:/opt/api
+    command: --reload
+
+  ui:
+    volumes:
+      - ./ui:/opt/ui
+    command: --reload
