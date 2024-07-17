@@ -37,24 +37,34 @@ UI: http://localhost:5000
 
 
 ## develop
+run backend & frontend with live code reload:
+```
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+open http://localhost:8000/docs and http://localhost:5000
+
+create local environment with all dependencies:
 ```console
 pipenv install --dev
-pipenv shell
-
-cd api
-pytest
-uvicorn --host 0.0.0.0 --port 8000 api.app:app --reload
-
-cd ui
-gunicorn --bind 0.0.0.0:5000 ui.app:app --reload
 ```
+- open any .py file in vscode
+- choose newly created env as python interpreter (bottom right button)
+- now vscode intellisense will work correctly for all packages
 
-on Pipfile changes:
+if you need to change the Pipfile:
 ```console
 pipenv requirements --exclude-markers --dev > requirements.txt
 cp requirements.txt ui
 cp requirements.txt api
 ```
+
+to run api tests:
+```
+pipenv shell
+cd api
+pytest
+```
+
 
 ## todo
 - [x] base classes
