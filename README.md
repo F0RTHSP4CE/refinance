@@ -29,6 +29,8 @@ you may request a new token any time: with `name`, `id` or `telegram_id` of your
 > token — [jwt](http://jwt.io) with entity id & timestamp inside. basically it's a server-signed & verifiable json, base64'd.
 
 ## run
+you need to put configure secrets into file `secrets.env`. see `secrets.env.example` as a reference. 
+
 ```console
 docker compose up
 ```
