@@ -58,14 +58,26 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     def create(
         self, schema: TransactionCreateSchema, actor_entity: Entity
     ) -> Transaction:
+        # invalidate balance cache
         self._balance_service.invalidate_cache_entry(schema.from_entity_id)
         self._balance_service.invalidate_cache_entry(schema.to_entity_id)
+        # create tx
         return super().create(schema, overrides={"actor_entity_id": actor_entity.id})
 
     def update(
-        self, obj_id: int, update_schema: TransactionUpdateSchema, overrides: dict = {}
+        self, obj_id: int, schema: TransactionUpdateSchema, overrides: dict = {}
     ) -> Transaction:
+        # invalidate balance cache
         tx = self.get(obj_id)
         self._balance_service.invalidate_cache_entry(tx.from_entity_id)
         self._balance_service.invalidate_cache_entry(tx.to_entity_id)
-        return super().update(obj_id, update_schema, overrides)
+        # update tx
+        return super().update(obj_id, schema, overrides)
+
+    def delete(self, obj_id: int) -> int:
+        # invalidate balance cache
+        tx = self.get(obj_id)
+        self._balance_service.invalidate_cache_entry(tx.from_entity_id)
+        self._balance_service.invalidate_cache_entry(tx.to_entity_id)
+        # delete tx
+        return super().delete(obj_id)
