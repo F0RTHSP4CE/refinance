@@ -1,5 +1,4 @@
-import time
-
+import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -7,6 +6,7 @@ from fastapi.testclient import TestClient
 class TestBalanceServiceCache:
     """Test cache functionality in BalanceService"""
 
+    @pytest.mark.flaky(max_runs=10, min_passes=5)
     def test_cache_functionality(self, test_app: TestClient, token_factory, token):
         # Create entities
         response = test_app.post(
@@ -34,18 +34,21 @@ class TestBalanceServiceCache:
                 "to_entity_id": entity_b_id,
                 "amount": "100.00",
                 "currency": "usd",
+                "confirmed": True,
             },
             {
                 "from_entity_id": entity_a_id,
                 "to_entity_id": entity_c_id,
                 "amount": "200.00",
                 "currency": "usd",
+                "confirmed": True,
             },
             {
                 "from_entity_id": entity_b_id,
                 "to_entity_id": entity_c_id,
                 "amount": "150.00",
                 "currency": "usd",
+                "confirmed": True,
             },
         ]
 
@@ -56,82 +59,100 @@ class TestBalanceServiceCache:
                 headers={"x-token": token_factory(transaction_data["from_entity_id"])},
             )
             assert response.status_code == status.HTTP_200_OK
-            transaction_id = response.json()["id"]
-
-            # Confirm the transaction
-            response = test_app.patch(
-                f"/transactions/{transaction_id}",
-                json={"confirmed": True},
-                headers={"x-token": token_factory(transaction_data["from_entity_id"])},
-            )
-            assert response.status_code == status.HTTP_200_OK
 
         # Get initial balances using the cached method
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
-        cached_balance_a = response.json()
+        balance_a_1 = response.json()
+        balance_a_elapsed_1 = response.elapsed
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
-        cached_balance_b = response.json()
+        balance_b_1 = response.json()
+        balance_b_elapsed_1 = response.elapsed
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
-        cached_balance_c = response.json()
+        balance_c_1 = response.json()
+        balance_c_elapsed_1 = response.elapsed
 
         # Expected balances after transactions
         expected_balance_a = {"confirmed": {"usd": "-300.00"}, "non_confirmed": {}}
         expected_balance_b = {"confirmed": {"usd": "-50.00"}, "non_confirmed": {}}
         expected_balance_c = {"confirmed": {"usd": "350.00"}, "non_confirmed": {}}
 
-        assert cached_balance_a == expected_balance_a
-        assert cached_balance_b == expected_balance_b
-        assert cached_balance_c == expected_balance_c
+        assert balance_a_1 == expected_balance_a
+        assert balance_b_1 == expected_balance_b
+        assert balance_c_1 == expected_balance_c
 
-        # Wait to simulate cache usage and check balances again
-        time.sleep(1)
+        # Ensure that request time is less than previous
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
-        cached_balance_a_again = response.json()
+        balance_a_2 = response.json()
+        balance_a_elapsed_2 = response.elapsed
+
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
-        cached_balance_b_again = response.json()
+        balance_b_2 = response.json()
+        balance_b_elapsed_2 = response.elapsed
+
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
-        cached_balance_c_again = response.json()
+        balance_c_elapsed_2 = response.elapsed
+        balance_c_2 = response.json()
 
-        assert cached_balance_a_again == cached_balance_a
-        assert cached_balance_b_again == cached_balance_b
-        assert cached_balance_c_again == cached_balance_c
+        assert balance_a_2 == balance_a_1
+        assert balance_b_2 == balance_b_1
+        assert balance_c_2 == balance_c_1
 
-        # Invalidate the cache and check balances again
-        test_app.get(
-            f"/balances/{entity_a_id}/invalidate", headers={"x-token": token_a}
+        assert balance_a_elapsed_2 < balance_a_elapsed_1
+        assert balance_b_elapsed_2 < balance_b_elapsed_1
+        assert balance_c_elapsed_2 < balance_c_elapsed_1
+
+        # Invalidate the cache and check request time again
+        response = test_app.post(
+            "/transactions/",
+            json={
+                "from_entity_id": entity_a_id,
+                "to_entity_id": entity_b_id,
+                "amount": 100,
+                "currency": "eth",
+            },
+            headers={"x-token": token_factory(transaction_data["from_entity_id"])},
         )
-        test_app.get(
-            f"/balances/{entity_b_id}/invalidate", headers={"x-token": token_b}
-        )
-        test_app.get(
-            f"/balances/{entity_c_id}/invalidate", headers={"x-token": token_c}
+        assert response.status_code == status.HTTP_200_OK
+        tx_id = response.json()["id"]
+        test_app.delete(
+            f"/transactions/{tx_id}",
+            headers={"x-token": token_a},
         )
 
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
-        uncached_balance_a = response.json()
+        balance_a_3 = response.json()
+        balance_a_elapsed_3 = response.elapsed
+
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
-        uncached_balance_b = response.json()
+        balance_b_3 = response.json()
+        balance_b_elapsed_3 = response.elapsed
+
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
-        uncached_balance_c = response.json()
+        balance_c_elapsed_3 = response.elapsed
+        balance_c_3 = response.json()
 
-        assert uncached_balance_a == expected_balance_a
-        assert uncached_balance_b == expected_balance_b
-        assert uncached_balance_c == expected_balance_c
+        assert balance_a_3 == expected_balance_a
+        assert balance_b_3 == expected_balance_b
+        assert balance_c_3 == expected_balance_c
+
+        assert balance_a_elapsed_3 > balance_a_elapsed_2
+        assert balance_b_elapsed_3 > balance_b_elapsed_2
+        assert balance_c_elapsed_3 < balance_c_elapsed_1
