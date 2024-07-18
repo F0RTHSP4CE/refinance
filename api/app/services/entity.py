@@ -1,12 +1,13 @@
 """Entity service"""
 
+from sqlalchemy.orm import Query
+from sqlalchemy.sql import func
+
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
 from app.schemas.entity import EntityFiltersSchema
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
-from sqlalchemy.orm import Query
-from sqlalchemy.sql import func
 
 
 class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):

@@ -1,7 +1,5 @@
 """Tests for Balance API and Transaction confirmation"""
 
-import time
-from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import status
@@ -70,4 +68,3 @@ class TestBalanceEndpoints:
         )
         balance_b = Decimal(response.json()["confirmed"]["usd"])
         assert balance_b == Decimal("100")
-

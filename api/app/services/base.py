@@ -2,12 +2,13 @@
 
 from typing import Generic, Type, TypeVar
 
+from fastapi import Depends
+from sqlalchemy.orm import Query, Session
+
 from app.db import get_db
 from app.errors.common import NotFoundError
 from app.models.base import BaseModel
 from app.schemas.base import BaseFilterSchema, BaseUpdateSchema, PaginationSchema
-from fastapi import Depends
-from sqlalchemy.orm import Query, Session
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
