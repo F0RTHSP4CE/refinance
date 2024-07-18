@@ -1,5 +1,7 @@
 """API routes for Tag manipulation"""
 
+from fastapi import APIRouter, Depends
+
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -10,7 +12,6 @@ from app.schemas.tag import (
     TagUpdateSchema,
 )
 from app.services.tag import TagService
-from fastapi import APIRouter, Depends
 
 tag_router = APIRouter(prefix="/tags", tags=["Tags"])
 

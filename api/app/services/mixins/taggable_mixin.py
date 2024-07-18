@@ -2,14 +2,15 @@
 
 from typing import Generic, Iterable, TypeVar
 
+from fastapi import Depends
+from sqlalchemy.orm import Query, Session
+
 from app.db import get_db
 from app.errors.tag import TagAlreadyAdded, TagAlreadyRemoved, TagsNotSupported
 from app.models.base import BaseModel
 from app.models.tag import Tag
 from app.services.base import BaseService
 from app.services.tag import TagService
-from fastapi import Depends
-from sqlalchemy.orm import Query, Session
 
 _M = TypeVar("_M", bound=BaseModel)
 
