@@ -39,6 +39,7 @@ class BaseService(Generic[M]):
     def _apply_base_filters(
         self, query: Query[M], filters: BaseFilterSchema
     ) -> Query[M]:
+        """Common filters that are present for any database model"""
         if filters.comment is not None:
             query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
         if filters.created_after is not None:
@@ -47,9 +48,9 @@ class BaseService(Generic[M]):
             query = query.filter(self.model.created_at <= filters.created_before)
         return query
 
-    def _apply_filters(
-        self, query: Query[M], filters: BaseFilterSchema
-    ) -> Query[M]: ...
+    def _apply_filters(self, query: Query[M], filters: BaseFilterSchema) -> Query[M]:
+        """Filters for a particular model. To be overridden by child class."""
+        return query
 
     def get_all(
         self, filters: BaseFilterSchema | None = None, skip=0, limit=100
@@ -63,11 +64,9 @@ class BaseService(Generic[M]):
         items = query.offset(skip).limit(limit).all()
         return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
 
-    def update(
-        self, obj_id: K, update_schema: BaseUpdateSchema, overrides: dict = {}
-    ) -> M:
+    def update(self, obj_id: K, schema: BaseUpdateSchema, overrides: dict = {}) -> M:
         obj = self.get(obj_id)
-        data = update_schema.dump()
+        data = schema.dump()
         data = {**data, **overrides}
         for key, value in data.items():
             setattr(obj, key, value)
