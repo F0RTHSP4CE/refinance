@@ -1,20 +1,20 @@
 """Balance service"""
 
-from datetime import datetime
 from decimal import Decimal
+
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import func, select
 
 from app.db import get_db
 from app.models.transaction import Transaction
 from app.schemas.balance import BalanceSchema
 from app.services.entity import EntityService
-from fastapi import Depends
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import func, select
 
 
 class BalanceService:
     _cache = {}
-    
+
     def __init__(
         self,
         db: Session = Depends(get_db),
@@ -28,8 +28,13 @@ class BalanceService:
 
     def get_balances(self, entity_id: int) -> BalanceSchema:
         """
-        Calculates the current balances for a given entity across all currencies.
-        Only confirmed transactions are considered.
+        Calculate momentary balances for a given entity across all currencies.
+        - confirmed and non-confirmed transactions are counted separately.
+        - currencies are counted separately.
+
+        Internal in-RAM cache stores balances of each entity.
+        Balance cache for a particular entity is invalidated when transaction from/to
+        entity is created, edited (confirmed) or deleted.
         """
         if entity_id in self._cache:
             return self._cache[entity_id]
@@ -38,13 +43,11 @@ class BalanceService:
             self._cache[entity_id] = result
             return result
 
-    def _get_balances(
-        self, entity_id: int
-    ) -> BalanceSchema:
+    def _get_balances(self, entity_id: int) -> BalanceSchema:
         # Check that entity exists
         self.entity_service.get(entity_id)
 
-        # Function to process transactions based on confirmation status
+        # Function to sum transactions based on confirmation status
         def sum_transactions(confirmed: bool) -> dict[str, Decimal]:
             # Query to get sum of all incoming transactions
             credit_query = select(
@@ -94,5 +97,4 @@ class BalanceService:
             confirmed=sum_transactions(confirmed=True),
             non_confirmed=sum_transactions(confirmed=False),
         )
-        self._cache[entity_id] = result
         return result
