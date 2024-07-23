@@ -20,30 +20,21 @@ sum of all transactions. both confirmed and not. separated.
 mark entities and transactions for quick search.
 
 ### security
-`X-Token` header is used for authentication.
 
-token will be sent to `telegram_id` of an entity. newly generated tokens do not revoke old ones.
+- `X-Token` header is used for authentication.
+- you may request a new token any time: `POST /tokens/send` with `name`, `id` or `telegram_id` of your entity — anything you remember.
+- token (link) will be sent to `telegram_id` of the entity. newly generated tokens do NOT revoke old ones.
 
-you may request a new token any time: with `name`, `id` or `telegram_id` of your entity — anything you remember.
-
-> token — [jwt](http://jwt.io) with entity id & timestamp inside. basically it's a server-signed & verifiable json, base64'd.
+> token — [jwt](http://jwt.io) string with entity id & timestamp inside. basically `base64(sign(json(id=123, date=now())))`.
 
 ## run
-you need to put configure secrets into file `secrets.env`. see `secrets.env.example` as a reference. 
 
-```console
-docker compose up
-```
-API: http://localhost:8000/docs
-UI: http://localhost:5000
-
-
-## develop
+### development
 run backend & frontend with live code reload:
 ```
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
-open http://localhost:8000/docs and http://localhost:5000
+open http://localhost:8000/docs and http://localhost:9000
 
 create local environment with all dependencies:
 ```console
@@ -66,6 +57,15 @@ pipenv shell
 cd api
 pytest
 ```
+
+### production
+put secrets into `secrets.env`. see `secrets.env.example` as a reference. 
+
+```console
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+API: http://0.0.0.0:8000/docs
+UI: http://0.0.0.0:9000
 
 
 ## todo
