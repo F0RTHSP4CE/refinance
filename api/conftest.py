@@ -3,11 +3,12 @@
 import os
 
 import pytest
+from fastapi import Depends
+from fastapi.testclient import TestClient
+
 from app.app import app
 from app.config import Config, get_config
 from app.services.token import TokenService
-from fastapi import Depends
-from fastapi.testclient import TestClient
 
 
 # each test class have it's own empty database

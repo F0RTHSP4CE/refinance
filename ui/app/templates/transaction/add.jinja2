@@ -10,6 +10,7 @@
             <td>{{ form.from_entity_name.label }}</td>
             <td>
                 <input id="from_entity_name" type="search" name="name" placeholder="search..."
+                    autocomplete="off"
                     hx-trigger="input changed delay:500ms, name" hx-get="hx/search"
                     hx-target=" #from_entity_name_search_results" hx-indicator=".htmx-indicator">
             </td>
@@ -24,6 +25,7 @@
             <td>{{ form.to_entity_name.label }}</td>
             <td>
                 <input id="to_entity_name" type="search" name="name" placeholder="search..."
+                    autocomplete="off"
                     hx-trigger="input changed delay:500ms, name" hx-get="hx/search"
                     hx-target=" #to_entity_name_search_results" hx-indicator=".htmx-indicator">
             </td>

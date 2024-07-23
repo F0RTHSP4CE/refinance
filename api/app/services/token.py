@@ -5,6 +5,9 @@ from datetime import datetime, timezone
 
 import jwt
 import requests
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
 from app.config import Config, get_config
 from app.db import get_db
 from app.errors.common import NotFoundError
@@ -12,8 +15,6 @@ from app.errors.token import TokenInvalid
 from app.models.entity import Entity
 from app.schemas.token import TokenSendReportSchema
 from app.services.entity import EntityService
-from fastapi import Depends
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
