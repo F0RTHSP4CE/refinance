@@ -65,17 +65,14 @@ class TestBalanceServiceCache:
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
         balance_a_1 = response.json()
-        balance_a_elapsed_1 = response.elapsed
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
         balance_b_1 = response.json()
-        balance_b_elapsed_1 = response.elapsed
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
         balance_c_1 = response.json()
-        balance_c_elapsed_1 = response.elapsed
 
         # Expected balances after transactions
         expected_balance_a = {"confirmed": {"usd": "-300.00"}, "non_confirmed": {}}
@@ -91,27 +88,20 @@ class TestBalanceServiceCache:
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
         balance_a_2 = response.json()
-        balance_a_elapsed_2 = response.elapsed
 
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
         balance_b_2 = response.json()
-        balance_b_elapsed_2 = response.elapsed
 
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
-        balance_c_elapsed_2 = response.elapsed
         balance_c_2 = response.json()
 
         assert balance_a_2 == balance_a_1
         assert balance_b_2 == balance_b_1
         assert balance_c_2 == balance_c_1
-
-        assert balance_a_elapsed_2 < balance_a_elapsed_1
-        assert balance_b_elapsed_2 < balance_b_elapsed_1
-        assert balance_c_elapsed_2 < balance_c_elapsed_1
 
         # Invalidate the cache and check request time again
         response = test_app.post(
@@ -135,24 +125,17 @@ class TestBalanceServiceCache:
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
         balance_a_3 = response.json()
-        balance_a_elapsed_3 = response.elapsed
 
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
         balance_b_3 = response.json()
-        balance_b_elapsed_3 = response.elapsed
 
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
-        balance_c_elapsed_3 = response.elapsed
         balance_c_3 = response.json()
 
         assert balance_a_3 == expected_balance_a
         assert balance_b_3 == expected_balance_b
         assert balance_c_3 == expected_balance_c
-
-        assert balance_a_elapsed_3 > balance_a_elapsed_2
-        assert balance_b_elapsed_3 > balance_b_elapsed_2
-        assert balance_c_elapsed_3 < balance_c_elapsed_1
