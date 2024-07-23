@@ -24,7 +24,6 @@ isort = "*"
 mypy = "*"
 ruff = "*"
 pytest = "*"
-flaky = "*"
 httpx = "*"
 
 [requires]

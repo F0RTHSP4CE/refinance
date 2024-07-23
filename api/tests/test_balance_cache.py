@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 class TestBalanceServiceCache:
     """Test cache functionality in BalanceService"""
 
-    @pytest.mark.flaky(max_runs=10, min_passes=5)
     def test_cache_functionality(self, test_app: TestClient, token_factory, token):
         # Create entities
         response = test_app.post(
