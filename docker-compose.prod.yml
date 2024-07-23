@@ -1,0 +1,8 @@
+services:
+  api:
+    env_file:
+      - secrets.env
+
+  ui:
+    env_file:
+      - secrets.env

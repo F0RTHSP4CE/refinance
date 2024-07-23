@@ -1,10 +1,11 @@
 """Transaction model"""
 
+from sqlalchemy import DECIMAL, Column, ForeignKey, String, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from sqlalchemy import DECIMAL, Column, ForeignKey, String, Table
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 transactions_tags = Table(
     "transactions_tags",
