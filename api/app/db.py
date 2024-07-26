@@ -2,12 +2,11 @@
 
 import os
 
+from app.config import Config, get_config
+from app.models.base import BaseModel
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-from app.config import Config, get_config
-from app.models.base import BaseModel
 
 
 class DatabaseConnection:

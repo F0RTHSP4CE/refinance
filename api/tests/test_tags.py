@@ -1,9 +1,8 @@
 """Tests for Tag API"""
 
+from app.errors.common import NotFoundError
 from fastapi import status
 from fastapi.testclient import TestClient
-
-from app.errors.common import NotFoundError
 
 
 class TestTagEndpoints:
