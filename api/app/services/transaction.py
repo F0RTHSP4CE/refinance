@@ -1,9 +1,5 @@
 """Transaction service"""
 
-from fastapi import Depends
-from sqlalchemy import or_
-from sqlalchemy.orm import Query, Session
-
 from app.db import get_db
 from app.models.entity import Entity
 from app.models.transaction import Transaction
@@ -15,6 +11,9 @@ from app.schemas.transaction import (
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from fastapi import Depends
+from sqlalchemy import or_
+from sqlalchemy.orm import Query, Session
 
 
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):

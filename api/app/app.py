@@ -2,11 +2,6 @@
 
 import logging
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.config import Config, get_config
 from app.errors.base import ApplicationError
 from app.routes.balance import balance_router
@@ -14,6 +9,10 @@ from app.routes.entity import entity_router
 from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import SQLAlchemyError
 
 logger = logging.getLogger(__name__)
 

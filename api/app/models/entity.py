@@ -2,11 +2,10 @@
 
 from typing import List
 
-from sqlalchemy import Column, ForeignKey, Table
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.models.base import BaseModel
 from app.models.tag import Tag
+from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 entities_tags = Table(
     "entities_tags",

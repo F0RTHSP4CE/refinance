@@ -2,12 +2,11 @@
 
 from decimal import Decimal
 
-from pydantic import field_validator, model_validator
-
 from app.schemas.base import BaseFilterSchema, BaseReadSchema, BaseUpdateSchema
 from app.schemas.entity import EntitySchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
+from pydantic import field_validator, model_validator
 
 
 class TransactionSchema(BaseReadSchema):

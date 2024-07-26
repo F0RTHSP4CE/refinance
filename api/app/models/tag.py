@@ -1,8 +1,7 @@
 """Tag model"""
 
-from sqlalchemy.orm import Mapped, mapped_column
-
 from app.models.base import BaseModel
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class Tag(BaseModel):

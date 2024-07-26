@@ -3,7 +3,7 @@ from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Transaction
 from flask import Blueprint, redirect, render_template, url_for
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, StringField, SubmitField
+from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
 entity_bp = Blueprint("entity", __name__)

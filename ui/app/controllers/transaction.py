@@ -4,9 +4,7 @@ from app.schemas import Transaction
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
-    BooleanField,
     FloatField,
-    HiddenField,
     IntegerField,
     SelectField,
     StringField,
