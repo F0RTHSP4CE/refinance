@@ -49,6 +49,13 @@ nav .user {
   float: right;
 }
 
+/* FORMS */
+input.small {
+  width: 3rem;
+}
+.description {
+  padding-bottom: 0.5rem;
+}
 /* COLORS  */
 a {
   color: #007bff;
@@ -71,4 +78,8 @@ table tr:nth-child(even) {
 
 .amount-negative {
   color: red;
+}
+
+.secondary {
+  color: gray;
 }

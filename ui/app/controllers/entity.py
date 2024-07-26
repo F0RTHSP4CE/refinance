@@ -10,10 +10,18 @@ entity_bp = Blueprint("entity", __name__)
 
 
 class EntityForm(FlaskForm):
-    name = StringField("Name", validators=[DataRequired()])
+    name = StringField(
+        "Name",
+        validators=[DataRequired()],
+        description="Unique, short identifier",
+        render_kw={"placeholder": "h4ck3r"},
+    )
+    telegram_id = StringField(
+        "Telegram ID",
+        description="Required for residents. Leave 0 for system entities. View ID: <a href='https://t.me/myidbot'>t.me/myidbot</a>",
+        render_kw={"placeholder": "91827364"},
+    )
     comment = StringField("Comment")
-    telegram_id = StringField("Telegram ID")
-    active = BooleanField("Active", default=True)
     submit = SubmitField("Submit")
 
 

@@ -48,6 +48,8 @@ class TransactionCreateSchema(BaseUpdateSchema):
 
 
 class TransactionUpdateSchema(BaseUpdateSchema):
+    amount: Decimal | None = None
+    currency: str | None = None
     confirmed: bool | None = None
 
 
