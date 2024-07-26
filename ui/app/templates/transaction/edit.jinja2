@@ -5,6 +5,6 @@
 
 {% block content %}
 <form method="post">
-    {{ render_form(form) }}
+    {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id')) }}
 </form>
 {% endblock %}

@@ -9,45 +9,33 @@
         <tr>
             <td>{{ form.from_entity_name.label }}</td>
             <td>
-                <input id="from_entity_name" type="search" name="name" placeholder="search..."
-                    autocomplete="off"
-                    hx-trigger="input changed delay:500ms, name" hx-get="hx/search"
-                    hx-target=" #from_entity_name_search_results" hx-indicator=".htmx-indicator">
+                <input id="from_entity_name" type="search" name="name" placeholder="search..." autocomplete="off"
+                    hx-trigger="input changed delay:250ms, name" hx-get="hx/search"
+                    hx-target=" #from_entity_name_search_results">
+                id: {{ form.from_entity_id(id="from_entity_id", placeholder="id", class="small") }}
             </td>
-            <td id="from_entity_name_search_results"></td>
         </tr>
         <tr>
             <td></td>
-            <td>{{ form.from_entity_id(id="from_entity_id", placeholder="id") }}</td>
+            <td id="from_entity_name_search_results"></td>
         </tr>
 
         <tr>
             <td>{{ form.to_entity_name.label }}</td>
             <td>
-                <input id="to_entity_name" type="search" name="name" placeholder="search..."
-                    autocomplete="off"
-                    hx-trigger="input changed delay:500ms, name" hx-get="hx/search"
-                    hx-target=" #to_entity_name_search_results" hx-indicator=".htmx-indicator">
+                <input id="to_entity_name" type="search" name="name" placeholder="search..." autocomplete="off"
+                    hx-trigger="input changed delay:250ms, name" hx-get="hx/search"
+                    hx-target=" #to_entity_name_search_results">
+                id: {{ form.to_entity_id(id="to_entity_id", placeholder="id", class="small") }}
             </td>
-            <td id="to_entity_name_search_results"></td>
         </tr>
         <tr>
             <td></td>
-            <td>{{ form.to_entity_id(id="to_entity_id", placeholder="id") }}</td>
+            <td id="to_entity_name_search_results"></td>
         </tr>
 
-
-        {% for field in form %}
-        {% if field.name not in ('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id') %}
-        <tr>
-            {% if field.type not in ('CSRFTokenField', 'SubmitField') %}
-            <td>{{ field.label() }}</td>
-            {% endif %}
-            <td>{{ field() }}</td>
-        </tr>
-        {% endif %}
-        {% endfor %}
-
+        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id'),
+        new_table=False) }}
     </table>
 </form>
 

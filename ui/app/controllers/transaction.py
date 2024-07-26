@@ -8,6 +8,7 @@ from wtforms import (
     FloatField,
     HiddenField,
     IntegerField,
+    SelectField,
     StringField,
     SubmitField,
 )
@@ -21,10 +22,24 @@ class TransactionForm(FlaskForm):
     to_entity_name = StringField("To")
     from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
-    amount = FloatField("Amount", validators=[DataRequired()])
-    currency = StringField("Currency", validators=[DataRequired()])
     comment = StringField("Comment")
-    confirmed = BooleanField("Confirmed", default=False)
+    amount = FloatField(
+        "Amount",
+        validators=[DataRequired()],
+        render_kw={"placeholder": "10.00"},
+    )
+    currency = StringField(
+        "Currency",
+        validators=[DataRequired()],
+        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
+        render_kw={"placeholder": "GEL, USD, DOGE"},
+    )
+    confirmed = SelectField(
+        "Confirmed",
+        choices=(True, False),
+        default=False,
+        description="Funds have been received by recipient.",
+    )
     submit = SubmitField("Submit")
 
 
