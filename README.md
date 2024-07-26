@@ -28,6 +28,14 @@ mark entities and transactions for quick search.
 > token — [jwt](http://jwt.io) string with entity id & timestamp inside. basically `base64(sign(json(id=123, date=now())))`.
 
 ## run
+### production
+put secrets into `secrets.env`. see `secrets.env.example` as a reference. 
+
+```console
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+API: http://0.0.0.0:8000/docs
+UI: http://0.0.0.0:9000
 
 ### development
 run backend & frontend with live code reload:
@@ -57,16 +65,6 @@ pipenv shell
 cd api
 pytest
 ```
-
-### production
-put secrets into `secrets.env`. see `secrets.env.example` as a reference. 
-
-```console
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-API: http://0.0.0.0:8000/docs
-UI: http://0.0.0.0:9000
-
 
 ## todo
 - [x] base classes
