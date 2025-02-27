@@ -11,6 +11,7 @@ class Config:
     telegram_bot_api_token: str | None = field(
         default=getenv("REFINANCE_TELEGRAM_BOT_API_TOKEN", "")
     )
+    ui_url: str | None = field(default=getenv("REFINANCE_UI_URL", ""))
 
     app_name: str = "refinance"
     app_version: str = "0.1.0"

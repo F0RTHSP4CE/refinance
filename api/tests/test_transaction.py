@@ -106,9 +106,7 @@ class TestTransactionEndpoints:
         )
         # Depending on your API, you might expect a 400, 403, 409, etc.
         # The key part is that it should NOT be successful (200).
-        assert (
-            update_response.status_code == 418
-        ), "Expected 418"
+        assert update_response.status_code == 418, "Expected 418"
 
         # Double-check the transaction is still confirmed
         get_response = test_app.get(
