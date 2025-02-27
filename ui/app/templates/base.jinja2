@@ -29,7 +29,8 @@
                         }}</strong></a>! <a href="{{ url_for('auth.logout') }}">Logout</a>
             </li>
             {% else %}
-            <li>Refinance</li>
+            <li><a href="/">Refinance</a></li>
+            <li class="user"><a href="{{ url_for('auth.logout') }}">Logout</a></li>
             {% endif %}
         </ul>
     </nav>

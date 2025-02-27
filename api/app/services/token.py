@@ -105,7 +105,7 @@ class TokenService:
                 f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
                 data=dict(
                     chat_id=entity.telegram_id,
-                    text=token,
+                    text=f"{self.config.ui_url}/auth/token/{token}",
                 ),
                 timeout=5,
             )

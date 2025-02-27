@@ -13,9 +13,8 @@ def login():
     return render_template("auth/login.jinja2")
 
 
-@auth_bp.route("/token", methods=["GET"])
-def token_auth():
-    token = request.args.get("token")
+@auth_bp.route("/token/<token>", methods=["GET"])
+def token_auth(token: str):
     if token:
         session["token"] = token
         return redirect(url_for("index.index"))
@@ -24,5 +23,6 @@ def token_auth():
 
 @auth_bp.route("/logout", methods=["GET"])
 def logout():
-    session.pop("token")
+    if session.get("token"):
+        session.pop("token")
     return redirect(url_for("auth.login"))
