@@ -47,7 +47,9 @@
 <table>
     {% for currency,amount in balance.confirmed.items() %}
     <tr>
-        <td class="right-align">{{ amount }}</td>
+        <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">
+            {{ amount}}
+        </td>
         <td>{{ currency | upper }}</td>
     </tr>
     {% endfor %}

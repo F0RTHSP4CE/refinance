@@ -30,7 +30,9 @@ class Transaction(BaseModel):
     to_entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
     to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
 
-    amount: Mapped[DECIMAL] = mapped_column(DECIMAL(scale=2), nullable=False)
+    amount: Mapped[DECIMAL] = mapped_column(
+        DECIMAL(scale=18), nullable=False
+    )  # max ethereum
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
     confirmed: Mapped[bool] = mapped_column(default=False)
 

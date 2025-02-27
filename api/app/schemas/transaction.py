@@ -2,7 +2,12 @@
 
 from decimal import Decimal
 
-from app.schemas.base import BaseFilterSchema, BaseReadSchema, BaseUpdateSchema
+from app.schemas.base import (
+    BaseFilterSchema,
+    BaseReadSchema,
+    BaseUpdateSchema,
+    CurrencyDecimal,
+)
 from app.schemas.entity import EntitySchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
@@ -16,7 +21,7 @@ class TransactionSchema(BaseReadSchema):
     to_entity: EntitySchema
     from_entity_id: int
     from_entity: EntitySchema
-    amount: Decimal
+    amount: CurrencyDecimal
     currency: str
     confirmed: bool
     tags: list[TagSchema]
@@ -31,9 +36,9 @@ class TransactionCreateSchema(BaseUpdateSchema):
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError("Amount must be positive")
-        return v
+        if v > 0:
+            return v
+        raise ValueError("Amount must be positive")
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
