@@ -2,9 +2,9 @@
 
 from decimal import Decimal
 
-from app.schemas.base import BaseSchema
+from app.schemas.base import BaseSchema, CurrencyDecimal
 
 
 class BalanceSchema(BaseSchema):
-    confirmed: dict[str, Decimal]
-    non_confirmed: dict[str, Decimal]
+    confirmed: dict[str, CurrencyDecimal]
+    non_confirmed: dict[str, CurrencyDecimal]

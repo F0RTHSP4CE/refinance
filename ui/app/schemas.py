@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 
 @dataclass
@@ -15,14 +16,14 @@ class Entity:
 
 @dataclass
 class Balance:
-    confirmed: dict[str, float]
-    non_confirmed: dict[str, float]
+    confirmed: dict[str, Decimal]
+    non_confirmed: dict[str, Decimal]
 
 
 @dataclass
 class Transaction:
     id: int
-    amount: float
+    amount: Decimal
     actor_entity_id: int
     actor_entity: Entity
     from_entity_id: int
