@@ -27,8 +27,7 @@ mark entities and transactions for quick search.
 
 > token — [jwt](http://jwt.io) string with entity id & timestamp inside. basically `base64(sign(json(id=123, date=now())))`.
 
-## run
-### production
+## production
 put secrets into `secrets.env`. see `secrets.env.example` as a reference. 
 
 ```console
@@ -37,34 +36,37 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 API: http://0.0.0.0:8000/docs
 UI: http://0.0.0.0:9000
 
-### development
-run backend & frontend with live code reload:
-```
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-```
-open http://localhost:8000/docs and http://localhost:9000
+## development
 
-create local environment with all dependencies:
+### create local environment with all dependencies
 ```console
-pipenv install --dev
+uv python install 3.12
+uv sync --dev
 ```
-- open any .py file in vscode
-- choose newly created env as python interpreter (bottom right button)
-- now vscode intellisense will work correctly for all packages
 
-if you need to change the Pipfile:
+open project in vscode, <kbd>F1</kbd> `python.setInterpreter`, select `.venv` (workspace)
+
+if you need to change project deps:
 ```console
-pipenv requirements --exclude-markers --dev > requirements.txt
+uv add packagename
+uv lock
+uv export > requirements.txt
 cp requirements.txt ui
 cp requirements.txt api
 ```
 
-to run api tests:
+### tests
 ```
-pipenv shell
+source ./.venv/bin/activate
 cd api
 pytest
 ```
+
+### run backend & frontend with live code reload
+```
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+open http://localhost:8000/docs and http://localhost:9000
 
 ## todo
 - [x] base classes

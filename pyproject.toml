@@ -1,0 +1,27 @@
+[project]
+name = "refinance"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.8",
+    "flask>=3.1.0",
+    "flask-cors>=5.0.1",
+    "flask-wtf>=1.2.2",
+    "gunicorn>=23.0.0",
+    "pyjwt>=2.10.1",
+    "requests>=2.32.3",
+    "sqlalchemy>=2.0.38",
+    "uvicorn>=0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "httpx>=0.28.1",
+    "isort>=6.0.1",
+    "mypy>=1.15.0",
+    "pytest>=8.3.4",
+    "ruff>=0.9.7",
+]
