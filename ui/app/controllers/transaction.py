@@ -3,13 +3,7 @@ from app.middlewares.auth import token_required
 from app.schemas import Transaction
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
-from wtforms import (
-    FloatField,
-    IntegerField,
-    SelectField,
-    StringField,
-    SubmitField,
-)
+from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
 from wtforms.validators import DataRequired, NumberRange
 
 transaction_bp = Blueprint("transaction", __name__)

@@ -74,6 +74,53 @@ class TestTransactionEndpoints:
         data = response.json()
         assert data["id"] == transaction_id
 
+    def test_cannot_unconfirm_confirmed_transaction(
+        self, test_app: TestClient, entity_one, entity_two, token
+    ):
+        """
+        Ensure that once a transaction is confirmed, it cannot be updated to unconfirmed.
+        Adjust this test as needed if your update endpoint or behavior differs.
+        """
+        # First, create a transaction that is confirmed
+        create_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": entity_one,
+                "to_entity_id": entity_two,
+                "amount": "300.00",
+                "currency": "usd",
+                "confirmed": True,
+            },
+            headers={"x-token": token},
+        )
+        assert create_response.status_code == 200
+        tx_data = create_response.json()
+        tx_id = tx_data["id"]
+        assert tx_data["confirmed"] is True
+
+        # Try to unconfirm the transaction
+        update_response = test_app.patch(
+            f"/transactions/{tx_id}",
+            json={"confirmed": False},
+            headers={"x-token": token},
+        )
+        # Depending on your API, you might expect a 400, 403, 409, etc.
+        # The key part is that it should NOT be successful (200).
+        assert (
+            update_response.status_code == 418
+        ), "Expected 418"
+
+        # Double-check the transaction is still confirmed
+        get_response = test_app.get(
+            f"/transactions/{tx_id}",
+            headers={"x-token": token},
+        )
+        assert get_response.status_code == 200
+        updated_data = get_response.json()
+        assert (
+            updated_data["confirmed"] is True
+        ), "Transaction should still be confirmed"
+
 
 @pytest.fixture
 def multiple_transactions(test_app: TestClient, entity_one, entity_two, token):
