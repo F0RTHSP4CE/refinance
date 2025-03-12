@@ -2,7 +2,7 @@ services:
   api:
     volumes:
       - ./api:/opt/api
-      - api-data:/opt/data
+      # - api-data:/opt/data
     command: --reload
 
   ui:
