@@ -35,9 +35,18 @@
         <td>Confirmed</td>
         <td>{{ transaction.confirmed }}</a></td>
     </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ transaction.created_at }}</a></td>
+    </tr>
+    <tr>
+        <td>Modified at</td>
+        <td>{{ transaction.modified_at }}</a></td>
+    </tr>
 </table>
-<p><a href="{{ url_for('transaction.edit', id=transaction.id) }}">Edit</a></p>
 {% if not transaction.confirmed %}
+<p><a href="{{ url_for('transaction.confirm', id=transaction.id) }}">Confirm</a></p>
+<p><a href="{{ url_for('transaction.edit', id=transaction.id) }}">Edit</a></p>
 <p><a href="{{ url_for('transaction.delete', id=transaction.id) }}">Delete</a></p>
 {% endif %}
 {% endblock %}

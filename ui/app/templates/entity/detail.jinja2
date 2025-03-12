@@ -16,7 +16,7 @@
     </tr>
     <tr>
         <td>Comment</td>
-        <td>{{ entity.comment }}</a></td>
+        <td>{{ entity.comment or "" }}</a></td>
     </tr>
     <tr>
         <td>Telegram ID</td>
@@ -25,6 +25,10 @@
     <tr>
         <td>Created at</td>
         <td>{{ entity.created_at }}</a></td>
+    </tr>
+    <tr>
+        <td>Modified at</td>
+        <td>{{ entity.modified_at or "" }}</a></td>
     </tr>
     <tr>
         <td>Active</td>

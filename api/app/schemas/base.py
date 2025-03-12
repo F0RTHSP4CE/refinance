@@ -9,11 +9,12 @@ from pydantic import BaseModel, ConfigDict
 
 class CurrencyDecimal:
     """Displays Decimal with high scale (many digits) in a useful way.
-    
+
     0.0000010000000 -> 0.000001
     10.001000000000 -> 10.001
     10.000000000000 -> 10.00
     """
+
     def __init__(self, value: Decimal):
         self.value = value
 
@@ -72,6 +73,7 @@ class BaseReadSchema(BaseSchema):
     id: int
     comment: Optional[str] = None
     created_at: datetime
+    modified_at: datetime | None = None
 
 
 class BaseUpdateSchema(BaseSchema):

@@ -23,4 +23,4 @@ class Entity(BaseModel):
     tags: Mapped[List[Tag]] = relationship(secondary=entities_tags)
 
     # authentication
-    telegram_id: Mapped[int] = mapped_column(nullable=True, unique=True)
+    telegram_id: Mapped[int] = mapped_column(nullable=True, default=None)

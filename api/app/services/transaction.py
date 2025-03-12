@@ -1,7 +1,10 @@
 """Transaction service"""
 
 from app.db import get_db
-from app.errors.transaction import TransactionCanNotBeUnconfirmed
+from app.errors.transaction import (
+    TransactionCanNotBeDeletedAfterConfirmation,
+    TransactionCanNotBeEditedAfterConfirmation,
+)
 from app.models.entity import Entity
 from app.models.transaction import Transaction
 from app.schemas.transaction import (
@@ -68,10 +71,9 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         self, obj_id: int, schema: TransactionUpdateSchema, overrides: dict = {}
     ) -> Transaction:
         tx = self.get(obj_id)
-        # prevent un-confirming of a confirmed transaction
+        # prevent editing of a confirmed transaction
         if tx.confirmed is True:
-            if schema.confirmed is False:
-                raise TransactionCanNotBeUnconfirmed
+            raise TransactionCanNotBeEditedAfterConfirmation
         # invalidate balance cache
         self._balance_service.invalidate_cache_entry(tx.from_entity_id)
         self._balance_service.invalidate_cache_entry(tx.to_entity_id)
@@ -80,6 +82,9 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
 
     def delete(self, obj_id: int) -> int:
         tx = self.get(obj_id)
+        # prevent deleting of a confirmed transaction
+        if tx.confirmed is True:
+            raise TransactionCanNotBeDeletedAfterConfirmation
         # invalidate balance cache
         self._balance_service.invalidate_cache_entry(tx.from_entity_id)
         self._balance_service.invalidate_cache_entry(tx.to_entity_id)
