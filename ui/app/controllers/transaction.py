@@ -35,8 +35,12 @@ class TransactionForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-class DeleteConfirmForm(FlaskForm):
+class DeleteForm(FlaskForm):
     delete = SubmitField("Delete")
+
+
+class ConfirmForm(FlaskForm):
+    confirm = SubmitField("Confirm")
 
 
 @transaction_bp.route("/")
@@ -114,10 +118,24 @@ def edit(id):
 def delete(id):
     api = get_refinance_api_client()
     transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
-    form = DeleteConfirmForm()
+    form = DeleteForm()
     if form.validate_on_submit():
         api.http("DELETE", f"transactions/{id}")
         return redirect(url_for("transaction.list"))
     return render_template(
         "transaction/delete.jinja2", form=form, transaction=transaction
+    )
+
+
+@transaction_bp.route("/<int:id>/confirm", methods=["GET", "POST"])
+@token_required
+def confirm(id):
+    api = get_refinance_api_client()
+    transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
+    form = ConfirmForm()
+    if form.validate_on_submit():
+        api.http("PATCH", f"transactions/{id}", data={"confirmed": True})
+        return redirect(url_for("transaction.detail", id=id))
+    return render_template(
+        "transaction/confirm.jinja2", form=form, transaction=transaction
     )

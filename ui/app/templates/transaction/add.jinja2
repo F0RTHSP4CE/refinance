@@ -11,8 +11,9 @@
             <td>
                 <input id="from_entity_name" type="search" name="name" placeholder="search..." autocomplete="off"
                     hx-trigger="input changed delay:250ms, name" hx-get="hx/search"
-                    hx-target=" #from_entity_name_search_results">
-                id: {{ form.from_entity_id(id="from_entity_id", placeholder="id", class="small") }}
+                    hx-target=" #from_entity_name_search_results" value="{{g.actor_entity.name}}">
+                id: {{ form.from_entity_id(id="from_entity_id", placeholder="id", class="small",
+                value=g.actor_entity.id) }}
             </td>
         </tr>
         <tr>

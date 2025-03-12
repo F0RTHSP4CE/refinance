@@ -4,7 +4,11 @@
 {% block title %}Edit transaction {{ transaction.id }}{% endblock %}
 
 {% block content %}
+{% if transaction.confirmed == False %}
 <form method="post">
     {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id')) }}
 </form>
+{% else %}
+<p>This transaction is confirmed and can not be edited anymore.</p>
+{% endif %}
 {% endblock %}

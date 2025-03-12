@@ -9,6 +9,7 @@ class Entity:
     name: str
     comment: str
     created_at: datetime
+    modified_at: datetime | None
     telegram_id: int
     tags: list[dict]
     active: bool
@@ -31,6 +32,7 @@ class Transaction:
     to_entity_id: int
     to_entity: Entity
     created_at: datetime
+    modified_at: datetime | None
     currency: str
     confirmed: bool
     tags: list[dict]

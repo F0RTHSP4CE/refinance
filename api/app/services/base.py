@@ -1,5 +1,6 @@
 """Base service that incorporates business logic and CRUD operations."""
 
+import datetime
 from typing import Generic, Type, TypeVar
 
 from app.db import get_db
@@ -69,6 +70,7 @@ class BaseService(Generic[M]):
         data = {**data, **overrides}
         for key, value in data.items():
             setattr(obj, key, value)
+        setattr(obj, "modified_at", datetime.datetime.now())
         self.db.commit()
         self.db.refresh(obj)
         return obj

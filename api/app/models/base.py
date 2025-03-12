@@ -19,6 +19,7 @@ class BaseModel(DeclarativeBase):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+    modified_at: Mapped[datetime] = mapped_column(DateTime, default=None, nullable=True)
 
     def __repr__(self):
         """Automatically generate beautiful __repr__ of a database object (chatgpt4 generated snippet)"""
