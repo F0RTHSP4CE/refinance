@@ -10,7 +10,7 @@ class Entity:
     comment: str
     created_at: datetime
     modified_at: datetime | None
-    telegram_id: int
+    auth: dict
     tags: list[dict]
     active: bool
 

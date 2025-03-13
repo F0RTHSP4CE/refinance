@@ -16,23 +16,47 @@
     </tr>
     <tr>
         <td>Comment</td>
-        <td>{{ entity.comment or "" }}</a></td>
-    </tr>
-    <tr>
-        <td>Telegram ID</td>
-        <td>{{ entity.telegram_id }}</a></td>
-    </tr>
-    <tr>
-        <td>Created at</td>
-        <td>{{ entity.created_at }}</a></td>
-    </tr>
-    <tr>
-        <td>Modified at</td>
-        <td>{{ entity.modified_at or "" }}</a></td>
+        <td>{{ entity.comment or "" }}</td>
     </tr>
     <tr>
         <td>Active</td>
-        <td>{{ entity.active }}</a></td>
+        <td>{{ entity.active }}</td>
+    </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ entity.created_at }}</td>
+    </tr>
+    <tr>
+        <td>Modified at</td>
+        <td>{{ entity.modified_at or "" }}</td>
+    </tr>
+    <tr>
+        <td>Authentication</td>
+        <td>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set labels = {
+                    "telegram_id": "Telegram ID",
+                    "signal_id": "Signal ID",
+                    "whatsapp_number": "WhatsApp Number",
+                    "email": "Email"
+                    } %}
+                    {% for key, value in entity.auth.items() %}
+                    <tr>
+                        <td>{{ labels.get(key, key.replace('_', ' ').title()) }}</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </td>
     </tr>
 </table>
 </p>
