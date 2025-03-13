@@ -14,10 +14,10 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Build and Run Docker Compose
         run: |
-          docker compose up --build -d
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up --build -d
       - name: Run pytest
         run: |
-          docker compose exec api pytest -v -s --log-level DEBUG
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec api pytest -v -s --log-level DEBUG
       - name: Stop and remove containers
         run: |
-          docker compose down
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml down

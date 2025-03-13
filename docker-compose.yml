@@ -5,15 +5,11 @@ services:
       - "8000:8000"
     volumes:
       - api-data:/opt/data
-    env_file:
-      - secrets.env
 
   ui:
     build: ui
     ports:
       - "9000:9000"
-    env_file:
-      - secrets.env
 
 volumes:
   api-data:
