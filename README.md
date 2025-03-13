@@ -20,11 +20,9 @@ sum of all transactions. both confirmed and not. separated.
 mark entities and transactions for quick search.
 
 ## authentication
-- `X-Token` header is used for authentication.
-- you may request a new token any time: `POST /tokens/send` with `name`, `id` or `telegram_id` of your entity — anything you remember.
-- token (link) will be sent to `telegram_id` of the entity. newly generated tokens do NOT revoke old ones.
-
-> token — [jwt](http://jwt.io) string with entity id & timestamp inside. basically `base64(sign(json(id=123, date=now())))`.
+- you can request a login link with your entity name, telegram id, signal id or whatever.
+- login link will be sent to all available destinations (telegram, signal, email, etc)
+- new login link does not revoke old ones, so no one can deauthenticate you. 
 
 ## production
 put secrets into `secrets.env`. see `secrets.env.example` as a reference. 
