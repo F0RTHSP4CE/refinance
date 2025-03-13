@@ -1,0 +1,31 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Token request{% endblock %}
+
+{% block content %}
+{% if report %}
+<table>
+    <thead>
+        <tr>
+            <th>Step</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Entity found</td>
+            <td>{{ '✅' if report.entity_found else '❌' }}</td>
+        </tr>
+        <tr>
+            <td>Token generated</td>
+            <td>{{ '✅' if report.token_generated else '❌' }}</td>
+        </tr>
+        <tr>
+            <td>Message sent</td>
+            <td>{{ '✅' if report.message_sent else '❌' }}</td>
+        </tr>
+    </tbody>
+</table>
+{% endif %}
+{% endblock %}

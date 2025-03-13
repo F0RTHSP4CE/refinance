@@ -1,6 +1,9 @@
 """Test configuration and shared fixtures"""
 
+import logging
 import os
+import sys
+import traceback
 
 import pytest
 from app.app import app
@@ -8,6 +11,34 @@ from app.config import Config, get_config
 from app.services.token import TokenService
 from fastapi import Depends
 from fastapi.testclient import TestClient
+
+_original_request = TestClient.request
+
+
+def logging_request(self, *args, **kwargs):
+    try:
+        response = _original_request(self, *args, **kwargs)
+    except Exception as exc:
+        # Print request details on exception
+        print("\n=== Exception in TestClient.request ===")
+        print("Request args:", args)
+        print("Request kwargs:", kwargs)
+        traceback.print_exc(file=sys.stdout)
+        raise
+
+    # Optionally, if the response indicates an error, log details
+    if response.status_code >= 400:
+        req = response.request
+        print("\n=== HTTP Error Response Captured ===")
+        print(f"Method: {req.method} URL: {req.url}")
+        print("Request Content:", req.content)
+        print("Response Status:", response.status_code)
+        print("Response Body:", response.text)
+    return response
+
+
+# Patch TestClient.request globally
+TestClient.request = logging_request
 
 
 # each test class have it's own empty database

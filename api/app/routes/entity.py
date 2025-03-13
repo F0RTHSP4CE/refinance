@@ -59,15 +59,6 @@ def read_entity(
     return entity_service.get(entity_id)
 
 
-@entity_router.get("/telegram_id/{telegram_id}", response_model=EntitySchema)
-def get_entity_by_telegram_id(
-    telegram_id: int,
-    entity_service: EntityService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return entity_service.get_by_telegram_id(telegram_id)
-
-
 @entity_router.get("", response_model=PaginationSchema[EntitySchema])
 def read_entities(
     filters: EntityFiltersSchema = Depends(),

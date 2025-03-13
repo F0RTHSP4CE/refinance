@@ -5,6 +5,9 @@
 
 {% block content %}
 <form method="post">
-    {{ render_form(form) }}
+    <h2>Entity</h2>
+    {{ render_form(entity_form) }}
+    <h2>Auth</h2>
+    {{ render_form(auth_form) }}
 </form>
 {% endblock %}

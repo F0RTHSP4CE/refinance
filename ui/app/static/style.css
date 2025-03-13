@@ -15,8 +15,12 @@ a {
   text-decoration: none;
 }
 
+th {
+  text-align: left;
+}
+
 td {
-  padding-left: 0.5rem;
+  /* padding-left: 0.5rem; */
   padding-right: 0.5rem;
 }
 
@@ -27,20 +31,21 @@ td {
 .wide-table-wrapper {
   max-width: 100%;
 }
-.wide-table-wrapper > table {
+
+.wide-table-wrapper>table {
   display: block;
   overflow-x: auto;
   white-space: nowrap;
 }
 
 /* NAVIGATION */
-nav > ul {
+nav>ul {
   list-style-type: none;
   padding: 0.75rem;
   margin: 0;
 }
 
-nav > ul > li {
+nav>ul>li {
   display: inline;
   margin-right: 1rem;
 }
@@ -53,9 +58,11 @@ nav .user {
 input.small {
   width: 3rem;
 }
+
 .description {
   padding-bottom: 0.5rem;
 }
+
 /* COLORS  */
 a {
   color: #007bff;
@@ -65,9 +72,11 @@ nav {
   background-color: black;
   color: lightgray;
 }
+
 nav a {
   color: lightgray;
 }
+
 nav a:hover {
   color: white;
 }

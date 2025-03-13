@@ -4,7 +4,7 @@ from typing import List
 
 from app.models.base import BaseModel
 from app.models.tag import Tag
-from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy import JSON, Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 entities_tags = Table(
@@ -22,5 +22,6 @@ class Entity(BaseModel):
     active: Mapped[bool] = mapped_column(default=True)
     tags: Mapped[List[Tag]] = relationship(secondary=entities_tags)
 
-    # authentication
-    telegram_id: Mapped[int] = mapped_column(nullable=True, default=None)
+    # dictionary with telegram id, signal id, matrix id, etc.
+    # where to send an authentication link.
+    auth: Mapped[dict] = mapped_column(JSON, nullable=True, default=None)
