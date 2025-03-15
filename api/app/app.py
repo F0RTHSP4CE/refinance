@@ -2,10 +2,12 @@
 
 import logging
 
+import uvicorn
 from app.config import Config, get_config
 from app.errors.base import ApplicationError
 from app.routes.balance import balance_router
 from app.routes.entity import entity_router
+from app.routes.split import split_router
 from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
@@ -56,3 +58,7 @@ app.include_router(entity_router)
 app.include_router(tag_router)
 app.include_router(transaction_router)
 app.include_router(balance_router)
+app.include_router(split_router)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,25 +1,33 @@
 {% macro render_form(form, except=(), new_table=True) %}
-
 {% if new_table %}<table>{% endif %}
 
     {% for field in form %}
-    {% if field.name not in except%}
+    {% if field.name not in except %}
     <tr>
         {% if field.type not in ('CSRFTokenField', 'SubmitField') %}
         <td>{{ field.label() }}</td>
         {% endif %}
-        <td>{{ field(autocomplete="off") }}</td>
+        <td>
+            {% if field.data is not none %}
+            {{ field(autocomplete="off", value=field.data) }}
+            {% else %}
+            {{ field(autocomplete="off") }}
+            {% endif %}
+        </td>
     </tr>
     {% if field.description %}
     <tr>
         <td></td>
-        <td class="description"><small class="secondary">{{ field.description }}</small></td>
+        <td class="description">
+            <small class="secondary">{{ field.description }}</small>
+        </td>
     </tr>
     {% endif %}
     {% endif %}
     {% endfor %}
 
-{% if new_table %}</table>{% endif %}
+    {% if new_table %}
+</table>{% endif %}
 
 {% if form.errors %}
 <ul class="errors">

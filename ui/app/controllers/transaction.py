@@ -26,12 +26,6 @@ class TransactionForm(FlaskForm):
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
         render_kw={"placeholder": "GEL, USD, DOGE"},
     )
-    confirmed = SelectField(
-        "Confirmed",
-        choices=(True, False),
-        default=False,
-        description="Funds have been received by recipient.",
-    )
     submit = SubmitField("Submit")
 
 
@@ -63,27 +57,6 @@ def detail(id):
         "transaction/detail.jinja2",
         transaction=Transaction(**api.http("GET", f"transactions/{id}").json()),
     )
-
-
-@transaction_bp.route("/hx/search", methods=["GET", "POST"])
-@token_required
-def hx_search():
-    api = get_refinance_api_client()
-    entities = api.http(
-        "GET", "entities", params=dict(name=request.args.get("name"))
-    ).json()["items"]
-    return render_template("transaction/hx_search_results.jinja2", entities=entities)
-
-
-@transaction_bp.route("/hx/entity-name/<int:id>")
-@token_required
-def hx_entity_name(id):
-    api = get_refinance_api_client()
-    r = api.http("GET", f"entities/{id}")
-    if r.status_code == 200:
-        return jsonify(r.json()), 200
-    else:
-        return jsonify({}), 404
 
 
 @transaction_bp.route("/add", methods=["GET", "POST"])

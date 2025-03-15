@@ -2,13 +2,16 @@ services:
   api:
     volumes:
       - ./api:/opt/api
-      # - api-data:/opt/data
     command: --reload
+    env_file:
+      - secrets.env
 
   ui:
     volumes:
       - ./ui:/opt/ui
     command: --reload
+    env_file:
+      - secrets.env
 
 volumes:
   api-data:

@@ -1,92 +1,30 @@
 {% extends 'base.jinja2' %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
 {% from 'form.jinja2' import render_form %}
 
-{% block title %}New transaction{% endblock %}
+{% block title %}New Transaction{% endblock %}
 
 {% block content %}
 <form method="post">
     <table>
         <tr>
-            <td>{{ form.from_entity_name.label }}</td>
+            <td>From Entity</td>
             <td>
-                <input id="from_entity_name" type="search" name="name" placeholder="search..." autocomplete="off"
-                    hx-trigger="input changed delay:250ms, name" hx-get="hx/search"
-                    hx-target=" #from_entity_name_search_results" value="{{g.actor_entity.name}}">
-                id: {{ form.from_entity_id(id="from_entity_id", placeholder="id", class="small",
-                value=g.actor_entity.id) }}
+                {{ entity_selector('from_entity', g.actor_entity.name,
+                g.actor_entity.id) }}
             </td>
         </tr>
         <tr>
-            <td></td>
-            <td id="from_entity_name_search_results"></td>
-        </tr>
-
-        <tr>
-            <td>{{ form.to_entity_name.label }}</td>
+            <td>To Entity</td>
             <td>
-                <input id="to_entity_name" type="search" name="name" placeholder="search..." autocomplete="off"
-                    hx-trigger="input changed delay:250ms, name" hx-get="hx/search"
-                    hx-target=" #to_entity_name_search_results">
-                id: {{ form.to_entity_id(id="to_entity_id", placeholder="id", class="small") }}
+                {{ entity_selector('to_entity') }}
             </td>
         </tr>
-        <tr>
-            <td></td>
-            <td id="to_entity_name_search_results"></td>
-        </tr>
-
         {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id'),
         new_table=False) }}
     </table>
 </form>
 
-<script>
-    document.addEventListener('click', function (event) {
-        if (event.target.matches('.search-result-item')) {
-            const name = event.target.getAttribute('x-name');
-            const id = event.target.getAttribute('x-id');
-            const searchResultsId = event.target.closest('td').id;
-
-            if (searchResultsId === 'from_entity_name_search_results') {
-                document.getElementById('from_entity_name').value = name;
-                document.getElementById('from_entity_id').value = id;
-                document.getElementById('from_entity_id').focus();
-
-            } else if (searchResultsId === 'to_entity_name_search_results') {
-                document.getElementById('to_entity_name').value = name;
-                document.getElementById('to_entity_id').value = id;
-                document.getElementById('to_entity_id').focus();
-            }
-
-            document.getElementById(searchResultsId).innerHTML = '';
-        }
-    });
-
-    document.getElementById('from_entity_id').addEventListener('change', function () {
-        fetchEntityName('from_entity_id', 'from_entity_name');
-    });
-
-    document.getElementById('to_entity_id').addEventListener('change', function () {
-        fetchEntityName('to_entity_id', 'to_entity_name');
-    });
-
-    function fetchEntityName(entityIdField, entityNameField) {
-        const entityId = document.getElementById(entityIdField).value;
-        if (entityId) {
-            fetch(`/transactions/hx/entity-name/${entityId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.id) {
-                        document.getElementById(entityNameField).value = data.name;
-                    } else {
-                        alert('Entity not found');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching entity name:', error);
-                    alert('Error fetching entity name');
-                });
-        }
-    }
-</script>
+<!-- Include the JS widget file -->
+<script src="/static/js/entitySelector.js"></script>
 {% endblock %}
