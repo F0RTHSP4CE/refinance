@@ -3,6 +3,15 @@
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
+<details>
+    <summary>read manual</summary>
+    <p>Transaction — is a transfer of money from one Entity to another Entity.</p>
+    <p>Transaction can be created by anyone, from anyone to anyone.</p>
+    <p>Transaction can be Confirmed or Non-Confirmed if you decide that you want to create a draft one / wait for a
+        confirmation from other party. Non-Confirmed Transactions are like written cheques. Don't use them too
+        frequently.</p>
+</details>
+
 <p><a href="{{ url_for('transaction.add') }}">Add</a></p>
 {{ transaction_list(transactions) }}
 {% endblock %}

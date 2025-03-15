@@ -1,0 +1,29 @@
+{% extends "base.jinja2" %}
+{% block title %}Splits{% endblock %}
+{% block content %}
+<details>
+    <summary>read manual</summary>
+    <p>Split — a function that withdraws the same amount of money from all participants and sends it to one
+        recipient.
+    </p>
+    <p>Splits can be used to fairly distribute the cost of shared expenses, like rent or utilities.</p>
+    <p>Splits are also useful when you want to collectively buy something expensive.</p>
+    <p>An example:
+    <ul>
+        <li>you create a Split for 50 USD</li>
+        <li>5 people join your Split as participants</li>
+        <li>you Perform the Split</li>
+        <li>a confirmed Transaction for 10 USD is created from each participant to you</li>
+        <li>now you have 50 USD</li>
+    </ul>
+    </p>
+
+</details>
+
+<p><a href="{{ url_for('split.add') }}">Add</a></p>
+<ul>
+    {% for split in splits %}
+    <li><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.comment }}</a></li>
+    {% endfor %}
+</ul>
+{% endblock %}

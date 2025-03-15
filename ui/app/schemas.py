@@ -4,12 +4,17 @@ from decimal import Decimal
 
 
 @dataclass
-class Entity:
+class Base:
     id: int
-    name: str
     comment: str
     created_at: datetime
     modified_at: datetime | None
+    tags: list[dict]
+
+
+@dataclass
+class Entity(Base):
+    name: str
     auth: dict
     tags: list[dict]
     active: bool
@@ -22,8 +27,7 @@ class Balance:
 
 
 @dataclass
-class Transaction:
-    id: int
+class Transaction(Base):
     amount: Decimal
     actor_entity_id: int
     actor_entity: Entity
@@ -31,9 +35,17 @@ class Transaction:
     from_entity: Entity
     to_entity_id: int
     to_entity: Entity
-    created_at: datetime
-    modified_at: datetime | None
     currency: str
     confirmed: bool
-    tags: list[dict]
-    comment: str
+
+
+@dataclass
+class Split(Base):
+    amount: Decimal
+    actor_entity_id: int
+    actor_entity: Entity
+    recipient_entity_id: int
+    recipient_entity: Entity
+    participants: list[Entity]
+    performed: bool
+    currency: str
