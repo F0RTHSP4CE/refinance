@@ -10,6 +10,7 @@ from app.schemas.split import (
     SplitUpdateSchema,
 )
 from app.schemas.tag import TagSchema
+from app.schemas.transaction import TransactionSchema
 from app.services.split import SplitService
 from fastapi import APIRouter, Depends
 
@@ -64,7 +65,7 @@ def delete_split(
     return split_service.delete(split_id)
 
 
-@split_router.post("/{split_id}/perform", response_model=SplitSchema)
+@split_router.post("/{split_id}/perform", response_model=list[TransactionSchema])
 def perform_split(
     split_id: int,
     split_service: SplitService = Depends(),

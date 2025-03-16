@@ -7,12 +7,14 @@ from app.db import get_db
 from app.errors.split import (
     PerformedSplitCanNotBeDeleted,
     PerformedSplitCanNotBeEdited,
+    PerformedSplitParticipantsAreNotEditable,
     SplitDoesNotHaveParticipants,
     SplitParticipantAlreadyAdded,
     SplitParticipantAlreadyRemoved,
 )
 from app.models.entity import Entity
 from app.models.split import Split
+from app.models.transaction import Transaction
 from app.schemas.split import SplitCreateSchema, SplitFiltersSchema, SplitUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
 from app.services.base import BaseService
@@ -77,6 +79,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
 
     def add_participant(self, obj_id: int, entity_id: int) -> Split:
         db_obj = self.get(obj_id)
+        if db_obj.performed is True:
+            raise PerformedSplitParticipantsAreNotEditable
         entity = self._entity_service.get(entity_id)
         if entity not in db_obj.participants:
             db_obj.participants.append(entity)
@@ -87,6 +91,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
 
     def remove_participant(self, obj_id: int, entity_id: int) -> Split:
         db_obj = self.get(obj_id)
+        if db_obj.performed is True:
+            raise PerformedSplitParticipantsAreNotEditable
         entity = self._entity_service.get(entity_id)
         if entity not in db_obj.participants:
             db_obj.participants.remove(entity)
@@ -139,15 +145,16 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
             splits[user] = share.quantize(Decimal("0.01"))
         return splits
 
-    def perform(self, obj_id: int, actor_entity: Entity) -> Split:
+    def perform(self, obj_id: int, actor_entity: Entity) -> list[Transaction]:
         db_obj = self.get(obj_id)
         participants_ids = [x.id for x in db_obj.participants]
         shares: dict[int, Decimal] = self._calculate_split(
             amount=db_obj.amount, users=participants_ids
         )
         if shares:
+            tx_list: list[Transaction] = []
             for participant_id, participant_amount in shares.items():
-                self._transaction_service.create(
+                tx = self._transaction_service.create(
                     TransactionCreateSchema(
                         amount=participant_amount,
                         from_entity_id=participant_id,
@@ -158,7 +165,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
                     ),
                     actor_entity=actor_entity,
                 )
+                tx_list.append(tx)
             self.update(obj_id, SplitUpdateSchema(performed=True))
+            return tx_list
         else:
             raise SplitDoesNotHaveParticipants
-        return db_obj
