@@ -1,4 +1,6 @@
 {% extends "base.jinja2" %}
+{% from "split/macro_list.jinja2" import split_list with context %}
+
 {% block title %}Splits{% endblock %}
 {% block content %}
 <details>
@@ -6,8 +8,8 @@
     <p>Split — a function that withdraws the same amount of money from all participants and sends it to one
         recipient.
     </p>
+    <p>Splits are useful when you want to collectively buy something expensive.</p>
     <p>Splits can be used to fairly distribute the cost of shared expenses, like rent or utilities.</p>
-    <p>Splits are also useful when you want to collectively buy something expensive.</p>
     <p>An example:
     <ul>
         <li>you create a Split for 50 USD</li>
@@ -21,9 +23,5 @@
 </details>
 
 <p><a href="{{ url_for('split.add') }}">Add</a></p>
-<ul>
-    {% for split in splits %}
-    <li><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.comment }}</a></li>
-    {% endfor %}
-</ul>
+{{ split_list(splits) }}
 {% endblock %}

@@ -5,6 +5,7 @@ from typing import Any
 
 from app.db import get_db
 from app.errors.split import (
+    MinimalNumberOfParticipantsRequired,
     PerformedSplitCanNotBeDeleted,
     PerformedSplitCanNotBeEdited,
     PerformedSplitParticipantsAreNotEditable,
@@ -116,9 +117,6 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         Raises:
         ValueError: If `amount` is not a Decimal or if the users list is empty.
         """
-        if not isinstance(amount, Decimal):
-            raise ValueError("Amount must be a Decimal.")
-
         # Convert amount to exactly two decimal places.
         amount = amount.quantize(Decimal("0.01"))
 
@@ -147,6 +145,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
 
     def perform(self, obj_id: int, actor_entity: Entity) -> list[Transaction]:
         db_obj = self.get(obj_id)
+        if len(db_obj.participants) < 2:
+            raise MinimalNumberOfParticipantsRequired
         participants_ids = [x.id for x in db_obj.participants]
         shares: dict[int, Decimal] = self._calculate_split(
             amount=db_obj.amount, users=participants_ids

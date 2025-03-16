@@ -1,6 +1,6 @@
 """Split model"""
 
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 
 from app.models.base import BaseModel
 from app.models.entity import Entity
@@ -45,3 +45,19 @@ class Split(BaseModel):
     # future transaction details
     amount: Mapped[Decimal] = mapped_column(DECIMAL(scale=2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
+
+    @property
+    def share_preview(self) -> Decimal:
+        """
+        PREVIEW AMOUNT ONLY.
+        REAL SHARES ARE CALCULATED IN SPLIT SERVICE.
+
+        Calculates the share as the amount divided by the number of participants.
+        Returns a Decimal with exactly two decimal places.
+        If there are no participants, returns Decimal('0.00').
+        """
+        count = len(self.participants)
+        if count == 0:
+            return Decimal("0.00")
+        share = self.amount / Decimal(count)
+        return share.quantize(Decimal("0.01"), rounding=ROUND_DOWN)

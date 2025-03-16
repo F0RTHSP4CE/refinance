@@ -2,9 +2,42 @@
 {% block title %}Entities{% endblock %}
 {% block content %}
 <p><a href="{{ url_for('entity.add') }}">Add</a></p>
-<ul>
-    {% for entity in entities %}
-    <li><a href="{{ url_for('entity.detail', id=entity.id) }}">{{ entity.name }}</a></li>
-    {% endfor %}
-</ul>
+{% if entities %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Name</td>
+                <td>Comment</td>
+                <td>Tags</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entity in entities %}
+            <tr>
+                <td><a href="{{ url_for('entity.detail', id=entity.id) }}">{{ entity.id }}</a></td>
+                <td>
+                    <a href="{{ url_for('entity.detail', id=entity.id) }}">
+                        {{ entity.name }}
+                    </a>
+                </td>
+                <td>{{ entity.comment or ""}}</td>
+                <td>
+                    {% if entity.tags %}
+                    <ul>
+                        {% for tag in entity.tags %}
+                        <li>{{ tag.name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No entities.</p>
+{% endif %}
 {% endblock %}

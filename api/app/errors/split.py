@@ -31,3 +31,7 @@ class SplitDoesNotHaveParticipants(ApplicationError):
 class PerformedSplitParticipantsAreNotEditable(ApplicationError):
     error_code = 6007
     error = "Can not add/remove participants of a performed split."
+
+class MinimalNumberOfParticipantsRequired(ApplicationError):
+    error_code = 6008
+    error = "There should be at least 2 participants to perform the split."
