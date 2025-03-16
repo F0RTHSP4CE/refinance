@@ -48,4 +48,5 @@ class Split(Base):
     recipient_entity: Entity
     participants: list[Entity]
     performed: bool
+    share_preview: Decimal
     currency: str

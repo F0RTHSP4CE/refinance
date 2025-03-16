@@ -23,6 +23,7 @@ class SplitSchema(BaseReadSchema):
     amount: CurrencyDecimal
     currency: str
     performed: bool
+    share_preview: CurrencyDecimal
     tags: list[TagSchema]
 
 
