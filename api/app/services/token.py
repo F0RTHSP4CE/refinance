@@ -1,7 +1,8 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import time
 
 import jwt
 import requests
@@ -34,8 +35,9 @@ class TokenService:
     def _generate_new_token(self, entity_id: int) -> str:
         """Generate a new signed token with entity_id and current timestamp."""
         data = {
-            "sub": entity_id,
-            "iad": int(datetime.now(timezone.utc).timestamp()),
+            "sub": str(entity_id),
+            "iat": int(time.time()),
+            "exp": int(time.time() + timedelta(weeks=4).total_seconds()),
         }
         encoded_jwt = jwt.encode(data, self.config.secret_key, algorithm=self.ALGORITHM)
         return encoded_jwt
@@ -46,13 +48,13 @@ class TokenService:
             payload: dict[str, int] = jwt.decode(
                 token, self.config.secret_key, algorithms=[self.ALGORITHM]
             )
-            entity_id = payload.get("sub")
+            entity_id = int(payload.get("sub") or 0)
             if entity_id is not None:
                 return self.entity_service.get(entity_id)
             else:
                 raise TokenInvalid
-        except jwt.InvalidTokenError:
-            raise TokenInvalid
+        except jwt.InvalidTokenError as e:
+            raise TokenInvalid from e
 
     def generate_and_send_new_token(
         self,
