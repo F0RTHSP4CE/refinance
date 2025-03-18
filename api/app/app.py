@@ -1,6 +1,7 @@
 """FastAPI app initialization, exception handling"""
 
 import logging
+import traceback
 
 import uvicorn
 from app.config import Config, get_config
@@ -31,6 +32,7 @@ app.add_middleware(
 
 @app.exception_handler(ApplicationError)
 def application_exception_handler(request: Request, exc: ApplicationError):
+    traceback.print_exception(exc)
     e = JSONResponse(
         status_code=exc.http_code or 418,
         content={
@@ -39,17 +41,16 @@ def application_exception_handler(request: Request, exc: ApplicationError):
             "where": exc.where,
         },
     )
-    logger.warning(e.body.decode())
     return e
 
 
 @app.exception_handler(SQLAlchemyError)
 def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
+    traceback.print_exception(exc)
     e = JSONResponse(
         status_code=418,
         content={"error_code": 4000, "error": exc._message()},
     )
-    logger.warning(e.body.decode())
     return e
 
 
