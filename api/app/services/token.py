@@ -34,8 +34,8 @@ class TokenService:
     def _generate_new_token(self, entity_id: int) -> str:
         """Generate a new signed token with entity_id and current timestamp."""
         data = {
-            "e": entity_id,
-            "d": int(datetime.now(timezone.utc).timestamp()),
+            "sub": entity_id,
+            "iad": int(datetime.now(timezone.utc).timestamp()),
         }
         encoded_jwt = jwt.encode(data, self.config.secret_key, algorithm=self.ALGORITHM)
         return encoded_jwt
@@ -46,7 +46,7 @@ class TokenService:
             payload: dict[str, int] = jwt.decode(
                 token, self.config.secret_key, algorithms=[self.ALGORITHM]
             )
-            entity_id = payload.get("e")
+            entity_id = payload.get("sub")
             if entity_id is not None:
                 return self.entity_service.get(entity_id)
             else:
