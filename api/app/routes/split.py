@@ -23,7 +23,7 @@ def create_split(
     split_service: SplitService = Depends(),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
-    return split_service.create(split, actor_entity)
+    return split_service.create(split, overrides={"actor_entity_id": actor_entity.id})
 
 
 @split_router.get("/{split_id}", response_model=SplitSchema)

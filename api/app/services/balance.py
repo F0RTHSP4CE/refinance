@@ -93,7 +93,7 @@ class BalanceService:
             return total_by_currency
 
         result = BalanceSchema(
-            confirmed=sum_transactions(confirmed=True),
-            non_confirmed=sum_transactions(confirmed=False),
+            confirmed=sum_transactions(confirmed=True),  # type: ignore
+            non_confirmed=sum_transactions(confirmed=False),  # type: ignore
         )
         return result

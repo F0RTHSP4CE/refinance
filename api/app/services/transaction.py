@@ -59,13 +59,13 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         return query
 
     def create(
-        self, schema: TransactionCreateSchema, actor_entity: Entity
+        self, schema: TransactionCreateSchema, overrides: dict = {}
     ) -> Transaction:
         # invalidate balance cache
         self._balance_service.invalidate_cache_entry(schema.from_entity_id)
         self._balance_service.invalidate_cache_entry(schema.to_entity_id)
         # create tx
-        return super().create(schema, overrides={"actor_entity_id": actor_entity.id})
+        return super().create(schema, overrides)
 
     def update(
         self, obj_id: int, schema: TransactionUpdateSchema, overrides: dict = {}
