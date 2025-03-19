@@ -59,8 +59,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
             query = query.filter(self.model.performed == filters.performed)
         return query
 
-    def create(self, schema: SplitCreateSchema, actor_entity: Entity) -> Split:
-        return super().create(schema, overrides={"actor_entity_id": actor_entity.id})
+    def create(self, schema: SplitCreateSchema, overrides: dict = {}) -> Split:
+        return super().create(schema, overrides)
 
     def update(
         self, obj_id: int, schema: SplitUpdateSchema, overrides: dict = {}
@@ -163,7 +163,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
                         confirmed=True,
                         comment=f"{db_obj.comment} (split #{db_obj.id})",
                     ),
-                    actor_entity=actor_entity,
+                    overrides={"actor_entity_id": actor_entity.id},
                 )
                 tx_list.append(tx)
             self.update(obj_id, SplitUpdateSchema(performed=True))

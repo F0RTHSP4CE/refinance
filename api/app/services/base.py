@@ -12,6 +12,8 @@ from sqlalchemy.orm import Query, Session
 
 M = TypeVar("M", bound=BaseModel)  # model
 K = TypeVar("K", int, str)  # primary key
+BFS = TypeVar("BFS", bound=BaseFilterSchema)
+BUS = TypeVar("BUS", bound=BaseUpdateSchema)
 
 
 class BaseService(Generic[M]):
@@ -21,7 +23,7 @@ class BaseService(Generic[M]):
     def __init__(self, db: Session = Depends(get_db)):
         self.db = db
 
-    def create(self, schema: BaseUpdateSchema, overrides: dict = {}) -> M:
+    def create(self, schema: BUS, overrides: dict = {}) -> M:
         data = schema.dump()
         data = {**data, **overrides}
         new_obj = self.model(**data)
@@ -36,9 +38,7 @@ class BaseService(Generic[M]):
             raise NotFoundError(f"{self.model.__name__} id={obj_id}")
         return db_obj
 
-    def _apply_base_filters(
-        self, query: Query[M], filters: BaseFilterSchema
-    ) -> Query[M]:
+    def _apply_base_filters(self, query: Query[M], filters: BFS) -> Query[M]:
         """Common filters that are present for any database model"""
         if filters.comment is not None:
             query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
@@ -48,12 +48,12 @@ class BaseService(Generic[M]):
             query = query.filter(self.model.created_at <= filters.created_before)
         return query
 
-    def _apply_filters(self, query: Query[M], filters: BaseFilterSchema) -> Query[M]:
+    def _apply_filters(self, query: Query[M], filters: BFS) -> Query[M]:
         """Filters for a particular model. To be overridden by child class."""
         return query
 
     def get_all(
-        self, filters: BaseFilterSchema | None = None, skip=0, limit=100
+        self, filters: BFS | None = None, skip=0, limit=100
     ) -> PaginationSchema[M]:
         query = self.db.query(self.model)
         if filters:
@@ -64,7 +64,7 @@ class BaseService(Generic[M]):
         items = query.offset(skip).limit(limit).all()
         return PaginationSchema[M](items=items, total=total, skip=skip, limit=limit)
 
-    def update(self, obj_id: K, schema: BaseUpdateSchema, overrides: dict = {}) -> M:
+    def update(self, obj_id: K, schema: BUS, overrides: dict = {}) -> M:
         obj = self.get(obj_id)
         data = schema.dump()
         data = {**data, **overrides}

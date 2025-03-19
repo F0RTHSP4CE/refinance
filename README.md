@@ -88,7 +88,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [ ] currency exchange
 
 ### techdebt
-- [ ] fix parameters override with function signature redeclaration in services
+- [x] fix parameters override with function signature redeclaration in services
 - [ ] add reserved entities, id ranges and bootstrapping
 
 ## tests notice
