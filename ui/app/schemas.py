@@ -15,7 +15,7 @@ class Base:
 @dataclass
 class Entity(Base):
     name: str
-    auth: dict
+    auth: dict | None
     tags: list[dict]
     active: bool
 

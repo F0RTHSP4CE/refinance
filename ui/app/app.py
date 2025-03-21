@@ -7,10 +7,18 @@ from app.controllers.split import split_bp
 from app.controllers.transaction import transaction_bp
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
-from flask import Flask, g, jsonify, redirect, render_template, request, session, url_for
-from flask_cors import CORS
-
 from app.middlewares.auth import token_required
+from flask import (
+    Flask,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = "supersecret"
@@ -62,7 +70,6 @@ def hx_entity_name(id):
         return jsonify(r.json()), 200
     else:
         return jsonify({}), 404
-
 
 
 # dev

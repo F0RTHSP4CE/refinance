@@ -1,8 +1,8 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
 import logging
-from datetime import datetime, timedelta, timezone
 import time
+from datetime import datetime, timedelta, timezone
 
 import jwt
 import requests
@@ -110,23 +110,24 @@ class TokenService:
 
             sent_count = 0
 
-            # Send via Telegram if available
-            if "telegram_id" in entity.auth:
-                try:
-                    response = requests.post(
-                        f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
-                        data={
-                            "chat_id": entity.auth["telegram_id"],
-                            "text": login_link,
-                        },
-                        timeout=5,
-                    )
-                    if response.status_code == 200:
-                        sent_count += 1
-                    else:
-                        logger.error(f"response: {response.text}")
-                except Exception:
-                    pass
+            if isinstance(entity.auth, dict):
+                # Send via Telegram if available
+                if "telegram_id" in entity.auth:
+                    try:
+                        response = requests.post(
+                            f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
+                            data={
+                                "chat_id": entity.auth["telegram_id"],
+                                "text": login_link,
+                            },
+                            timeout=5,
+                        )
+                        if response.status_code == 200:
+                            sent_count += 1
+                        else:
+                            logger.error(f"response: {response.text}")
+                    except Exception:
+                        pass
 
             report.message_sent = sent_count > 0
 

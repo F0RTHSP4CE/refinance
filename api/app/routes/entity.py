@@ -1,6 +1,5 @@
 """API routes for Entity manipulation"""
 
-from app.errors.entity import EntitiesAlreadyPresent
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -15,23 +14,6 @@ from app.services.entity import EntityService
 from fastapi import APIRouter, Depends
 
 entity_router = APIRouter(prefix="/entities", tags=["Entities"])
-
-
-@entity_router.post("/first", response_model=EntitySchema)
-def create_first_entity(
-    entity: EntityCreateSchema,
-    entity_service: EntityService = Depends(),
-):
-    """
-    Create very first Entity.
-    Does NOT require authentication (X-Token Header).
-
-    Useful for creating first account after deploying an application
-    """
-    if entity_service.get_all().total == 0:
-        return entity_service.create(entity)
-    else:
-        raise EntitiesAlreadyPresent
 
 
 @entity_router.post("", response_model=EntitySchema)
