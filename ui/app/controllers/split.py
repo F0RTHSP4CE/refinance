@@ -83,7 +83,7 @@ def detail(id):
     return render_template(
         "split/detail.jinja2",
         split=split,
-)
+    )
 
 
 @split_bp.route("/<int:id>/delete", methods=["GET", "POST"])

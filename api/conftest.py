@@ -8,8 +8,9 @@ import traceback
 import pytest
 from app.app import app
 from app.config import Config, get_config
+from app.db import DatabaseConnection
 from app.services.token import TokenService
-from fastapi import Depends
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
 _original_request = TestClient.request
@@ -50,6 +51,11 @@ def test_app():
     )
     app.dependency_overrides = {get_config: lambda: test_config}
 
+    # trigger table creation and bootstrapping
+    db_conn = DatabaseConnection(config=test_config)
+    db_conn.create_tables()
+    db_conn.seed_bootstrap_data()
+
     # create private token generator route to be used only from tests
     @app.get("/tokens/{entity_id}", include_in_schema=False)
     def _generate_token(
@@ -79,7 +85,5 @@ def token_factory(test_app: TestClient):
 
 @pytest.fixture(scope="class")
 def token(test_app: TestClient, token_factory):
-    """Create a very first Entity and return its token"""
-    t = test_app.post("/entities/first", json={"name": "test"})
-    assert t.status_code == 200
+    """get token of the first (system) entity"""
     return token_factory(1)
