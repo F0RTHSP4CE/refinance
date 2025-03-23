@@ -15,8 +15,10 @@ a {
   text-decoration: none;
 }
 
-th {
+th,
+thead {
   text-align: left;
+  font-weight: bold;
 }
 
 td {
@@ -61,6 +63,23 @@ input.small {
 
 .description {
   padding-bottom: 0.5rem;
+}
+
+/* TAG BADGE */
+.tag-badge {
+  display: inline-block;
+  /* background-color: black; */
+  padding: 0.1rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  border: 1px solid;
+  border-radius: 0.2rem;
+  vertical-align: baseline;
+  opacity: 0.8;
+}
+
+.tag-badge a {
+  text-decoration: none;
 }
 
 /* COLORS  */
