@@ -1,0 +1,12 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% block title %}Edit tag {{ tag_inline(tag) }}{% endblock %}
+
+{% block content %}
+<form method="post">
+    {{ render_form(form) }}
+</form>
+
+{% endblock %}
