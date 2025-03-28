@@ -15,6 +15,7 @@ from app.schemas.transaction import (
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from app.services.tag import TagService
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
@@ -24,10 +25,14 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     model = Transaction
 
     def __init__(
-        self, db: Session = Depends(get_db), balance_service: BalanceService = Depends()
+        self,
+        db: Session = Depends(get_db),
+        balance_service: BalanceService = Depends(),
+        tag_service: TagService = Depends(),
     ):
         self.db = db
         self._balance_service = balance_service
+        self._tag_service = tag_service
 
     def _apply_filters(
         self, query: Query[Transaction], filters: TransactionFiltersSchema

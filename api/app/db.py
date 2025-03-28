@@ -4,14 +4,13 @@ import logging
 import os
 from typing import Any, Generator, List, Type
 
+from app.bootstrap import BOOTSTRAP
+from app.config import Config, get_config
+from app.models.base import BaseModel
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
-
-from app.config import Config, get_config
-from app.models.base import BaseModel
-from app.bootstrap import BOOTSTRAP
 
 logger = logging.getLogger(__name__)
 

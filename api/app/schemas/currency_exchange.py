@@ -2,20 +2,17 @@
 
 from decimal import Decimal
 
-from app.schemas.base import CurrencyDecimal
-from app.schemas.entity import EntitySchema
-from pydantic import BaseModel
-
-from api.app.schemas.transaction import TransactionSchema
+from app.schemas.base import BaseSchema, CurrencyDecimal
+from app.schemas.transaction import TransactionSchema
 
 
-class CurrencyExchangePreviewRequestSchema(BaseModel):
+class CurrencyExchangePreviewRequestSchema(BaseSchema):
     source_currency: str
-    source_amount: CurrencyDecimal
+    source_amount: Decimal
     target_currency: str
 
 
-class CurrencyExchangePreviewResponseSchema(BaseModel):
+class CurrencyExchangePreviewResponseSchema(BaseSchema):
     source_currency: str
     source_amount: CurrencyDecimal
     target_currency: str
@@ -23,14 +20,14 @@ class CurrencyExchangePreviewResponseSchema(BaseModel):
     rate: CurrencyDecimal
 
 
-class CurrencyExchangeRequestSchema(BaseModel):
+class CurrencyExchangeRequestSchema(BaseSchema):
     entity_id: int
     source_currency: str
-    source_amount: CurrencyDecimal
+    source_amount: Decimal
     target_currency: str
 
 
-class CurrencyExchangeReceiptSchema(BaseModel):
+class CurrencyExchangeReceiptSchema(BaseSchema):
     source_currency: str
     source_amount: CurrencyDecimal
     target_currency: str
