@@ -52,6 +52,9 @@ class CurrencyDecimal:
             s = s.rstrip("0").rstrip(".")
         return s
 
+    def to_decimal(self) -> Decimal:
+        return Decimal(self.value)
+
     def __repr__(self):
         return str(self)
 
