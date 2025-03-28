@@ -30,7 +30,7 @@ class TransactionSchema(BaseReadSchema):
 class TransactionCreateSchema(BaseUpdateSchema):
     to_entity_id: int
     from_entity_id: int
-    amount: Decimal
+    amount: CurrencyDecimal
     currency: str
     confirmed: bool | None = False
 
