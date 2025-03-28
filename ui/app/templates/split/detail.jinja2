@@ -1,0 +1,90 @@
+{% extends "base.jinja2" %}
+
+{% block title %}Split {{ split.id }}{% endblock %}
+
+{% block content %}
+<table>
+    <tr>
+        <td>ID</td>
+        <td>{{ split.id }}</td>
+    </tr>
+    <tr>
+        <td>Comment</td>
+        <td>{{ split.comment or "" }}</td>
+    </tr>
+    <tr>
+        <td>Actor</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
+                {{ split.actor_entity.name }}
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>Recipient</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
+                {{ split.recipient_entity.name }}
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>Amount</td>
+        <td>{{ split.amount }}</td>
+    </tr>
+    <tr>
+        <td>Currency</td>
+        <td>{{ split.currency }}</td>
+    </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ split.created_at }}</td>
+    </tr>
+    <tr>
+        <td>Modified at</td>
+        <td>{{ split.modified_at or "" }}</td>
+    </tr>
+    <tr>
+        <td>Participants</td>
+        <td>
+            <table>
+                <tbody>
+                    {% for participant in split.participants %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('entity.detail', id=participant.id) }}">
+                                {{ participant.name }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td>Performed</td>
+        <td>{{ split.performed }}</td>
+    </tr>
+    <tr>
+        <td>Tags</td>
+        <td>
+            <table>
+                <tbody>
+                    {% for tag in split.tags %}
+                    <tr>
+                        <td>{{ tag.name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </td>
+    </tr>
+</table>
+
+{% if not split.performed %}
+<p><a href="{{ url_for('split.perform', id=split.id) }}">Perform</a></p>
+<p><a href="{{ url_for('split.edit', id=split.id) }}">Edit</a></p>
+<p><a href="{{ url_for('split.delete', id=split.id) }}">Delete</a></p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.jinja2' %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}New split{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        <tr>
+            <td>{{ form.recipient_entity_name.label }}</td>
+            <td>
+                {{ entity_selector('recipient_entity', g.actor_entity.name, g.actor_entity.id) }}
+            </td>
+        </tr>
+        {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id'), new_table=False) }}
+    </table>
+</form>
+
+<!-- Include the JS widget file -->
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}

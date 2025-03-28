@@ -34,12 +34,6 @@ class TransactionCreateSchema(BaseUpdateSchema):
     currency: str
     confirmed: bool | None = False
 
-    @field_validator("amount")
-    def amount_must_be_positive(cls, v):
-        if v > 0:
-            return v
-        raise ValueError("Amount must be positive")
-
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()

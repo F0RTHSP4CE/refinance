@@ -33,6 +33,7 @@
     <tr>
         <td>Authentication</td>
         <td>
+            {% if entity.auth %}
             <table>
                 <thead>
                     <tr>
@@ -55,7 +56,9 @@
                     {% endfor %}
                 </tbody>
             </table>
-
+            {% else %}
+            -
+            {% endif %}
         </td>
     </tr>
 </table>
