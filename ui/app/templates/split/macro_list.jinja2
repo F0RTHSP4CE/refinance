@@ -1,0 +1,59 @@
+{% macro split_list(splits) %}
+{% if splits %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Actor</td>
+                <td>Created At</td>
+                <td>Recipient</td>
+                <td>Comment</td>
+                <td>Amount</td>
+                <td>≈Share</td>
+                <td>Currency</td>
+                <td>Participants</td>
+                <td>Performed</td>
+                <td>Tags</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for split in splits %}
+            <tr>
+                <td><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.id }}</a></td>
+
+                <td>
+                    <a href="{{ url_for('entity.detail', id=split.actor_entity_id) }}">
+                        {{ split.actor_entity.name }}
+                    </a>
+                </td>
+                <td>{{ split.created_at }}</td>
+                <td>
+                    <a href="{{ url_for('entity.detail', id=split.recipient_entity_id) }}">
+                        {{ split.recipient_entity.name }}
+                    </a>
+                </td>
+                <td>{{ split.comment or ""}}</td>
+                <td class="right-align">{{ split.amount }}</td>
+                <td class="right-align">{{ split.share_preview }}</td>
+                <td>{{ split.currency | upper }}</td>
+                <td>{{ split.participants | length or "" }}</td>
+                <td>{{ split.performed }}</td>
+                <td>
+                    {% if split.tags %}
+                    <ul>
+                        {% for tag in split.tags %}
+                        <li>{{ tag.name }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No splits.</p>
+{% endif %}
+{% endmacro %}

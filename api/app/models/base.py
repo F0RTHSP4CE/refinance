@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, Integer
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -12,9 +12,11 @@ from sqlalchemy.sql import func
 class BaseModel(DeclarativeBase):
     # do not create separate table for this class
     __abstract__ = True
+    # force AUTOINCREMENT statement for sqlite, as this dialect omits it by default, but we do need sqlite_sequence table for correct seeding.
+    __table_args__ = {"sqlite_autoincrement": True}
 
     # everything should have an id and a comment
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     comment: Mapped[Optional[str]]
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
