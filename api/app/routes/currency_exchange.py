@@ -12,7 +12,7 @@ from app.services.currency_exchange import CurrencyExchangeService
 from fastapi import APIRouter, Depends
 
 currency_exchange_router = APIRouter(
-    prefix="/currency_exchanges", tags=["CurrencyExchange"]
+    prefix="/currency_exchange", tags=["CurrencyExchange"]
 )
 
 
@@ -22,9 +22,9 @@ currency_exchange_router = APIRouter(
 def exchange(
     exchange: CurrencyExchangeRequestSchema,
     currency_exchange_service: CurrencyExchangeService = Depends(),
-    _: Entity = Depends(get_entity_from_token),  # auth
+    actor_entity: Entity = Depends(get_entity_from_token),  # auth
 ):
-    return currency_exchange_service.exchange(exchange)
+    return currency_exchange_service.exchange(exchange, actor_entity)
 
 
 @currency_exchange_router.post(
@@ -38,7 +38,7 @@ def preview(
     return currency_exchange_service.preview(preview)
 
 
-@currency_exchange_router.get("/rates", response_model=dict)
+@currency_exchange_router.get("/rates")
 def rates(
     currency_exchange_service: CurrencyExchangeService = Depends(),
     _: Entity = Depends(get_entity_from_token),  # auth
