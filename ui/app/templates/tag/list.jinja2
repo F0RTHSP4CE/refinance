@@ -1,0 +1,31 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% block title %}Tags{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('tag.add') }}">Add</a></p>
+{% if tags %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>Name</td>
+                <td>Comment</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tag in tags %}
+            <tr>
+                <td>
+                    {{ tag_inline(tag) }}
+                </td>
+                <td>{{ tag.comment or ""}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No tags.</p>
+{% endif %}
+{% endblock %}
