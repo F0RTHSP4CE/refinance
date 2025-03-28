@@ -5,6 +5,7 @@ from app.controllers.entity import entity_bp
 from app.controllers.index import index_bp
 from app.controllers.split import split_bp
 from app.controllers.transaction import transaction_bp
+from app.controllers.tag import tag_bp
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
@@ -29,6 +30,7 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(entity_bp, url_prefix="/entities")
 app.register_blueprint(transaction_bp, url_prefix="/transactions")
 app.register_blueprint(split_bp, url_prefix="/splits")
+app.register_blueprint(tag_bp, url_prefix="/tags")
 
 
 @app.errorhandler(ApplicationError)

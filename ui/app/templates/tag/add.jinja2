@@ -1,0 +1,10 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}New tag{% endblock %}
+
+{% block content %}
+<form method="post">
+    {{ render_form(form) }}
+</form>
+{% endblock %}
