@@ -1,0 +1,31 @@
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% macro tag_manager(model, entity_id, tags, available_tags) %}
+<div class="tag-manager" id="{{ model }}-tag-manager-{{ entity_id }}">
+    {% for tag in tags %}
+    <span class="tag-item">
+        {{ tag_inline(tag) }}
+        {# Remove tag button with hardcoded URL #}
+        <form action="/entities/{{ entity_id }}/tags/remove" method="post" class="remove-tag-form"
+            style="display:inline;">
+            <input type="hidden" name="entity_id" value="{{ entity_id }}">
+            <input type="hidden" name="tag_id" value="{{ tag.id }}">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="submit" title="Remove tag">x</button>
+        </form>
+    </span>
+    {% endfor %}
+
+    {# Add tag form with hardcoded URL using an interactive selector #}
+    <form action="/entities/{{ entity_id }}/tags/add" method="post" class="add-tag-form" style="display:inline;">
+        <input type="hidden" name="entity_id" value="{{ entity_id }}">
+        <select name="tag_id" id="tag-selector-{{ entity_id }}" class="form-control" required>
+            <option value="" disabled selected>-</option>
+            {% for tag in available_tags %}
+            <option value="{{ tag.id }}">{{ tag.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Add Tag</button>
+    </form>
+</div>
+{% endmacro %}

@@ -1,7 +1,7 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Transaction
-from flask import Blueprint, redirect, render_template, url_for
+from app.schemas import Balance, Entity, Tag, Transaction
+from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FormField, StringField, SubmitField
 from wtforms.validators import DataRequired
@@ -96,11 +96,13 @@ def edit(id):
         api.http("PATCH", f"entities/{id}", data=combined_data)
         return redirect(url_for("entity.detail", id=id))
 
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     return render_template(
         "entity/edit.jinja2",
         entity=entity,
         entity_form=entity_form,
         auth_form=auth_form,
+        all_tags=all_tags,
     )
 
 
@@ -120,3 +122,21 @@ def detail(id):
         balance=Balance(**balance_data),
         transactions=[Transaction(**x) for x in transactions_data],
     )
+
+
+@entity_bp.route("/<int:entity_id>/tags/add", methods=["POST"])
+@token_required
+def add_tag(entity_id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("POST", f"entities/{entity_id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("entity.edit", id=entity_id))
+
+
+@entity_bp.route("/<int:entity_id>/tags/remove", methods=["POST"])
+@token_required
+def remove_tag(entity_id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("DELETE", f"entities/{entity_id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("entity.edit", id=entity_id))

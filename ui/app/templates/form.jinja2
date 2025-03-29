@@ -9,7 +9,8 @@
         {% endif %}
         <td>
             {% if field.data is not none %}
-            {{ field(autocomplete="off", value=field.data or field.label.text) }}
+            {{ field(autocomplete="off", value=field.data or (field.label.text if field.type == 'SubmitField' else ''))
+            }}
             {% else %}
             {{ field(autocomplete="off") }}
             {% endif %}
