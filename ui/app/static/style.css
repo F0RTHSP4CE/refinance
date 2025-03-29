@@ -15,6 +15,11 @@ a {
   text-decoration: none;
 }
 
+table td {
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+
 th,
 thead {
   text-align: left;
@@ -100,9 +105,10 @@ nav a:hover {
   color: white;
 }
 
-table tr:nth-child(even) {
+table tr:not(:has(input[type="submit"])):nth-child(even) {
   background-color: #f8f8f8;
 }
+
 
 .amount-negative {
   color: red;
