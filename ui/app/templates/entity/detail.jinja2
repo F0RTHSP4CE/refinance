@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
 
 {% block title %}Entity {{ entity.name }}{% endblock %}
 
@@ -17,6 +18,14 @@
     <tr>
         <td>Comment</td>
         <td>{{ entity.comment or "" }}</td>
+    </tr>
+    <tr>
+        <td>Tags</td>
+        <td>
+            {% for tag in entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
     </tr>
     <tr>
         <td>Active</td>
@@ -60,6 +69,7 @@
             -
             {% endif %}
         </td>
+
     </tr>
 </table>
 </p>

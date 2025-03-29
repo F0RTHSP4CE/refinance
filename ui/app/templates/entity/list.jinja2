@@ -1,4 +1,6 @@
 {% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
 {% block title %}Entities{% endblock %}
 {% block content %}
 <p><a href="{{ url_for('entity.add') }}">Add</a></p>
@@ -7,31 +9,25 @@
     <table>
         <thead>
             <tr>
-                <td>ID</td>
                 <td>Name</td>
-                <td>Comment</td>
                 <td>Tags</td>
+                <td>Comment</td>
             </tr>
         </thead>
         <tbody>
             {% for entity in entities %}
             <tr>
-                <td><a href="{{ url_for('entity.detail', id=entity.id) }}">{{ entity.id }}</a></td>
                 <td>
                     <a href="{{ url_for('entity.detail', id=entity.id) }}">
                         {{ entity.name }}
                     </a>
                 </td>
-                <td>{{ entity.comment or ""}}</td>
                 <td>
-                    {% if entity.tags %}
-                    <ul>
-                        {% for tag in entity.tags %}
-                        <li>{{ tag.name }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
+                    {% for tag in entity.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
                 </td>
+                <td>{{ entity.comment or ""}}</td>
             </tr>
             {% endfor %}
         </tbody>

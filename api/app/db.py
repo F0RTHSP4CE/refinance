@@ -4,10 +4,9 @@ import logging
 import os
 from typing import Any, Generator, List, Type
 
+from app.bootstrap import BOOTSTRAP
 from app.config import Config, get_config
 from app.models.base import BaseModel
-from app.models.entity import ENTITY_BOOTSTRAP, Entity
-from app.models.tag import TAG_BOOTSTRAP, Tag
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -62,25 +61,20 @@ class DatabaseConnection:
         This method is called once during initialization.
         """
         with self.get_session() as session:
-            try:
-                self._seed_model(
-                    session=session,
-                    model=Tag,
-                    seeds=TAG_BOOTSTRAP,
-                    sequence_start=100,
-                )
-                self._seed_model(
-                    session=session,
-                    model=Entity,
-                    seeds=ENTITY_BOOTSTRAP,
-                    sequence_start=100,
-                )
-                session.commit()
-                logger.info("Bootstrap data seeding completed successfully.")
-            except SQLAlchemyError as exc:
-                session.rollback()
-                logger.exception("Error occurred during bootstrap data seeding.")
-                raise exc
+            for model, seeds in BOOTSTRAP.items():
+                try:
+                    self._seed_model(
+                        session=session,
+                        model=model,
+                        seeds=seeds,
+                        sequence_start=100,
+                    )
+                    session.commit()
+                    logger.info("Bootstrap data seeding completed successfully.")
+                except SQLAlchemyError as exc:
+                    session.rollback()
+                    logger.exception("Error occurred during bootstrap data seeding.")
+                    raise exc
 
     def _seed_model(
         self,

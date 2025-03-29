@@ -1,0 +1,18 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Currency exchange preview{% endblock %}
+
+{% block content %}
+<p>Exchange <strong>{{ preview.source_amount }}</strong> {{ preview.source_currency.upper() }} to <strong>{{
+        preview.target_amount }}</strong> {{ preview.target_currency.upper() }}? Rate is {{ preview.rate }}</p>
+
+<form method="post" action="{{ url_for('currency_exchange.exchange') }}">
+    <input type="hidden" name="source_amount" value="{{ form.data.source_amount }}">
+    <input type="hidden" name="source_currency" value="{{ form.data.source_currency }}">
+    <input type="hidden" name="target_amount" value="{{ form.data.target_amount }}">
+    <input type="hidden" name="target_currency" value="{{ form.data.target_currency }}">
+    <input type="hidden" name="entity_id" value="{{ form.data.entity_id }}">
+    <button type="submit">Exchange</button>
+</form>
+{% endblock %}

@@ -9,14 +9,18 @@ class Base:
     comment: str
     created_at: datetime
     modified_at: datetime | None
-    tags: list[dict]
+
+
+@dataclass
+class Tag(Base):
+    name: str
 
 
 @dataclass
 class Entity(Base):
     name: str
     auth: dict | None
-    tags: list[dict]
+    tags: list[Tag]
     active: bool
 
 
@@ -37,6 +41,7 @@ class Transaction(Base):
     to_entity: Entity
     currency: str
     confirmed: bool
+    tags: list[Tag]
 
 
 @dataclass
@@ -50,3 +55,25 @@ class Split(Base):
     performed: bool
     share_preview: Decimal
     currency: str
+    tags: list[Tag]
+
+
+@dataclass
+class CurrencyExchangePreviewResponse:
+    entity_id: int
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+
+
+@dataclass
+class CurrencyExchangeReceipt:
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+
+    transactions: list[Transaction]
