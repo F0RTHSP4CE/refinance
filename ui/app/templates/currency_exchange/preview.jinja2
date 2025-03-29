@@ -4,15 +4,15 @@
 {% block title %}Currency exchange preview{% endblock %}
 
 {% block content %}
-<p>Exchange {{ preview.source_amount }} {{ preview.source_currency }} to <strong>{{
-        preview.target_amount }} {{
-        preview.target_currency }}</strong>? Rate is {{ preview.rate }}</p>
+<p>Exchange <strong>{{ preview.source_amount }}</strong> {{ preview.source_currency.upper() }} to <strong>{{
+        preview.target_amount }}</strong> {{ preview.target_currency.upper() }}? Rate is {{ preview.rate }}</p>
 
 <form method="post" action="{{ url_for('currency_exchange.exchange') }}">
-    <input type="hidden" name="source_amount" value="{{ preview.source_amount }}">
-    <input type="hidden" name="source_currency" value="{{ preview.source_currency }}">
-    <input type="hidden" name="target_currency" value="{{ preview.target_currency }}">
-    <input type="hidden" name="entity_id" value="{{ preview.entity_id }}">
+    <input type="hidden" name="source_amount" value="{{ form.data.source_amount }}">
+    <input type="hidden" name="source_currency" value="{{ form.data.source_currency }}">
+    <input type="hidden" name="target_amount" value="{{ form.data.target_amount }}">
+    <input type="hidden" name="target_currency" value="{{ form.data.target_currency }}">
+    <input type="hidden" name="entity_id" value="{{ form.data.entity_id }}">
     <button type="submit">Exchange</button>
 </form>
 {% endblock %}

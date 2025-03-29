@@ -112,6 +112,68 @@ class TestCurrencyExchangeEndpoints:
         assert "usd" in currencies
         assert "eur" in currencies
 
+    def test_preview_with_target(self, test_app: TestClient, token, entity_one):
+        """
+        Test the /currency_exchange/preview endpoint when only target_amount is provided.
+        With fixed rates:
+          - Conversion rate from USD to EUR = (3.00 / 3.50) ≈ 0.8571
+          - Reverse conversion = 1.1667 so the displayed rate = 1.17
+          - To receive 100.00 EUR, required USD = 100.00 / (3.00/3.50) ≈ 116.67 USD.
+        """
+        payload = {
+            "entity_id": entity_one,
+            "source_currency": "usd",
+            "target_currency": "eur",
+            "target_amount": "100.00",
+        }
+        response = test_app.post(
+            "/currency_exchange/preview",
+            json=payload,
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Expected: source_amount computed as 100.00 / (3.00/3.50) = 116.67
+        assert Decimal(data["source_amount"]) == Decimal("116.67")
+        assert Decimal(data["target_amount"]) == Decimal("100.00")
+        assert Decimal(data["rate"]) == Decimal("1.17")
+        assert data["entity_id"] == entity_one
+        assert data["source_currency"].lower() == "usd"
+        assert data["target_currency"].lower() == "eur"
+
+    def test_exchange_with_target(self, test_app: TestClient, token, entity_one):
+        """
+        Test the /currency_exchange/exchange endpoint when only target_amount is provided.
+        For a request converting to receive 150.00 EUR from USD:
+          - Required USD = 150.00 / (3.00/3.50) = 175.00 USD.
+          - Displayed rate should be 1.17.
+          - The receipt should include two transactions: one debiting USD and one crediting EUR.
+        """
+        payload = {
+            "entity_id": entity_one,
+            "source_currency": "usd",
+            "target_currency": "eur",
+            "target_amount": "150.00",
+        }
+        response = test_app.post(
+            "/currency_exchange/exchange",
+            json=payload,
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Expected: source_amount computed as 150.00 / (3.00/3.50) = 175.00 USD.
+        assert Decimal(data["source_amount"]) == Decimal("175.00")
+        assert Decimal(data["target_amount"]) == Decimal("150.00")
+        assert Decimal(data["rate"]) == Decimal("1.17")
+        transactions = data.get("transactions", [])
+        assert isinstance(transactions, list)
+        assert len(transactions) == 2
+        # One transaction should be in USD and the other in EUR.
+        currencies = {tx["currency"].lower() for tx in transactions}
+        assert "usd" in currencies
+        assert "eur" in currencies
+
     def test_rates(self, test_app: TestClient, token):
         """
         Test the /currency_exchange/rates endpoint.

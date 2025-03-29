@@ -4,33 +4,33 @@ from app.schemas import CurrencyExchangePreviewResponse, CurrencyExchangeReceipt
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms.validators import DataRequired, NumberRange, Optional
 from wtforms.widgets import HiddenInput
 
 currency_exchange_bp = Blueprint("currency_exchange", __name__)
 
 
 class CurrencyExchangeForm(FlaskForm):
-    entity_name = StringField("Entity")
     entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
-
     source_amount = FloatField(
-        "Amount",
-        validators=[DataRequired()],
-        render_kw={"placeholder": "10.00"},
+        "Source Amount", render_kw={"placeholder": "10.00"}, validators=[Optional()]
     )
     source_currency = StringField(
-        "Source Currency",
+        "Source Currency →",
+        description="Amount must be either source or target.<br>Leave another amount blank.",
         validators=[DataRequired()],
         render_kw={"placeholder": "GEL, USD"},
     )
+    target_amount = FloatField(
+        "Target Amount", render_kw={"placeholder": "20.00"}, validators=[Optional()]
+    )
     target_currency = StringField(
-        "Target Currency",
+        "Target Currency ←",
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
         render_kw={"placeholder": "EUR, RUB"},
     )
-    preview = SubmitField("Preview")
+    entity_name = StringField("Entity")
 
 
 @currency_exchange_bp.route("/", methods=["GET", "POST"])
@@ -41,7 +41,9 @@ def index():
         api = get_refinance_api_client()
         r = api.http("POST", "currency_exchange/preview", data=form.data)
         preview = CurrencyExchangePreviewResponse(**r.json())
-        return render_template("currency_exchange/preview.jinja2", preview=preview)
+        return render_template(
+            "currency_exchange/preview.jinja2", preview=preview, form=form
+        )
     else:
         return render_template("currency_exchange/index.jinja2", form=form)
 

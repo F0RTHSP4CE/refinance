@@ -89,8 +89,8 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
             tags=[deposit_tag, payprovider_tag],
         ),
         # residents
-        # Entity(
-        #     id=100, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
-        # ),
+        Entity(
+            id=100, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
+        ),
     ],
 }
