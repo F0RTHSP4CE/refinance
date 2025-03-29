@@ -25,9 +25,3 @@ class Entity(BaseModel):
     # dictionary with telegram id, signal id, matrix id, etc.
     # where to send an authentication link.
     auth: Mapped[dict] = mapped_column(JSON, nullable=True, default=None)
-
-
-# this list is used by db.py to create system entities
-ENTITY_BOOTSTRAP: list[Entity] = [
-    Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace"),
-]

@@ -1,0 +1,28 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+
+{% block title %}Currency exchange{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        {{ render_form(form, except=('entity_name', 'entity_id',),
+        new_table=False) }}
+        <tr>
+            <td>Entity</td>
+            <td>
+                {{ entity_selector('entity', g.actor_entity.name,
+                g.actor_entity.id) }}
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <button type="submit">Preview</button>
+            </td>
+        </tr>
+    </table>
+</form>
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}

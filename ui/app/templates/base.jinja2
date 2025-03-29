@@ -24,7 +24,10 @@
             {% if g.actor_entity %}
             <li><a href="{{ url_for('transaction.list') }}">Transactions</a></li>
             <li><a href="{{ url_for('split.list') }}">Splits</a></li>
+            <li><a href="{{ url_for('currency_exchange.index') }}">Exchange</a></li>
+            <li>·</li>
             <li><a href="{{ url_for('entity.list') }}">Entities</a></li>
+            <li><a href="{{ url_for('tag.list') }}">Tags</a></li>
 
             <li class="user">
                 Welcome, <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name

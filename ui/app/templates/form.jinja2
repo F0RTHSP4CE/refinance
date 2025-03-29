@@ -4,14 +4,15 @@
     {% for field in form %}
     {% if field.name not in except %}
     <tr>
-        {% if field.type not in ('CSRFTokenField', 'SubmitField') %}
+        {% if field.type not in ('CSRFTokenField', 'SubmitField') and field.widget.__class__.__name__ != 'HiddenInput'%}
         <td>{{ field.label() }}</td>
         {% endif %}
         <td>
             {% if field.data is not none %}
-            {{ field(autocomplete="off", value=field.data) }}
+            {{ field(value=field.data or (field.label.text if field.type == 'SubmitField' else ''))
+            }}
             {% else %}
-            {{ field(autocomplete="off") }}
+            {{ field() }}
             {% endif %}
         </td>
     </tr>

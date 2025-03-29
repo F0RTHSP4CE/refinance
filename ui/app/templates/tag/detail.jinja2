@@ -1,0 +1,24 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% block title %}Tag {{ tag_inline(tag) }}{% endblock %}
+
+{% block content %}
+<table>
+    <tr>
+        <td>Comment</td>
+        <td>{{ tag.comment or "" }}</td>
+    </tr>
+    <tr>
+        <td>Name</td>
+        <td>{{ tag.name }}</td>
+    </tr>
+    <tr>
+        <td>ID</td>
+        <td>{{ tag.id }}</td>
+    </tr>
+</table>
+
+<p><a href="{{ url_for('tag.edit', id=tag.id) }}">Edit</a></p>
+<p><a href="{{ url_for('tag.delete', id=tag.id) }}">Delete</a></p>
+{% endblock %}

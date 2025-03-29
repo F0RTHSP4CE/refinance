@@ -1,17 +1,28 @@
 """Entity service"""
 
+from app.db import get_db
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
 from app.schemas.entity import EntityFiltersSchema
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from app.services.tag import TagService
+from fastapi import Depends
 from sqlalchemy import Integer, Text, cast
-from sqlalchemy.orm import Query
+from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import func
 
 
 class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
     model = Entity
+
+    def __init__(
+        self,
+        db: Session = Depends(get_db),
+        tag_service: TagService = Depends(),
+    ):
+        self.db = db
+        self._tag_service = tag_service
 
     def delete(self, obj_id):
         """This will break the history, implement it later (maybe)"""

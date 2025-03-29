@@ -36,7 +36,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         transaction_service: TransactionService = Depends(),
         entity_service: EntityService = Depends(),
     ):
-        self.db = db
+        self.db: Session = db
         self._transaction_service = transaction_service
         self._entity_service = entity_service
 
