@@ -17,8 +17,10 @@ class TagForm(FlaskForm):
     comment = StringField("Comment")
     submit = SubmitField("Submit")
 
+
 class DeleteForm(FlaskForm):
     delete = SubmitField("Delete")
+
 
 @tag_bp.route("/")
 @token_required
@@ -39,9 +41,7 @@ def add():
         api.http("POST", "tags", data=form.data)
         return redirect(url_for("tag.list"))
 
-    return render_template(
-        "tag/add.jinja2", form=form
-    )
+    return render_template("tag/add.jinja2", form=form)
 
 
 @tag_bp.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -66,10 +66,8 @@ def edit(id):
 def detail(id):
     api = get_refinance_api_client()
     tag = api.http("GET", f"tags/{id}").json()
-    return render_template(
-        "tag/detail.jinja2",
-        tag=Tag(**tag)
-    )
+    return render_template("tag/detail.jinja2", tag=Tag(**tag))
+
 
 @tag_bp.route("/<int:id>/delete", methods=["GET", "POST"])
 @token_required

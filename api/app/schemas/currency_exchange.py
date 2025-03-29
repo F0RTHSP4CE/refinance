@@ -7,12 +7,14 @@ from app.schemas.transaction import TransactionSchema
 
 
 class CurrencyExchangePreviewRequestSchema(BaseSchema):
+    entity_id: int
     source_currency: str
     source_amount: Decimal
     target_currency: str
 
 
 class CurrencyExchangePreviewResponseSchema(BaseSchema):
+    entity_id: int
     source_currency: str
     source_amount: CurrencyDecimal
     target_currency: str
@@ -34,5 +36,4 @@ class CurrencyExchangeReceiptSchema(BaseSchema):
     target_amount: CurrencyDecimal
     rate: CurrencyDecimal
 
-    source_transaction: TransactionSchema
-    target_transaction: TransactionSchema
+    transactions: list[TransactionSchema]

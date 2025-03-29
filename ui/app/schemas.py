@@ -15,6 +15,7 @@ class Base:
 class Tag(Base):
     name: str
 
+
 @dataclass
 class Entity(Base):
     name: str
@@ -55,3 +56,24 @@ class Split(Base):
     share_preview: Decimal
     currency: str
     tags: list[Tag]
+
+
+@dataclass
+class CurrencyExchangePreviewResponse:
+    entity_id: int
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+
+
+@dataclass
+class CurrencyExchangeReceipt:
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+
+    transactions: list[Transaction]
