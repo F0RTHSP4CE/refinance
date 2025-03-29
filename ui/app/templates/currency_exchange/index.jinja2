@@ -7,6 +7,8 @@
 {% block content %}
 <form method="post">
     <table>
+        {{ render_form(form, except=('entity_name', 'entity_id',),
+        new_table=False) }}
         <tr>
             <td>Entity</td>
             <td>
@@ -14,8 +16,11 @@
                 g.actor_entity.id) }}
             </td>
         </tr>
-        {{ render_form(form, except=('entity_name', 'entity_id',),
-        new_table=False) }}
+        <tr>
+            <td>
+                <button type="submit">Preview</button>
+            </td>
+        </tr>
     </table>
 </form>
 
