@@ -102,7 +102,8 @@ class CurrencyExchangeService:
         return round(converted_amount, 2), round(displayed_conversion_rate, 2)
 
     def preview(
-        self, preview: CurrencyExchangePreviewRequestSchema
+        self,
+        preview: CurrencyExchangePreviewRequestSchema,
     ) -> CurrencyExchangePreviewResponseSchema:
         amount, rate = self.calculate(
             source_amount=preview.source_amount,
@@ -162,6 +163,8 @@ class CurrencyExchangeService:
             target_currency=exchange_request.target_currency,
             target_amount=amount,
             rate=rate,
-            source_transaction=TransactionSchema.model_validate(source_transaction),
-            target_transaction=TransactionSchema.model_validate(target_transaction),
+            transactions=[
+                TransactionSchema.model_validate(source_transaction),
+                TransactionSchema.model_validate(target_transaction),
+            ],
         )
