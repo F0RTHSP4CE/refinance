@@ -1,6 +1,7 @@
 """Deposit service"""
 
-from api.app.errors.common import NotFoundError
+from app.errors.common import NotFoundError
+from app.services.tag import TagService
 from app.db import get_db
 from app.models.deposit import Deposit
 from app.schemas.deposit import (
@@ -21,9 +22,11 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
         self,
         db: Session = Depends(get_db),
         transaction_service: TransactionService = Depends(),
+        tag_service: TagService = Depends(),
     ):
         self.db = db
         self._transaction_service = transaction_service
+        self._tag_service = tag_service
 
     def _apply_filters(
         self, query: Query[Deposit], filters: DepositFiltersSchema
