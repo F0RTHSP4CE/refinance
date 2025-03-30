@@ -1,11 +1,12 @@
 """Transaction model"""
 
+import enum
 from decimal import Decimal
 
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from sqlalchemy import DECIMAL, Column, ForeignKey, String, Table
+from sqlalchemy import DECIMAL, Column, Enum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 transactions_tags = Table(
@@ -14,6 +15,11 @@ transactions_tags = Table(
     Column("transaction_id", ForeignKey("transactions.id")),
     Column("tag_id", ForeignKey("tags.id")),
 )
+
+
+class TransactionStatus(enum.Enum):
+    DRAFT = "draft"
+    COMPLETED = "completed"
 
 
 class Transaction(BaseModel):
@@ -34,6 +40,8 @@ class Transaction(BaseModel):
 
     amount: Mapped[Decimal] = mapped_column(DECIMAL(scale=2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217
-    confirmed: Mapped[bool] = mapped_column(default=False)
+    status: Mapped[TransactionStatus] = mapped_column(
+        Enum(TransactionStatus), nullable=False, default=TransactionStatus.DRAFT
+    )
 
     tags: Mapped[list[Tag]] = relationship(secondary=transactions_tags)

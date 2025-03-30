@@ -1,6 +1,6 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Transaction
+from app.schemas import Transaction, TransactionStatus
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
@@ -25,6 +25,9 @@ class TransactionForm(FlaskForm):
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
         render_kw={"placeholder": "GEL, USD, DOGE"},
+    )
+    status = SelectField(
+        "Status", choices=[(e.value, e.value) for e in TransactionStatus]
     )
     submit = SubmitField("Submit")
 
@@ -100,15 +103,15 @@ def delete(id):
     )
 
 
-@transaction_bp.route("/<int:id>/confirm", methods=["GET", "POST"])
+@transaction_bp.route("/<int:id>/complete", methods=["GET", "POST"])
 @token_required
-def confirm(id):
+def complete(id):
     api = get_refinance_api_client()
     transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
     form = ConfirmForm()
     if form.validate_on_submit():
-        api.http("PATCH", f"transactions/{id}", data={"confirmed": True})
+        api.http("PATCH", f"transactions/{id}", data={"status": "completed"})
         return redirect(url_for("transaction.detail", id=id))
     return render_template(
-        "transaction/confirm.jinja2", form=form, transaction=transaction
+        "transaction/complete.jinja2", form=form, transaction=transaction
     )

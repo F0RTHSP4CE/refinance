@@ -1,8 +1,8 @@
 """Deposit model"""
 
-from decimal import Decimal
 import enum
 import uuid as u
+from decimal import Decimal
 
 from app.models.base import BaseModel
 from app.models.entity import Entity

@@ -1,15 +1,13 @@
 """Deposit service"""
 
-from app.errors.common import NotFoundError
-from app.services.tag import TagService
 from app.db import get_db
+from app.errors.common import NotFoundError
 from app.models.deposit import Deposit
-from app.schemas.deposit import (
-    DepositFiltersSchema,
-)
-from app.services.transaction import TransactionService
+from app.schemas.deposit import DepositFiltersSchema
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from app.services.tag import TagService
+from app.services.transaction import TransactionService
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
