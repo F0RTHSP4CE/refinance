@@ -15,7 +15,7 @@ from app.errors.split import (
 )
 from app.models.entity import Entity
 from app.models.split import Split
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.split import SplitCreateSchema, SplitFiltersSchema, SplitUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
 from app.services.base import BaseService
@@ -160,7 +160,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
                         from_entity_id=participant_id,
                         to_entity_id=db_obj.recipient_entity_id,
                         currency=db_obj.currency,
-                        confirmed=True,
+                        status=TransactionStatus.COMPLETED,
                         comment=f"{db_obj.comment} (split #{db_obj.id})",
                     ),
                     overrides={"actor_entity_id": actor_entity.id},

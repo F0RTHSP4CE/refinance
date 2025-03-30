@@ -3,11 +3,11 @@
 from app.errors.base import ApplicationError
 
 
-class TransactionCanNotBeEditedAfterConfirmation(ApplicationError):
+class CompletedTransactionNotEditable(ApplicationError):
     error_code = 5002
-    error = "Can not edit a confirmed transaction."
+    error = "Can not edit a completed transaction."
 
 
-class TransactionCanNotBeDeletedAfterConfirmation(ApplicationError):
+class CompletedTransactionNotDeletable(ApplicationError):
     error_code = 5003
-    error = "Can not delete a confirmed transaction."
+    error = "Can not delete a completed transaction."
