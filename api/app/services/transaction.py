@@ -2,11 +2,11 @@
 
 from app.db import get_db
 from app.errors.transaction import (
-    TransactionCanNotBeDeletedAfterConfirmation,
-    TransactionCanNotBeEditedAfterConfirmation,
+    CompletedTransactionNotDeletable,
+    CompletedTransactionNotEditable,
 )
 from app.models.entity import Entity
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.transaction import (
     TransactionCreateSchema,
     TransactionFiltersSchema,
@@ -59,8 +59,8 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             query = query.filter(self.model.currency == filters.currency)
         if filters.comment is not None:
             query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
-        if filters.confirmed is not None:
-            query = query.filter(self.model.confirmed == filters.confirmed)
+        if filters.status is not None:
+            query = query.filter(self.model.status == filters.status)
         return query
 
     def create(
@@ -76,9 +76,9 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         self, obj_id: int, schema: TransactionUpdateSchema, overrides: dict = {}
     ) -> Transaction:
         tx = self.get(obj_id)
-        # prevent editing of a confirmed transaction
-        if tx.confirmed is True:
-            raise TransactionCanNotBeEditedAfterConfirmation
+        # prevent editing of a completed transaction
+        if tx.status == TransactionStatus.COMPLETED:
+            raise CompletedTransactionNotEditable
         # invalidate balance cache
         self._balance_service.invalidate_cache_entry(tx.from_entity_id)
         self._balance_service.invalidate_cache_entry(tx.to_entity_id)
@@ -87,9 +87,9 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
 
     def delete(self, obj_id: int) -> int:
         tx = self.get(obj_id)
-        # prevent deleting of a confirmed transaction
-        if tx.confirmed is True:
-            raise TransactionCanNotBeDeletedAfterConfirmation
+        # prevent deleting of a completed transaction
+        if tx.status == TransactionStatus.COMPLETED:
+            raise CompletedTransactionNotDeletable
         # invalidate balance cache
         self._balance_service.invalidate_cache_entry(tx.from_entity_id)
         self._balance_service.invalidate_cache_entry(tx.to_entity_id)

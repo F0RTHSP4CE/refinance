@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from app.db import get_db
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.balance import BalanceSchema
 from app.services.entity import EntityService
 from fastapi import Depends
@@ -28,12 +28,12 @@ class BalanceService:
     def get_balances(self, entity_id: int) -> BalanceSchema:
         """
         Calculate momentary balances for a given entity across all currencies.
-        - confirmed and non-confirmed transactions are counted separately.
+        - status and non-status transactions are counted separately.
         - currencies are counted separately.
 
         Internal in-RAM cache stores balances of each entity.
         Balance cache for a particular entity is invalidated when transaction from/to
-        entity is created, edited (confirmed) or deleted.
+        entity is created, edited (status) or deleted.
         """
         if entity_id in self._cache:
             return self._cache[entity_id]
@@ -47,14 +47,14 @@ class BalanceService:
         self.entity_service.get(entity_id)
 
         # Function to sum transactions based on confirmation status
-        def sum_transactions(confirmed: bool) -> dict[str, Decimal]:
+        def sum_transactions(status: TransactionStatus) -> dict[str, Decimal]:
             # Query to get sum of all incoming transactions
             credit_query = select(
                 Transaction.currency,
                 func.sum(Transaction.amount).label("total_credit"),
             ).where(
                 Transaction.to_entity_id == entity_id,
-                Transaction.confirmed == confirmed,
+                Transaction.status == status,
             )
 
             # Query to get sum of all outgoing transactions
@@ -63,7 +63,7 @@ class BalanceService:
                 func.sum(Transaction.amount).label("total_debit"),
             ).where(
                 Transaction.from_entity_id == entity_id,
-                Transaction.confirmed == confirmed,
+                Transaction.status == status,
             )
 
             # Group sums by currency
@@ -93,7 +93,7 @@ class BalanceService:
             return total_by_currency
 
         result = BalanceSchema(
-            confirmed=sum_transactions(confirmed=True),  # type: ignore
-            non_confirmed=sum_transactions(confirmed=False),  # type: ignore
+            completed=sum_transactions(status=TransactionStatus.COMPLETED),  # type: ignore
+            draft=sum_transactions(status=TransactionStatus.DRAFT),  # type: ignore
         )
         return result

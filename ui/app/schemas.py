@@ -1,3 +1,4 @@
+import enum
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -26,8 +27,13 @@ class Entity(Base):
 
 @dataclass
 class Balance:
-    confirmed: dict[str, Decimal]
-    non_confirmed: dict[str, Decimal]
+    draft: dict[str, Decimal]
+    completed: dict[str, Decimal]
+
+
+class TransactionStatus(enum.Enum):
+    DRAFT = "draft"
+    COMPLETED = "completed"
 
 
 @dataclass
@@ -40,7 +46,7 @@ class Transaction(Base):
     to_entity_id: int
     to_entity: Entity
     currency: str
-    confirmed: bool
+    status: str
     tags: list[Tag]
 
 

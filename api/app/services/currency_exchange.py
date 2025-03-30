@@ -10,6 +10,7 @@ import requests
 from app.bootstrap import currency_exchange_entity, currency_exchange_tag
 from app.db import get_db
 from app.models.entity import Entity
+from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
 from app.schemas.currency_exchange import (
     CurrencyExchangePreviewRequestSchema,
@@ -150,7 +151,7 @@ class CurrencyExchangeService:
             to_entity_id=currency_exchange_entity.id,
             amount=computed_source,
             currency=exchange_request.source_currency,
-            confirmed=True,
+            status=TransactionStatus.COMPLETED,
         )
         target_tx = TransactionCreateSchema(
             comment=comment,
@@ -158,7 +159,7 @@ class CurrencyExchangeService:
             to_entity_id=exchange_request.entity_id,
             amount=computed_target,
             currency=exchange_request.target_currency,
-            confirmed=True,
+            status=TransactionStatus.COMPLETED,
         )
         source_transaction = self.transaction_service.create(
             source_tx, overrides={"actor_entity_id": actor_entity.id}
