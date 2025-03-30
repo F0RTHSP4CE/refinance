@@ -10,9 +10,6 @@ utilities_tag = Tag(
     id=4, name="utilities", comment="gas, electricity, water, internet, etc"
 )
 resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
-payprovider_tag = Tag(
-    id=6, name="payprovider", comment="generic automatic money deposit"
-)
 rent_tag = Tag(id=7, name="rent")
 f0_tag = Tag(id=8, name="hackerspace")
 deposit_tag = Tag(id=9, name="deposit", comment="money input into system")
@@ -28,6 +25,12 @@ currency_exchange_entity = Entity(
     comment="automatic money caster eur(gel(usd(float(binary(...)))))",
     tags=[currency_exchange_tag],
 )
+cryptapi_deposit_provider = Entity(
+    id=50,
+    name="cryptapi_in",
+    comment="crypatapi.io deposit provider",
+    tags=[deposit_tag],
+)
 
 BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
@@ -40,7 +43,6 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
             name="donation",
             comment="free money from guests/residents (not a fee)",
         ),
-        payprovider_tag,
         rent_tag,
         f0_tag,
         deposit_tag,
@@ -82,15 +84,10 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
         Entity(id=10, name="rent", comment="rent bill", tags=[rent_tag]),
         currency_exchange_entity,
         # payment providers
-        Entity(
-            id=50,
-            name="cryptapi_in",
-            comment="cryptocurrency deposit",
-            tags=[deposit_tag, payprovider_tag],
-        ),
+        cryptapi_deposit_provider,
         # residents
-        # Entity(
-        #     id=200, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
-        # ),
+        Entity(
+            id=200, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
+        ),
     ],
 }

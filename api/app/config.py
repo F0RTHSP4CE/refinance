@@ -11,10 +11,19 @@ class Config:
     telegram_bot_api_token: str | None = field(
         default=getenv("REFINANCE_TELEGRAM_BOT_API_TOKEN", "")
     )
+
     ui_url: str | None = field(default=getenv("REFINANCE_UI_URL", ""))
+    api_url: str | None = field(default=getenv("REFINANCE_API_URL", ""))
 
     app_name: str = "refinance"
     app_version: str = "0.1.0"
+
+    cryptapi_address_erc20_usdt: str | None = field(
+        default=getenv("REFINANCE_CRYPTAPI_ADDRESS_ERC20_USDT", "")
+    )
+    cryptapi_address_trc20_usdt: str | None = field(
+        default=getenv("REFINANCE_CRYPTAPI_ADDRESS_TRC20_USDT", "")
+    )
 
     @property
     def database_path(self) -> Path:
