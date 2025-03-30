@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
 {% from "split/macro_list.jinja2" import split_list with context %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
 
 {% block title %}Splits{% endblock %}
 {% block content %}
@@ -24,4 +25,5 @@
 
 <p><a href="{{ url_for('split.add') }}">Add</a></p>
 {{ split_list(splits) }}
+{{ pagination_control(page, total, limit, 'split.list') }}
 {% endblock %}

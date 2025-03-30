@@ -1,7 +1,7 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Balance, Split, Transaction
-from flask import Blueprint, redirect, render_template, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, FormField, IntegerField, StringField, SubmitField
 from wtforms.validators import DataRequired, NumberRange
@@ -40,10 +40,22 @@ class PerformForm(FlaskForm):
 @split_bp.route("/")
 @token_required
 def list():
+    # Retrieve pagination parameters from the query string
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 10, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
+    response = api.http("GET", "splits", params={"skip": skip, "limit": limit}).json()
+    splits = [Split(**x) for x in response["items"]]
+    total = response["total"]
+
     return render_template(
         "split/list.jinja2",
-        splits=[Split(**x) for x in api.http("GET", "splits").json()["items"]],
+        splits=splits,
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 
