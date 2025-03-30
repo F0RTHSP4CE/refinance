@@ -87,7 +87,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] pytest ci
 - [ ] easy payment urls
 - [ ] card processing
-- [ ] usdt top-up
+- [x] usdt top-up
 - [x] currency exchange
 - [ ] implement unit of work?
 - [ ] add misc validation of amounts (>0.00)
