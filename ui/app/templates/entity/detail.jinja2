@@ -78,15 +78,15 @@
 
 <h2>Balance</h2>
 
-{% if not balance.confirmed and not balance.non_confirmed %}
+{% if not balance.draft and not balance.completed %}
 <p>No transactions.</p>
 {% endif %}
 
-{% if balance.confirmed %}
+{% if balance.completed %}
 <p>
-    Confirmed:
+    Completed:
 <table>
-    {% for currency,amount in balance.confirmed.items() %}
+    {% for currency,amount in balance.completed.items() %}
     <tr>
         <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">
             {{ amount}}
@@ -98,11 +98,11 @@
 </p>
 {% endif %}
 
-{% if balance.non_confirmed %}
+{% if balance.draft %}
 <p>
-    Non-confirmed (<a href="{{ url_for('transaction.list', entity_id=entity.id, confirmed=False) }}">Find</a>):
+    Draft (<a href="{{ url_for('transaction.list', entity_id=entity.id, status='draft') }}">Find</a>):
 <table>
-    {% for currency,amount in balance.non_confirmed.items() %}
+    {% for currency,amount in balance.draft.items() %}
     <tr>
         <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">
             {{ amount}}

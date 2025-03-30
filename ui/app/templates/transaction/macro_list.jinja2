@@ -16,7 +16,7 @@
                 <td>Amount</td>
                 <td>Currency</td>
                 <td>Comment</td>
-                <td>Confirmed</td>
+                <td>Status</td>
             </tr>
         </thead>
         {% for transaction in transactions %}
@@ -50,7 +50,7 @@
             <td class="right-align">{{ transaction.amount }}</td>
             <td>{{ transaction.currency | upper }}</td>
             <td>{{ transaction.comment or '' }}</td>
-            <td>{{ transaction.confirmed }}</td>
+            <td>{{ transaction.status }}</td>
         </tr>
         {% endfor %}
     </table>

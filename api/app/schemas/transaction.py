@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from app.models.transaction import TransactionStatus
 from app.schemas.base import (
     BaseFilterSchema,
     BaseReadSchema,
@@ -23,7 +24,7 @@ class TransactionSchema(BaseReadSchema):
     from_entity: EntitySchema
     amount: CurrencyDecimal
     currency: str
-    confirmed: bool
+    status: TransactionStatus
     tags: list[TagSchema]
 
 
@@ -32,7 +33,7 @@ class TransactionCreateSchema(BaseUpdateSchema):
     from_entity_id: int
     amount: Decimal
     currency: str
-    confirmed: bool | None = False
+    status: TransactionStatus | None = None
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
@@ -48,7 +49,7 @@ class TransactionCreateSchema(BaseUpdateSchema):
 class TransactionUpdateSchema(BaseUpdateSchema):
     amount: Decimal | None = None
     currency: str | None = None
-    confirmed: bool | None = None
+    status: TransactionStatus | None = None
 
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
@@ -59,4 +60,4 @@ class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None
     currency: str | None = None
-    confirmed: bool | None = None
+    status: TransactionStatus | None = None

@@ -25,28 +25,28 @@ class TestBalanceServiceCache:
         entity_c_id = response.json()["id"]
         token_c = token_factory(entity_c_id)
 
-        # Create transactions between entities
+        # Create transactions between entities using the new status enum
         transactions = [
             {
                 "from_entity_id": entity_a_id,
                 "to_entity_id": entity_b_id,
                 "amount": "100.00",
                 "currency": "usd",
-                "confirmed": True,
+                "status": "completed",
             },
             {
                 "from_entity_id": entity_a_id,
                 "to_entity_id": entity_c_id,
                 "amount": "200.00",
                 "currency": "usd",
-                "confirmed": True,
+                "status": "completed",
             },
             {
                 "from_entity_id": entity_b_id,
                 "to_entity_id": entity_c_id,
                 "amount": "150.00",
                 "currency": "usd",
-                "confirmed": True,
+                "status": "completed",
             },
         ]
 
@@ -72,26 +72,24 @@ class TestBalanceServiceCache:
         )
         balance_c_1 = response.json()
 
-        # Expected balances after transactions
-        expected_balance_a = {"confirmed": {"usd": "-300.00"}, "non_confirmed": {}}
-        expected_balance_b = {"confirmed": {"usd": "-50.00"}, "non_confirmed": {}}
-        expected_balance_c = {"confirmed": {"usd": "350.00"}, "non_confirmed": {}}
+        # Expected balances after transactions with updated keys
+        expected_balance_a = {"completed": {"usd": "-300.00"}, "draft": {}}
+        expected_balance_b = {"completed": {"usd": "-50.00"}, "draft": {}}
+        expected_balance_c = {"completed": {"usd": "350.00"}, "draft": {}}
 
         assert balance_a_1 == expected_balance_a
         assert balance_b_1 == expected_balance_b
         assert balance_c_1 == expected_balance_c
 
-        # Ensure that request time is less than previous
+        # Ensure that cached balances remain unchanged
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
         balance_a_2 = response.json()
-
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
         balance_b_2 = response.json()
-
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )
@@ -101,7 +99,7 @@ class TestBalanceServiceCache:
         assert balance_b_2 == balance_b_1
         assert balance_c_2 == balance_c_1
 
-        # Invalidate the cache and check request time again
+        # Invalidate the cache by creating a new transaction with status "draft"
         response = test_app.post(
             "/transactions/",
             json={
@@ -109,26 +107,27 @@ class TestBalanceServiceCache:
                 "to_entity_id": entity_b_id,
                 "amount": 100,
                 "currency": "eth",
+                "status": "draft",
             },
-            headers={"x-token": token_factory(transaction_data["from_entity_id"])},
+            headers={"x-token": token_factory(entity_a_id)},
         )
         assert response.status_code == status.HTTP_200_OK
         tx_id = response.json()["id"]
+
         test_app.delete(
             f"/transactions/{tx_id}",
             headers={"x-token": token_a},
         )
 
+        # Verify that balances remain as expected after cache invalidation
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
         balance_a_3 = response.json()
-
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
         balance_b_3 = response.json()
-
         response = test_app.get(
             f"/balances/{entity_c_id}", headers={"x-token": token_c}
         )

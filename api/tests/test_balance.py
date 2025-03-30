@@ -41,18 +41,18 @@ class TestBalanceEndpoints:
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
-        assert response.json()["confirmed"] == {}
-        assert Decimal(response.json()["non_confirmed"]["usd"]) == Decimal("-100")
+        assert response.json()["completed"] == {}
+        assert Decimal(response.json()["draft"]["usd"]) == Decimal("-100")
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
-        assert response.json()["confirmed"] == {}
-        assert Decimal(response.json()["non_confirmed"]["usd"]) == Decimal("100")
+        assert response.json()["completed"] == {}
+        assert Decimal(response.json()["draft"]["usd"]) == Decimal("100")
 
         # Confirm the transaction
         response = test_app.patch(
             f"/transactions/{transaction_id}",
-            json={"confirmed": True},
+            json={"status": "completed"},
             headers={"x-token": token_a},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -61,10 +61,10 @@ class TestBalanceEndpoints:
         response = test_app.get(
             f"/balances/{entity_a_id}", headers={"x-token": token_a}
         )
-        balance_a = Decimal(response.json()["confirmed"]["usd"])
+        balance_a = Decimal(response.json()["completed"]["usd"])
         assert balance_a == Decimal("-100")
         response = test_app.get(
             f"/balances/{entity_b_id}", headers={"x-token": token_b}
         )
-        balance_b = Decimal(response.json()["confirmed"]["usd"])
+        balance_b = Decimal(response.json()["completed"]["usd"])
         assert balance_b == Decimal("100")
