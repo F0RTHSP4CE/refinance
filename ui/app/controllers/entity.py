@@ -37,10 +37,22 @@ class AuthForm(FlaskForm):
 @entity_bp.route("/")
 @token_required
 def list():
+    # Retrieve pagination parameters from the query string
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 10, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
+    response = api.http("GET", "entities", params={"skip": skip, "limit": limit}).json()
+    entities = [Entity(**x) for x in response["items"]]
+    total = response["total"]
+
     return render_template(
         "entity/list.jinja2",
-        entities=[Entity(**x) for x in api.http("GET", "entities").json()["items"]],
+        entities=entities,
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 

@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
 
 {% block title %}Tags{% endblock %}
 {% block content %}
@@ -28,4 +29,5 @@
 {% else %}
 <p>No tags.</p>
 {% endif %}
+{{ pagination_control(page, total, limit, 'tag.list') }}
 {% endblock %}

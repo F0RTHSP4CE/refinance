@@ -1,7 +1,7 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Tag
-from flask import Blueprint, redirect, render_template, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FormField, StringField, SubmitField
 from wtforms.validators import DataRequired
@@ -25,10 +25,23 @@ class DeleteForm(FlaskForm):
 @tag_bp.route("/")
 @token_required
 def list():
+    # Get current page and limit from query parameters (defaults: page 1, 10 items per page)
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 10, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
+    # Include skip and limit in your API call for tags
+    response = api.http("GET", "tags", params={"skip": skip, "limit": limit}).json()
+    tags = [Tag(**x) for x in response["items"]]
+    total = response["total"]
+
     return render_template(
         "tag/list.jinja2",
-        tags=[Tag(**x) for x in api.http("GET", "tags").json()["items"]],
+        tags=tags,
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 

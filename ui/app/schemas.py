@@ -81,5 +81,4 @@ class CurrencyExchangeReceipt:
     target_currency: str
     target_amount: Decimal
     rate: Decimal
-
     transactions: list[Transaction]

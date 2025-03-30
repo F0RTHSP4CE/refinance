@@ -40,15 +40,33 @@ class ConfirmForm(FlaskForm):
     confirm = SubmitField("Confirm")
 
 
+from flask import render_template, request
+
+
 @transaction_bp.route("/")
 @token_required
 def list():
+    # Get the current page and limit from query parameters, defaulting to page 1 and 10 items per page.
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
+    # Pass skip and limit to the FastAPI endpoint
+    response = api.http(
+        "GET", "transactions", params={"skip": skip, "limit": limit}
+    ).json()
+
+    # Extract transactions and pagination details from the API response
+    transactions = [Transaction(**x) for x in response["items"]]
+    total = response["total"]
+
     return render_template(
         "transaction/list.jinja2",
-        transactions=[
-            Transaction(**x) for x in api.http("GET", "transactions").json()["items"]
-        ],
+        transactions=transactions,
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 

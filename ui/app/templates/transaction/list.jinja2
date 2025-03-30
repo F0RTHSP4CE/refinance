@@ -1,5 +1,7 @@
 {% extends "base.jinja2" %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
+
 {% block title %}Transactions{% endblock %}
 
 {% block content %}
@@ -21,4 +23,5 @@
 
 <p><a href="{{ url_for('transaction.add') }}">Add</a></p>
 {{ transaction_list(transactions) }}
+{{ pagination_control(page, total, limit, 'transaction.list') }}
 {% endblock %}
