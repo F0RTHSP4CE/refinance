@@ -53,7 +53,7 @@ class TestCurrencyExchangeEndpoints:
         With fixed rates:
           - Conversion rate from USD to EUR = (3.00 / 3.50) ≈ 0.8571
           - Converted amount for 100.00 USD ≈ 85.71 EUR
-          - Displayed rate = max(3.00/3.50, 3.50/3.00) = 1.17
+          - Displayed rate = max(3.00/3.50, 3.50/3.00) = 1.16 (round down)
         """
         payload = {
             "entity_id": entity_one,
@@ -71,7 +71,7 @@ class TestCurrencyExchangeEndpoints:
 
         # 100 USD → EUR: 100 * (3.00/3.50) = 85.714... rounded to 85.71
         assert Decimal(data["target_amount"]) == Decimal("85.71")
-        assert Decimal(data["rate"]) == Decimal("1.17")
+        assert Decimal(data["rate"]) == Decimal("1.16")
         # Verify the echoed request data.
         assert data["entity_id"] == entity_one
         assert data["source_currency"].lower() == "usd"
@@ -82,8 +82,8 @@ class TestCurrencyExchangeEndpoints:
         """
         Test the /currency_exchange/exchange endpoint.
         For a request converting 200.00 USD to EUR:
-          - Expected conversion: 200 * (3.00 / 3.50) ≈ 171.43 EUR
-          - Displayed rate should be 1.17
+          - Expected conversion: 200 * (3.00 / 3.50) ≈ 171.42 EUR
+          - Displayed rate should be 1.16
           - The receipt should include two transactions:
             one debiting USD and one crediting EUR.
         """
@@ -101,9 +101,9 @@ class TestCurrencyExchangeEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # 200 USD → EUR: 200 * (3.00/3.50) ≈ 171.43
-        assert Decimal(data["target_amount"]) == Decimal("171.43")
-        assert Decimal(data["rate"]) == Decimal("1.17")
+        # 200 USD → EUR: 200 * (3.00/3.50) ≈ 171.42
+        assert Decimal(data["target_amount"]) == Decimal("171.42")
+        assert Decimal(data["rate"]) == Decimal("1.16")
         transactions = data.get("transactions", [])
         assert isinstance(transactions, list)
         assert len(transactions) == 2
@@ -134,9 +134,9 @@ class TestCurrencyExchangeEndpoints:
         assert response.status_code == 200
         data = response.json()
         # Expected: source_amount computed as 100.00 / (3.00/3.50) = 116.67
-        assert Decimal(data["source_amount"]) == Decimal("116.67")
+        assert Decimal(data["source_amount"]) == Decimal("116.66")
         assert Decimal(data["target_amount"]) == Decimal("100.00")
-        assert Decimal(data["rate"]) == Decimal("1.17")
+        assert Decimal(data["rate"]) == Decimal("1.16")
         assert data["entity_id"] == entity_one
         assert data["source_currency"].lower() == "usd"
         assert data["target_currency"].lower() == "eur"
@@ -146,7 +146,7 @@ class TestCurrencyExchangeEndpoints:
         Test the /currency_exchange/exchange endpoint when only target_amount is provided.
         For a request converting to receive 150.00 EUR from USD:
           - Required USD = 150.00 / (3.00/3.50) = 175.00 USD.
-          - Displayed rate should be 1.17.
+          - Displayed rate should be 1.16.
           - The receipt should include two transactions: one debiting USD and one crediting EUR.
         """
         payload = {
@@ -165,7 +165,7 @@ class TestCurrencyExchangeEndpoints:
         # Expected: source_amount computed as 150.00 / (3.00/3.50) = 175.00 USD.
         assert Decimal(data["source_amount"]) == Decimal("175.00")
         assert Decimal(data["target_amount"]) == Decimal("150.00")
-        assert Decimal(data["rate"]) == Decimal("1.17")
+        assert Decimal(data["rate"]) == Decimal("1.16")
         transactions = data.get("transactions", [])
         assert isinstance(transactions, list)
         assert len(transactions) == 2
@@ -196,49 +196,49 @@ class TestCurrencyExchangeEndpoints:
         ]
         assert data == expected
 
-    def test_many_exchanges_no_gain(self, test_app: TestClient, token, entity_one):
+    def test_round_trip_with_subtraction(self, test_app: TestClient, token, entity_one):
         """
-        Simulate many consecutive exchanges in a round-trip:
-          USD → EUR, then EUR → USD.
-        The final USD amount should never exceed the initial amount,
-        ensuring that rounding errors do not lead to a net gain.
+        Test a round-trip exchange:
+        - Convert 1000 USD to GEL.
+        - Subtract 0.01 GEL from the received amount.
+        - Convert the adjusted GEL amount back to USD.
+        The final amount should be 999.99 USD.
+        Even though 0.01 GEL is less than 0.01 USD.
         """
-        initial_usd = Decimal("100.00")
-        current_usd = initial_usd
-        iterations = 10
-        for _ in range(iterations):
-            # Exchange USD → EUR.
-            payload_usd_to_eur = {
-                "entity_id": entity_one,
-                "source_currency": "usd",
-                "source_amount": str(current_usd),
-                "target_currency": "eur",
-            }
-            resp = test_app.post(
-                "/currency_exchange/exchange",
-                json=payload_usd_to_eur,
-                headers={"x-token": token},
-            )
-            assert resp.status_code == 200
-            data = resp.json()
-            current_eur = Decimal(data["target_amount"])
+        # Exchange 1000 USD to GEL.
+        payload_usd_to_gel = {
+            "entity_id": entity_one,
+            "source_currency": "usd",
+            "source_amount": "1000.00",
+            "target_currency": "gel",
+        }
+        resp = test_app.post(
+            "/currency_exchange/exchange",
+            json=payload_usd_to_gel,
+            headers={"x-token": token},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        received_gel = Decimal(data["target_amount"])
 
-            # Exchange EUR → USD.
-            payload_eur_to_usd = {
-                "entity_id": entity_one,
-                "source_currency": "eur",
-                "source_amount": str(current_eur),
-                "target_currency": "usd",
-            }
-            resp = test_app.post(
-                "/currency_exchange/exchange",
-                json=payload_eur_to_usd,
-                headers={"x-token": token},
-            )
-            assert resp.status_code == 200
-            data = resp.json()
-            current_usd = Decimal(data["target_amount"])
+        # Subtract 0.01 GEL from the received amount.
+        adjusted_gel = received_gel - Decimal("0.01")
 
-        # Ensure that the final USD amount is not greater than the initial amount.
-        # It may be slightly lower due to rounding, but never a net gain.
-        assert current_usd <= initial_usd
+        # Convert the adjusted GEL amount back to USD.
+        payload_gel_to_usd = {
+            "entity_id": entity_one,
+            "source_currency": "gel",
+            "source_amount": str(adjusted_gel),
+            "target_currency": "usd",
+        }
+        resp2 = test_app.post(
+            "/currency_exchange/exchange",
+            json=payload_gel_to_usd,
+            headers={"x-token": token},
+        )
+        assert resp2.status_code == 200
+        data2 = resp2.json()
+        final_usd = Decimal(data2["target_amount"])
+
+        # The final USD amount should be 999.99, not 1000.00.
+        assert final_usd == Decimal("999.99")

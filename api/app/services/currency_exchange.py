@@ -1,8 +1,9 @@
 """Currency exchange service"""
 
+import math
 import time
 from datetime import timedelta
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Optional, TypeVar
 
 import requests
@@ -103,9 +104,9 @@ class CurrencyExchangeService:
             )
 
         return (
-            round(computed_source, 2),
-            round(computed_target, 2),
-            round(displayed_conversion_rate, 2),
+            computed_source.quantize(Decimal("0.01"), rounding=ROUND_DOWN),
+            computed_target.quantize(Decimal("0.01"), rounding=ROUND_DOWN),
+            displayed_conversion_rate.quantize(Decimal("0.01"), rounding=ROUND_DOWN),
         )
 
     def preview(
