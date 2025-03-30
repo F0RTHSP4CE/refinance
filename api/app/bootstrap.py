@@ -1,8 +1,11 @@
+import random
+from decimal import Decimal
 from typing import Type
 
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
+from app.models.transaction import Transaction
 
 # commonly used tags
 sys_tag = Tag(id=1, name="system", comment="system")  # , color="999999"
@@ -18,7 +21,7 @@ currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 
-# commonly used entities
+# entities used by other modules for creating transactions from/to
 currency_exchange_entity = Entity(
     id=11,
     name="exchange",
@@ -86,8 +89,21 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
         # payment providers
         cryptapi_deposit_provider,
         # residents
+        #
         # Entity(
         #     id=200, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
         # ),
     ],
+    # example transactions
+    #
+    # Transaction: [
+    #     Transaction(
+    #         actor_entity_id=random.randint(1, 10),
+    #         from_entity_id=random.randint(1, 5),
+    #         to_entity_id=random.randint(6, 10),
+    #         amount=Decimal(random.random() * 100),
+    #         currency=random.choice(["GEL", "USD", "EUR"]),
+    #     )
+    #     for _ in range(300)
+    # ],
 }
