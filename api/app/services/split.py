@@ -3,7 +3,6 @@
 from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
-from app.db import get_db
 from app.errors.split import (
     MinimalNumberOfParticipantsRequired,
     PerformedSplitCanNotBeDeleted,
@@ -22,6 +21,7 @@ from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.transaction import TransactionService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
@@ -32,7 +32,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(),
         entity_service: EntityService = Depends(),
     ):
@@ -85,7 +85,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         entity = self._entity_service.get(entity_id)
         if entity not in db_obj.participants:
             db_obj.participants.append(entity)
-            self.db.commit()
+            self.db.flush()
         else:
             raise SplitParticipantAlreadyAdded
         return db_obj
@@ -97,7 +97,7 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         entity = self._entity_service.get(entity_id)
         if entity not in db_obj.participants:
             db_obj.participants.remove(entity)
-            self.db.commit()
+            self.db.flush()
         else:
             raise SplitParticipantAlreadyRemoved
         return db_obj

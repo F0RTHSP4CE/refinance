@@ -2,12 +2,12 @@
 
 from typing import Generic, Iterable, TypeVar
 
-from app.db import get_db
 from app.errors.tag import TagAlreadyAdded, TagAlreadyRemoved, TagsNotSupported
 from app.models.base import BaseModel
 from app.models.tag import Tag
 from app.services.base import BaseService
 from app.services.tag import TagService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
 
@@ -26,7 +26,7 @@ class TaggableServiceMixin(BaseService[_M], Generic[_M]):
         tag = self._tag_service.get(tag_id)
         if tag not in db_obj.tags:  # type: ignore
             db_obj.tags.append(tag)  # type: ignore
-            self.db.commit()
+            self.db.flush()
         else:
             raise TagAlreadyAdded
         return tag
@@ -38,7 +38,7 @@ class TaggableServiceMixin(BaseService[_M], Generic[_M]):
         tag = self._tag_service.get(tag_id)
         if tag in db_obj.tags:  # type: ignore
             db_obj.tags.remove(tag)  # type: ignore
-            self.db.commit()
+            self.db.flush()
         else:
             raise TagAlreadyRemoved
         return tag

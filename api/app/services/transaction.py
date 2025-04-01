@@ -1,6 +1,5 @@
 """Transaction service"""
 
-from app.db import get_db
 from app.errors.transaction import (
     CompletedTransactionNotDeletable,
     CompletedTransactionNotEditable,
@@ -16,6 +15,7 @@ from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
@@ -26,7 +26,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         balance_service: BalanceService = Depends(),
         tag_service: TagService = Depends(),
     ):

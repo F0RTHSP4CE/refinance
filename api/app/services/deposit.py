@@ -3,7 +3,6 @@
 from typing import Any
 from uuid import UUID
 
-from app.db import get_db
 from app.errors.common import NotFoundError
 from app.errors.deposit import DepositAlreadyCompleted, DepositCannotBeEdited
 from app.models.deposit import Deposit, DepositStatus
@@ -14,6 +13,7 @@ from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
 from app.services.transaction import TransactionService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
@@ -24,7 +24,7 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(),
         tag_service: TagService = Depends(),
     ):

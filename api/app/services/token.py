@@ -7,12 +7,12 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import requests
 from app.config import Config, get_config
-from app.db import get_db
 from app.errors.common import NotFoundError
 from app.errors.token import TokenInvalid
 from app.models.entity import Entity
 from app.schemas.token import TokenSendReportSchema
 from app.services.entity import EntityService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,7 @@ class TokenService:
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         entity_service: EntityService = Depends(),
         config: Config = Depends(get_config),
     ):

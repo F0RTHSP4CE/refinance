@@ -8,7 +8,6 @@ from typing import Optional, TypeVar
 
 import requests
 from app.bootstrap import currency_exchange_entity, currency_exchange_tag
-from app.db import get_db
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
@@ -22,6 +21,7 @@ from app.schemas.transaction import TransactionCreateSchema, TransactionSchema
 from app.services.entity import EntityService
 from app.services.tag import TagService
 from app.services.transaction import TransactionService
+from app.uow import get_uow
 from cachetools import TTLCache, cached
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -36,7 +36,7 @@ class CurrencyExchangeService:
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(),
         entity_service: EntityService = Depends(),
     ):

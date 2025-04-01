@@ -6,7 +6,6 @@ from uuid import UUID
 import requests
 from app.bootstrap import cryptapi_deposit_provider
 from app.config import Config, get_config
-from app.db import get_db
 from app.errors.deposit import DepositAmountIncorrect
 from app.models.entity import Entity
 from app.schemas.deposit import DepositCreateSchema
@@ -16,6 +15,7 @@ from app.schemas.deposit_providers.cryptapi import (
 )
 from app.services.base import BaseService
 from app.services.deposit import DepositService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 class CryptAPIDepositProviderService(BaseService[Entity]):
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         deposit_service: DepositService = Depends(),
         config: Config = Depends(get_config),
     ):
