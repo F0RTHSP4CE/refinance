@@ -1,12 +1,12 @@
 """Entity service"""
 
-from app.db import get_db
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
 from app.schemas.entity import EntityFiltersSchema
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import Integer, Text, cast
 from sqlalchemy.orm import Query, Session
@@ -18,7 +18,7 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         tag_service: TagService = Depends(),
     ):
         self.db = db

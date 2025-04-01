@@ -82,6 +82,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] generic deposit service
 - [x] usdt top-up
 - [x] currency exchange
+- [x] unit of work?
 - [ ] donation categories (entities?)
 - [ ] migrations (not alembic?)
 - [ ] logging
@@ -89,7 +90,6 @@ open http://localhost:8000/docs and http://localhost:9000
 - [ ] permissions?
 - [ ] easy payment urls
 - [ ] card processing
-- [ ] unit of work?
 - [ ] misc validation of amounts (>0.00)
 
 ## tests notice

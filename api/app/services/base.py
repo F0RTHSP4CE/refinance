@@ -3,10 +3,10 @@
 import datetime
 from typing import Generic, Type, TypeVar
 
-from app.db import get_db
 from app.errors.common import NotFoundError
 from app.models.base import BaseModel
 from app.schemas.base import BaseFilterSchema, BaseUpdateSchema, PaginationSchema
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
 
@@ -20,7 +20,7 @@ class BaseService(Generic[M]):
     model: Type[M]
     db: Session
 
-    def __init__(self, db: Session = Depends(get_db)):
+    def __init__(self, db: Session = Depends(get_uow)):
         self.db = db
 
     def create(self, schema: BUS, overrides: dict = {}) -> M:
@@ -28,7 +28,7 @@ class BaseService(Generic[M]):
         data = {**data, **overrides}
         new_obj = self.model(**data)
         self.db.add(new_obj)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(new_obj)
         return new_obj
 
@@ -71,12 +71,12 @@ class BaseService(Generic[M]):
         for key, value in data.items():
             setattr(obj, key, value)
         setattr(obj, "modified_at", datetime.datetime.now())
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(obj)
         return obj
 
     def delete(self, obj_id: K) -> K:
         obj = self.get(obj_id)
         self.db.delete(obj)
-        self.db.commit()
+        self.db.flush()
         return obj_id

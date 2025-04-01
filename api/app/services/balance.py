@@ -2,10 +2,10 @@
 
 from decimal import Decimal
 
-from app.db import get_db
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.balance import BalanceSchema
 from app.services.entity import EntityService
+from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func, select
@@ -16,7 +16,7 @@ class BalanceService:
 
     def __init__(
         self,
-        db: Session = Depends(get_db),
+        db: Session = Depends(get_uow),
         entity_service: EntityService = Depends(),
     ):
         self.db = db
