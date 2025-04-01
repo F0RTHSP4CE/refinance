@@ -83,6 +83,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] usdt top-up
 - [x] currency exchange
 - [x] unit of work?
+- [x] fixed amount participation in split
 - [ ] donation categories (entities?)
 - [ ] migrations (not alembic?)
 - [ ] logging

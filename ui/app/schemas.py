@@ -51,13 +51,19 @@ class Transaction(Base):
 
 
 @dataclass
+class SplitParticipant(Base):
+    entity: Entity
+    fixed_amount: Decimal | None
+
+
+@dataclass
 class Split(Base):
     amount: Decimal
     actor_entity_id: int
     actor_entity: Entity
     recipient_entity_id: int
     recipient_entity: Entity
-    participants: list[Entity]
+    participants: list[SplitParticipant]
     performed: bool
     share_preview: Decimal
     currency: str

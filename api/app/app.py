@@ -23,7 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 logger = logging.getLogger(__name__)
 
 config: Config = get_config()
-app = FastAPI(title=config.app_name, version=config.app_version)
+app = FastAPI(title=config.app_name, version=config.app_version, debug=True)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

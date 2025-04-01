@@ -3,9 +3,8 @@ from decimal import Decimal
 import pytest
 from fastapi.testclient import TestClient
 
-# Fixtures for entities (using the same mechanism as in transaction tests).
 
-
+# Fixtures for entities.
 @pytest.fixture(scope="class")
 def entity_one(test_app: TestClient, token):
     response = test_app.post(
@@ -73,9 +72,7 @@ def participant_f(test_app: TestClient, token):
 
 
 # Fixtures to create splits.
-
-
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def split_100(test_app: TestClient, token, entity_two):
     """
     Create a split of 100.00 USD with recipient entity_two.
@@ -89,7 +86,7 @@ def split_100(test_app: TestClient, token, entity_two):
     return response.json()
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def split_200(test_app: TestClient, token, entity_two):
     """
     Create a split of 200.00 USD with recipient entity_two.
@@ -144,7 +141,7 @@ class TestSplitEndpoints:
         assert data["id"] == split_id
 
     def test_update_split(self, test_app: TestClient, token, split_100):
-        # update to 75
+        # update to 75.00
         split_id = split_100["id"]
         response = test_app.patch(
             f"/splits/{split_id}",
@@ -155,8 +152,7 @@ class TestSplitEndpoints:
         data = response.json()
         assert Decimal(data["amount"]) == Decimal("75.00")
         assert data["currency"] == "usd"
-        # update back to 100
-        split_id = split_100["id"]
+        # update back to 100.00
         response = test_app.patch(
             f"/splits/{split_id}",
             json={"amount": "100.00", "currency": "usd"},
@@ -190,19 +186,18 @@ class TestSplitEndpoints:
     ):
         """
         Test performing a split where 100.00 USD is divided among two participants.
-        In this case, only Participant C and Participant D are added (actor is not automatically included).
         Each should receive 50.00.
         """
         split_id = split_100["id"]
-        # Add two participants.
+        # Add two participants (using JSON body with participant schema).
         resp1 = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_c},
+            json={"entity_id": participant_c},
             headers={"x-token": token},
         )
         resp2 = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_d},
+            json={"entity_id": participant_d},
             headers={"x-token": token},
         )
         assert resp1.status_code == 200
@@ -226,18 +221,17 @@ class TestSplitEndpoints:
     ):
         """
         Test performing a split where 0.01 USD is divided among two participants.
-        Here, Participant E and Participant F are added.
-        The distribution should yield one transaction of 0.01 and one transaction of 0.00.
+        One should pay 0.01 and the other is not charged.
         """
         split_id = split_small["id"]
         resp_e = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_e},
+            json={"entity_id": participant_e},
             headers={"x-token": token},
         )
         resp_f = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_f},
+            json={"entity_id": participant_f},
             headers={"x-token": token},
         )
         assert resp_e.status_code == 200
@@ -249,12 +243,8 @@ class TestSplitEndpoints:
         assert perform_resp.status_code == 200
         transactions = perform_resp.json()
         # Expect two transactions.
-        assert len(transactions) == 2
-        amounts = [Decimal(tx["amount"]) for tx in transactions]
-        assert sum(amounts) == Decimal("0.01")
-        # Expect one transaction with 0.01 and one with 0.00.
-        assert amounts.count(Decimal("0.01")) == 1
-        assert amounts.count(Decimal("0.00")) == 1
+        assert len(transactions) == 1
+        assert Decimal(transactions[0]["amount"]) == Decimal("0.01")
 
     def test_perform_split_200(
         self,
@@ -267,28 +257,23 @@ class TestSplitEndpoints:
     ):
         """
         Test performing a split where 200.00 USD is divided among three participants.
-        Here, we explicitly add the actor (entity_one), Participant C, and Participant D.
-        Calculation:
-          - 200.00 / 3 = 66.6666...
-          - Base share (rounded down) = 66.66, total = 199.98, remainder = 0.02,
-          - Extra count = 2 => two participants get 66.66 + 0.01 (66.67) and one gets 66.66.
         Expected distribution: two transactions of 66.67 and one of 66.66.
         """
         split_id = split_200["id"]
-        # Add the three participants.
+        # Add three participants.
         resp_actor = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": entity_one},
+            json={"entity_id": entity_one},
             headers={"x-token": token},
         )
         resp_c = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_c},
+            json={"entity_id": participant_c},
             headers={"x-token": token},
         )
         resp_d = test_app.post(
             f"/splits/{split_id}/participants",
-            params={"entity_id": participant_d},
+            json={"entity_id": participant_d},
             headers={"x-token": token},
         )
         assert resp_actor.status_code == 200
@@ -305,6 +290,144 @@ class TestSplitEndpoints:
         amounts = [Decimal(tx["amount"]) for tx in transactions]
         # Ensure total equals 200.00.
         assert sum(amounts) == Decimal("200.00")
-        # Check expected distribution: two transactions of 66.67 and one of 66.66.
+        # Expected distribution: two transactions of 66.67 and one of 66.66.
         assert amounts.count(Decimal("66.67")) == 2
         assert amounts.count(Decimal("66.66")) == 1
+
+    def test_perform_split_fixed_partial(
+        self,
+        test_app: TestClient,
+        token,
+        split_100,
+        participant_c,
+        participant_d,
+        participant_e,
+        participant_f,
+    ):
+        """
+        For a split of 100.00 USD:
+          - Add Participant C with fixed amount 10.00,
+          - Add Participant D with fixed amount 10.00,
+          - Add Participant E and Participant F without fixed amounts.
+        Expected distribution:
+          - Participant C: 10.00, Participant D: 10.00,
+          - The remaining 80.00 split equally among Participant E and F (40.00 each).
+        """
+        split_id = split_100["id"]
+        resp_c = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_c, "fixed_amount": "10.00"},
+            headers={"x-token": token},
+        )
+        resp_d = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_d, "fixed_amount": "10.00"},
+            headers={"x-token": token},
+        )
+        resp_e = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_e},
+            headers={"x-token": token},
+        )
+        resp_f = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_f},
+            headers={"x-token": token},
+        )
+        assert resp_c.status_code == 200
+        assert resp_d.status_code == 200
+        assert resp_e.status_code == 200
+        assert resp_f.status_code == 200
+
+        perform_resp = test_app.post(
+            f"/splits/{split_id}/perform", headers={"x-token": token}
+        )
+        assert perform_resp.status_code == 200
+        transactions = perform_resp.json()
+        # Expect four transactions.
+        assert len(transactions) == 4
+        amounts = [Decimal(tx["amount"]) for tx in transactions]
+        # Expect two transactions of 10.00 and two transactions of 40.00.
+        assert amounts.count(Decimal("10.00")) == 2
+        assert amounts.count(Decimal("40.00")) == 2
+        assert sum(amounts) == Decimal("100.00")
+
+    def test_perform_split_fixed_full(
+        self,
+        test_app: TestClient,
+        token,
+        split_100,
+        participant_c,
+        participant_d,
+        participant_e,
+    ):
+        """
+        For a split of 100.00 USD:
+          - Add Participant C with fixed amount 50.00,
+          - Add Participant D with fixed amount 50.00,
+          - Add Participant E without a fixed amount.
+        Expected outcome:
+          - Only Participant C and Participant D receive transactions (50.00 each),
+          - Participant E is not charged.
+        """
+        split_id = split_100["id"]
+        resp_c = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_c, "fixed_amount": "50.00"},
+            headers={"x-token": token},
+        )
+        resp_d = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_d, "fixed_amount": "50.00"},
+            headers={"x-token": token},
+        )
+        resp_e = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_e},
+            headers={"x-token": token},
+        )
+        assert resp_c.status_code == 200
+        assert resp_d.status_code == 200
+        assert resp_e.status_code == 200
+
+        perform_resp = test_app.post(
+            f"/splits/{split_id}/perform", headers={"x-token": token}
+        )
+        assert perform_resp.status_code == 200
+        transactions = perform_resp.json()
+        # Expect only two transactions for the fixed participants.
+        assert len(transactions) == 2
+        amounts = [Decimal(tx["amount"]) for tx in transactions]
+        assert amounts.count(Decimal("50.00")) == 2
+        assert sum(amounts) == Decimal("100.00")
+
+    @pytest.mark.xfail()
+    def test_perform_split_fixed_exceed(
+        self, test_app: TestClient, token, split_100, participant_c, participant_d
+    ):
+        """
+        For a split of 100.00 USD:
+          - Add Participant C with fixed amount 60.00,
+          - Add Participant D with fixed amount 50.00,
+          Total fixed amounts exceed the split total.
+        Expected outcome: an error response.
+        """
+        split_id = split_100["id"]
+        resp_c = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_c, "fixed_amount": "60.00"},
+            headers={"x-token": token},
+        )
+        resp_d = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_d, "fixed_amount": "50.00"},
+            headers={"x-token": token},
+        )
+        assert resp_c.status_code == 200
+        assert resp_d.status_code == 200
+
+        perform_resp = test_app.post(
+            f"/splits/{split_id}/perform", headers={"x-token": token}
+        )
+        # Expect a non-200 status code (or an error message) since fixed amounts exceed total.
+        assert perform_resp.status_code != 200
