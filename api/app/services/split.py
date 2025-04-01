@@ -1,7 +1,7 @@
-"""Split service"""
+"""Split service with fixed participant amounts"""
 
 from decimal import ROUND_DOWN, Decimal
-from typing import Any
+from typing import Any, Optional
 
 from app.errors.split import (
     MinimalNumberOfParticipantsRequired,
@@ -13,9 +13,14 @@ from app.errors.split import (
     SplitParticipantAlreadyRemoved,
 )
 from app.models.entity import Entity
-from app.models.split import Split
+from app.models.split import Split, SplitParticipant
 from app.models.transaction import Transaction, TransactionStatus
-from app.schemas.split import SplitCreateSchema, SplitFiltersSchema, SplitUpdateSchema
+from app.schemas.split import (
+    SplitCreateSchema,
+    SplitFiltersSchema,
+    SplitParticipantAddSchema,
+    SplitUpdateSchema,
+)
 from app.schemas.transaction import TransactionCreateSchema
 from app.services.base import BaseService
 from app.services.entity import EntityService
@@ -23,7 +28,6 @@ from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.transaction import TransactionService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
 
 
@@ -66,94 +70,127 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         self, obj_id: int, schema: SplitUpdateSchema, overrides: dict = {}
     ) -> Split:
         db_obj = self.get(obj_id)
-        # prevent editing of a performed split
+        # Prevent editing of a performed split.
         if db_obj.performed is True:
             raise PerformedSplitCanNotBeEdited
         return super().update(obj_id, schema, overrides)
 
     def delete(self, obj_id: int) -> int:
         db_obj = self.get(obj_id)
-        # prevent deleting of a performed split
+        # Prevent deleting of a performed split.
         if db_obj.performed is True:
             raise PerformedSplitCanNotBeDeleted
         return super().delete(obj_id)
 
-    def add_participant(self, obj_id: int, entity_id: int) -> Split:
+    def add_participant(self, obj_id: int, schema: SplitParticipantAddSchema) -> Split:
+        """
+        Adds a participant to the split.
+        Optionally, a fixed_amount (Decimal) can be provided.
+        """
         db_obj = self.get(obj_id)
         if db_obj.performed is True:
             raise PerformedSplitParticipantsAreNotEditable
-        entity = self._entity_service.get(entity_id)
-        if entity not in db_obj.participants:
-            db_obj.participants.append(entity)
-            self.db.flush()
-        else:
-            raise SplitParticipantAlreadyAdded
+        for assoc in db_obj.participants:
+            if assoc.entity_id == schema.entity_id:
+                raise SplitParticipantAlreadyAdded
+        entity = self._entity_service.get(schema.entity_id)
+        new_assoc = SplitParticipant(
+            split=db_obj,
+            entity=entity,
+            fixed_amount=(
+                schema.fixed_amount.quantize(Decimal("0.01"))
+                if schema.fixed_amount is not None
+                else None
+            ),
+        )
+        db_obj.participants.append(new_assoc)
+        self.db.flush()
+        self.db.refresh(db_obj)
         return db_obj
 
     def remove_participant(self, obj_id: int, entity_id: int) -> Split:
         db_obj = self.get(obj_id)
         if db_obj.performed is True:
             raise PerformedSplitParticipantsAreNotEditable
-        entity = self._entity_service.get(entity_id)
-        if entity not in db_obj.participants:
-            db_obj.participants.remove(entity)
-            self.db.flush()
-        else:
+        assoc_to_remove = None
+        for assoc in db_obj.participants:
+            if assoc.entity_id == entity_id:
+                assoc_to_remove = assoc
+                break
+        if assoc_to_remove is None:
             raise SplitParticipantAlreadyRemoved
+        db_obj.participants.remove(assoc_to_remove)
+        self.db.flush()
+        self.db.refresh(db_obj)
         return db_obj
 
     @staticmethod
-    def _calculate_split(amount: Decimal, users: list[Any]) -> dict[Any, Decimal]:
+    def _calculate_split(
+        amount: Decimal, fixed: dict[int, Decimal], non_fixed: list[int]
+    ) -> dict[int, Decimal]:
         """
-        Splits a total amount among the provided users.
-
-        Parameters:
-        amount (Decimal): The total amount to be split. It will be rounded to two decimal places.
-        users (list): A list of users (can be any hashable identifiers).
-
-        Returns:
-        dict: A dictionary mapping each user to their calculated share as a Decimal with exactly 2 decimal places.
-
-        Raises:
-        ValueError: If `amount` is not a Decimal or if the users list is empty.
+        Calculates the split amounts for all participants.
+        Participants with a fixed amount are assigned that amount.
+        The remaining balance (amount minus the sum of fixed amounts)
+        is split equally among participants without a fixed amount.
         """
-        # Convert amount to exactly two decimal places.
         amount = amount.quantize(Decimal("0.01"))
-
-        if not users:
-            raise ValueError("Users list must not be empty.")
-
-        num_users = len(users)
-        # Calculate the base share by dividing equally and rounding down to 2 decimals.
-        base_share = (amount / num_users).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
-        total_base = base_share * num_users
-        remainder = amount - total_base
-        # Determine the number of extra cents (as whole numbers).
-        extra_count = int(
-            (remainder / Decimal("0.01")).to_integral_value(rounding=ROUND_DOWN)
-        )
-
-        # Create the split dictionary by adding an extra cent to the first `extra_count` users.
-        splits = {}
-        for i, user in enumerate(users):
-            share = base_share + (
-                Decimal("0.01") if i < extra_count else Decimal("0.00")
+        total_fixed = sum(fixed.values()) if fixed else Decimal("0.00")
+        if total_fixed > amount:
+            raise ValueError("Total fixed amounts exceed split amount")
+        remaining = amount - total_fixed
+        non_fixed_shares = {}
+        if non_fixed:
+            num_non_fixed = len(non_fixed)
+            base_share = (remaining / num_non_fixed).quantize(
+                Decimal("0.01"), rounding=ROUND_DOWN
             )
-            # Ensure each share is exactly two decimals.
-            splits[user] = share.quantize(Decimal("0.01"))
+            total_base = base_share * num_non_fixed
+            remainder = remaining - total_base
+            extra_count = int(
+                (remainder / Decimal("0.01")).to_integral_value(rounding=ROUND_DOWN)
+            )
+            for i, uid in enumerate(non_fixed):
+                share = base_share + (
+                    Decimal("0.01") if i < extra_count else Decimal("0.00")
+                )
+                non_fixed_shares[uid] = share.quantize(Decimal("0.01"))
+        splits = {}
+        # Fixed amounts are used as provided.
+        for uid in fixed:
+            splits[uid] = fixed[uid].quantize(Decimal("0.01"))
+        # Non-fixed participants get their calculated share.
+        for uid, share in non_fixed_shares.items():
+            splits[uid] = share
         return splits
 
     def perform(self, obj_id: int, actor_entity: Entity) -> list[Transaction]:
+        """
+        Executes the split by creating transactions.
+        For each participant, if a fixed amount is provided that amount is used;
+        otherwise, the remaining amount is split equally among the non-fixed participants.
+        Transactions with 0 amount are skipped.
+        """
         db_obj = self.get(obj_id)
-        if len(db_obj.participants) < 2:
+        total_participants = len(db_obj.participants)
+        if total_participants < 2:
             raise MinimalNumberOfParticipantsRequired
-        participants_ids = [x.id for x in db_obj.participants]
+
+        fixed: dict[int, Decimal] = {}
+        non_fixed: list[int] = []
+        for assoc in db_obj.participants:
+            if assoc.fixed_amount is not None:
+                fixed[assoc.entity_id] = assoc.fixed_amount.quantize(Decimal("0.01"))
+            else:
+                non_fixed.append(assoc.entity_id)
+
         shares: dict[int, Decimal] = self._calculate_split(
-            amount=db_obj.amount, users=participants_ids
+            amount=db_obj.amount, fixed=fixed, non_fixed=non_fixed
         )
-        if shares:
-            tx_list: list[Transaction] = []
-            for participant_id, participant_amount in shares.items():
+
+        tx_list: list[Transaction] = []
+        for participant_id, participant_amount in shares.items():
+            if participant_amount > Decimal("0.00"):
                 tx = self._transaction_service.create(
                     TransactionCreateSchema(
                         amount=participant_amount,
@@ -166,7 +203,5 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
                     overrides={"actor_entity_id": actor_entity.id},
                 )
                 tx_list.append(tx)
-            self.update(obj_id, SplitUpdateSchema(performed=True))
-            return tx_list
-        else:
-            raise SplitDoesNotHaveParticipants
+        self.update(obj_id, SplitUpdateSchema(performed=True))
+        return tx_list

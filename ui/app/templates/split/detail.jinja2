@@ -34,7 +34,7 @@
     </tr>
     <tr>
         <td>Currency</td>
-        <td>{{ split.currency }}</td>
+        <td>{{ split.currency | upper }}</td>
     </tr>
     <tr>
         <td>Created at</td>
@@ -52,9 +52,14 @@
                     {% for participant in split.participants %}
                     <tr>
                         <td>
-                            <a href="{{ url_for('entity.detail', id=participant.id) }}">
-                                {{ participant.name }}
+                            <a href="{{ url_for('entity.detail', id=participant.entity.id) }}">
+                                {{ participant.entity.name }}
                             </a>
+                        </td>
+                        <td>
+                            {% if participant.fixed_amount %}
+                            {{ participant.fixed_amount }} {{ split.currency | upper }}
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

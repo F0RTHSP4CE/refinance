@@ -6,6 +6,7 @@ from app.schemas.base import PaginationSchema
 from app.schemas.split import (
     SplitCreateSchema,
     SplitFiltersSchema,
+    SplitParticipantAddSchema,
     SplitSchema,
     SplitUpdateSchema,
 )
@@ -97,11 +98,11 @@ def remove_tag_from_split(
 @split_router.post("/{split_id}/participants", response_model=SplitSchema)
 def add_participant_to_split(
     split_id: int,
-    entity_id: int,
+    participant_add_schema: SplitParticipantAddSchema,
     split_service: SplitService = Depends(),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
-    return split_service.add_participant(split_id, entity_id)
+    return split_service.add_participant(split_id, participant_add_schema)
 
 
 @split_router.delete("/{split_id}/participants", response_model=SplitSchema)
@@ -111,4 +112,4 @@ def remove_participant_from_split(
     split_service: SplitService = Depends(),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
-    return split_service.add_participant(split_id, entity_id)
+    return split_service.remove_participant(split_id, entity_id)

@@ -9,7 +9,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 
-class BaseModel(DeclarativeBase):
+class Base(DeclarativeBase):
+    __abstract__ = True
+
+
+class BaseModel(Base):
     # do not create separate table for this class
     __abstract__ = True
     # force AUTOINCREMENT statement for sqlite, as this dialect omits it by default, but we do need sqlite_sequence table for correct seeding.
