@@ -208,7 +208,7 @@ class TestSplitEndpoints:
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
         assert perform_resp.status_code == 200
-        transactions = perform_resp.json()
+        transactions = perform_resp.json()["performed_transactions"]
         # Expect two transactions.
         assert len(transactions) == 2
         amounts = [Decimal(tx["amount"]) for tx in transactions]
@@ -241,7 +241,7 @@ class TestSplitEndpoints:
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
         assert perform_resp.status_code == 200
-        transactions = perform_resp.json()
+        transactions = perform_resp.json()["performed_transactions"]
         # Expect two transactions.
         assert len(transactions) == 1
         assert Decimal(transactions[0]["amount"]) == Decimal("0.01")
@@ -284,7 +284,7 @@ class TestSplitEndpoints:
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
         assert perform_resp.status_code == 200
-        transactions = perform_resp.json()
+        transactions = perform_resp.json()["performed_transactions"]
         # Expect three transactions.
         assert len(transactions) == 3
         amounts = [Decimal(tx["amount"]) for tx in transactions]
@@ -343,7 +343,7 @@ class TestSplitEndpoints:
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
         assert perform_resp.status_code == 200
-        transactions = perform_resp.json()
+        transactions = perform_resp.json()["performed_transactions"]
         # Expect four transactions.
         assert len(transactions) == 4
         amounts = [Decimal(tx["amount"]) for tx in transactions]
@@ -394,23 +394,29 @@ class TestSplitEndpoints:
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
         assert perform_resp.status_code == 200
-        transactions = perform_resp.json()
+        transactions = perform_resp.json()["performed_transactions"]
         # Expect only two transactions for the fixed participants.
         assert len(transactions) == 2
         amounts = [Decimal(tx["amount"]) for tx in transactions]
         assert amounts.count(Decimal("50.00")) == 2
         assert sum(amounts) == Decimal("100.00")
 
-    @pytest.mark.xfail()
     def test_perform_split_fixed_exceed(
-        self, test_app: TestClient, token, split_100, participant_c, participant_d
+        self,
+        test_app: TestClient,
+        token,
+        split_100,
+        participant_c,
+        participant_d,
+        participant_e,
     ):
         """
         For a split of 100.00 USD:
           - Add Participant C with fixed amount 60.00,
           - Add Participant D with fixed amount 50.00,
+          - Add Participant E.
           Total fixed amounts exceed the split total.
-        Expected outcome: an error response.
+        Expected outcome: each entity is billed with their fixed amount. E is not billed at all.
         """
         split_id = split_100["id"]
         resp_c = test_app.post(
@@ -423,11 +429,18 @@ class TestSplitEndpoints:
             json={"entity_id": participant_d, "fixed_amount": "50.00"},
             headers={"x-token": token},
         )
+        resp_e = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_id": participant_e},
+            headers={"x-token": token},
+        )
         assert resp_c.status_code == 200
         assert resp_d.status_code == 200
 
         perform_resp = test_app.post(
             f"/splits/{split_id}/perform", headers={"x-token": token}
         )
-        # Expect a non-200 status code (or an error message) since fixed amounts exceed total.
-        assert perform_resp.status_code != 200
+        assert perform_resp.status_code == 200
+        transactions = perform_resp.json()["performed_transactions"]
+        assert len(transactions) == 2
+        assert sum([Decimal(x["amount"]) for x in transactions]) == Decimal(110)

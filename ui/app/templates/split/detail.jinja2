@@ -1,4 +1,5 @@
 {% extends "base.jinja2" %}
+{% from "transaction/macro_list.jinja2" import transaction_list with context %}
 
 {% block title %}Split {{ split.id }}{% endblock %}
 
@@ -13,63 +14,12 @@
         <td>{{ split.comment or "" }}</td>
     </tr>
     <tr>
-        <td>Actor</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
-                {{ split.actor_entity.name }}
-            </a>
-        </td>
-    </tr>
-    <tr>
-        <td>Recipient</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
-                {{ split.recipient_entity.name }}
-            </a>
-        </td>
-    </tr>
-    <tr>
         <td>Amount</td>
         <td>{{ split.amount }}</td>
     </tr>
     <tr>
         <td>Currency</td>
         <td>{{ split.currency | upper }}</td>
-    </tr>
-    <tr>
-        <td>Created at</td>
-        <td>{{ split.created_at }}</td>
-    </tr>
-    <tr>
-        <td>Modified at</td>
-        <td>{{ split.modified_at or "" }}</td>
-    </tr>
-    <tr>
-        <td>Participants</td>
-        <td>
-            <table>
-                <tbody>
-                    {% for participant in split.participants %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('entity.detail', id=participant.entity.id) }}">
-                                {{ participant.entity.name }}
-                            </a>
-                        </td>
-                        <td>
-                            {% if participant.fixed_amount %}
-                            {{ participant.fixed_amount }} {{ split.currency | upper }}
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </td>
-    </tr>
-    <tr>
-        <td>Performed</td>
-        <td>{{ split.performed }}</td>
     </tr>
     <tr>
         <td>Tags</td>
@@ -85,6 +35,35 @@
             </table>
         </td>
     </tr>
+    <tr>
+        <td>Recipient</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
+                {{ split.recipient_entity.name }}
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>Actor</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
+                {{ split.actor_entity.name }}
+            </a>
+        </td>
+    </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ split.created_at }}</td>
+    </tr>
+    <tr>
+        <td>Modified at</td>
+        <td>{{ split.modified_at or "" }}</td>
+    </tr>
+    <tr>
+        <td>Performed</td>
+        <td>{{ split.performed }}</td>
+    </tr>
+
 </table>
 
 {% if not split.performed %}
@@ -92,4 +71,46 @@
 <p><a href="{{ url_for('split.edit', id=split.id) }}">Edit</a></p>
 <p><a href="{{ url_for('split.delete', id=split.id) }}">Delete</a></p>
 {% endif %}
+
+<h2>Participants</h2>
+{% if split.participants %}
+<table>
+    <tbody>
+        {% for participant in split.participants %}
+        <tr>
+            <td>
+                <a href="{{ url_for('entity.detail', id=participant.entity.id) }}">
+                    {{ participant.entity.name }}
+                </a>
+            </td>
+            <td>
+                {% if participant.fixed_amount %}
+                {{ participant.fixed_amount }} {{ split.currency | upper }}
+                {% else %}
+                <span class="secondary">≈ {{ split.share_preview.current_share }} {{ split.currency | upper }}</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if not split.performed %}
+                <a href="{{ url_for('split.remove_participant', id=split.id, entity_id=participant.entity.id )}}">X</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<p>Total: {{ split.participants | length }}</p>
+{% else %}
+No participants yet.
+{% endif%}
+{% if not split.performed %}
+<p>
+    <a href="{{ url_for('split.add_participant', id=split.id ) }}">Add participant</a>
+</p>
+{% endif%}
+
+{% if split.performed %}
+<h2>Transactions</h2>
+{{ transaction_list(split.performed_transactions) }}
+{% endif%}
 {% endblock %}

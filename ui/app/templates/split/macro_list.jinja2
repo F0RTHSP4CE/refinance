@@ -1,4 +1,6 @@
-{% macro split_list(splits) %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% macro split_list(splits, actor_entity_id) %}
 {% if splits %}
 <div class="wide-table-wrapper">
     <table>
@@ -9,17 +11,20 @@
                 <td>Created At</td>
                 <td>Recipient</td>
                 <td>Comment</td>
+                <td>Tags</td>
+                <td>Collected</td>
                 <td>Amount</td>
-                <td>≈Share</td>
                 <td>Currency</td>
                 <td>Participants</td>
-                <td>Performed</td>
-                <td>Tags</td>
+                <td class="right-align">≈Share</td>
+                <td class="right-align">≈Next share</td>
+                <td class="right-align">Impact%</td>
+                <td></td>
             </tr>
         </thead>
         <tbody>
             {% for split in splits %}
-            <tr>
+            <tr {% if split.performed %} class="secondary" {%endif%}>
                 <td><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.id }}</a></td>
 
                 <td>
@@ -34,18 +39,37 @@
                     </a>
                 </td>
                 <td>{{ split.comment or ""}}</td>
+                <td>
+                    {% for tag in split.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
+                </td>
+                <td class="right-align">
+                    {% if split.collected_amount | float > 0 %}{{ split.collected_amount }}{% endif %}
+                </td>
                 <td class="right-align">{{ split.amount }}</td>
-                <td class="right-align">{{ split.share_preview }}</td>
                 <td>{{ split.currency | upper }}</td>
                 <td>{{ split.participants | length or "" }}</td>
-                <td>{{ split.performed }}</td>
+                <td class="right-align">
+                    {% if split.share_preview.current_share | float > 0 %}
+                    {{ split.share_preview.current_share }}
+                    {% endif %}
+                </td>
+                <td class="right-align">
+                    {% if split.share_preview.next_share | float > 0 %}
+                    {{ split.share_preview.next_share }} {{ split.currency | upper }}
+                    {% endif %}
+                </td>
+                <td class="right-align">
+                    {% if split.share_preview.impact_percent | float > 0 %}
+                    -{{ split.share_preview.impact_percent }}%
+                    {% endif %}
+                </td>
                 <td>
-                    {% if split.tags %}
-                    <ul>
-                        {% for tag in split.tags %}
-                        <li>{{ tag.name }}</li>
-                        {% endfor %}
-                    </ul>
+                    {% if (split.participants | selectattr("entity.id", "equalto", g.actor_entity.id) | list) or
+                    split.performed %}
+                    {% else %}
+                    <a href="{{ url_for('split.add_participant', id=split.id ) }}">Join!</a>
                     {% endif %}
                 </td>
             </tr>

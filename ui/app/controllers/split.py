@@ -1,10 +1,10 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Split, Transaction
+from app.schemas import Balance, Entity, Split, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, FormField, IntegerField, StringField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms.validators import DataRequired, NumberRange, Optional
 
 split_bp = Blueprint("split", __name__)
 
@@ -25,6 +25,15 @@ class SplitForm(FlaskForm):
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
         render_kw={"placeholder": "GEL, USD, DOGE"},
+    )
+    submit = SubmitField("Submit")
+
+
+class SplitAddParticipant(FlaskForm):
+    entity_name = StringField("Entity")
+    entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    fixed_amount = FloatField(
+        "Amount", render_kw={"placeholder": "optional"}, validators=[Optional()]
     )
     submit = SubmitField("Submit")
 
@@ -118,5 +127,34 @@ def perform(id):
     form = PerformForm()
     if form.validate_on_submit():
         api.http("POST", f"splits/{id}/perform")
-        return redirect(url_for("transaction.list"))
+        return redirect(url_for("split.detail", id=split.id))
     return render_template("split/perform.jinja2", form=form, split=split)
+
+
+@split_bp.route("/<int:id>/participants/add", methods=["GET", "POST"])
+@token_required
+def add_participant(id):
+    api = get_refinance_api_client()
+    split = Split(**api.http("GET", f"splits/{id}").json())
+    form = SplitAddParticipant()
+    if form.validate_on_submit():
+        api.http("POST", f"splits/{id}/participants", data=form.data)
+        return redirect(url_for("split.detail", id=split.id))
+    return render_template("split/add_participant.jinja2", form=form, split=split)
+
+
+@split_bp.route(
+    "/<int:id>/participants/<int:entity_id>/remove", methods=["GET", "POST"]
+)
+@token_required
+def remove_participant(id, entity_id):
+    api = get_refinance_api_client()
+    split = Split(**api.http("GET", f"splits/{id}").json())
+    entity = Entity(**api.http("GET", f"entities/{entity_id}").json())
+    form = DeleteForm()
+    if form.validate_on_submit():
+        api.http("DELETE", f"splits/{id}/participants", params={"entity_id": entity.id})
+        return redirect(url_for("split.detail", id=split.id))
+    return render_template(
+        "split/remove_participant.jinja2", form=form, split=split, entity=entity
+    )

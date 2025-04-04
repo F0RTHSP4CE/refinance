@@ -65,7 +65,9 @@ class Split(Base):
     recipient_entity: Entity
     participants: list[SplitParticipant]
     performed: bool
-    share_preview: Decimal
+    share_preview: tuple[Decimal, Decimal]
+    performed_transactions: list[Transaction]
+    collected_amount: Decimal
     currency: str
     tags: list[Tag]
 

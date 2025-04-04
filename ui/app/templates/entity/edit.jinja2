@@ -1,6 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'form.jinja2' import render_form %}
-{% import 'widgets/tag_manager.jinja2' as tag_manager %}
+{% from 'widgets/tag_manager.jinja2' import tag_manager %}
 
 {% block title %}Edit entity {{ entity.id }} {{ entity.name }}{% endblock %}
 
@@ -12,5 +12,5 @@
     {{ render_form(auth_form) }}
 </form>
 <h2>Tags</h2>
-{{ tag_manager.tag_manager("entity", entity.id, entity.tags, all_tags) }}
+{{ tag_manager("entity", entity.id, entity.tags, all_tags) }}
 {% endblock %}

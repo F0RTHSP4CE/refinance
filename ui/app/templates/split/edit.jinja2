@@ -1,5 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'widgets/tag_manager.jinja2' import tag_manager %}
 {% from 'form.jinja2' import render_form %}
 
 {% block title %}Edit split {{ split.id }}{% endblock %}
@@ -16,6 +17,8 @@
         {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id'), new_table=False) }}
     </table>
 </form>
+<h2>Tags</h2>
+{{ tag_manager("split", split.id, split.tags, all_tags) }}
 
 <!-- Include the JS widget file -->
 <script src="/static/js/entitySelector.js"></script>

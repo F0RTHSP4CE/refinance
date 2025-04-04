@@ -13,7 +13,8 @@ from app.schemas.base import (
 from app.schemas.entity import EntitySchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
-from pydantic import BaseModel, field_validator
+from app.schemas.transaction import TransactionSchema
+from pydantic import BaseModel, Field, field_validator
 
 
 class SplitParticipantAddSchema(BaseModel):
@@ -32,16 +33,24 @@ class SplitParticipantSchema(BaseSchema):
     fixed_amount: Optional[CurrencyDecimal] = None
 
 
+class SplitSharePreview(BaseSchema):
+    current_share: CurrencyDecimal
+    next_share: CurrencyDecimal
+    impact_percent: Decimal
+
+
 class SplitSchema(BaseReadSchema):
     actor_entity_id: int
     actor_entity: EntitySchema
     recipient_entity_id: int
     recipient_entity: EntitySchema
-    participants: list[SplitParticipantSchema]
+    participants: list[SplitParticipantSchema] = Field(default_factory=list)
     amount: CurrencyDecimal
     currency: str
+    collected_amount: Decimal
     performed: bool
-    share_preview: CurrencyDecimal
+    share_preview: SplitSharePreview
+    performed_transactions: list[TransactionSchema] = Field(default_factory=list)
     tags: list[TagSchema]
 
 
@@ -65,7 +74,6 @@ class SplitUpdateSchema(BaseUpdateSchema):
     recipient_entity_id: int | None = None
     amount: Decimal | None = None
     currency: str | None = None
-    performed: bool | None = None
 
 
 class SplitFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
