@@ -1,0 +1,51 @@
+{% extends 'base.jinja2' %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Add split {{ split.id }} participant{% endblock %}
+
+{% block content %}
+<td class="right-align">
+    {% if split.collected_amount | float > 0 %}{{ split.collected_amount }}{% endif %}
+</td>
+<table>
+    <tr>
+        <td>Current share</td>
+        <td>
+            {% if split.share_preview.current_share | float > 0 %}
+            {{ split.share_preview.current_share }} {{ split.currency | upper }}
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <td>Next share</td>
+        <td>
+            {% if split.share_preview.next_share | float > 0 %}
+            {{ split.share_preview.next_share }} {{ split.currency | upper }}
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <td>Impact</td>
+        <td>
+            {% if split.share_preview.impact_percent | float > 0 %}
+            -{{ split.share_preview.impact_percent }}%
+            {% endif %}
+        </td>
+    </tr>
+</table>
+<h2>Participant</h2>
+<form method="post">
+    <table>
+        <tr>
+            <td>Entity</td>
+            <td>
+                {{ entity_selector('entity', g.actor_entity.name, g.actor_entity.id) }}
+            </td>
+        </tr>
+        {{ render_form(form, except=('entity_name', 'entity_id'), new_table=False) }}
+    </table>
+</form>
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}

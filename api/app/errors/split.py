@@ -13,9 +13,11 @@ class PerformedSplitCanNotBeDeleted(ApplicationError):
     error = "Can not delete a performed split."
 
 
-class SplitParticipantAlreadyAdded(ApplicationError):
-    error_code = 6004
-    error = "Entity is already a participant of this split."
+# not needed anymore, because we just override the data in that case
+#
+# class SplitParticipantAlreadyAdded(ApplicationError):
+#     error_code = 6004
+#     error = "Entity is already a participant of this split."
 
 
 class SplitParticipantAlreadyRemoved(ApplicationError):
@@ -35,4 +37,4 @@ class PerformedSplitParticipantsAreNotEditable(ApplicationError):
 
 class MinimalNumberOfParticipantsRequired(ApplicationError):
     error_code = 6008
-    error = "There should be at least 2 participants to perform the split."
+    error = "There should be at least 1 participants to perform the split."
