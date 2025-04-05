@@ -1,4 +1,6 @@
 {% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}s
+
 {% block title %}Transaction {{ transaction.id }}{% endblock %}
 {% block content %}
 <table>
@@ -26,10 +28,18 @@
         <td>Currency</td>
         <td>{{ transaction.currency | upper }}</a></td>
     </tr>
-    <tr>
 
+    <tr>
         <td>Comment</td>
         <td>{{ transaction.comment or '' }}</a></td>
+    </tr>
+    <tr>
+        <td>Tags</td>
+        <td>
+            {% for tag in transaction.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
     </tr>
     <tr>
         <td>Status</td>

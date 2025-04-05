@@ -35,6 +35,10 @@ td {
   text-align: right;
 }
 
+.center-align {
+  text-align: center;
+}
+
 .wide-table-wrapper {
   max-width: 100%;
 }
@@ -55,6 +59,10 @@ nav>ul {
 nav>ul>li {
   display: inline;
   margin-right: 1rem;
+}
+
+nav>ul>li.active>a {
+  color: white;
 }
 
 nav .user {
@@ -115,5 +123,5 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 }
 
 .secondary {
-  color: gray;
+  filter: opacity(0.44);
 }

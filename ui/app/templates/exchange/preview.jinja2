@@ -7,7 +7,7 @@
 <p>Exchange <strong>{{ preview.source_amount }}</strong> {{ preview.source_currency.upper() }} to <strong>{{
         preview.target_amount }}</strong> {{ preview.target_currency.upper() }}? Rate is {{ preview.rate }}</p>
 
-<form method="post" action="{{ url_for('currency_exchange.exchange') }}">
+<form method="post" action="{{ url_for('exchange.exchange') }}">
     <input type="hidden" name="source_amount" value="{{ form.data.source_amount }}">
     <input type="hidden" name="source_currency" value="{{ form.data.source_currency }}">
     <input type="hidden" name="target_amount" value="{{ form.data.target_amount }}">

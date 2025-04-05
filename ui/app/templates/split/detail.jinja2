@@ -85,9 +85,16 @@
             </td>
             <td>
                 {% if participant.fixed_amount %}
+                =
+                {% else %}
+
+                {% endif %}
+            </td>
+            <td>
+                {% if participant.fixed_amount %}
                 {{ participant.fixed_amount }} {{ split.currency | upper }}
                 {% else %}
-                <span class="secondary">≈ {{ split.share_preview.current_share }} {{ split.currency | upper }}</span>
+                {{ split.share_preview.current_share }} {{ split.currency | upper }}
                 {% endif %}
             </td>
             <td>

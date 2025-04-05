@@ -1,6 +1,6 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Transaction, TransactionStatus
+from app.schemas import Tag, Transaction, TransactionStatus
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
@@ -18,13 +18,13 @@ class TransactionForm(FlaskForm):
     amount = FloatField(
         "Amount",
         validators=[DataRequired()],
-        render_kw={"placeholder": "10.00"},
+        render_kw={"placeholder": "10.00", "class": "small"},
     )
     currency = StringField(
         "Currency",
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL, USD, DOGE"},
+        render_kw={"placeholder": "GEL", "class": "small"},
     )
     status = SelectField(
         "Status", choices=[(e.value, e.value) for e in TransactionStatus]
@@ -102,8 +102,12 @@ def edit(id):
         form.populate_obj(transaction)
         api.http("PATCH", f"transactions/{id}", data=form.data)
         return redirect(url_for("transaction.detail", id=id))
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     return render_template(
-        "transaction/edit.jinja2", form=form, transaction=transaction
+        "transaction/edit.jinja2",
+        form=form,
+        transaction=transaction,
+        all_tags=all_tags,
     )
 
 
@@ -133,3 +137,21 @@ def complete(id):
     return render_template(
         "transaction/complete.jinja2", form=form, transaction=transaction
     )
+
+
+@transaction_bp.route("/<int:id>/tags/add", methods=["POST"])
+@token_required
+def add_tag(id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("POST", f"transactions/{id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("transaction.edit", id=id))
+
+
+@transaction_bp.route("/<int:id>/tags/remove", methods=["POST"])
+@token_required
+def remove_tag(id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("DELETE", f"transactions/{id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("transaction.edit", id=id))

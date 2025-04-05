@@ -5,7 +5,7 @@
         hx-trigger="input changed delay:250ms, name" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
         value="{{ initial_name }}">
     <!-- ID input remains unique per widget -->
-    id: <input id="{{ prefix }}_id" class="entity-id-field" type="text" name="{{ prefix }}_id" placeholder="id"
+    id: <input id="{{ prefix }}_id" class="entity-id-field small" type="number" name="{{ prefix }}_id" placeholder="id"
         value="{{ initial_id }}">
     <!-- Container for search results -->
     <div id="{{ prefix }}_search_results"></div>

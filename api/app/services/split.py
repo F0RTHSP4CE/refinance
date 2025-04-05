@@ -1,15 +1,12 @@
 """Split service with fixed participant amounts"""
 
-import logging
 from decimal import ROUND_DOWN, Decimal
-from typing import Any, Optional
 
 from app.errors.split import (
     MinimalNumberOfParticipantsRequired,
     PerformedSplitCanNotBeDeleted,
     PerformedSplitCanNotBeEdited,
     PerformedSplitParticipantsAreNotEditable,
-    SplitDoesNotHaveParticipants,
     SplitParticipantAlreadyRemoved,
 )
 from app.models.entity import Entity
@@ -25,12 +22,11 @@ from app.schemas.transaction import TransactionCreateSchema
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from app.services.tag import TagService
 from app.services.transaction import TransactionService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Query, Session
-
-logger = logging.getLogger(__name__)
 
 
 class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
@@ -41,14 +37,15 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(),
         entity_service: EntityService = Depends(),
+        tag_service: TagService = Depends(),
     ):
         self.db: Session = db
         self._transaction_service = transaction_service
         self._entity_service = entity_service
+        self._tag_service = tag_service
 
     def get(self, obj_id: int) -> Split:
         db_obj = super().get(obj_id)
-        logger.debug(db_obj)
         return db_obj
 
     def _apply_filters(

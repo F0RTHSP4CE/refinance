@@ -101,13 +101,11 @@ class Split(BaseModel):
                 current_share=share or Decimal("0"),
                 next_share=share_next.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
                 or Decimal("0"),
-                impact_percent=improvement.quantize(Decimal("0.01")) or Decimal("0"),
             )
         except:
             return SplitSharePreview(
                 current_share=Decimal("0"),
                 next_share=Decimal("0"),
-                impact_percent=Decimal("0"),
             )
 
     @property

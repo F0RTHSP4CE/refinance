@@ -1,11 +1,11 @@
-{% macro pagination_control(page, total, limit, endpoint) %}
+{% macro pagination_control(page, total, limit, endpoint, id = None) %}
 {% set total_pages = ((total - 1) // limit) + 1 %}
 <p class="pagination">
     {% if page > 1 %}
-    <a href="{{ url_for(endpoint, page=page-1, limit=limit) }}">Previous</a>
+    <a href="{{ url_for(endpoint, page=page-1, limit=limit, id=id) }}">Previous</a>
     {% endif %}
     <span>Page {{ page }} of {{ total_pages }}</span>
-    {% if (page * limit) < total %} <a href="{{ url_for(endpoint, page=page+1, limit=limit) }}">Next</a>
+    {% if (page * limit) < total %} <a href="{{ url_for(endpoint, page=page+1, limit=limit, id=id) }}">Next</a>
         {% endif %}
 </p>
 {% endmacro %}

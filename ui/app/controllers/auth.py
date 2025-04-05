@@ -13,8 +13,6 @@ entity_bp = Blueprint("entity", __name__)
 
 class TokenRequestForm(FlaskForm):
     entity_name = StringField("Name")
-    telegram_id = StringField("Telegram ID")
-    signal_id = StringField("Signal ID")
     submit = SubmitField("Request")
 
 

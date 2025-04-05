@@ -36,7 +36,6 @@ class SplitParticipantSchema(BaseSchema):
 class SplitSharePreview(BaseSchema):
     current_share: CurrencyDecimal
     next_share: CurrencyDecimal
-    impact_percent: Decimal
 
 
 class SplitSchema(BaseReadSchema):

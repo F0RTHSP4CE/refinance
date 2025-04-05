@@ -1,6 +1,7 @@
 {% extends "base.jinja2" %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
 
 {% block title %}Entity {{ entity.name }}{% endblock %}
 
@@ -116,5 +117,5 @@
 
 <h2>Transactions</h2>
 {{ transaction_list(transactions) }}
-
+{{ pagination_control(page, total, limit, 'entity.detail', id=entity.id) }}
 {% endblock %}
