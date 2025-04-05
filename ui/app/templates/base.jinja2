@@ -22,16 +22,35 @@
     <nav>
         <ul>
             {% if g.actor_entity %}
-            <li><a href="{{ url_for('transaction.list') }}">Transactions</a></li>
-            <li><a href="{{ url_for('split.list') }}">Splits</a></li>
-            <li><a href="{{ url_for('currency_exchange.index') }}">Exchange</a></li>
-            <li>·</li>
-            <li><a href="{{ url_for('entity.list') }}">Entities</a></li>
-            <li><a href="{{ url_for('tag.list') }}">Tags</a></li>
+            <li {% if 'transaction' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('transaction.list') }}">Transaction</a>
+            </li>
+            <li {% if 'split' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('split.list') }}">Split</a>
+            </li>
+            <li {% if 'exchange' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('exchange.index') }}">Exchange</a>
+            </li>
+            <li>///</li>
+            <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('entity.list') }}">Entity</a>
+            </li>
+            <li {% if 'tag' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('tag.list') }}">Tag</a>
+            </li>
 
             <li class="user">
-                Welcome, <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name
-                        }}</strong></a>! <a href="{{ url_for('auth.logout') }}">Logout</a>
+
+                {% for currency,value in g.actor_entity_balance["completed"].items() %}
+                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" {% if value | float < 0 %}
+                    class="amount-negative" {% endif %}>{{ value }} {{ currency |
+                    upper}}</a>
+                {% endfor %}
+                ///
+                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name
+                        }}</strong></a>
+                ///
+                <a href="{{ url_for('auth.logout') }}">Log out</a>
             </li>
             {% else %}
             <li><a href="/">Refinance</a></li>

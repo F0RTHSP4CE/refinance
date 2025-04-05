@@ -57,6 +57,12 @@ class SplitParticipant(Base):
 
 
 @dataclass
+class SplitSharePreview(Base):
+    current_share: Decimal
+    next_share: Decimal
+
+
+@dataclass
 class Split(Base):
     amount: Decimal
     actor_entity_id: int
@@ -65,7 +71,7 @@ class Split(Base):
     recipient_entity: Entity
     participants: list[SplitParticipant]
     performed: bool
-    share_preview: tuple[Decimal, Decimal]
+    share_preview: SplitSharePreview
     performed_transactions: list[Transaction]
     collected_amount: Decimal
     currency: str

@@ -42,15 +42,16 @@ class CurrencyDecimal:
         return {"type": "string", "title": "CurrencyDecimal", "example": "10.00001"}
 
     def __str__(self) -> str:
-        d = self.value
-        # If the value is integral, format with exactly 2 decimal places.
-        if d == d.to_integral_value():
-            return format(d, ".2f")
-        # Otherwise, use fixed‑point notation and trim any trailing zeros.
-        s = format(d, "f")
-        if "." in s:
-            s = s.rstrip("0").rstrip(".")
-        return s
+        # d = self.value
+        # # If the value is integral, format with exactly 2 decimal places.
+        # if d == d.to_integral_value():
+        #     return format(d, ".2f")
+        # # Otherwise, use fixed‑point notation and trim any trailing zeros.
+        # s = format(d, "f")
+        # if "." in s:
+        #     s = s.rstrip("0").rstrip(".")
+        # return s
+        return format(self.value, ".2f")
 
     def to_decimal(self) -> Decimal:
         return Decimal(self.value)

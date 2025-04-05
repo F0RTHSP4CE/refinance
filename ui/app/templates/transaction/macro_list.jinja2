@@ -7,7 +7,6 @@
         <thead>
             <tr>
                 <td>ID</td>
-                <td>Actor</td>
                 <td>Date</td>
                 <td>From</td>
                 <td></td>
@@ -15,17 +14,16 @@
                 <td></td>
                 <td>Amount</td>
                 <td>Currency</td>
+                <td>Tags</td>
                 <td>Comment</td>
                 <td>Status</td>
+                <td>Actor</td>
             </tr>
         </thead>
         {% for transaction in transactions %}
-        <tr>
+        <tr {% if transaction.status=="draft" %} class="secondary" {%endif%}>
             <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
-            <td>
-                <a
-                    href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}">{{transaction.actor_entity.name}}</a>
-            </td>
+
             <td>{{ transaction.created_at }}</td>
             <td>
                 <a
@@ -49,8 +47,17 @@
 
             <td class="right-align">{{ transaction.amount }}</td>
             <td>{{ transaction.currency | upper }}</td>
+            <td>
+                {% for tag in transaction.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
             <td>{{ transaction.comment or '' }}</td>
             <td>{{ transaction.status }}</td>
+            <td>
+                <a
+                    href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}">{{transaction.actor_entity.name}}</a>
+            </td>
         </tr>
         {% endfor %}
     </table>

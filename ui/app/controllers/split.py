@@ -1,6 +1,6 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Split, Transaction
+from app.schemas import Balance, Entity, Split, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, FormField, IntegerField, StringField, SubmitField
@@ -18,13 +18,13 @@ class SplitForm(FlaskForm):
     amount = FloatField(
         "Amount",
         validators=[DataRequired()],
-        render_kw={"placeholder": "10.00"},
+        render_kw={"placeholder": "10.00", "class": "small"},
     )
     currency = StringField(
         "Currency",
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL, USD, DOGE"},
+        render_kw={"placeholder": "GEL", "class": "small"},
     )
     submit = SubmitField("Submit")
 
@@ -33,7 +33,10 @@ class SplitAddParticipant(FlaskForm):
     entity_name = StringField("Entity")
     entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     fixed_amount = FloatField(
-        "Amount", render_kw={"placeholder": "optional"}, validators=[Optional()]
+        "Amount",
+        render_kw={"placeholder": "10.00", "class": "small"},
+        validators=[Optional()],
+        description="Optional. Automatic share will be recalculated with each participant. Fixed amount will be sent as is.",
     )
     submit = SubmitField("Submit")
 
@@ -88,11 +91,12 @@ def edit(id):
     if form.validate_on_submit():
         api.http("PATCH", f"splits/{id}", data=form.data)
         return redirect(url_for("split.detail", id=id))
-
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     return render_template(
         "split/edit.jinja2",
         split=split,
         form=form,
+        all_tags=all_tags,
     )
 
 
@@ -158,3 +162,21 @@ def remove_participant(id, entity_id):
     return render_template(
         "split/remove_participant.jinja2", form=form, split=split, entity=entity
     )
+
+
+@split_bp.route("/<int:id>/tags/add", methods=["POST"])
+@token_required
+def add_tag(id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("POST", f"splits/{id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("split.edit", id=id))
+
+
+@split_bp.route("/<int:id>/tags/remove", methods=["POST"])
+@token_required
+def remove_tag(id):
+    tag_id = request.form.get("tag_id", type=int)
+    api = get_refinance_api_client()
+    api.http("DELETE", f"splits/{id}/tags", params={"tag_id": tag_id}).json()
+    return redirect(url_for("split.edit", id=id))

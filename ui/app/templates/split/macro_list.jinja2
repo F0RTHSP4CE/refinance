@@ -12,13 +12,11 @@
                 <td>Recipient</td>
                 <td>Comment</td>
                 <td>Tags</td>
-                <td>Collected</td>
                 <td>Amount</td>
                 <td>Currency</td>
                 <td>Participants</td>
-                <td class="right-align">≈Share</td>
+                <td class="right-align">≈Calc. share</td>
                 <td class="right-align">≈Next share</td>
-                <td class="right-align">Impact%</td>
                 <td></td>
             </tr>
         </thead>
@@ -44,25 +42,19 @@
                     {{ tag_inline(tag) }}
                     {% endfor %}
                 </td>
-                <td class="right-align">
-                    {% if split.collected_amount | float > 0 %}{{ split.collected_amount }}{% endif %}
-                </td>
                 <td class="right-align">{{ split.amount }}</td>
                 <td>{{ split.currency | upper }}</td>
-                <td>{{ split.participants | length or "" }}</td>
+                <td class="center-align">{{ split.participants | length or "" }}</td>
                 <td class="right-align">
                     {% if split.share_preview.current_share | float > 0 %}
-                    {{ split.share_preview.current_share }}
+                    {{ split.share_preview.current_share }} {{ split.currency | upper }}
                     {% endif %}
                 </td>
                 <td class="right-align">
+                    {% if not split.performed %}
                     {% if split.share_preview.next_share | float > 0 %}
                     {{ split.share_preview.next_share }} {{ split.currency | upper }}
                     {% endif %}
-                </td>
-                <td class="right-align">
-                    {% if split.share_preview.impact_percent | float > 0 %}
-                    -{{ split.share_preview.impact_percent }}%
                     {% endif %}
                 </td>
                 <td>

@@ -118,21 +118,60 @@ def edit(id):
     )
 
 
+"""
+
+@transaction_bp.route("/")
+@token_required
+def list():
+    # Get the current page and limit from query parameters, defaulting to page 1 and 10 items per page.
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    skip = (page - 1) * limit
+
+    api = get_refinance_api_client()
+    # Pass skip and limit to the FastAPI endpoint
+    response = api.http(
+        "GET", "transactions", params={"skip": skip, "limit": limit}
+    ).json()
+
+    # Extract transactions and pagination details from the API response
+    transactions = [Transaction(**x) for x in response["items"]]
+    total = response["total"]
+
+    return render_template(
+        "transaction/list.jinja2",
+        transactions=transactions,
+        total=total,
+        page=page,
+        limit=limit,
+    )
+
+"""
+
+
 @entity_bp.route("/<int:id>")
 @token_required
 def detail(id):
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
     entity_data = api.http("GET", f"entities/{id}").json()
     balance_data = api.http("GET", f"balances/{id}").json()
-    transactions_data = api.http(
-        "GET", "transactions", params=dict(entity_id=id)
-    ).json()["items"]
+    transactions_page = api.http(
+        "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
+    ).json()
+    total = transactions_page["total"]
 
     return render_template(
         "entity/detail.jinja2",
         entity=Entity(**entity_data),
         balance=Balance(**balance_data),
-        transactions=[Transaction(**x) for x in transactions_data],
+        transactions=[Transaction(**x) for x in transactions_page["items"]],
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 

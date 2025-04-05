@@ -1,8 +1,8 @@
 import re
 
 from app.controllers.auth import auth_bp
-from app.controllers.currency_exchange import currency_exchange_bp
 from app.controllers.entity import entity_bp
+from app.controllers.exchange import exchange_bp
 from app.controllers.index import index_bp
 from app.controllers.split import split_bp
 from app.controllers.tag import tag_bp
@@ -32,7 +32,7 @@ app.register_blueprint(entity_bp, url_prefix="/entities")
 app.register_blueprint(transaction_bp, url_prefix="/transactions")
 app.register_blueprint(split_bp, url_prefix="/splits")
 app.register_blueprint(tag_bp, url_prefix="/tags")
-app.register_blueprint(currency_exchange_bp, url_prefix="/currency_exchange")
+app.register_blueprint(exchange_bp, url_prefix="/exchange")
 
 
 @app.errorhandler(ApplicationError)
@@ -41,7 +41,7 @@ def handle_foo_exception(error):
 
 
 @app.before_request
-def load_current_user():
+def load_current_user_and_balance():
     if re.match(r"^/auth|^/static", request.path):
         return
     if "token" in session:
@@ -49,6 +49,8 @@ def load_current_user():
         r = api.http("GET", "entities/me")
         if r.status_code == 200:
             g.actor_entity = r.json()
+            b = api.http("GET", "balances/%s" % g.actor_entity["id"])
+            g.actor_entity_balance = b.json()
             return
         else:
             session.pop("token")

@@ -147,6 +147,7 @@ class CurrencyExchangeService:
             f"{computed_target} {exchange_request.target_currency.upper()} (rate {rate})"
         )
         source_tx = TransactionCreateSchema(
+            comment=comment,
             from_entity_id=exchange_request.entity_id,
             to_entity_id=currency_exchange_entity.id,
             amount=computed_source,
@@ -180,7 +181,7 @@ class CurrencyExchangeService:
             target_amount=computed_target,
             rate=rate,
             transactions=[
-                TransactionSchema.model_validate(source_transaction),
                 TransactionSchema.model_validate(target_transaction),
+                TransactionSchema.model_validate(source_transaction),
             ],
         )
