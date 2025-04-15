@@ -11,7 +11,7 @@
         <tr>
             <td>{{ form.recipient_entity_name.label }}</td>
             <td>
-                {{ entity_selector('recipient_entity', split.recipient_entity_name, split.recipient_entity_id) }}
+                {{ entity_selector('recipient_entity', split.recipient_entity.name, split.recipient_entity.id) }}
             </td>
         </tr>
         {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id'), new_table=False) }}

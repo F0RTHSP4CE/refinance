@@ -128,7 +128,7 @@ class TestSplitEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert "id" in data
-        assert data["recipient_entity_id"] == entity_two
+        assert data["recipient_entity"]["id"] == entity_two
         assert Decimal(data["amount"]) == Decimal("50.00")
         assert data["currency"] == "usd"
         assert data["performed"] is False

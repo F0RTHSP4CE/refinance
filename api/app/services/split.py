@@ -65,6 +65,10 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
             query = query.filter(self.model.currency == filters.currency)
         if filters.performed is not None:
             query = query.filter(self.model.performed == filters.performed)
+        if filters.participant_entity_id is not None:
+            query = query.filter(
+                self.model.participants.any(entity_id=filters.participant_entity_id)
+            )
         return query
 
     def create(self, schema: SplitCreateSchema, overrides: dict = {}) -> Split:

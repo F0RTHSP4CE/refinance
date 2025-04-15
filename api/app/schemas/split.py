@@ -39,9 +39,7 @@ class SplitSharePreview(BaseSchema):
 
 
 class SplitSchema(BaseReadSchema):
-    actor_entity_id: int
     actor_entity: EntitySchema
-    recipient_entity_id: int
     recipient_entity: EntitySchema
     participants: list[SplitParticipantSchema] = Field(default_factory=list)
     amount: CurrencyDecimal
@@ -82,4 +80,4 @@ class SplitFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     amount_max: Decimal | None = None
     currency: str | None = None
     performed: bool | None = None
-    entity_id: int | None = None
+    participant_entity_id: int | None = None

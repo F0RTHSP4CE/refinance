@@ -3,7 +3,14 @@ from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Split, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
-from wtforms import FloatField, FormField, IntegerField, StringField, SubmitField
+from wtforms import (
+    FloatField,
+    FormField,
+    IntegerField,
+    SelectField,
+    StringField,
+    SubmitField,
+)
 from wtforms.validators import DataRequired, NumberRange, Optional
 
 split_bp = Blueprint("split", __name__)
@@ -49,6 +56,32 @@ class PerformForm(FlaskForm):
     perform = SubmitField("Perform")
 
 
+class SplitFilterForm(FlaskForm):
+    actor_entity_name = StringField("Actor")
+    actor_entity_id = IntegerField("", validators=[NumberRange(min=1)])
+    recipient_entity_name = StringField("Recipient")
+    recipient_entity_id = IntegerField(
+        "", validators=[DataRequired(), NumberRange(min=1)]
+    )
+    amount_min = FloatField(
+        "Amount Min",
+        render_kw={"placeholder": "10.00", "class": "small"},
+    )
+    amount_max = FloatField(
+        "Amount Max",
+        render_kw={"placeholder": "20.00", "class": "small"},
+    )
+    currency = StringField(
+        "Currency",
+        render_kw={"placeholder": "GEL", "class": "small"},
+    )
+    comment = StringField("Comment")
+    performed = SelectField(
+        "Performed", choices=[("", ""), ("true", "True"), ("false", "False")]
+    )
+    submit = SubmitField("Search")
+
+
 @split_bp.route("/")
 @token_required
 def list():
@@ -57,8 +90,18 @@ def list():
     limit = request.args.get("limit", 10, type=int)
     skip = (page - 1) * limit
 
+    filter_form = SplitFilterForm(request.args)
+    # leave only non-empty filters
+    filters = {
+        key: value
+        for (key, value) in filter_form.data.items()
+        if value not in (None, "")
+    }
+
     api = get_refinance_api_client()
-    response = api.http("GET", "splits", params={"skip": skip, "limit": limit}).json()
+    response = api.http(
+        "GET", "splits", params={"skip": skip, "limit": limit, **filters}
+    ).json()
     splits = [Split(**x) for x in response["items"]]
     total = response["total"]
 
@@ -68,6 +111,7 @@ def list():
         total=total,
         page=page,
         limit=limit,
+        filter_form=filter_form,
     )
 
 

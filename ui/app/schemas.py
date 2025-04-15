@@ -65,9 +65,7 @@ class SplitSharePreview(Base):
 @dataclass
 class Split(Base):
     amount: Decimal
-    actor_entity_id: int
     actor_entity: Entity
-    recipient_entity_id: int
     recipient_entity: Entity
     participants: list[SplitParticipant]
     performed: bool

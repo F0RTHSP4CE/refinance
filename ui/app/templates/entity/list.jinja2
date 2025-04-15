@@ -1,10 +1,23 @@
 {% extends "base.jinja2" %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
+{% from 'form.jinja2' import render_form %}
 
 {% block title %}Entities{% endblock %}
 {% block content %}
 <p><a href="{{ url_for('entity.add') }}">Add</a></p>
+
+<p>
+<details>
+    <summary>search</summary>
+    <p>
+    <form method="get">
+        {{ render_form(filter_form, except=('csrf_token')) }}
+    </form>
+    </p>
+</details>
+</p>
+
 {% if entities %}
 <div class="wide-table-wrapper">
     <table>
