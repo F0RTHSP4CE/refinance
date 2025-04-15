@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
 
 {% block title %}Split {{ split.id }}{% endblock %}
 
@@ -27,9 +28,7 @@
             <table>
                 <tbody>
                     {% for tag in split.tags %}
-                    <tr>
-                        <td>{{ tag.name }}</td>
-                    </tr>
+                    {{ tag_inline(tag) }}
                     {% endfor %}
                 </tbody>
             </table>

@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urlencode
 
 from app.controllers.auth import auth_bp
 from app.controllers.entity import entity_bp
@@ -76,6 +77,22 @@ def hx_entity_name(id):
         return jsonify(r.json()), 200
     else:
         return jsonify({}), 404
+
+
+def update_query_params(**kwargs):
+    """
+    Merges the current request query parameters with new parameters passed via kwargs.
+    Returns a URL-encoded query string including a leading '?'.
+    """
+    # Start with the current request arguments as a dictionary.
+    current_params = request.args.to_dict()
+    # Update the dictionary with the new parameters.
+    current_params.update(kwargs)
+    # Return the URL-encoded query string.
+    return "?" + urlencode(current_params)
+
+
+app.jinja_env.globals["update_query_params"] = update_query_params
 
 
 # dev
