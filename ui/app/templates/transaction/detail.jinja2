@@ -12,12 +12,18 @@
         <td>From</td>
         <td>
             <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
+            {% for tag in transaction.from_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
         </td>
     </tr>
     <tr>
         <td>To</td>
         <td>
             <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
+            {% for tag in transaction.to_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
         </td>
     </tr>
     <tr>
@@ -51,7 +57,7 @@
     </tr>
     <tr>
         <td>Modified at</td>
-        <td>{{ transaction.modified_at }}</a></td>
+        <td>{{ transaction.modified_at or '' }}</a></td>
     </tr>
 </table>
 {% if transaction.status != "completed" %}

@@ -40,7 +40,31 @@ class ConfirmForm(FlaskForm):
     confirm = SubmitField("Confirm")
 
 
-from flask import render_template, request
+class TransactionFilterForm(FlaskForm):
+    entity_name = StringField("Entity (From/To)")
+    entity_id = IntegerField("", validators=[NumberRange(min=1)])
+    actor_entity_name = StringField("Actor")
+    actor_entity_id = IntegerField("", validators=[NumberRange(min=1)])
+    from_entity_name = StringField("From")
+    from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    to_entity_name = StringField("To")
+    to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    amount_min = FloatField(
+        "Amount Min",
+        render_kw={"placeholder": "10.00", "class": "small"},
+    )
+    amount_max = FloatField(
+        "Amount Max",
+        render_kw={"placeholder": "20.00", "class": "small"},
+    )
+    currency = StringField(
+        "Currency",
+        render_kw={"placeholder": "GEL", "class": "small"},
+    )
+    status = SelectField(
+        "Status", choices=[("", "")] + [(e.value, e.value) for e in TransactionStatus]
+    )
+    submit = SubmitField("Search")
 
 
 @transaction_bp.route("/")
@@ -51,10 +75,18 @@ def list():
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
 
+    filter_form = TransactionFilterForm(request.args)
+    # leave only non-empty filters
+    filters = {
+        key: value
+        for (key, value) in filter_form.data.items()
+        if value not in (None, "")
+    }
+
     api = get_refinance_api_client()
     # Pass skip and limit to the FastAPI endpoint
     response = api.http(
-        "GET", "transactions", params={"skip": skip, "limit": limit}
+        "GET", "transactions", params={"skip": skip, "limit": limit, **filters}
     ).json()
 
     # Extract transactions and pagination details from the API response
@@ -67,6 +99,7 @@ def list():
         total=total,
         page=page,
         limit=limit,
+        filter_form=filter_form,
     )
 
 

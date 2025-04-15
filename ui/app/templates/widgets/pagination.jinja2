@@ -1,11 +1,17 @@
-{% macro pagination_control(page, total, limit, endpoint, id = None) %}
+{% macro pagination_control(page, total, limit, id) %}
+{# Calculate total pages #}
 {% set total_pages = ((total - 1) // limit) + 1 %}
 <p class="pagination">
+    {# Previous button #}
     {% if page > 1 %}
-    <a href="{{ url_for(endpoint, page=page-1, limit=limit, id=id) }}">Previous</a>
+    {% set prev_page = page - 1 %}
+    {% set prev_skip = (prev_page - 1) * limit %}
+    <a href="{{ request.path }}{{ update_query_params(page=prev_page, limit=limit, skip=prev_skip) }}">Previous</a>
     {% endif %}
     <span>Page {{ page }} of {{ total_pages }}</span>
-    {% if (page * limit) < total %} <a href="{{ url_for(endpoint, page=page+1, limit=limit, id=id) }}">Next</a>
+    {# Next button #}
+    {% if page < total_pages %} {% set next_page=page + 1 %} {% set next_skip=(next_page - 1) * limit %} <a
+        href="{{ request.path }}{{ update_query_params(page=next_page, limit=limit, skip=next_skip) }}">Next</a>
         {% endif %}
 </p>
 {% endmacro %}
