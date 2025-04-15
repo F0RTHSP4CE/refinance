@@ -40,6 +40,9 @@
             <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
                 {{ split.recipient_entity.name }}
             </a>
+            {% for tag in split.recipient_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
         </td>
     </tr>
     <tr>
@@ -81,6 +84,9 @@
                 <a href="{{ url_for('entity.detail', id=participant.entity.id) }}">
                     {{ participant.entity.name }}
                 </a>
+                {% for tag in participant.entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
             </td>
             <td>
                 {% if participant.fixed_amount %}
@@ -89,7 +95,7 @@
 
                 {% endif %}
             </td>
-            <td>
+            <td class="right-align">
                 {% if participant.fixed_amount %}
                 {{ participant.fixed_amount }} {{ split.currency | upper }}
                 {% else %}

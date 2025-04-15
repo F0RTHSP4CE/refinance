@@ -5,7 +5,7 @@
 {% block title %}Add split {{ split.id }} participant{% endblock %}
 
 {% block content %}
-<table>
+{# <table>
     <tr>
         <td>Current share</td>
         <td>
@@ -24,7 +24,8 @@
         <td>(with one more participant)</td>
     </tr>
 </table>
-<h2>Participant</h2>
+
+<h2>Add participant</h2> #}
 <form method="post">
     <table>
         <tr>
@@ -33,9 +34,32 @@
                 {{ entity_selector('entity', g.actor_entity.name, g.actor_entity.id) }}
             </td>
         </tr>
-        {{ render_form(form, except=('entity_name', 'entity_id'), new_table=False) }}
+        {# Render fields from form_entity (excluding entity_name and entity_id already rendered) #}
+        {{ render_form(form_entity, except=('entity_name', 'entity_id'), new_table=False) }}
     </table>
 </form>
+
+
+<details>
+    <summary>add by tag instead</summary>
+    <h2>Add participants by Tag</h2>
+    <form method="post">
+        <table>
+            <tr>
+                <td>Entity Tag</td>
+                <td>
+                    <select name="entity_tag_id" id="participant-tag-selector" class="form-control">
+                        {% for value, label in form_tag.entity_tag_id.choices %}
+                        <option value="{{ value }}" {% if value=="" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {# Render remaining fields for the tag form #}
+            {{ render_form(form_tag, except=('entity_tag_id'), new_table=False) }}
+        </table>
+    </form>
+</details>
 
 <script src="/static/js/entitySelector.js"></script>
 {% endblock %}

@@ -444,3 +444,36 @@ class TestSplitEndpoints:
         transactions = perform_resp.json()["performed_transactions"]
         assert len(transactions) == 2
         assert sum([Decimal(x["amount"]) for x in transactions]) == Decimal(110)
+
+    def test_add_participants_by_tag(self, test_app: TestClient, token, entity_two):
+        # Create a new split with recipient entity_two.
+        resp = test_app.post(
+            "/splits",
+            json={
+                "recipient_entity_id": entity_two,
+                "amount": "100.00",
+                "currency": "usd",
+            },
+            headers={"x-token": token},
+        )
+        assert resp.status_code == 200
+        split = resp.json()
+        split_id = split["id"]
+
+        # Add participants by tag (using deposit tag id=9) with fixed_amount "5.00"
+        add_resp = test_app.post(
+            f"/splits/{split_id}/participants",
+            json={"entity_tag_id": 9, "fixed_amount": "5.00"},
+            headers={"x-token": token},
+        )
+        assert add_resp.status_code == 200
+        updated_split = add_resp.json()
+
+        # Verify that participants include the deposit entities (e.g. cash_in: id=2 and bank_in: id=4)
+        participant_ids = [p["entity"]["id"] for p in updated_split["participants"]]
+        assert 2 in participant_ids
+        assert 4 in participant_ids
+
+        # Verify each participant has fixed_amount set to "5.00"
+        for p in updated_split["participants"]:
+            assert p["fixed_amount"] == "5.00"

@@ -11,6 +11,7 @@ from app.errors.split import (
 )
 from app.models.entity import Entity
 from app.models.split import Split, SplitParticipant
+from app.models.tag import Tag
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.split import (
     SplitCreateSchema,
@@ -100,10 +101,44 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         if db_obj.performed is True:
             raise PerformedSplitParticipantsAreNotEditable
 
-        # Check if the participant already exists.
+        #  if entity_tag_id is provided, fetch all entities by tag.
+        if schema.entity_tag_id is not None:
+            entities = (
+                self.db.query(Entity)
+                .join(Entity.tags)
+                .filter(Tag.id == schema.entity_tag_id)
+                .all()
+            )
+            for entity in entities:
+                # Check if participant already exists.
+                updated = False
+                for assoc in db_obj.participants:
+                    if assoc.entity_id == entity.id:
+                        assoc.fixed_amount = (
+                            schema.fixed_amount.quantize(Decimal("0.01"))
+                            if schema.fixed_amount is not None
+                            else None
+                        )
+                        updated = True
+                        break
+                if not updated:
+                    new_assoc = SplitParticipant(
+                        split=db_obj,
+                        entity=entity,
+                        fixed_amount=(
+                            schema.fixed_amount.quantize(Decimal("0.01"))
+                            if schema.fixed_amount is not None
+                            else None
+                        ),
+                    )
+                    db_obj.participants.append(new_assoc)
+            self.db.flush()
+            self.db.refresh(db_obj)
+            return db_obj
+
+        # Original logic using entity_id.
         for assoc in db_obj.participants:
             if assoc.entity_id == schema.entity_id:
-                # Override the fixed_amount with the new value.
                 assoc.fixed_amount = (
                     schema.fixed_amount.quantize(Decimal("0.01"))
                     if schema.fixed_amount is not None

@@ -48,6 +48,19 @@ class SplitAddParticipant(FlaskForm):
     submit = SubmitField("Submit")
 
 
+# New form for adding participant by tag.
+class SplitAddParticipantByTag(FlaskForm):
+    entity_tag_id = SelectField(
+        "Participant Tag", choices=[], validators=[DataRequired()]
+    )
+    fixed_amount = FloatField(
+        "Amount",
+        render_kw={"placeholder": "10.00", "class": "small"},
+        validators=[Optional()],
+    )
+    submit = SubmitField("Submit by Tag")
+
+
 class DeleteForm(FlaskForm):
     delete = SubmitField("Delete")
 
@@ -184,11 +197,27 @@ def perform(id):
 def add_participant(id):
     api = get_refinance_api_client()
     split = Split(**api.http("GET", f"splits/{id}").json())
-    form = SplitAddParticipant()
-    if form.validate_on_submit():
-        api.http("POST", f"splits/{id}/participants", data=form.data)
-        return redirect(url_for("split.detail", id=split.id))
-    return render_template("split/add_participant.jinja2", form=form, split=split)
+    form_entity = SplitAddParticipant()
+    form_tag = SplitAddParticipantByTag()
+    tags_response = api.http("GET", "tags").json()
+    all_tags = [Tag(**x) for x in tags_response["items"]]
+    choices = [("", "-")] + [(str(tag.id), tag.name) for tag in all_tags]
+    # Assign choices to the new form's tag field.
+    form_tag.entity_tag_id.choices = choices
+    if request.method == "POST":
+        if form_entity.submit.data and form_entity.validate_on_submit():
+            api.http("POST", f"splits/{id}/participants", data=form_entity.data)
+            return redirect(url_for("split.detail", id=split.id))
+        elif form_tag.submit.data and form_tag.validate_on_submit():
+            api.http("POST", f"splits/{id}/participants", data=form_tag.data)
+            return redirect(url_for("split.detail", id=split.id))
+    return render_template(
+        "split/add_participant.jinja2",
+        split=split,
+        form_entity=form_entity,
+        form_tag=form_tag,
+        all_tags=all_tags,
+    )
 
 
 @split_bp.route(

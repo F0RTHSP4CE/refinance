@@ -1,7 +1,6 @@
 """DTO for Split"""
 
 from decimal import Decimal
-from typing import Optional
 
 from app.schemas.base import (
     BaseFilterSchema,
@@ -18,8 +17,9 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class SplitParticipantAddSchema(BaseModel):
-    entity_id: int
-    fixed_amount: Optional[Decimal] = None
+    entity_id: int | None = None
+    entity_tag_id: int | None = None
+    fixed_amount: Decimal | None = None
 
     @field_validator("fixed_amount")
     def fixed_amount_must_be_non_negative(cls, v):
@@ -30,7 +30,7 @@ class SplitParticipantAddSchema(BaseModel):
 
 class SplitParticipantSchema(BaseSchema):
     entity: EntitySchema
-    fixed_amount: Optional[CurrencyDecimal] = None
+    fixed_amount: CurrencyDecimal | None = None
 
 
 class SplitSharePreview(BaseSchema):
