@@ -123,5 +123,5 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 }
 
 .secondary {
-  filter: opacity(0.44);
+  filter: opacity(0.5);
 }
