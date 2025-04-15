@@ -84,6 +84,8 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] currency exchange
 - [x] unit of work?
 - [x] fixed amount participation in split
+- [ ] deposit ui
+- [ ] add a batch of participants to a split
 - [ ] donation categories (entities?)
 - [ ] migrations (not alembic?)
 - [ ] logging
