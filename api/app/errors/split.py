@@ -38,3 +38,8 @@ class PerformedSplitParticipantsAreNotEditable(ApplicationError):
 class MinimalNumberOfParticipantsRequired(ApplicationError):
     error_code = 6008
     error = "There should be at least 1 participants to perform the split."
+
+
+class EitherEntityOrTagIdRequired(ApplicationError):
+    error_code = 6009
+    error = "Either entity_id or entity_tag_id should be provided."

@@ -3,6 +3,7 @@
 from decimal import ROUND_DOWN, Decimal
 
 from app.errors.split import (
+    EitherEntityOrTagIdRequired,
     MinimalNumberOfParticipantsRequired,
     PerformedSplitCanNotBeDeleted,
     PerformedSplitCanNotBeEdited,
@@ -93,15 +94,21 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
 
     def add_participant(self, obj_id: int, schema: SplitParticipantAddSchema) -> Split:
         """
-        Adds or updates a participant in the split.
-        If the participant is already added, its fixed_amount is updated with the new value.
+        Adds a participant in the split.
+        If the participant is already added, it is skipped.
         Otherwise, a new participant association is created.
         """
         db_obj = self.get(obj_id)
         if db_obj.performed is True:
             raise PerformedSplitParticipantsAreNotEditable
 
-        #  if entity_tag_id is provided, fetch all entities by tag.
+        try:
+            assert schema.entity_id is not None or schema.entity_tag_id is not None
+            assert not (schema.entity_id and schema.entity_tag_id)
+        except AssertionError:
+            raise EitherEntityOrTagIdRequired
+
+        # If entity_tag_id is provided, fetch all entities by tag.
         if schema.entity_tag_id is not None:
             entities = (
                 self.db.query(Entity)
@@ -109,19 +116,9 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
                 .filter(Tag.id == schema.entity_tag_id)
                 .all()
             )
+            existing_entity_ids = {assoc.entity_id for assoc in db_obj.participants}
             for entity in entities:
-                # Check if participant already exists.
-                updated = False
-                for assoc in db_obj.participants:
-                    if assoc.entity_id == entity.id:
-                        assoc.fixed_amount = (
-                            schema.fixed_amount.quantize(Decimal("0.01"))
-                            if schema.fixed_amount is not None
-                            else None
-                        )
-                        updated = True
-                        break
-                if not updated:
+                if entity.id not in existing_entity_ids:
                     new_assoc = SplitParticipant(
                         split=db_obj,
                         entity=entity,
@@ -135,34 +132,27 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
             self.db.flush()
             self.db.refresh(db_obj)
             return db_obj
+        else:
+            # Original logic using entity_id.
+            for assoc in db_obj.participants:
+                if assoc.entity_id == schema.entity_id:
+                    return db_obj  # Skip if participant already exists.
 
-        # Original logic using entity_id.
-        for assoc in db_obj.participants:
-            if assoc.entity_id == schema.entity_id:
-                assoc.fixed_amount = (
+            # Otherwise, add a new participant association.
+            entity = self._entity_service.get(schema.entity_id)
+            new_assoc = SplitParticipant(
+                split=db_obj,
+                entity=entity,
+                fixed_amount=(
                     schema.fixed_amount.quantize(Decimal("0.01"))
                     if schema.fixed_amount is not None
                     else None
-                )
-                self.db.flush()
-                self.db.refresh(db_obj)
-                return db_obj
-
-        # Otherwise, add a new participant association.
-        entity = self._entity_service.get(schema.entity_id)
-        new_assoc = SplitParticipant(
-            split=db_obj,
-            entity=entity,
-            fixed_amount=(
-                schema.fixed_amount.quantize(Decimal("0.01"))
-                if schema.fixed_amount is not None
-                else None
-            ),
-        )
-        db_obj.participants.append(new_assoc)
-        self.db.flush()
-        self.db.refresh(db_obj)
-        return db_obj
+                ),
+            )
+            db_obj.participants.append(new_assoc)
+            self.db.flush()
+            self.db.refresh(db_obj)
+            return db_obj
 
     def remove_participant(self, obj_id: int, entity_id: int) -> Split:
         db_obj = self.get(obj_id)
