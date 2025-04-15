@@ -3,7 +3,7 @@ from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
-from wtforms import FormField, StringField, SubmitField
+from wtforms import FormField, SelectField, StringField, SubmitField
 from wtforms.validators import DataRequired
 
 entity_bp = Blueprint("entity", __name__)
@@ -34,6 +34,15 @@ class AuthForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
+class EntityFilterForm(FlaskForm):
+    name = StringField("Name")
+    comment = StringField("Comment")
+    active = SelectField(
+        "Active", choices=[("", ""), ("true", "Active"), ("false", "Inactive")]
+    )
+    submit = SubmitField("Search")
+
+
 @entity_bp.route("/")
 @token_required
 def list():
@@ -42,8 +51,18 @@ def list():
     limit = request.args.get("limit", 10, type=int)
     skip = (page - 1) * limit
 
+    filter_form = EntityFilterForm(request.args)
+    # leave only non-empty filters
+    filters = {
+        key: value
+        for (key, value) in filter_form.data.items()
+        if value not in (None, "")
+    }
+
     api = get_refinance_api_client()
-    response = api.http("GET", "entities", params={"skip": skip, "limit": limit}).json()
+    response = api.http(
+        "GET", "entities", params={"skip": skip, "limit": limit, **filters}
+    ).json()
     entities = [Entity(**x) for x in response["items"]]
     total = response["total"]
 
@@ -53,6 +72,7 @@ def list():
         total=total,
         page=page,
         limit=limit,
+        filter_form=filter_form,
     )
 
 
@@ -116,37 +136,6 @@ def edit(id):
         auth_form=auth_form,
         all_tags=all_tags,
     )
-
-
-"""
-
-@transaction_bp.route("/")
-@token_required
-def list():
-    # Get the current page and limit from query parameters, defaulting to page 1 and 10 items per page.
-    page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 20, type=int)
-    skip = (page - 1) * limit
-
-    api = get_refinance_api_client()
-    # Pass skip and limit to the FastAPI endpoint
-    response = api.http(
-        "GET", "transactions", params={"skip": skip, "limit": limit}
-    ).json()
-
-    # Extract transactions and pagination details from the API response
-    transactions = [Transaction(**x) for x in response["items"]]
-    total = response["total"]
-
-    return render_template(
-        "transaction/list.jinja2",
-        transactions=transactions,
-        total=total,
-        page=page,
-        limit=limit,
-    )
-
-"""
 
 
 @entity_bp.route("/<int:id>")

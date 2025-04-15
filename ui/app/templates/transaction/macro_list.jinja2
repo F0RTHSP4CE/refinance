@@ -9,9 +9,7 @@
                 <td>ID</td>
                 <td>Date</td>
                 <td>From</td>
-                <td></td>
                 <td>To</td>
-                <td></td>
                 <td>Amount</td>
                 <td>Currency</td>
                 <td>Tags</td>
@@ -29,8 +27,7 @@
                 <a
                     href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
 
-            </td>
-            <td>
+
                 {% for tag in transaction.from_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
@@ -38,8 +35,7 @@
 
             <td>
                 <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
-            </td>
-            <td>
+
                 {% for tag in transaction.to_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}

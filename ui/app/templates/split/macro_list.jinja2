@@ -26,15 +26,18 @@
                 <td><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.id }}</a></td>
 
                 <td>
-                    <a href="{{ url_for('entity.detail', id=split.actor_entity_id) }}">
+                    <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
                         {{ split.actor_entity.name }}
                     </a>
                 </td>
                 <td>{{ split.created_at }}</td>
                 <td>
-                    <a href="{{ url_for('entity.detail', id=split.recipient_entity_id) }}">
+                    <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
                         {{ split.recipient_entity.name }}
                     </a>
+                    {% for tag in split.recipient_entity.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
                 </td>
                 <td>{{ split.comment or ""}}</td>
                 <td>
