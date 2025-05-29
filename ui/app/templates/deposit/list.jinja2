@@ -1,0 +1,10 @@
+{% extends "base.jinja2" %}
+{% from 'deposit/macro_list.jinja2' import deposit_list %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
+
+{% block content %}
+<h1>Deposits</h1>
+
+{{ deposit_list(deposits) }}
+{{ pagination_control(page, total, limit, 'split.list') }}
+{% endblock %}

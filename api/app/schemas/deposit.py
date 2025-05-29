@@ -16,9 +16,8 @@ from pydantic import field_validator
 
 
 class DepositSchema(BaseReadSchema):
-    actor_entity_id: int
     actor_entity: EntitySchema
-    to_entity_id: int
+    from_entity: EntitySchema
     to_entity: EntitySchema
     amount: CurrencyDecimal
     currency: str
@@ -49,7 +48,7 @@ class DepositUpdateSchema(BaseUpdateSchema):
 class DepositFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     entity_id: int | None = None
     actor_entity_id: int | None = None
-    from_entity_id: int
+    from_entity_id: int | None = None
     to_entity_id: int | None = None
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None

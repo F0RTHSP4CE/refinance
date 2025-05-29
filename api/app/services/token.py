@@ -125,7 +125,7 @@ class TokenService:
                         if response.status_code == 200:
                             sent_count += 1
                         else:
-                            logger.error(f"response: {response.text}")
+                            logger.error(f"response: {response.status_code} {response.text}")
                     except Exception:
                         pass
 

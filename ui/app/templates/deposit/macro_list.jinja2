@@ -1,0 +1,34 @@
+{% macro deposit_list(deposits) %}
+{% if deposits %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Date</td>
+                <td>Entity</td>
+                <td>Amount</td>
+                <td>Currency</td>
+                <td>Comment</td>
+                <td>Status</td>
+            </tr>
+        </thead>
+        {% for deposit in deposits %}
+        <tr {% if deposit.status !="complete" %} class="secondary" {%endif%}>
+            <td><a href="{{ url_for('deposit.detail', id=deposit.id) }}">{{ deposit.id }}</a></td>
+            <td>{{ deposit.created_at }}</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=deposit.entity_id) }}">{{deposit.entity.name}}</a>
+            </td>
+            <td>{{ deposit.amount }}</td>
+            <td>{{ deposit.currency }}</td>
+            <td>{{ deposit.comment }}</td>
+            <td>{{ deposit.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<p>No deposits found.</p>
+{% endif %}
+{% endmacro %}

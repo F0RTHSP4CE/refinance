@@ -94,3 +94,14 @@ class CurrencyExchangeReceipt:
     target_amount: Decimal
     rate: Decimal
     transactions: list[Transaction]
+
+@dataclass
+class Deposit(Base):
+    actor_entity: Entity
+    to_entity: Entity
+    amount: Decimal
+    currency: str
+    status: str
+    provider: str
+    tags: list[Tag]
+    details: dict | None = None

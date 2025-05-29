@@ -31,6 +31,9 @@
             <li {% if 'exchange' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('exchange.index') }}">Exchange</a>
             </li>
+            <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('deposit.list') }}">Deposit</a>
+            </li>
             <li>///</li>
             <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('entity.list') }}">Entity</a>
