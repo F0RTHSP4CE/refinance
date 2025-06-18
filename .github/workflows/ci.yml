@@ -81,5 +81,6 @@ jobs:
           cache-to: type=gha,mode=max
           push: true
           file: ${{ matrix.component }}/Dockerfile
+          context: ${{ matrix.component }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
