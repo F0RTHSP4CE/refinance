@@ -48,10 +48,8 @@ open project in vscode, <kbd>F1</kbd> `python.setInterpreter`, select `.venv` (w
 if you need to change project deps:
 ```console
 uv add packagename
-uv lock
-uv export > requirements.txt
-cp requirements.txt ui
-cp requirements.txt api
+uv remove packagename
+uv sync
 ```
 
 ### tests
