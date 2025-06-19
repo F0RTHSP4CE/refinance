@@ -20,13 +20,13 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Build and Run Docker Compose
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml up --build -d
+          make ci-daemon
       - name: Run pytest
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec api pytest -v -s --log-level DEBUG
+          make ci-test
       - name: Stop and remove containers
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml down
+          make down
 
   docker:
     name: Docker Build
@@ -80,7 +80,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
-          file: ${{ matrix.component }}/Dockerfile
-          context: ${{ matrix.component }}
+          file: ./${{ matrix.component }}/Dockerfile
+          context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

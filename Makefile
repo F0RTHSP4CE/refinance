@@ -24,11 +24,11 @@ prod-daemon:
 
 
 # Starts the CI environment
-ci:
+ci-daemon:
 	docker-compose -f $(COMPOSE_BASE) -f $(CI_COMPOSE) up --build -d
 
-ci-exec:
-	docker-compose -f $(COMPOSE_BASE) -f $(CI_COMPOSE) exec
+ci-test:
+	docker-compose -f $(COMPOSE_BASE) -f $(CI_COMPOSE) exec api pytest -v -s --log-level DEBUG
 
 # Stops all running services
 down:
