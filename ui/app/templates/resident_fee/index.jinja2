@@ -1,0 +1,54 @@
+{% extends "base.jinja2" %}
+
+{% block content %}
+{% set month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] %}
+<h1>Resident Fees</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th></th>
+            {% for month in fees[0].fees %}
+            {% if month.month==current_month and month.year==current_year %}
+            <th class="center-align">▼</th>
+            {% else %}
+            <th></th>
+            {% endif %}
+            {% endfor %}
+        </tr>
+    </thead>
+    <thead>
+        <tr>
+            <th></th>
+            {% if fees %}
+            {% for month in fees[0].fees %}
+            <th>
+                {{ month_names[month.month] }} {{ month.year }}
+            </th>
+            {% endfor %}
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for resident_fee in fees %}
+        <tr>
+            <td>
+                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}">{{resident_fee.entity.name}}</a>
+            </td>
+
+            {% for fee in resident_fee.fees %}
+            {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month) %}
+            <td{% if fee.amounts %} class="fee-paid" {% elif not is_future %} class="fee-not-paid" {% endif %}>
+                {% if fee.amounts %}
+                {% for currency, amount in fee.amounts.items() %}
+                <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
+                {% endfor %}
+                {% else %}
+
+                {% endif %}
+                </td>
+                {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -20,6 +20,11 @@ withdrawal_tag = Tag(id=10, name="withdrawal", comment="money output from system
 currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
+fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
+
+
+# commonly used entities
+f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag])
 
 # entities used by other modules for creating transactions from/to
 currency_exchange_entity = Entity(
@@ -39,7 +44,7 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
         sys_tag,
         resident_tag,
-        Tag(id=3, name="fee", comment="monthly resident's fee"),
+        fee_tag,
         utilities_tag,
         Tag(
             id=5,
@@ -54,7 +59,7 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
     ],
     Entity: [
         # hackerspace
-        Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag]),
+        f0_entity,
         # generic deposit/withdrawal
         Entity(
             id=2, name="cash_in", comment="classic money deposit", tags=[deposit_tag]
