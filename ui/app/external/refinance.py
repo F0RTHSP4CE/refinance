@@ -16,7 +16,7 @@ class RefinanceAPI:
                 params=params,
                 json=data,
                 timeout=5,
-                headers={"X-Token": self.token},
+                headers={"X-Token": self.token} if self.token else {},
             )
             if r.status_code != 200:
                 e = r.json()
@@ -25,7 +25,7 @@ class RefinanceAPI:
         except requests.exceptions.RequestException as e:
             raise ApplicationError(f"Request to API failed: {e}")
 
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str | None) -> None:
         self.token = token
 
 

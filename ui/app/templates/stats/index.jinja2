@@ -1,0 +1,125 @@
+{% extends "base.jinja2" %}
+
+{% block title %}Stats{% endblock title %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .charts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: space-around;
+    }
+
+    .chart-container {
+        flex: 1 1 45%;
+        max-width: 45%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .chart-container canvas {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Responsive: full width on small screens */
+    @media (max-width: 600px) {
+        .chart-container {
+            flex: 1 1 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div class="charts">
+    <div class="chart-container">
+        <h2>Resident Fee Sum by Month</h2>
+        <canvas id="resident-fee-chart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h2>Transactions Sum by Week</h2>
+        <canvas id="transactions-week-chart"></canvas>
+    </div>
+</div>
+
+<script>
+    const residentFeeData = {{ resident_fee_sum | tojson }};
+
+    const residentFeeLabels = residentFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+    const residentFeeDatasets = {};
+
+    residentFeeData.forEach(item => {
+        for (const currency in item.amounts) {
+            if (!residentFeeDatasets[currency]) {
+                residentFeeDatasets[currency] = {
+                    label: currency,
+                    data: [],
+                    borderWidth: 1
+                };
+            }
+        }
+    });
+
+    residentFeeData.forEach(item => {
+        for (const currency in residentFeeDatasets) {
+            residentFeeDatasets[currency].data.push(item.amounts[currency] || 0);
+        }
+    });
+
+    new Chart(document.getElementById('resident-fee-chart'), {
+        type: 'bar',
+        data: {
+            labels: residentFeeLabels,
+            datasets: Object.values(residentFeeDatasets)
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const transactionsData = {{ transactions_sum_by_week | tojson }};
+    const transactionsLabels = transactionsData.map(item => `${item.year}-W${item.week.toString().padStart(2, '0')}`);
+    const transactionsDatasets = {};
+
+    transactionsData.forEach(item => {
+        for (const currency in item.amounts) {
+            if (!transactionsDatasets[currency]) {
+                transactionsDatasets[currency] = {
+                    label: currency,
+                    data: [],
+                    borderWidth: 1
+                };
+            }
+        }
+    });
+
+    transactionsData.forEach(item => {
+        for (const currency in transactionsDatasets) {
+            transactionsDatasets[currency].data.push(item.amounts[currency] || 0);
+        }
+    });
+
+    new Chart(document.getElementById('transactions-week-chart'), {
+        type: 'bar',
+        data: {
+            labels: transactionsLabels,
+            datasets: Object.values(transactionsDatasets)
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock content %}

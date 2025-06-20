@@ -152,6 +152,11 @@ def detail(id):
         "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
     ).json()
     total = transactions_page["total"]
+    # Fetch stats for this entity
+    balance_changes = api.http("GET", f"stats/entity/{id}/balance-change-by-day").json()
+    transactions_by_day = api.http(
+        "GET", f"stats/entity/{id}/transactions-by-day"
+    ).json()
 
     return render_template(
         "entity/detail.jinja2",
@@ -161,6 +166,8 @@ def detail(id):
         total=total,
         page=page,
         limit=limit,
+        balance_changes=balance_changes,
+        transactions_by_day=transactions_by_day,
     )
 
 
