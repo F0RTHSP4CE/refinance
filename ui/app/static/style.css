@@ -95,6 +95,15 @@ input.small {
   text-decoration: none;
 }
 
+/* TEXT */
+.not-bold {
+  font-weight: normal;
+}
+
+.center-align {
+  text-align: center;
+}
+
 /* COLORS  */
 a {
   color: #007bff;
@@ -122,6 +131,30 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   color: red;
 }
 
+.fee-paid {
+  background-color: hsla(127, 100%, 60%, 0.1);
+}
+
+.fee-not-paid {
+  background-color: hsla(0, 100%, 60%, 0.1);
+}
+
+/* 
+.fee-current-month {
+  background-color: hsla(50, 100%, 60%, 0.2)
+} */
+
 .secondary {
   filter: opacity(0.5);
+}
+
+/* LMAO */
+.blinking {
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
 }
