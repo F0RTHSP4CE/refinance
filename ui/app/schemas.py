@@ -1,5 +1,5 @@
 import enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field, fields
 from datetime import datetime
 from decimal import Decimal
 
@@ -94,3 +94,21 @@ class CurrencyExchangeReceipt:
     target_amount: Decimal
     rate: Decimal
     transactions: list[Transaction]
+
+
+@dataclass
+class MonthlyFee:
+    year: int
+    month: int
+    amounts: dict[str, Decimal]
+
+
+@dataclass
+class ResidentFee:
+    entity: Entity
+    fees: list[MonthlyFee]
+
+
+@dataclass
+class ResidentFeeFilters:
+    months: int = 12

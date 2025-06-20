@@ -5,6 +5,7 @@ from app.controllers.auth import auth_bp
 from app.controllers.entity import entity_bp
 from app.controllers.exchange import exchange_bp
 from app.controllers.index import index_bp
+from app.controllers.resident_fee import resident_fee_bp
 from app.controllers.split import split_bp
 from app.controllers.tag import tag_bp
 from app.controllers.transaction import transaction_bp
@@ -34,6 +35,7 @@ app.register_blueprint(transaction_bp, url_prefix="/transactions")
 app.register_blueprint(split_bp, url_prefix="/splits")
 app.register_blueprint(tag_bp, url_prefix="/tags")
 app.register_blueprint(exchange_bp, url_prefix="/exchange")
+app.register_blueprint(resident_fee_bp, url_prefix="/fees")
 
 
 @app.errorhandler(ApplicationError)
