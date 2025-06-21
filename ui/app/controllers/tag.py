@@ -78,8 +78,18 @@ def edit(id):
 @token_required
 def detail(id):
     api = get_refinance_api_client()
-    tag = api.http("GET", f"tags/{id}").json()
-    return render_template("tag/detail.jinja2", tag=Tag(**tag))
+    # Fetch tag data and monthly transaction sums by tag
+    tag_data = api.http("GET", f"tags/{id}").json()
+    tag = Tag(**tag_data)
+    tag_stats = api.http(
+        "GET", "stats/transactions-sum-by-tag-by-month", params={"tag_id": id}
+    ).json()
+    # Render template with stats data
+    return render_template(
+        "tag/detail.jinja2",
+        tag=tag,
+        tag_stats=tag_stats,
+    )
 
 
 @tag_bp.route("/<int:id>/delete", methods=["GET", "POST"])

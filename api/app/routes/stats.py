@@ -7,6 +7,7 @@ from app.schemas.stats import (
     EntityBalanceChangeByDaySchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
+    TransactionsSumByTagByMonthSchema,
     TransactionsSumByWeekSchema,
 )
 from app.services.stats import StatsService
@@ -64,4 +65,19 @@ def get_entity_transactions_by_day(
 ):
     return stats_service.get_entity_transactions_by_day(
         entity_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get(
+    "/transactions-sum-by-tag-by-month",
+    response_model=List[TransactionsSumByTagByMonthSchema],
+)
+def get_transactions_sum_by_tag_by_month(
+    tag_id: int,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(),
+):
+    return stats_service.get_transactions_sum_by_tag_by_month(
+        tag_id, timeframe_from, timeframe_to
     )
