@@ -22,17 +22,20 @@
     <nav>
         <ul>
             {% if g.actor_entity %}
-            <li {% if 'fees' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('resident_fee.index') }}">Fees</a>
-            </li>
             <li {% if 'transaction' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('transaction.list') }}">Transaction</a>
+            </li>
+            <li {% if 'fee' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('resident_fee.index') }}">Fee</a>
             </li>
             <li {% if 'split' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('split.list') }}">Split</a>
             </li>
             <li {% if 'exchange' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('exchange.index') }}">Exchange</a>
+            </li>
+            <li {% if 'stats' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('stats.index') }}">Stats</a>
             </li>
             <li>///</li>
             <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>

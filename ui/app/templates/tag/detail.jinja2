@@ -4,21 +4,85 @@
 {% block title %}Tag {{ tag_inline(tag) }}{% endblock %}
 
 {% block content %}
-<table>
-    <tr>
-        <td>Comment</td>
-        <td>{{ tag.comment or "" }}</td>
-    </tr>
-    <tr>
-        <td>Name</td>
-        <td>{{ tag.name }}</td>
-    </tr>
-    <tr>
-        <td>ID</td>
-        <td>{{ tag.id }}</td>
-    </tr>
-</table>
+<style>
+    .top-section {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
 
-<p><a href="{{ url_for('tag.edit', id=tag.id) }}">Edit</a></p>
-<p><a href="{{ url_for('tag.delete', id=tag.id) }}">Delete</a></p>
+    .details-info {
+        flex: 0 0 auto;
+        min-width: 300px;
+    }
+
+    .stats {
+        flex: 1 1 0;
+    }
+
+    .charts {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+    }
+
+    .chart-container {
+        flex: 1 1 100%;
+        max-width: 100%;
+        /* dynamic max height relative to viewport */
+        max-height: 50vh;
+        box-sizing: border-box;
+    }
+
+    .chart-container canvas {
+        width: 100% !important;
+        height: auto !important;
+        max-height: 50vh !important;
+    }
+
+    @media (max-width: 600px) {
+        .chart-container {
+            flex: 1 1 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+<div class="top-section">
+    <div class="details-info">
+        <h2>Tag Details</h2>
+        <table>
+            <tr>
+                <td>Comment</td>
+                <td>{{ tag.comment or "" }}</td>
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ tag.name }}</td>
+            </tr>
+            <tr>
+                <td>ID</td>
+                <td>{{ tag.id }}</td>
+            </tr>
+        </table>
+        <p><a href="{{ url_for('tag.edit', id=tag.id) }}">Edit</a></p>
+        <p><a href="{{ url_for('tag.delete', id=tag.id) }}">Delete</a></p>
+    </div> <!-- .details-info -->
+    <div class="stats">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <h2>Transactions Sum by Month</h2>
+        <div class="charts">
+            <div class="chart-container">
+                <canvas id="tag-transactions-month-chart"></canvas>
+            </div>
+        </div>
+        <script>
+            const tagStats = {{ tag_stats | tojson }};
+            const labels = tagStats.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+            const datasets = {};
+            tagStats.forEach(item => { for (const currency in item.amounts) { if (!datasets[currency]) { datasets[currency] = { label: currency, data: [], borderWidth: 1 }; } } });
+            tagStats.forEach(item => { for (const currency in datasets) { datasets[currency].data.push(item.amounts[currency] || 0); } });
+            new Chart(document.getElementById('tag-transactions-month-chart'), { type: 'bar', data: { labels: labels, datasets: Object.values(datasets) }, options: { scales: { y: { beginAtZero: true } } } });
+        </script>
+    </div>
+</div>
 {% endblock %}
