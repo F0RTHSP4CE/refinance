@@ -13,6 +13,7 @@ from app.routes.deposits import deposits_router
 from app.routes.entity import entity_router
 from app.routes.resident_fee import router as resident_fee_router
 from app.routes.split import split_router
+from app.routes.stats import router as stats_router
 from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
@@ -82,6 +83,7 @@ app.include_router(currency_exchange_router)
 app.include_router(deposits_router)
 app.include_router(deposit_provider_callbacks_router)
 app.include_router(resident_fee_router)
+app.include_router(stats_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
