@@ -25,3 +25,9 @@ class TransactionsSumByWeekSchema(BaseModel):
 class EntityBalanceChangeByDaySchema(BaseModel):
     day: date
     balance_changes: dict[str, float]
+
+
+class TransactionsSumByTagByMonthSchema(BaseModel):
+    year: int
+    month: int
+    amounts: dict[str, float]
