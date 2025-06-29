@@ -60,3 +60,29 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         if not db_obj:
             raise NotFoundError(f"{self.model.__name__} {name=}")
         return db_obj
+
+    def get_by_oidc_sub(self, oidc_sub: str) -> Entity:
+        """Get entity by OIDC subject identifier."""
+        db_obj = (
+            self.db.query(self.model)
+            .filter(
+                cast(self.model.auth["oidc_sub"], Text) == oidc_sub
+            )
+            .first()
+        )
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__}.auth.{oidc_sub=}")
+        return db_obj
+
+    def get_by_oidc_email(self, oidc_email: str) -> Entity:
+        """Get entity by OIDC email."""
+        db_obj = (
+            self.db.query(self.model)
+            .filter(
+                cast(self.model.auth["oidc_email"], Text) == oidc_email
+            )
+            .first()
+        )
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__}.auth.{oidc_email=}")
+        return db_obj

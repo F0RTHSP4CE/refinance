@@ -4,8 +4,100 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<form method="post">
-    {{ render_form(form) }}
-</form>
+<div class="login-container">
+    <h2>Choose Login Method</h2>
+    
+    <!-- Traditional Token-based Login -->
+    <div class="login-method">
+        <h3>Login with Entity Token</h3>
+        <p>Enter your entity name to receive a login link via Telegram or other configured methods.</p>
+        <form method="post">
+            {{ render_form(form) }}
+        </form>
+    </div>
+    
+    <!-- OIDC Login -->
+    <div class="login-method">
+        <h3>Login with OIDC Provider</h3>
+        <p>Sign in with your external identity provider (Google, Microsoft, etc.)</p>
+        <button id="oidc-login-btn" class="btn btn-primary">
+            Login with OIDC
+        </button>
+    </div>
+    
+    {% if request.args.get('error') == 'oidc_auth_failed' %}
+    <div class="alert alert-danger">
+        OIDC authentication failed. Please try again or contact an administrator.
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.getElementById('oidc-login-btn').addEventListener('click', function() {
+    // Get OIDC authorization URL from API
+    // In development, API might be on different port; in production via docker, it's on the same host
+    const apiBaseUrl = window.location.hostname === 'localhost' ? 
+        'http://localhost:8000' : 
+        (window.location.protocol + '//' + window.location.host.replace(':9000', ':8000'));
+    
+    fetch(apiBaseUrl + '/auth/oidc/login')
+        .then(response => response.json())
+        .then(data => {
+            if (data.auth_url) {
+                window.location.href = data.auth_url;
+            } else {
+                alert('Failed to initiate OIDC login');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to initiate OIDC login. Make sure OIDC is configured.');
+        });
+});
+</script>
+
+<style>
+.login-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.login-method {
+    margin-bottom: 30px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.login-method h3 {
+    margin-top: 0;
+}
+
+.btn {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background-color: #0056b3;
+}
+
+.alert {
+    padding: 10px;
+    margin-top: 20px;
+    border-radius: 4px;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>
 
 {% endblock %}
