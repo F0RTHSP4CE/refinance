@@ -1,0 +1,53 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
+
+{% block title %}Treasuries{% endblock %}
+{% block content %}
+<p><a href="{{ url_for('treasury.add') }}">Add Treasury</a></p>
+{% if treasuries %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>Name</td>
+                <td>Balance</td>
+                <td>Comment</td>
+                <td>Active</td>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in treasuries %}
+            <tr{% if not t.active %} class="secondary" {% endif %}>
+                <td>{{ treasury_inline(t) }}</td>
+                <td>
+                    {% if t.balances.completed %}
+                    {% for currency, amount in t.balances.completed.items() %}
+                    {% if amount | float != 0 %}
+                    <div class="right-align">{{ amount }} {{ currency|upper }}</div>
+                    {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    {% endif %}
+                    {% if t.balances.draft %}
+                    {% for currency, amount in t.balances.draft.items() %}
+                    {% if amount | float != 0 %}
+                    <div class="right-align secondary">{{ amount }} {{ currency|upper }}</div>
+                    {% endif %}
+                    {% endfor %}
+                    {% else %}
+                    {% endif %}
+                </td>
+                <td>{{ t.comment or '' }}</td>
+                <td>{{ 'Yes' if t.active else 'No' }}</td>
+
+                </tr>
+                {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>No treasuries.</p>
+{% endif %}
+{{ pagination_control(page, total, limit, 'treasury.list') }}
+{% endblock %}

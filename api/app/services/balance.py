@@ -13,6 +13,8 @@ from sqlalchemy.sql import func, select
 
 class BalanceService:
     _cache = {}
+    # cache for treasury balances
+    _treasury_cache = {}
 
     def __init__(
         self,
@@ -24,6 +26,9 @@ class BalanceService:
 
     def invalidate_cache_entry(self, entity_id: int):
         self._cache.pop(entity_id, None)
+
+    def invalidate_treasury_cache_entry(self, treasury_id: int):
+        self._treasury_cache.pop(treasury_id, None)
 
     def get_balances(self, entity_id: int) -> BalanceSchema:
         """
@@ -41,6 +46,65 @@ class BalanceService:
             result = self._get_balances(entity_id)
             self._cache[entity_id] = result
             return result
+
+    def get_treasury_balances(self, treasury_id: int) -> BalanceSchema:
+        """
+        Calculate balances for a given treasury across all currencies.
+        Similar to get_balances but using treasury fields in transactions.
+        """
+        if treasury_id in self._treasury_cache:
+            return self._treasury_cache[treasury_id]
+
+        # Function to sum transactions based on treasury fields and status
+        def sum_transactions(status: TransactionStatus) -> dict[str, Decimal]:
+            # Sum of incoming to treasury
+            credit_query = (
+                select(
+                    Transaction.currency,
+                    func.sum(Transaction.amount).label("total_credit"),
+                )
+                .where(
+                    Transaction.to_treasury_id == treasury_id,
+                    Transaction.status == status,
+                )
+                .group_by(Transaction.currency)
+            )
+            # Sum of outgoing from treasury
+            debit_query = (
+                select(
+                    Transaction.currency,
+                    func.sum(Transaction.amount).label("total_debit"),
+                )
+                .where(
+                    Transaction.from_treasury_id == treasury_id,
+                    Transaction.status == status,
+                )
+                .group_by(Transaction.currency)
+            )
+
+            credits = self.db.execute(credit_query).all()
+            debits = self.db.execute(debit_query).all()
+
+            credit_dict: dict[str, Decimal] = {
+                res.currency: res.total_credit for res in credits
+            }
+            debit_dict: dict[str, Decimal] = {
+                res.currency: res.total_debit for res in debits
+            }
+
+            total_by_currency: dict[str, Decimal] = {}
+            for currency in set(credit_dict.keys()) | set(debit_dict.keys()):
+                credit = credit_dict.get(currency, Decimal(0))
+                debit = debit_dict.get(currency, Decimal(0))
+                total_by_currency[currency] = credit - debit
+            return total_by_currency
+
+        result = BalanceSchema(
+            completed=sum_transactions(status=TransactionStatus.COMPLETED),  # type: ignore
+            draft=sum_transactions(status=TransactionStatus.DRAFT),  # type: ignore
+        )
+        self._treasury_cache[treasury_id] = result
+        return result
 
     def _get_balances(self, entity_id: int) -> BalanceSchema:
         # Check that entity exists
