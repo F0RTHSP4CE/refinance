@@ -9,8 +9,10 @@ from app.schemas.oidc import (
     OIDCLoginResponseSchema,
 )
 from app.services.oidc import OIDCService
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
+import json
+from urllib.parse import quote, unquote
 
 oidc_router = APIRouter(prefix="/auth/oidc", tags=["OIDC Authentication"])
 
@@ -18,19 +20,36 @@ oidc_router = APIRouter(prefix="/auth/oidc", tags=["OIDC Authentication"])
 @oidc_router.get("/login", response_model=OIDCAuthUrlSchema)
 def oidc_login_url(
     request: Request,
+    response: Response,
     oidc_service: OIDCService = Depends(),
 ):
     """Generate OIDC authorization URL for login."""
-    # Use the UI callback URL
-    redirect_uri = str(request.base_url).rstrip('/') + "/auth/oidc/callback"
+    # Use the API callback URL for the redirect_uri
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/auth/oidc/callback"
     
     # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
     
     auth_url, code_verifier = oidc_service.generate_auth_url(redirect_uri, state)
     
-    # In a real implementation, you'd store code_verifier and state in session/cache
-    # For simplicity, we'll include them in the response (not recommended for production)
+    # Store code_verifier and state in a simple cookie for this demo
+    # In production, use proper session management or Redis
+    session_data = {
+        "code_verifier": code_verifier,
+        "state": state
+    }
+    
+    # Set a secure httponly cookie with the session data
+    response.set_cookie(
+        key="oidc_session",
+        value=quote(json.dumps(session_data)),
+        max_age=600,  # 10 minutes
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax"
+    )
+    
     return OIDCAuthUrlSchema(
         auth_url=auth_url,
         state=state
@@ -45,13 +64,32 @@ def oidc_callback(
     oidc_service: OIDCService = Depends(),
 ):
     """Handle OIDC callback and authenticate user."""
-    # In production, you'd validate the state parameter against stored value
+    # Retrieve session data from cookie
+    oidc_session_cookie = request.cookies.get("oidc_session")
+    if not oidc_session_cookie:
+        return RedirectResponse(
+            url="/auth/login?error=oidc_session_missing",
+            status_code=302
+        )
+    
+    try:
+        session_data = json.loads(unquote(oidc_session_cookie))
+        stored_state = session_data.get("state")
+        code_verifier = session_data.get("code_verifier")
+    except (json.JSONDecodeError, KeyError):
+        return RedirectResponse(
+            url="/auth/login?error=oidc_session_invalid",
+            status_code=302
+        )
+    
+    # Validate state parameter
+    if state != stored_state:
+        return RedirectResponse(
+            url="/auth/login?error=oidc_state_mismatch",
+            status_code=302
+        )
     
     redirect_uri = str(request.base_url).rstrip('/') + "/auth/oidc/callback"
-    
-    # For this minimal implementation, we'll use a dummy code_verifier
-    # In production, this should be retrieved from session/cache
-    code_verifier = secrets.token_urlsafe(32)
     
     try:
         # Exchange code for tokens
@@ -66,24 +104,28 @@ def oidc_callback(
         # Generate JWT token for the application
         jwt_token = oidc_service.generate_jwt_token_for_entity(entity)
         
-        # Redirect to UI with token
-        ui_url = request.headers.get('referer', '/')
-        ui_base = ui_url.split('/auth')[0] if '/auth' in ui_url else ui_url.rstrip('/')
+        # Determine UI URL for redirect
+        # Try to get the original UI URL from referrer or use default
+        ui_base = request.headers.get('referer', 'http://localhost:9000')
+        if '/auth' in ui_base:
+            ui_base = ui_base.split('/auth')[0]
         
-        return RedirectResponse(
+        # Clear the session cookie
+        response = RedirectResponse(
             url=f"{ui_base}/auth/token/{jwt_token}",
             status_code=302
         )
+        response.delete_cookie("oidc_session")
+        return response
         
     except Exception as e:
-        # Redirect to login with error
-        ui_url = request.headers.get('referer', '/')
-        ui_base = ui_url.split('/auth')[0] if '/auth' in ui_url else ui_url.rstrip('/')
-        
-        return RedirectResponse(
-            url=f"{ui_base}/auth/login?error=oidc_auth_failed",
+        # Clear the session cookie and redirect to login with error
+        response = RedirectResponse(
+            url="/auth/login?error=oidc_auth_failed",
             status_code=302
         )
+        response.delete_cookie("oidc_session")
+        return response
 
 
 @oidc_router.post("/callback", response_model=OIDCLoginResponseSchema)
@@ -93,11 +135,13 @@ def oidc_callback_api(
     oidc_service: OIDCService = Depends(),
 ):
     """API endpoint for OIDC callback (for API-based flows)."""
+    # This is a simplified version for API clients
+    # In practice, you'd also need proper state/code_verifier management
     redirect_uri = str(request.base_url).rstrip('/') + "/auth/oidc/callback"
     
-    # For this minimal implementation, we'll use a dummy code_verifier
-    # In production, this should be retrieved from session/cache using the state
-    code_verifier = secrets.token_urlsafe(32)
+    # For API-based flows, the client would need to provide the code_verifier
+    # This is a simplified implementation
+    code_verifier = secrets.token_urlsafe(32)  # This should come from client
     
     # Exchange code for tokens
     token_data = oidc_service.exchange_code_for_tokens(

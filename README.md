@@ -22,7 +22,33 @@ mark entities and transactions for quick search.
 ## authentication
 - you can request a login link with your entity name, telegram id, signal id or whatever.
 - login link will be sent to all available destinations (telegram, signal, email, etc)
-- new login link does not revoke old ones, so no one can deauthenticate you. 
+- new login link does not revoke old ones, so no one can deauthenticate you.
+
+### OIDC Authentication
+In addition to the traditional token-based authentication, the system supports OpenID Connect (OIDC) authentication:
+
+- Configure OIDC provider settings via environment variables
+- Supports standard OIDC providers (Google, Microsoft, Auth0, etc.)
+- Users can link multiple authentication methods to one account
+- Secure authorization code flow with PKCE
+
+#### OIDC Configuration
+To enable OIDC authentication, set the following environment variables:
+
+```bash
+# Required
+export REFINANCE_OIDC_CLIENT_ID=your-oidc-client-id
+export REFINANCE_OIDC_CLIENT_SECRET=your-oidc-client-secret
+export REFINANCE_OIDC_DISCOVERY_URL=https://your-provider.com/.well-known/openid_configuration
+
+# Optional (defaults to "openid profile email")
+export REFINANCE_OIDC_SCOPES=openid profile email
+```
+
+#### OIDC Provider Examples
+- **Google**: `https://accounts.google.com/.well-known/openid_configuration`
+- **Microsoft**: `https://login.microsoftonline.com/common/v2.0/.well-known/openid_configuration`
+- **Auth0**: `https://your-domain.auth0.com/.well-known/openid_configuration` 
 
 ## production
 

@@ -29,6 +29,18 @@
     <div class="alert alert-danger">
         OIDC authentication failed. Please try again or contact an administrator.
     </div>
+    {% elif request.args.get('error') == 'oidc_session_missing' %}
+    <div class="alert alert-danger">
+        OIDC session expired. Please try logging in again.
+    </div>
+    {% elif request.args.get('error') == 'oidc_session_invalid' %}
+    <div class="alert alert-danger">
+        Invalid OIDC session. Please try logging in again.
+    </div>
+    {% elif request.args.get('error') == 'oidc_state_mismatch' %}
+    <div class="alert alert-danger">
+        OIDC security validation failed. Please try logging in again.
+    </div>
     {% endif %}
 </div>
 
