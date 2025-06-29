@@ -4,7 +4,11 @@ from decimal import Decimal
 from uuid import UUID
 
 import requests
-from app.bootstrap import cryptapi_deposit_provider
+from app.bootstrap import (
+    cryptapi_deposit_provider,
+    usdt_erc20_treasury,
+    usdt_trc20_treasury,
+)
 from app.config import Config, get_config
 from app.errors.deposit import DepositAmountIncorrect
 from app.models.entity import Entity
@@ -38,6 +42,10 @@ class CryptAPIDepositProviderService(BaseService[Entity]):
             raise DepositAmountIncorrect(f"minimum amount for this coin is {m}")
 
         # we need some record in databass, create it
+        treasury = {
+            "trc20/usdt": usdt_trc20_treasury,
+            "erc20/usdt": usdt_erc20_treasury,
+        }
         d = self.deposit_service.create(
             DepositCreateSchema(
                 from_entity_id=cryptapi_deposit_provider.id,
@@ -46,6 +54,7 @@ class CryptAPIDepositProviderService(BaseService[Entity]):
                 currency="USD",
                 provider="cryptapi",
                 details={},
+                to_treasury_id=treasury[schema.coin].id,
             ),
             overrides={"actor_entity_id": actor_entity.id},
         )

@@ -31,6 +31,13 @@ class Balance:
     completed: dict[str, Decimal]
 
 
+@dataclass
+class Treasury(Base):
+    name: str
+    active: bool
+    balances: Balance
+
+
 class TransactionStatus(enum.Enum):
     DRAFT = "draft"
     COMPLETED = "completed"
@@ -48,6 +55,10 @@ class Transaction(Base):
     currency: str
     status: str
     tags: list[Tag]
+    from_treasury_id: int | None = None
+    to_treasury_id: int | None = None
+    from_treasury: Treasury | None = None
+    to_treasury: Treasury | None = None
 
 
 @dataclass

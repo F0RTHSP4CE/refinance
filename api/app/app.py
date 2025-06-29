@@ -17,6 +17,7 @@ from app.routes.stats import router as stats_router
 from app.routes.tag import tag_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
+from app.routes.treasury import treasury_router
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -84,6 +85,7 @@ app.include_router(deposits_router)
 app.include_router(deposit_provider_callbacks_router)
 app.include_router(resident_fee_router)
 app.include_router(stats_router)
+app.include_router(treasury_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
