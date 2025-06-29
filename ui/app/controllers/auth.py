@@ -1,14 +1,20 @@
-from flask import Blueprint, redirect, render_template, request, session, url_for
+import re
+import requests
+from flask import (
+    Blueprint,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+    current_app,
+    Response,
+)
+from app.external.refinance import get_refinance_api_client
+from flask_wtf import FlaskForm
+from wtforms import StringField, SubmitField
 
 auth_bp = Blueprint("auth", __name__)
-from app.external.refinance import get_refinance_api_client
-from app.schemas import Balance, Entity, Transaction
-from flask import Blueprint, redirect, render_template, url_for
-from flask_wtf import FlaskForm
-from wtforms import FormField, IntegerField, StringField, SubmitField
-from wtforms.validators import DataRequired
-
-entity_bp = Blueprint("entity", __name__)
 
 
 class TokenRequestForm(FlaskForm):
@@ -39,3 +45,58 @@ def logout():
     if session.get("token"):
         session.pop("token")
     return redirect(url_for("auth.login"))
+
+
+def _strip_domain_path(cookie: str) -> str:
+    # Remove Domain and Path attributes for compatibility with UI domain
+    cookie = re.sub(r";\s*Domain=[^;]+", "", cookie, flags=re.IGNORECASE)
+    cookie = re.sub(r";\s*Path=[^;]+", "", cookie, flags=re.IGNORECASE)
+    return cookie
+
+
+def _proxy_oidc_backend(backend_url, params):
+    resp = requests.get(
+        backend_url,
+        params=params,
+        allow_redirects=False,
+        cookies=request.cookies,
+        stream=True,
+        headers={"Host": request.host},
+    )
+    set_cookie_headers = (
+        resp.raw.headers.get_all("Set-Cookie")
+        if hasattr(resp.raw.headers, "get_all")
+        else resp.headers.getlist("Set-Cookie")
+        if hasattr(resp.headers, "getlist")
+        else []
+    )
+    headers = [
+        (k, v)
+        for k, v in resp.headers.items()
+        if k.lower() not in ("content-encoding", "set-cookie")
+    ]
+    for cookie in set_cookie_headers:
+        headers.append(("Set-Cookie", _strip_domain_path(cookie)))
+    return resp, headers
+
+
+@auth_bp.route("/oidc/login", methods=["GET"])
+def oidc_login():
+    backend_url = (
+        current_app.config.get("OIDC_BACKEND_URL") or "http://api:8000/auth/oidc/login"
+    )
+    resp, headers = _proxy_oidc_backend(backend_url, request.args)
+    return Response(resp.content, status=resp.status_code, headers=headers)
+
+
+@auth_bp.route("/oidc/callback", methods=["GET"])
+def oidc_callback():
+    backend_url = (
+        current_app.config.get("OIDC_BACKEND_CALLBACK_URL")
+        or "http://api:8000/auth/oidc/callback"
+    )
+    resp, headers = _proxy_oidc_backend(backend_url, request.args)
+    if resp.is_redirect and resp.headers.get("Location", "").startswith("/auth/token/"):
+        token = resp.headers["Location"].split("/auth/token/")[-1]
+        return token_auth(token)
+    return Response(resp.content, status=resp.status_code, headers=headers)

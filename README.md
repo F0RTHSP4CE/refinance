@@ -22,7 +22,28 @@ mark entities and transactions for quick search.
 ## authentication
 - you can request a login link with your entity name, telegram id, signal id or whatever.
 - login link will be sent to all available destinations (telegram, signal, email, etc)
-- new login link does not revoke old ones, so no one can deauthenticate you. 
+- new login link does not revoke old ones, so no one can deauthenticate you.
+
+### OpenID Connect (OIDC) setup
+
+To enable OIDC-based login alongside Telegram:
+
+1. Add these environment variables (e.g. in `secrets.env` or your shell):
+
+   ```bash
+   export REFINANCE_OIDC_CLIENT_ID=<your-client-id>
+   export REFINANCE_OIDC_CLIENT_SECRET=<your-client-secret>
+   export REFINANCE_OIDC_DISCOVERY_URL=https://your-oidc-provider/.well-known/openid-configuration
+   export REFINANCE_OIDC_REDIRECT_URI=http://localhost:8000/auth/oidc/callback
+   ```
+
+1. Restart the backend service.
+
+1. Navigate your browser to `GET /auth/oidc/login` to begin the OIDC flow.
+
+1. After successful authentication, you will be redirected to the UI with a valid token at `/auth/token/<token>`.
+
+1. Use this token to access any protected API endpoint as usual.
 
 ## production
 

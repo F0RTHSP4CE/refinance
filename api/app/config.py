@@ -25,6 +25,18 @@ class Config:
         default=getenv("REFINANCE_CRYPTAPI_ADDRESS_TRC20_USDT", "")
     )
 
+    # OIDC configuration
+    oidc_client_id: str | None = field(default=getenv("REFINANCE_OIDC_CLIENT_ID", ""))
+    oidc_client_secret: str | None = field(
+        default=getenv("REFINANCE_OIDC_CLIENT_SECRET", "")
+    )
+    oidc_discovery_url: str | None = field(
+        default=getenv("REFINANCE_OIDC_DISCOVERY_URL", "")
+    )
+    oidc_redirect_uri: str | None = field(
+        default=getenv("REFINANCE_OIDC_REDIRECT_URI", "")
+    )
+
     @property
     def database_path(self) -> Path:
         return Path("./data/") / Path(f"{self.app_name}.db")
