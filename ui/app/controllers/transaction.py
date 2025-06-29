@@ -12,6 +12,9 @@ transaction_bp = Blueprint("transaction", __name__)
 class TransactionForm(FlaskForm):
     from_entity_name = StringField("From")
     to_entity_name = StringField("To")
+    # Treasury dropdowns
+    from_treasury_id = SelectField("From Treasury", coerce=int, choices=[], default=0)
+    to_treasury_id = SelectField("To Treasury", coerce=int, choices=[], default=0)
     from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     comment = StringField("Comment")
@@ -67,6 +70,13 @@ class TransactionFilterForm(FlaskForm):
     submit = SubmitField("Search")
 
 
+def _get_treasury_choices():
+    """Fetch treasuries and return select choices"""
+    api = get_refinance_api_client()
+    items = api.http("GET", "treasuries").json().get("items", [])
+    return [(0, "")] + [(t["id"], t["name"]) for t in items]
+
+
 @transaction_bp.route("/")
 @token_required
 def list():
@@ -117,9 +127,14 @@ def detail(id):
 @token_required
 def add():
     form = TransactionForm()
+    # populate treasury dropdowns
+    choices = _get_treasury_choices()
+    form.from_treasury_id.choices = choices  # type: ignore
+    form.to_treasury_id.choices = choices  # type: ignore
     if form.validate_on_submit():
-        api = get_refinance_api_client()
-        tx = api.http("POST", "transactions", data=form.data)
+        data = form.data.copy()
+        data.pop("csrf_token", None)
+        tx = get_refinance_api_client().http("POST", "transactions", data=data)
         if tx.status_code == 200:
             return redirect(url_for("transaction.detail", id=tx.json()["id"]))
     return render_template("transaction/add.jinja2", form=form)
@@ -130,10 +145,21 @@ def add():
 def edit(id):
     api = get_refinance_api_client()
     transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
-    form = TransactionForm(**transaction.__dict__)
+    # initialize form with transaction data and treasury IDs
+    init_data = {
+        **transaction.__dict__,
+        "from_treasury_id": transaction.from_treasury_id or 0,
+        "to_treasury_id": transaction.to_treasury_id or 0,
+    }
+    form = TransactionForm(data=init_data)
+    # populate treasury dropdowns
+    choices = _get_treasury_choices()
+    form.from_treasury_id.choices = choices  # type: ignore
+    form.to_treasury_id.choices = choices  # type: ignore
     if form.validate_on_submit():
-        form.populate_obj(transaction)
-        api.http("PATCH", f"transactions/{id}", data=form.data)
+        data = form.data.copy()
+        data.pop("csrf_token", None)
+        get_refinance_api_client().http("PATCH", f"transactions/{id}", data=data)
         return redirect(url_for("transaction.detail", id=id))
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     return render_template(

@@ -1,0 +1,71 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Treasury {{ treasury_inline(treasury) }}{% endblock %}
+
+{% block content %}
+<div class="details-balance">
+    <h2>Details</h2>
+    <table>
+        <tr>
+            <td>ID</td>
+            <td>{{ treasury.id }}</td>
+        </tr>
+        <tr>
+            <td>Name</td>
+            <td>{{ treasury.name }}</td>
+        </tr>
+        <tr>
+            <td>Comment</td>
+            <td>{{ treasury.comment or "" }}</td>
+        </tr>
+        <tr>
+            <td>Active</td>
+            <td>{{ 'Yes' if treasury.active else 'No' }}</td>
+        </tr>
+        <tr>
+            <td>Created at</td>
+            <td>{{ treasury.created_at }}</td>
+        </tr>
+        <tr>
+            <td>Modified at</td>
+            <td>{{ treasury.modified_at or "" }}</td>
+        </tr>
+    </table>
+    <p><a href="{{ url_for('treasury.edit', id=treasury.id) }}">Edit</a> |
+        <a href="{{ url_for('treasury.delete', id=treasury.id) }}">Delete</a>
+    </p>
+</div>
+
+<div class="details-balance">
+    <h2>Balance</h2>
+    {% if not balance.draft and not balance.completed %}
+    <p>No transactions.</p>
+    {% endif %}
+
+    {% if balance.completed %}
+    <p>Completed:</p>
+    <table>
+        {% for currency, amount in balance.completed.items() %}
+        <tr>
+            <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">{{ amount }}</td>
+            <td>{{ currency|upper }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if balance.draft %}
+    <p>Draft:</p>
+    <table>
+        {% for currency, amount in balance.draft.items() %}
+        <tr>
+            <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">{{ amount }}</td>
+            <td>{{ currency|upper }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

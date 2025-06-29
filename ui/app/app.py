@@ -10,6 +10,7 @@ from app.controllers.split import split_bp
 from app.controllers.stats import stats_bp
 from app.controllers.tag import tag_bp
 from app.controllers.transaction import transaction_bp
+from app.controllers.treasury import treasury_bp
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
@@ -38,6 +39,7 @@ app.register_blueprint(tag_bp, url_prefix="/tags")
 app.register_blueprint(exchange_bp, url_prefix="/exchange")
 app.register_blueprint(resident_fee_bp, url_prefix="/fee")
 app.register_blueprint(stats_bp, url_prefix="/stats")
+app.register_blueprint(treasury_bp, url_prefix="/treasuries")
 
 
 @app.errorhandler(ApplicationError)

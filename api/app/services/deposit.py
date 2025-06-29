@@ -54,6 +54,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             query = query.filter(self.model.currency == filters.currency)
         if filters.status is not None:
             query = query.filter(self.model.status == filters.status)
+        if filters.to_treasury_id is not None:
+            query = query.filter(self.model.to_treasury_id == filters.to_treasury_id)
         return query
 
     def get_by_uuid(self, uuid: UUID) -> Deposit:
@@ -77,6 +79,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
                     from_entity_id=db_obj.from_entity_id,
                     to_entity_id=db_obj.to_entity_id,
                     status=TransactionStatus.COMPLETED,
+                    to_treasury_id=db_obj.to_treasury_id,
+                    from_treasury_id=None,  # deposits are not from treasuries
                 ),
                 overrides={"actor_entity_id": db_obj.actor_entity_id},
             )

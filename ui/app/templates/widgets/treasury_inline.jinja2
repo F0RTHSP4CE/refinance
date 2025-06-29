@@ -1,0 +1,8 @@
+{% macro treasury_inline(treasury) %}
+{%- set hue = (treasury.id * 73.1) % 360 -%}
+{%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
+
+<small class="treasury-badge" style="background-color: {{ color }}">
+    <a href="{{ url_for('treasury.detail', id=treasury.id) }}">{{ treasury.name }}</a>
+</small>
+{% endmacro %}

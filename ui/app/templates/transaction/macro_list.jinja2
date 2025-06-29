@@ -1,4 +1,5 @@
-{% from 'widgets/tag_inline.jinja2' import tag_inline %}s
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
 
 {% macro transaction_list(transactions) %}
 {% if transactions %}
@@ -12,6 +13,7 @@
                 <td>To</td>
                 <td>Amount</td>
                 <td>Currency</td>
+                <td>Treasury</td>
                 <td>Tags</td>
                 <td>Comment</td>
                 <td>Status</td>
@@ -23,26 +25,46 @@
             <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
 
             <td>{{ transaction.created_at }}</td>
+
             <td>
-                <a
-                    href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
-
-
+                <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{ transaction.from_entity.name
+                    }}</a>
                 {% for tag in transaction.from_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
             </td>
 
             <td>
-                <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
-
+                <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{ transaction.to_entity.name
+                    }}</a>
                 {% for tag in transaction.to_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
             </td>
 
+
             <td class="right-align">{{ transaction.amount }}</td>
             <td>{{ transaction.currency | upper }}</td>
+
+            <td>
+                {% if transaction.from_treasury_id or transaction.to_treasury_id %}
+
+                {% if transaction.from_treasury_id %}
+                {{ treasury_inline(transaction.from_treasury) }}
+                {% else %}
+                x
+                {% endif %}
+                →
+                {% if transaction.to_treasury_id %}
+                {{ treasury_inline(transaction.to_treasury) }}
+                {% else %}
+                x
+                {% endif %}
+
+                {% endif %}
+
+            </td>
+
             <td>
                 {% for tag in transaction.tags %}
                 {{ tag_inline(tag) }}

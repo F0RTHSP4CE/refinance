@@ -5,7 +5,7 @@ from typing import Type
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from app.models.transaction import Transaction
+from app.models.treasury import Treasury
 
 # commonly used tags
 sys_tag = Tag(id=1, name="system", comment="system")  # , color="999999"
@@ -21,7 +21,10 @@ currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
-
+cash_treasury = Treasury(id=1, name="cash")
+# commonly used treasuries
+usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
+usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
 
 # commonly used entities
 f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag])

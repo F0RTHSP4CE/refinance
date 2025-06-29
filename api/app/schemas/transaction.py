@@ -12,6 +12,7 @@ from app.schemas.base import (
 from app.schemas.entity import EntitySchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
+from app.schemas.treasury import TreasurySchema
 from pydantic import field_validator, model_validator
 
 
@@ -26,6 +27,10 @@ class TransactionSchema(BaseReadSchema):
     currency: str
     status: TransactionStatus
     tags: list[TagSchema]
+    from_treasury_id: int | None
+    to_treasury_id: int | None
+    from_treasury: TreasurySchema | None
+    to_treasury: TreasurySchema | None
 
 
 class TransactionCreateSchema(BaseUpdateSchema):
@@ -34,22 +39,24 @@ class TransactionCreateSchema(BaseUpdateSchema):
     amount: Decimal
     currency: str
     status: TransactionStatus | None = None
+    from_treasury_id: int | None = None
+    to_treasury_id: int | None = None
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()
-
-    @model_validator(mode="after")
-    def check_ids_are_different(self):
-        if self.from_entity_id == self.to_entity_id:
-            raise ValueError("from_entity_id and to_entity_id must be different")
-        return self
 
 
 class TransactionUpdateSchema(BaseUpdateSchema):
     amount: Decimal | None = None
     currency: str | None = None
     status: TransactionStatus | None = None
+    from_treasury_id: int | None = None
+    to_treasury_id: int | None = None
+
+    @field_validator("currency")
+    def currency_must_be_lowercase(cls, v):
+        return v.lower()
 
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
@@ -61,3 +68,5 @@ class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     amount_max: Decimal | None = None
     currency: str | None = None
     status: TransactionStatus | None = None
+    from_treasury_id: int | None = None
+    to_treasury_id: int | None = None
