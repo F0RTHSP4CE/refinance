@@ -37,6 +37,9 @@
             <li {% if 'stats' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('stats.index') }}">Stats</a>
             </li>
+            <li {% if 'treasuries' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('treasury.list') }}">Treasuries</a>
+            </li>
             <li>///</li>
             <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('entity.list') }}">Entity</a>

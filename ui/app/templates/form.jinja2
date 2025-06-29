@@ -8,9 +8,8 @@
         <td>{{ field.label() }}</td>
         {% endif %}
         <td>
-            {% if field.data is not none %}
-            {{ field(value=(field.label.text if field.type == 'SubmitField' else '') or field.data)
-            }}
+            {% if field.data is not none and field.type != 'BooleanField' %}
+            {{ field(value=(field.label.text if field.type == 'SubmitField' else '') or field.data) }}
             {% else %}
             {{ field() }}
             {% endif %}
