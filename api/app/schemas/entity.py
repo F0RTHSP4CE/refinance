@@ -11,6 +11,8 @@ from pydantic import BaseModel
 class EntityAuthSchema(BaseModel):
     telegram_id: int | str | None = None
     signal_id: int | str | None = None
+    oidc_subject: str | None = None
+    email: str | None = None
 
 
 class EntitySchema(BaseReadSchema):
