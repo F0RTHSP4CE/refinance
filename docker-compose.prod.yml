@@ -5,3 +5,5 @@ services:
   ui:
     env_file:
       - secrets.env
+    ports:
+      - "8000:80"
