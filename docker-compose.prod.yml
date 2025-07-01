@@ -1,9 +1,9 @@
 services:
   api:
     env_file:
-      - secrets.env
+      - secrets.prod.env
   ui:
     env_file:
-      - secrets.env
+      - secrets.prod.env
     ports:
-      - "8000:80"
+      - "80:9000"

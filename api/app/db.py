@@ -104,7 +104,6 @@ class DatabaseConnection:
         logger.info("Seeding data for table '%s'", table_name)
 
         for seed in seeds:
-            logger.debug("Merging seed with id %s for table '%s'", seed.id, table_name)
             session.merge(seed)
         session.flush()
         logger.info("Merged %d seed(s) for table '%s'", len(seeds), table_name)

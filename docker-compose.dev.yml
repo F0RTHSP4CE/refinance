@@ -4,14 +4,18 @@ services:
       - ./api:/opt/api
     command: --reload
     env_file:
-      - secrets.env
+      - secrets.dev.env
+    ports:
+      - "8000:8000"
 
   ui:
     volumes:
       - ./ui:/opt/ui
     command: --reload
     env_file:
-      - secrets.env
-
+      - secrets.dev.env
+    ports:
+      - "9000:9000"
+  
 volumes:
   api-data:
