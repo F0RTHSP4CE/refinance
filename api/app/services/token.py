@@ -22,6 +22,15 @@ logger = logging.getLogger(__name__)
 class TokenService:
     ALGORITHM = "HS256"
 
+    @staticmethod
+    def decode_entity_id_from_token(token: str, secret_key: str) -> int:
+        """Decode entity id from token without DB lookup."""
+        try:
+            payload = jwt.decode(token, secret_key, algorithms=[TokenService.ALGORITHM])
+            return int(payload.get("sub") or 0)
+        except jwt.InvalidTokenError as e:
+            raise TokenInvalid from e
+
     def __init__(
         self,
         db: Session = Depends(get_uow),
@@ -43,18 +52,12 @@ class TokenService:
         return encoded_jwt
 
     def get_entity_from_token(self, token: str) -> Entity:
-        """Verify the token and retrieve the associated entity."""
-        try:
-            payload: dict[str, int] = jwt.decode(
-                token, self.config.secret_key, algorithms=[self.ALGORITHM]
-            )
-            entity_id = int(payload.get("sub") or 0)
-            if entity_id is not None:
-                return self.entity_service.get(entity_id)
-            else:
-                raise TokenInvalid
-        except jwt.InvalidTokenError as e:
-            raise TokenInvalid from e
+        """Verify the token, decode the entity id, then retrieve the associated entity via DB."""
+        # Decode entity id and then load entity from DB
+        entity_id = TokenService.decode_entity_id_from_token(
+            token, self.config.secret_key or ""
+        )
+        return self.entity_service.get(entity_id)
 
     def generate_and_send_new_token(
         self,

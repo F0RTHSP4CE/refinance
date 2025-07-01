@@ -22,8 +22,9 @@ loggers:
     handlers:
       - default
     propagate: no
+  # Adjusted to suppress access logs below WARNING
   uvicorn.access:
-    level: INFO
+    level: WARNING
     handlers:
       - access
     propagate: no
