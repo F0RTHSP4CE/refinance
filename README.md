@@ -87,7 +87,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] add split participants by a tag
 - [x] ~~grafana~~, statistics
 - [x] treasuries
-- [ ] logging
+- [x] logging
 - [ ] permissions?
 - [ ] misc validation of amounts (>0.00)
 - [ ] improve split ux
