@@ -30,6 +30,9 @@ ci-daemon:
 ci-test:
 	docker compose -f $(COMPOSE_BASE) -f $(CI_COMPOSE) exec api pytest -v -s --log-level DEBUG
 
+ci-down:
+	docker compose -f $(COMPOSE_BASE) -f $(CI_COMPOSE) down
+
 # Stops all running services
 down:
 	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) -f $(PROD_COMPOSE) down
