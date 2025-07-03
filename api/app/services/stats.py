@@ -4,10 +4,10 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from app.seeding import f0_entity, resident_tag
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.transaction import Transaction
+from app.seeding import f0_entity, resident_tag
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.services.resident_fee import ResidentFeeService

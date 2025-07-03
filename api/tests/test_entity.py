@@ -1,8 +1,8 @@
 """Tests for Entity"""
 
 import pytest
-from app.seeding import SEEDING
 from app.models.entity import Entity
+from app.seeding import SEEDING
 from fastapi import status
 from fastapi.testclient import TestClient
 

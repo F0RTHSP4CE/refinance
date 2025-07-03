@@ -27,7 +27,13 @@ usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
 usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
 
 # commonly used entities
-f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag], auth={"telegram_id": 97702445})
+f0_entity = Entity(
+    id=1,
+    name="F0",
+    comment="F0RTHSPACE hackerspace",
+    tags=[f0_tag],
+    auth={"telegram_id": 97702445},
+)
 
 # entities used by other modules for creating transactions from/to
 currency_exchange_entity = Entity(

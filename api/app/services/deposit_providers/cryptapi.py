@@ -4,11 +4,6 @@ from decimal import Decimal
 from uuid import UUID
 
 import requests
-from app.seeding import (
-    cryptapi_deposit_provider,
-    usdt_erc20_treasury,
-    usdt_trc20_treasury,
-)
 from app.config import Config, get_config
 from app.errors.deposit import DepositAmountIncorrect
 from app.models.entity import Entity
@@ -16,6 +11,11 @@ from app.schemas.deposit import DepositCreateSchema
 from app.schemas.deposit_providers.cryptapi import (
     CryptAPICallbackSchema,
     CryptAPIDepositCreateSchema,
+)
+from app.seeding import (
+    cryptapi_deposit_provider,
+    usdt_erc20_treasury,
+    usdt_trc20_treasury,
 )
 from app.services.base import BaseService
 from app.services.deposit import DepositService
