@@ -58,10 +58,10 @@ async def response_validation_exception_handler(
 @app.exception_handler(ApplicationError)
 def application_exception_handler(request: Request, exc: ApplicationError):
     c = {
-            "error_code": exc.error_code,
-            "error": exc.error,
-            "where": exc.where,
-        }
+        "error_code": exc.error_code,
+        "error": exc.error,
+        "where": exc.where,
+    }
     logger.error(c)
     # Only print full traceback when in debug logging
     if logger.isEnabledFor(logging.DEBUG):
