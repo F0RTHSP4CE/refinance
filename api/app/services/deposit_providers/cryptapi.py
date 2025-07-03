@@ -4,7 +4,7 @@ from decimal import Decimal
 from uuid import UUID
 
 import requests
-from app.bootstrap import (
+from app.seeding import (
     cryptapi_deposit_provider,
     usdt_erc20_treasury,
     usdt_trc20_treasury,

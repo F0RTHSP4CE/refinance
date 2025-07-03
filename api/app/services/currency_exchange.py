@@ -7,7 +7,7 @@ from decimal import ROUND_DOWN, Decimal
 from typing import Optional, TypeVar
 
 import requests
-from app.bootstrap import currency_exchange_entity, currency_exchange_tag
+from app.seeding import currency_exchange_entity, currency_exchange_tag
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal

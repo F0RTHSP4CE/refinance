@@ -5,7 +5,7 @@ import os
 from contextlib import contextmanager
 from typing import Any, Generator, List, Type
 
-from app.bootstrap import BOOTSTRAP
+from app.seeding import SEEDING
 from app.config import Config, get_config
 from app.models.base import BaseModel
 from fastapi import Depends
@@ -67,7 +67,7 @@ class DatabaseConnection:
         This method is called once during initialization.
         """
         with self.get_session() as session:
-            for model, seeds in BOOTSTRAP.items():
+            for model, seeds in SEEDING.items():
                 try:
                     self._seed_model(
                         session=session,

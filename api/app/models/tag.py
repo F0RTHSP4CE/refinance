@@ -11,7 +11,7 @@ class Tag(BaseModel):
 
 
 # this list is used by db.py to create system tags
-TAG_BOOTSTRAP: list[Tag] = [
+TAG_SEEDING: list[Tag] = [
     Tag(id=1, name="sys", comment="things defined in refinance code logic"),
     Tag(id=2, name="resident", comment="hackerspace residents"),
     Tag(id=3, name="fee", comment="monthly resident's fee"),

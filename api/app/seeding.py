@@ -43,7 +43,7 @@ cryptapi_deposit_provider = Entity(
     tags=[deposit_tag],
 )
 
-BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
+SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
         sys_tag,
         resident_tag,

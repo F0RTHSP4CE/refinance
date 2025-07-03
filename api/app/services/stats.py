@@ -4,7 +4,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from app.bootstrap import f0_entity, resident_tag
+from app.seeding import f0_entity, resident_tag
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.transaction import Transaction
