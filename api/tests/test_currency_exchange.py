@@ -3,17 +3,17 @@ from decimal import Decimal
 import pytest
 
 # Import bootstrap data to use pre-existing tags and entities.
-from app.bootstrap import BOOTSTRAP, Entity
+from app.seeding import SEEDING, Entity
 from fastapi.testclient import TestClient
 
 
 @pytest.fixture
 def entity_one():
     """
-    Use one of the pre-existing entities from BOOTSTRAP.
+    Use one of the pre-existing entities from SEEDING.
     We deliberately skip the currency_exchange_entity (id=11) since it's used internally.
     """
-    for e in BOOTSTRAP[Entity]:
+    for e in SEEDING[Entity]:
         if e.id != 11:
             return e.id
 
