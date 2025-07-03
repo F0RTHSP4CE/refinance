@@ -21,13 +21,13 @@ currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
-cash_treasury = Treasury(id=1, name="cash")
 # commonly used treasuries
+cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
 usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
 
 # commonly used entities
-f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag])
+f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag], auth={"telegram_id": 97702445})
 
 # entities used by other modules for creating transactions from/to
 currency_exchange_entity = Entity(
@@ -99,7 +99,7 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
         # residents
         #
         # Entity(
-        #     id=100, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
+        #     id=200, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
         # ),
     ],
     # example transactions
@@ -114,4 +114,9 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
     #     )
     #     for _ in range(300)
     # ],
+    Treasury: [
+        cash_treasury,
+        usdt_erc20_treasury,
+        usdt_trc20_treasury,
+    ],
 }
