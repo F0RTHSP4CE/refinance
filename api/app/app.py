@@ -57,24 +57,31 @@ async def response_validation_exception_handler(
 
 @app.exception_handler(ApplicationError)
 def application_exception_handler(request: Request, exc: ApplicationError):
-    traceback.print_exception(exc)
-    e = JSONResponse(
-        status_code=exc.http_code or 418,
-        content={
+    c = {
             "error_code": exc.error_code,
             "error": exc.error,
             "where": exc.where,
-        },
+        }
+    logger.error(c)
+    # Only print full traceback when in debug logging
+    if logger.isEnabledFor(logging.DEBUG):
+        traceback.print_exception(exc)
+    e = JSONResponse(
+        status_code=exc.http_code or 418,
+        content=c,
     )
     return e
 
 
 @app.exception_handler(SQLAlchemyError)
 def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
-    traceback.print_exception(exc)
+    logger.error(exc)
+    # Only print full traceback when in debug logging
+    if logger.isEnabledFor(logging.DEBUG):
+        traceback.print_exception(exc)
     e = JSONResponse(
         status_code=418,
-        content={"error_code": 4000, "error": exc._message()},
+        content={"error_code": 1500, "error": exc._message()},
     )
     return e
 
