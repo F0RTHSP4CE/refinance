@@ -8,13 +8,13 @@ from app.models.tag import Tag
 from app.models.treasury import Treasury
 
 # commonly used tags
-sys_tag = Tag(id=1, name="system", comment="system")  # , color="999999"
+sys_tag = Tag(id=1, name="system", comment="[internal machinery]")  # , color="999999"
 utilities_tag = Tag(
     id=4, name="utilities", comment="gas, electricity, water, internet, etc"
 )
 resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
-rent_tag = Tag(id=7, name="rent")
-f0_tag = Tag(id=8, name="hackerspace")
+rent_tag = Tag(id=7, name="rent", comment="monthly rent for the physical place")
+f0_tag = Tag(id=8, name="hackerspace", comment="F0RTHSPACE hackerspace")
 deposit_tag = Tag(id=9, name="deposit", comment="money input into system")
 withdrawal_tag = Tag(id=10, name="withdrawal", comment="money output from system")
 currency_exchange_tag = Tag(
@@ -99,7 +99,7 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
         # residents
         #
         # Entity(
-        #     id=200, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
+        #     id=100, name="mike", auth={"telegram_id": 97702445}, tags=[resident_tag]
         # ),
     ],
     # example transactions

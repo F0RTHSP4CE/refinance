@@ -16,6 +16,4 @@ services:
       - secrets.dev.env
     ports:
       - "9000:9000"
-  
-volumes:
-  api-data:
+
