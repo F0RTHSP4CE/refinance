@@ -32,7 +32,7 @@ ci-test:
 
 # Stops all running services
 down:
-	docker compose down
+	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) -f $(PROD_COMPOSE) down
 
 test: dev-daemon
 	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) exec api pytest
