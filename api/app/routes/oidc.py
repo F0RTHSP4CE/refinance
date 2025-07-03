@@ -7,6 +7,7 @@ from app.config import get_config
 from app.services.token import TokenService
 from app.services.entity import EntityService
 from app.models.entity import Entity
+from app.schemas.entity import EntityCreateSchema, EntityAuthSchema
 from sqlalchemy.orm import Session
 from app.uow import get_uow
 import logging
@@ -80,13 +81,15 @@ async def auth_callback(
                     "error": "OIDC user info missing unique identifier for entity name"
                 },
             )
-        entity = Entity(
-            name=name,
-            auth={"oidc_email": userinfo.get("email"), "oidc_sub": userinfo.get("sub")},
+        entity = entity_service.create(
+            EntityCreateSchema(
+                name=name,
+                auth=EntityAuthSchema(
+                    oidc_email=userinfo.get("email"),
+                    oidc_sub=userinfo.get("sub")
+                )
+            )
         )
-        db.add(entity)
-        db.commit()
-        db.refresh(entity)
 
     # Issue internal token
     internal_token = token_service._generate_new_token(entity.id)
