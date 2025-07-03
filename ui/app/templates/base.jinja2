@@ -38,9 +38,8 @@
                 <a href="{{ url_for('stats.index') }}">Stats</a>
             </li>
             <li {% if 'treasuries' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('treasury.list') }}">Treasuries</a>
+                <a href="{{ url_for('treasury.list') }}">Treasury</a>
             </li>
-            <li>///</li>
             <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('entity.list') }}">Entity</a>
             </li>
@@ -55,10 +54,8 @@
                     class="amount-negative" {% endif %}>{{ value }} {{ currency |
                     upper}}</a>
                 {% endfor %}
-                ///
                 <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name
                         }}</strong></a>
-                ///
                 <a href="{{ url_for('auth.logout') }}">Log out</a>
             </li>
             {% else %}
