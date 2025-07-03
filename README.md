@@ -52,6 +52,12 @@ uv remove packagename
 uv sync
 ```
 
+install pre-commit hook
+```
+source ./.venv/bin/activate
+pre-commit install
+```
+
 ### tests
 ```
 make test
