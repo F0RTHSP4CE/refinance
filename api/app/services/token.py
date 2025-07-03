@@ -28,8 +28,8 @@ class TokenService:
         try:
             payload = jwt.decode(token, secret_key, algorithms=[TokenService.ALGORITHM])
             return int(payload.get("sub") or 0)
-        except jwt.InvalidTokenError as e:
-            raise TokenInvalid from e
+        except Exception as e:
+            raise TokenInvalid
 
     def __init__(
         self,
