@@ -46,6 +46,14 @@ class TransactionCreateSchema(BaseUpdateSchema):
     def currency_must_be_lowercase(cls, v):
         return v.lower()
 
+    @field_validator("from_treasury_id", mode="before")
+    def normalize_from_treasury(cls, v):
+        return None if v == 0 else v
+
+    @field_validator("to_treasury_id", mode="before")
+    def normalize_to_treasury(cls, v):
+        return None if v == 0 else v
+
 
 class TransactionUpdateSchema(BaseUpdateSchema):
     amount: Decimal | None = None
@@ -57,6 +65,14 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()
+
+    @field_validator("from_treasury_id", mode="before")
+    def normalize_from_treasury(cls, v):
+        return None if v == 0 else v
+
+    @field_validator("to_treasury_id", mode="before")
+    def normalize_to_treasury(cls, v):
+        return None if v == 0 else v
 
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
