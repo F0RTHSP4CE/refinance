@@ -88,13 +88,13 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] ~~grafana~~, statistics
 - [x] treasuries
 - [x] logging
-- [ ] permissions?
-- [ ] misc validation of amounts (>0.00)
-- [ ] improve split ux
-- [ ] pass tags as a list, not as add/delete operations
-- [ ] migrations
+- [x] postgres
 
 ## todo techdebt
+- [ ] migrations
+- [ ] pass tags as a list, not as add/delete operations
+- [ ] misc validation of amounts (>0.00)
+- [ ] improve split ux
 - [ ] make a uniform deposit api CRUD, provider should be enum
 - [ ] update all boolean attrs to status enums
 - [ ] mobile ui
@@ -103,6 +103,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [ ] remove base service class
 
 ## todo future features
+- [ ] permissions?
 - [ ] deposit ui
 - [ ] donation categories (entities?)
 - [ ] easy payment urls

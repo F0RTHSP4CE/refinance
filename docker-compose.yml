@@ -3,13 +3,8 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    volumes:
-      - api-data:/opt/data
 
   ui:
     build: 
       context: .
       dockerfile: ui/Dockerfile
-
-volumes:
-  api-data:
