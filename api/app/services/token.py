@@ -1,5 +1,6 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
+import json
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -121,7 +122,16 @@ class TokenService:
                             f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
                             data={
                                 "chat_id": entity.auth["telegram_id"],
-                                "text": login_link,
+                                "text": f"refinance login: <b>{entity.name}</b>",
+                                "reply_markup": json.dumps({
+                                    "inline_keyboard": [[
+                                        {
+                                            "text": f"Login as {entity.name}",
+                                            "url": login_link
+                                        }
+                                    ]]
+                                }),
+                                "parse_mode": "HTML",
                             },
                             timeout=5,
                         )
