@@ -1,5 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'widgets/tag_selector.jinja2' import tag_selector %}
 {% from 'form.jinja2' import render_form %}
 
 {% block title %}New Transaction{% endblock %}
@@ -8,22 +9,28 @@
 <form method="post">
     <table>
         <tr>
-            <td>From Entity</td>
+            <td>Tags</td>
+            <td>{{ tag_selector('tag_ids', all_tags, []) }}</td>
+        </tr>
+        <tr>
+            <td><b>From</b></td>
             <td>
                 {{ entity_selector('from_entity', g.actor_entity.name,
                 g.actor_entity.id) }}
             </td>
         </tr>
         <tr>
-            <td>To Entity</td>
+            <td><b>To</b></td>
             <td>
                 {{ entity_selector('to_entity') }}
             </td>
         </tr>
-        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id'),
+        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
         new_table=False) }}
+
     </table>
 </form>
 
 <script src="/static/js/entitySelector.js"></script>
+<script src="/static/js/multiSelect.js"></script>
 {% endblock %}

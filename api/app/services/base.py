@@ -25,10 +25,17 @@ class BaseService(Generic[M]):
 
     def create(self, schema: BUS, overrides: dict = {}) -> M:
         data = schema.dump()
+        tag_ids = data.pop("tag_ids", None)
         data = {**data, **overrides}
         new_obj = self.model(**data)
         self.db.add(new_obj)
         self.db.flush()
+
+        # Handle tags if this service supports them and tag_ids were provided
+        if tag_ids is not None and hasattr(self, "set_tags"):
+            self.set_tags(new_obj, tag_ids)  # type: ignore
+            self.db.flush()
+
         self.db.refresh(new_obj)
         return new_obj
 
@@ -67,9 +74,15 @@ class BaseService(Generic[M]):
     def update(self, obj_id: K, schema: BUS, overrides: dict = {}) -> M:
         obj = self.get(obj_id)
         data = schema.dump()
+        tag_ids = data.pop("tag_ids", None)
         data = {**data, **overrides}
         for key, value in data.items():
             setattr(obj, key, value)
+
+        # Handle tags if this service supports them and tag_ids were provided
+        if tag_ids is not None and hasattr(self, "set_tags"):
+            self.set_tags(obj, tag_ids)  # type: ignore
+
         setattr(obj, "modified_at", datetime.datetime.now())
         self.db.flush()
         self.db.refresh(obj)

@@ -8,6 +8,7 @@ from wtforms import (
     FormField,
     IntegerField,
     SelectField,
+    SelectMultipleField,
     StringField,
     SubmitField,
 )
@@ -32,6 +33,9 @@ class SplitForm(FlaskForm):
         validators=[DataRequired()],
         description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
         render_kw={"placeholder": "GEL", "class": "small"},
+    )
+    tag_ids = SelectMultipleField(
+        "Tags", coerce=int, choices=[], description="Select tags for this split"
     )
     submit = SubmitField("Submit")
 
@@ -131,27 +135,46 @@ def list():
 @split_bp.route("/add", methods=["GET", "POST"])
 @token_required
 def add():
+    api = get_refinance_api_client()
     form = SplitForm()
+
+    # populate tag choices
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
     if form.validate_on_submit():
-        api = get_refinance_api_client()
-        api.http("POST", "splits", data=form.data)
+        data = form.data.copy()
+        data.pop("csrf_token", None)
+        api.http("POST", "splits", data=data)
         return redirect(url_for("split.list"))
-    return render_template("split/add.jinja2", form=form)
+    return render_template("split/add.jinja2", form=form, all_tags=all_tags)
 
 
 @split_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @token_required
 def edit(id):
     api = get_refinance_api_client()
-    split = api.http("GET", f"splits/{id}").json()
-    form = SplitForm(data=split)
-    if form.validate_on_submit():
-        api.http("PATCH", f"splits/{id}", data=form.data)
-        return redirect(url_for("split.detail", id=id))
+    split_data = api.http("GET", f"splits/{id}").json()
+
+    # Prepare form data with tag_ids
+    form_data = split_data.copy()
+    form_data["tag_ids"] = [tag["id"] for tag in split_data.get("tags", [])]
+
+    form = SplitForm(data=form_data)
+
+    # populate tag choices
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
+    if form.validate_on_submit():
+        data = form.data.copy()
+        data.pop("csrf_token", None)
+        api.http("PATCH", f"splits/{id}", data=data)
+        return redirect(url_for("split.detail", id=id))
+
     return render_template(
         "split/edit.jinja2",
-        split=split,
+        split=split_data,
         form=form,
         all_tags=all_tags,
     )
@@ -235,21 +258,3 @@ def remove_participant(id, entity_id):
     return render_template(
         "split/remove_participant.jinja2", form=form, split=split, entity=entity
     )
-
-
-@split_bp.route("/<int:id>/tags/add", methods=["POST"])
-@token_required
-def add_tag(id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("POST", f"splits/{id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("split.edit", id=id))
-
-
-@split_bp.route("/<int:id>/tags/remove", methods=["POST"])
-@token_required
-def remove_tag(id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("DELETE", f"splits/{id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("split.edit", id=id))

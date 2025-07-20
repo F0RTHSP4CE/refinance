@@ -9,7 +9,6 @@ from app.schemas.entity import (
     EntitySchema,
     EntityUpdateSchema,
 )
-from app.schemas.tag import TagSchema
 from app.services.entity import EntityService
 from fastapi import APIRouter, Depends
 
@@ -60,23 +59,3 @@ def update_entity(
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.update(entity_id, entity_update)
-
-
-@entity_router.post("/{entity_id}/tags", response_model=TagSchema)
-def add_tag_to_entity(
-    entity_id: int,
-    tag_id: int,
-    entity_service: EntityService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return entity_service.add_tag(entity_id, tag_id)
-
-
-@entity_router.delete("/{entity_id}/tags", response_model=TagSchema)
-def remove_tag_from_entity(
-    entity_id: int,
-    tag_id: int,
-    entity_service: EntityService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return entity_service.remove_tag(entity_id, tag_id)

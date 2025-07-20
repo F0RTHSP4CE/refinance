@@ -1,8 +1,12 @@
-{% macro tag_inline(tag) %}
+{% macro tag_inline(tag, href=true) %}
 {%- set hue = (tag.id * 41.9) % 360 -%}
 {%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
 
 <small class="tag-badge" style="border-color: {{ color }}">
+    {% if href %}
     <a style="color: {{ color }}" href="{{ url_for('tag.detail', id=tag.id )}}">{{ tag.name }}</a>
+    {% else %}
+    <span style="color: {{ color }}">{{ tag.name }}</span>
+    {% endif %}
 </small>
 {% endmacro %}

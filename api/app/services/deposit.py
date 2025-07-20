@@ -56,6 +56,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             query = query.filter(self.model.status == filters.status)
         if filters.to_treasury_id is not None:
             query = query.filter(self.model.to_treasury_id == filters.to_treasury_id)
+        if filters.tags_ids:
+            query = self._apply_tag_filters(query, filters.tags_ids)
         return query
 
     def get_by_uuid(self, uuid: UUID) -> Deposit:
