@@ -19,9 +19,6 @@ transaction_bp = Blueprint("transaction", __name__)
 class TransactionForm(FlaskForm):
     from_entity_name = StringField("From")
     to_entity_name = StringField("To")
-    # Treasury dropdowns
-    from_treasury_id = SelectField("From Treasury", coerce=int, choices=[], default=0)
-    to_treasury_id = SelectField("To Treasury", coerce=int, choices=[], default=0)
     from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     comment = StringField("Comment")
@@ -37,8 +34,21 @@ class TransactionForm(FlaskForm):
         render_kw={"placeholder": "GEL", "class": "small"},
     )
     status = SelectField(
-        "Status", choices=[(e.value, e.value) for e in TransactionStatus]
+        "Status",
+        choices=[(e.value, e.value) for e in TransactionStatus],
+        default=TransactionStatus.DRAFT.value,
+        description="Draft — can be edited. Completed — confirmed and executed, cannot be edited after confirmation.",
     )
+    # Treasury dropdowns
+    from_treasury_id = SelectField("From Treasury", coerce=int, choices=[], default=0)
+    to_treasury_id = SelectField(
+        "To Treasury",
+        coerce=int,
+        choices=[],
+        default=0,
+        description="For deposits/withdrawals only. Physical money source and destination.",
+    )
+
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this transaction"
     )
