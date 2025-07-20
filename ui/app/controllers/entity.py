@@ -3,7 +3,13 @@ from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
-from wtforms import FormField, SelectField, StringField, SubmitField
+from wtforms import (
+    FormField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    SubmitField,
+)
 from wtforms.validators import DataRequired
 
 entity_bp = Blueprint("entity", __name__)
@@ -17,6 +23,9 @@ class EntityForm(FlaskForm):
         render_kw={"placeholder": "h4ck3r"},
     )
     comment = StringField("Comment")
+    tag_ids = SelectMultipleField(
+        "Tags", coerce=int, choices=[], description="Select tags for this entity"
+    )
 
 
 class AuthForm(FlaskForm):
@@ -79,26 +88,34 @@ def list():
 @entity_bp.route("/add", methods=["GET", "POST"])
 @token_required
 def add():
+    api = get_refinance_api_client()
     entity_form = EntityForm(prefix="entity")
     auth_form = AuthForm(prefix="auth")
+
+    # Populate tag choices
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    entity_form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
 
     if entity_form.validate_on_submit() and auth_form.validate_on_submit():
         # Combine data from both forms into a single dictionary.
         data = {
             "name": entity_form.name.data,
             "comment": entity_form.comment.data,
+            "tag_ids": entity_form.tag_ids.data,
             "auth": auth_form.data,  # This includes telegram_id, signal_id, whatsapp_number, email
         }
         # Remove CSRF tokens from both dictionaries if present.
         data.pop("csrf_token", None)
         data["auth"].pop("csrf_token", None)
 
-        api = get_refinance_api_client()
         api.http("POST", "entities", data=data)
         return redirect(url_for("entity.list"))
 
     return render_template(
-        "entity/add.jinja2", entity_form=entity_form, auth_form=auth_form
+        "entity/add.jinja2",
+        entity_form=entity_form,
+        auth_form=auth_form,
+        all_tags=all_tags,
     )
 
 
@@ -110,12 +127,20 @@ def edit(id):
     entity_data = api.http("GET", f"entities/{id}").json()
     entity = Entity(**entity_data)
 
+    # Prepare form data with tag_ids
+    form_data = entity_data.copy()
+    form_data["tag_ids"] = [tag["id"] for tag in entity_data.get("tags", [])]
+
     # Create separate form instances with prefixes. Pre-populate:
-    entity_form = EntityForm(prefix="entity", data=entity_data)
+    entity_form = EntityForm(prefix="entity", data=form_data)
     # If the entity_data does not include auth keys at the root level,
     # extract them (or default to an empty dict).
     auth_data = entity_data.get("auth", {})
     auth_form = AuthForm(prefix="auth", data=auth_data)
+
+    # Populate tag choices
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    entity_form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
 
     # On POST, validate both forms.
     if entity_form.validate_on_submit() and auth_form.validate_on_submit():
@@ -123,12 +148,12 @@ def edit(id):
         combined_data = {
             "name": entity_form.name.data,
             "comment": entity_form.comment.data,
+            "tag_ids": entity_form.tag_ids.data,
             "auth": auth_form.data,  # This is the dict containing telegram_id, signal_id, etc.
         }
         api.http("PATCH", f"entities/{id}", data=combined_data)
         return redirect(url_for("entity.detail", id=id))
 
-    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     return render_template(
         "entity/edit.jinja2",
         entity=entity,
@@ -169,21 +194,3 @@ def detail(id):
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
     )
-
-
-@entity_bp.route("/<int:entity_id>/tags/add", methods=["POST"])
-@token_required
-def add_tag(entity_id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("POST", f"entities/{entity_id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("entity.edit", id=entity_id))
-
-
-@entity_bp.route("/<int:entity_id>/tags/remove", methods=["POST"])
-@token_required
-def remove_tag(entity_id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("DELETE", f"entities/{entity_id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("entity.edit", id=entity_id))

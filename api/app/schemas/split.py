@@ -55,6 +55,7 @@ class SplitCreateSchema(BaseUpdateSchema):
     recipient_entity_id: int
     amount: Decimal
     currency: str
+    tag_ids: list[int] = []
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
@@ -71,6 +72,7 @@ class SplitUpdateSchema(BaseUpdateSchema):
     recipient_entity_id: int | None = None
     amount: Decimal | None = None
     currency: str | None = None
+    tag_ids: list[int] | None = None
 
 
 class SplitFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):

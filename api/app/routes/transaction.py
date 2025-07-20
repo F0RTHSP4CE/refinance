@@ -3,7 +3,6 @@
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
-from app.schemas.tag import TagSchema
 from app.schemas.transaction import (
     TransactionCreateSchema,
     TransactionFiltersSchema,
@@ -64,23 +63,3 @@ def delete_transaction(
     actor_entity: Entity = Depends(get_entity_from_token),
 ) -> int:
     return transaction_service.delete(transaction_id)
-
-
-@transaction_router.post("/{transaction_id}/tags", response_model=TagSchema)
-def add_tag_to_transaction(
-    transaction_id: int,
-    tag_id: int,
-    transaction_service: TransactionService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return transaction_service.add_tag(transaction_id, tag_id)
-
-
-@transaction_router.delete("/{transaction_id}/tags", response_model=TagSchema)
-def remove_tag_from_transaction(
-    transaction_id: int,
-    tag_id: int,
-    transaction_service: TransactionService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return transaction_service.remove_tag(transaction_id, tag_id)

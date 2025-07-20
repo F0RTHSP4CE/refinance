@@ -36,6 +36,7 @@ class DepositCreateSchema(BaseUpdateSchema):
     provider: str
     details: dict | None = None
     to_treasury_id: int | None = None
+    tag_ids: list[int] = []
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
@@ -45,6 +46,7 @@ class DepositCreateSchema(BaseUpdateSchema):
 class DepositUpdateSchema(BaseUpdateSchema):
     status: DepositStatus | None = None
     details: dict | None = None
+    tag_ids: list[int] | None = None
 
 
 class DepositFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):

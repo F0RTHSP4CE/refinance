@@ -41,6 +41,7 @@ class TransactionCreateSchema(BaseUpdateSchema):
     status: TransactionStatus | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
+    tag_ids: list[int] = []
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
@@ -61,6 +62,7 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     status: TransactionStatus | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
+    tag_ids: list[int] | None = None
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):

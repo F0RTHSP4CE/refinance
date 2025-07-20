@@ -48,3 +48,12 @@ class TaggableServiceMixin(BaseService[_M], Generic[_M]):
     ) -> Query[_M]:
         tags = [self._tag_service.get(tag_id) for tag_id in tags_ids]
         return query.filter(*[self.model.tags.any(id=tag.id) for tag in tags])  # type: ignore
+
+    def set_tags(self, obj: _M, tag_ids: list[int]) -> None:
+        """Set tags for an object. This replaces all existing tags."""
+        if not hasattr(obj, "tags"):
+            raise TagsNotSupported
+
+        # Get all tags by their IDs
+        tags = [self._tag_service.get(tag_id) for tag_id in tag_ids]
+        obj.tags = tags  # type: ignore

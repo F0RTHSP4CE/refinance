@@ -71,6 +71,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
             query = query.filter(
                 self.model.participants.any(entity_id=filters.participant_entity_id)
             )
+        if filters.tags_ids:
+            query = self._apply_tag_filters(query, filters.tags_ids)
         return query
 
     def create(self, schema: SplitCreateSchema, overrides: dict = {}) -> Split:

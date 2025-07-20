@@ -11,7 +11,7 @@
                 <td>Created At</td>
                 <td>Recipient</td>
                 <td>Comment</td>
-                <td>Tags</td>
+                {# <td>Tags</td> #}
                 <td>Amount</td>
                 <td>Currency</td>
                 <td>Participants</td>
@@ -40,11 +40,11 @@
                     {% endfor %}
                 </td>
                 <td>{{ split.comment or ""}}</td>
-                <td>
+                {# <td>
                     {% for tag in split.tags %}
                     {{ tag_inline(tag) }}
                     {% endfor %}
-                </td>
+                </td> #}
                 <td class="right-align">{{ split.amount }}</td>
                 <td>{{ split.currency | upper }}</td>
                 <td class="center-align">{{ split.participants | length or "" }}</td>

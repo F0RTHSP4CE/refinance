@@ -98,7 +98,8 @@ open http://localhost:8000/docs and http://localhost:9000
 
 ## todo techdebt
 - [ ] migrations
-- [ ] pass tags as a list, not as add/delete operations
+- [x] pass tags as a list, not as add/delete operations
+    - [ ] fix ui tag management
 - [ ] misc validation of amounts (>0.00)
 - [ ] improve split ux
 - [ ] make a uniform deposit api CRUD, provider should be enum

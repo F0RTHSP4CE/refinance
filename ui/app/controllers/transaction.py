@@ -3,7 +3,14 @@ from app.middlewares.auth import token_required
 from app.schemas import Tag, Transaction, TransactionStatus
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
-from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
+from wtforms import (
+    FloatField,
+    IntegerField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    SubmitField,
+)
 from wtforms.validators import DataRequired, NumberRange
 
 transaction_bp = Blueprint("transaction", __name__)
@@ -31,6 +38,9 @@ class TransactionForm(FlaskForm):
     )
     status = SelectField(
         "Status", choices=[(e.value, e.value) for e in TransactionStatus]
+    )
+    tag_ids = SelectMultipleField(
+        "Tags", coerce=int, choices=[], description="Select tags for this transaction"
     )
     submit = SubmitField("Submit")
 
@@ -126,18 +136,25 @@ def detail(id):
 @transaction_bp.route("/add", methods=["GET", "POST"])
 @token_required
 def add():
+    api = get_refinance_api_client()
     form = TransactionForm()
+
     # populate treasury dropdowns
     choices = _get_treasury_choices()
     form.from_treasury_id.choices = choices  # type: ignore
     form.to_treasury_id.choices = choices  # type: ignore
+
+    # populate tag choices
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
-        tx = get_refinance_api_client().http("POST", "transactions", data=data)
+        tx = api.http("POST", "transactions", data=data)
         if tx.status_code == 200:
             return redirect(url_for("transaction.detail", id=tx.json()["id"]))
-    return render_template("transaction/add.jinja2", form=form)
+    return render_template("transaction/add.jinja2", form=form, all_tags=all_tags)
 
 
 @transaction_bp.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -150,18 +167,27 @@ def edit(id):
         **transaction.__dict__,
         "from_treasury_id": transaction.from_treasury_id or 0,
         "to_treasury_id": transaction.to_treasury_id or 0,
+        "tag_ids": [
+            tag["id"] if isinstance(tag, dict) else tag.id for tag in transaction.tags
+        ],
     }
     form = TransactionForm(data=init_data)
+
     # populate treasury dropdowns
     choices = _get_treasury_choices()
     form.from_treasury_id.choices = choices  # type: ignore
     form.to_treasury_id.choices = choices  # type: ignore
+
+    # populate tag choices
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
-        get_refinance_api_client().http("PATCH", f"transactions/{id}", data=data)
+        api.http("PATCH", f"transactions/{id}", data=data)
         return redirect(url_for("transaction.detail", id=id))
-    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+
     return render_template(
         "transaction/edit.jinja2",
         form=form,
@@ -196,21 +222,3 @@ def complete(id):
     return render_template(
         "transaction/complete.jinja2", form=form, transaction=transaction
     )
-
-
-@transaction_bp.route("/<int:id>/tags/add", methods=["POST"])
-@token_required
-def add_tag(id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("POST", f"transactions/{id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("transaction.edit", id=id))
-
-
-@transaction_bp.route("/<int:id>/tags/remove", methods=["POST"])
-@token_required
-def remove_tag(id):
-    tag_id = request.form.get("tag_id", type=int)
-    api = get_refinance_api_client()
-    api.http("DELETE", f"transactions/{id}/tags", params={"tag_id": tag_id}).json()
-    return redirect(url_for("transaction.edit", id=id))

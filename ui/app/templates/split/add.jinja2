@@ -1,5 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'widgets/tag_selector.jinja2' import tag_selector %}
 {% from 'form.jinja2' import render_form %}
 
 {% block title %}New split{% endblock %}
@@ -13,10 +14,15 @@
                 {{ entity_selector('recipient_entity', g.actor_entity.name, g.actor_entity.id) }}
             </td>
         </tr>
-        {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id'), new_table=False) }}
+        {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id', 'tag_ids'), new_table=False) }}
+        {# <tr>
+            <td>Tags</td>
+            <td>{{ tag_selector('tag_ids', all_tags, []) }}</td>
+        </tr> #}
     </table>
 </form>
 
 <!-- Include the JS widget file -->
 <script src="/static/js/entitySelector.js"></script>
+<script src="/static/js/multiSelect.js"></script>
 {% endblock %}

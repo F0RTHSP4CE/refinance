@@ -1,17 +1,24 @@
 {% extends 'base.jinja2' %}
 {% from 'form.jinja2' import render_form %}
-{% from 'widgets/tag_manager.jinja2' import tag_manager %}
+{% from 'widgets/tag_selector.jinja2' import tag_selector %}
 
 {% block title %}Edit transaction {{ transaction.id }}{% endblock %}
 
 {% block content %}
 {% if transaction.status != "completed" %}
 <form method="post">
-    {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id')) }}
+    <table>
+        <tr>
+            <td>Tags</td>
+            <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
+        </tr>
+        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
+        new_table=False) }}
+    </table>
 </form>
-<h2>Tags</h2>
-{{ tag_manager("transactions", transaction.id, transaction.tags, all_tags) }}
 {% else %}
 <p>This transaction is confirmed and can not be edited anymore.</p>
 {% endif %}
+
+<script src="/static/js/multiSelect.js"></script>
 {% endblock %}

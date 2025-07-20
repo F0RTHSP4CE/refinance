@@ -78,6 +78,53 @@ input.small {
   padding-bottom: 0.5rem;
 }
 
+/*  tag selector */
+.tag-selector {
+  margin: 0.5rem 0;
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+}
+
+.tag-option input[type="checkbox"] {
+  margin-right: 0.3rem;
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.tag-option .tag-badge {
+  margin-left: 0.2rem;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  pointer-events: none;
+}
+
+.tag-option input[type="checkbox"]:not(:checked)+.tag-badge {
+  opacity: 1;
+}
+
+.tag-option input[type="checkbox"]:checked+.tag-badge {
+  opacity: 1;
+}
+
+.tag-option:hover .tag-badge {
+  opacity: 0.8;
+}
+
+.tag-option input[type="checkbox"]:checked:hover+.tag-badge {
+  opacity: 1;
+}
+
 /* TAG BADGE */
 .tag-badge {
   display: inline-block;

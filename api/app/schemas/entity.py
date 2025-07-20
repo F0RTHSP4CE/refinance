@@ -23,12 +23,14 @@ class EntitySchema(BaseReadSchema):
 class EntityCreateSchema(BaseUpdateSchema):
     name: str
     auth: Optional[EntityAuthSchema] | None = None
+    tag_ids: list[int] = []
 
 
 class EntityUpdateSchema(BaseUpdateSchema):
     name: str | None = None
     active: bool | None = None
     auth: Optional[EntityAuthSchema] | None = None
+    tag_ids: list[int] | None = None
 
 
 class EntityFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
