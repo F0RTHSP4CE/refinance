@@ -39,8 +39,10 @@ app.add_middleware(
 )
 app.add_middleware(
     SessionMiddleware,
-    secret_key=config.secret_key or "change-me",
+    secret_key=config.secret_key,
 )
+if not config.secret_key:
+    raise ValueError("SECRET_KEY is missing in the configuration. Please set a valid secret key.")
 
 
 @app.exception_handler(ResponseValidationError)
