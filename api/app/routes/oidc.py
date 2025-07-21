@@ -59,10 +59,10 @@ async def auth_callback(
     # Find or create entity by email (or sub)
     entity = None
     if "email" in userinfo:
-        print(f"Searching entity by email: {userinfo['email']}")
+        logger.debug(f"Searching entity by email: {userinfo['email']}")
         try:
             entity = entity_service.get_by_oidc_email(userinfo["email"])
-            print(f"Found entity by email: {entity}")
+            logger.debug(f"Found entity by email: {entity}")
         except Exception:
             entity = None
     if not entity:
