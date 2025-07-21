@@ -62,7 +62,7 @@ async def oidc_callback(
     entity = None
     if email:
         try:
-            entity = entity_service.get_by_name(email)
+            entity = entity_service.get_by_oidc_email(email)
         except Exception:
             pass
     if not entity:
