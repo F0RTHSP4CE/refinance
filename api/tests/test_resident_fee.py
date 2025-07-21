@@ -2,6 +2,7 @@
 
 from datetime import date
 
+from app.seeding import resident_tag
 from fastapi.testclient import TestClient
 
 
@@ -23,10 +24,14 @@ class TestResidentFeeService:
         next_year = current_year if current_month < 12 else current_year + 1
         next_month = current_month + 1 if current_month < 12 else 1
 
-        # Create two residents
+        # Create two residents, with resident tag
         resident1_resp = test_app.post(
             "/entities",
-            json={"name": "Resident One", "comment": "test resident"},
+            json={
+                "name": "Resident One",
+                "comment": "test resident",
+                "tag_ids": [resident_tag.id],
+            },
             headers={"x-token": token},
         )
         assert resident1_resp.status_code == 200
@@ -34,18 +39,15 @@ class TestResidentFeeService:
 
         resident2_resp = test_app.post(
             "/entities",
-            json={"name": "Resident Two", "comment": "test resident"},
+            json={
+                "name": "Resident Two",
+                "comment": "test resident",
+                "tag_ids": [resident_tag.id],
+            },
             headers={"x-token": token},
         )
         assert resident2_resp.status_code == 200
         resident2 = resident2_resp.json()
-
-        # Assign the "resident" tag to both
-        for r_id in [resident1["id"], resident2["id"]]:
-            tag_resp = test_app.post(
-                f"/entities/{r_id}/tags?tag_id=2", headers={"x-token": token}
-            )
-            assert tag_resp.status_code == 200
 
         # Create transactions for Resident One
         # Fee for current month

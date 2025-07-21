@@ -24,6 +24,8 @@ class Config:
     cryptapi_address_trc20_usdt: str | None = field(
         default=getenv("REFINANCE_CRYPTAPI_ADDRESS_TRC20_USDT", "")
     )
+    # Optional database URL for Postgres or other databases
+    database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
 
     # OIDC configuration
     oidc_client_id: str | None = field(default=getenv("REFINANCE_OIDC_CLIENT_ID", ""))
@@ -43,6 +45,9 @@ class Config:
 
     @property
     def database_url(self) -> str:
+        # Use provided DATABASE_URL if available, else fall back to SQLite file
+        if self.database_url_env:
+            return self.database_url_env
         return f"sqlite:///{self.database_path}"
 
 

@@ -41,10 +41,19 @@ class TransactionCreateSchema(BaseUpdateSchema):
     status: TransactionStatus | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
+    tag_ids: list[int] = []
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()
+
+    @field_validator("from_treasury_id", mode="before")
+    def normalize_from_treasury(cls, v):
+        return None if v == 0 else v
+
+    @field_validator("to_treasury_id", mode="before")
+    def normalize_to_treasury(cls, v):
+        return None if v == 0 else v
 
 
 class TransactionUpdateSchema(BaseUpdateSchema):
@@ -53,10 +62,19 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     status: TransactionStatus | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
+    tag_ids: list[int] | None = None
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()
+
+    @field_validator("from_treasury_id", mode="before")
+    def normalize_from_treasury(cls, v):
+        return None if v == 0 else v
+
+    @field_validator("to_treasury_id", mode="before")
+    def normalize_to_treasury(cls, v):
+        return None if v == 0 else v
 
 
 class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):

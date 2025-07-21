@@ -3,17 +3,8 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
-    ports:
-      - "8000:8000"
-    volumes:
-      - api-data:/opt/data
 
   ui:
     build: 
       context: .
       dockerfile: ui/Dockerfile
-    ports:
-      - "9000:9000"
-
-volumes:
-  api-data:

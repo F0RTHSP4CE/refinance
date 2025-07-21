@@ -77,6 +77,8 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             query = query.filter(self.model.comment.ilike(f"%{filters.comment}%"))
         if filters.status is not None:
             query = query.filter(self.model.status == filters.status)
+        if filters.tags_ids:
+            query = self._apply_tag_filters(query, filters.tags_ids)
         return query
 
     def create(  # type: ignore[override]

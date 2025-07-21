@@ -1,13 +1,23 @@
 {% extends 'base.jinja2' %}
 {% from 'form.jinja2' import render_form %}
+{% from 'widgets/tag_selector.jinja2' import tag_selector %}
 
 {% block title %}New entity{% endblock %}
 
 {% block content %}
 <form method="post">
     <h2>Entity</h2>
-    {{ render_form(entity_form) }}
+    {{ render_form(entity_form, except=('entity-tag_ids',)) }}
+
+    <table>
+        <tr>
+            <td>Tags</td>
+            <td>{{ tag_selector('entity-tag_ids', all_tags, []) }}</td>
+        </tr>
+    </table>
+
     <h2>Auth</h2>
     {{ render_form(auth_form) }}
 </form>
+
 {% endblock %}

@@ -10,7 +10,6 @@ from app.schemas.split import (
     SplitSchema,
     SplitUpdateSchema,
 )
-from app.schemas.tag import TagSchema
 from app.services.split import SplitService
 from fastapi import APIRouter, Depends
 
@@ -76,26 +75,6 @@ def perform_split(
     return SplitSchema.model_validate(
         split_service.perform(split_id, actor_entity=actor_entity)
     )
-
-
-@split_router.post("/{split_id}/tags", response_model=TagSchema)
-def add_tag_to_split(
-    split_id: int,
-    tag_id: int,
-    split_service: SplitService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return TagSchema.model_validate(split_service.add_tag(split_id, tag_id))
-
-
-@split_router.delete("/{split_id}/tags", response_model=TagSchema)
-def remove_tag_from_split(
-    split_id: int,
-    tag_id: int,
-    split_service: SplitService = Depends(),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return TagSchema.model_validate(split_service.remove_tag(split_id, tag_id))
 
 
 @split_router.post("/{split_id}/participants", response_model=SplitSchema)

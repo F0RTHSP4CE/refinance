@@ -5,9 +5,9 @@ import os
 from contextlib import contextmanager
 from typing import Any, Generator, List, Type
 
-from app.bootstrap import BOOTSTRAP
 from app.config import Config, get_config
 from app.models.base import BaseModel
+from app.seeding import SEEDING
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -25,9 +25,14 @@ class DatabaseConnection:
     def __init__(self, config: Config = Depends(get_config)) -> None:
         # Ensure the database folder exists.
         os.makedirs(config.database_path.parent, exist_ok=True)
-        self.engine = create_engine(
-            config.database_url, connect_args={"check_same_thread": False}
-        )
+        # Create engine with appropriate connection args for SQLite or other databases
+        db_url = config.database_url
+        if db_url.startswith("sqlite"):  # SQLite needs check_same_thread
+            self.engine = create_engine(
+                db_url, connect_args={"check_same_thread": False}
+            )
+        else:
+            self.engine = create_engine(db_url)
         self.session_local = sessionmaker(
             autocommit=False,
             autoflush=False,
@@ -62,7 +67,7 @@ class DatabaseConnection:
         This method is called once during initialization.
         """
         with self.get_session() as session:
-            for model, seeds in BOOTSTRAP.items():
+            for model, seeds in SEEDING.items():
                 try:
                     self._seed_model(
                         session=session,
@@ -104,7 +109,6 @@ class DatabaseConnection:
         logger.info("Seeding data for table '%s'", table_name)
 
         for seed in seeds:
-            logger.debug("Merging seed with id %s for table '%s'", seed.id, table_name)
             session.merge(seed)
         session.flush()
         logger.info("Merged %d seed(s) for table '%s'", len(seeds), table_name)
@@ -130,7 +134,24 @@ class DatabaseConnection:
                 logger.info(
                     "Current sequence for table '%s': %d", table_name, current_seq
                 )
-                if current_seq < (sequence_start - 1):
+                # Determine the current max ID in the table
+                max_id_result = session.execute(
+                    text(f"SELECT MAX(id) FROM {table_name}")
+                ).fetchone()
+                max_id = (
+                    max_id_result[0]
+                    if max_id_result and max_id_result[0] is not None
+                    else 0
+                )
+                logger.info("Max id for table '%s': %d", table_name, max_id)
+                if max_id >= sequence_start:
+                    logger.info(
+                        "Skipping sequence update for table '%s' as max id %d >= desired start %d",
+                        table_name,
+                        max_id,
+                        sequence_start,
+                    )
+                elif current_seq < (sequence_start - 1):
                     logger.info(
                         "Updating sequence for table '%s' to %d",
                         table_name,
@@ -161,7 +182,24 @@ class DatabaseConnection:
                 sequence_name,
                 current_seq,
             )
-            if current_seq < (sequence_start - 1):
+            # Determine the current max ID in the table
+            max_id_result = session.execute(
+                text(f"SELECT MAX(id) FROM {table_name}")
+            ).fetchone()
+            max_id = (
+                max_id_result[0]
+                if max_id_result and max_id_result[0] is not None
+                else 0
+            )
+            logger.info("Max id for table '%s': %d", table_name, max_id)
+            if max_id >= sequence_start:
+                logger.info(
+                    "Skipping sequence update for table '%s' as max id %d >= desired start %d",
+                    table_name,
+                    max_id,
+                    sequence_start,
+                )
+            elif current_seq < (sequence_start - 1):
                 logger.info(
                     "Updating sequence for table '%s' (sequence: '%s') to %d",
                     table_name,

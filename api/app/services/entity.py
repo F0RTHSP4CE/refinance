@@ -2,7 +2,11 @@
 
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
-from app.schemas.entity import EntityFiltersSchema
+from app.schemas.entity import (
+    EntityCreateSchema,
+    EntityFiltersSchema,
+    EntityUpdateSchema,
+)
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService

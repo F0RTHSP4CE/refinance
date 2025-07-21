@@ -73,6 +73,12 @@ uv remove packagename
 uv sync
 ```
 
+install pre-commit hook
+```
+source ./.venv/bin/activate
+pre-commit install
+```
+
 ### tests
 ```
 make test
@@ -108,14 +114,15 @@ open http://localhost:8000/docs and http://localhost:9000
 - [x] add split participants by a tag
 - [x] ~~grafana~~, statistics
 - [x] treasuries
-- [ ] logging
-- [ ] permissions?
-- [ ] misc validation of amounts (>0.00)
-- [ ] improve split ux
-- [ ] pass tags as a list, not as add/delete operations
-- [ ] migrations
+- [x] logging
+- [x] postgres
 
 ## todo techdebt
+- [ ] migrations
+- [x] pass tags as a list, not as add/delete operations
+    - [ ] fix ui tag management
+- [ ] misc validation of amounts (>0.00)
+- [ ] improve split ux
 - [ ] make a uniform deposit api CRUD, provider should be enum
 - [ ] update all boolean attrs to status enums
 - [ ] mobile ui
@@ -124,6 +131,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [ ] remove base service class
 
 ## todo future features
+- [ ] permissions?
 - [ ] deposit ui
 - [ ] donation categories (entities?)
 - [ ] easy payment urls

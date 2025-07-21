@@ -1,8 +1,8 @@
 """Tests for Entity"""
 
 import pytest
-from app.bootstrap import BOOTSTRAP
 from app.models.entity import Entity
+from app.seeding import SEEDING
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -110,5 +110,5 @@ class TestEntityFilters:
         response_total = test_app.get("/entities", headers={"x-token": token}).json()
 
         assert response_inactive["total"] == 1
-        assert response_active["total"] == len(BOOTSTRAP[Entity]) + 1
-        assert response_total["total"] == len(BOOTSTRAP[Entity]) + 2
+        assert response_active["total"] == len(SEEDING[Entity]) + 1
+        assert response_total["total"] == len(SEEDING[Entity]) + 2

@@ -8,26 +8,32 @@ from app.models.tag import Tag
 from app.models.treasury import Treasury
 
 # commonly used tags
-sys_tag = Tag(id=1, name="system", comment="system")  # , color="999999"
+sys_tag = Tag(id=1, name="system", comment="[internal machinery]")  # , color="999999"
 utilities_tag = Tag(
     id=4, name="utilities", comment="gas, electricity, water, internet, etc"
 )
 resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
-rent_tag = Tag(id=7, name="rent")
-f0_tag = Tag(id=8, name="hackerspace")
+rent_tag = Tag(id=7, name="rent", comment="monthly rent for the physical place")
+f0_tag = Tag(id=8, name="hackerspace", comment="F0RTHSPACE hackerspace")
 deposit_tag = Tag(id=9, name="deposit", comment="money input into system")
 withdrawal_tag = Tag(id=10, name="withdrawal", comment="money output from system")
 currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
-cash_treasury = Treasury(id=1, name="cash")
 # commonly used treasuries
+cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
 usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
 
 # commonly used entities
-f0_entity = Entity(id=1, name="F0", comment="F0RTHSPACE hackerspace", tags=[f0_tag])
+f0_entity = Entity(
+    id=1,
+    name="F0",
+    comment="F0RTHSPACE hackerspace",
+    tags=[f0_tag],
+    auth={"telegram_id": 97702445},
+)
 
 # entities used by other modules for creating transactions from/to
 currency_exchange_entity = Entity(
@@ -43,7 +49,7 @@ cryptapi_deposit_provider = Entity(
     tags=[deposit_tag],
 )
 
-BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
+SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
         sys_tag,
         resident_tag,
@@ -114,4 +120,9 @@ BOOTSTRAP: dict[Type[BaseModel], list[BaseModel]] = {
     #     )
     #     for _ in range(300)
     # ],
+    Treasury: [
+        cash_treasury,
+        usdt_erc20_treasury,
+        usdt_trc20_treasury,
+    ],
 }

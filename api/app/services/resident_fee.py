@@ -6,10 +6,10 @@ from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
-from app.bootstrap import f0_entity, resident_tag
 from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.resident_fee import ResidentFeeFiltersSchema
+from app.seeding import f0_entity, resident_tag
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.uow import get_uow

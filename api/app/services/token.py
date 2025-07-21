@@ -1,5 +1,6 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
+import json
 import logging
 import time
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,15 @@ logger = logging.getLogger(__name__)
 class TokenService:
     ALGORITHM = "HS256"
 
+    @staticmethod
+    def decode_entity_id_from_token(token: str, secret_key: str) -> int:
+        """Decode entity id from token without DB lookup."""
+        try:
+            payload = jwt.decode(token, secret_key, algorithms=[TokenService.ALGORITHM])
+            return int(payload.get("sub") or 0)
+        except Exception as e:
+            raise TokenInvalid
+
     def __init__(
         self,
         db: Session = Depends(get_uow),
@@ -43,18 +53,12 @@ class TokenService:
         return encoded_jwt
 
     def get_entity_from_token(self, token: str) -> Entity:
-        """Verify the token and retrieve the associated entity."""
-        try:
-            payload: dict[str, int] = jwt.decode(
-                token, self.config.secret_key, algorithms=[self.ALGORITHM]
-            )
-            entity_id = int(payload.get("sub") or 0)
-            if entity_id is not None:
-                return self.entity_service.get(entity_id)
-            else:
-                raise TokenInvalid
-        except jwt.InvalidTokenError as e:
-            raise TokenInvalid from e
+        """Verify the token, decode the entity id, then retrieve the associated entity via DB."""
+        # Decode entity id and then load entity from DB
+        entity_id = TokenService.decode_entity_id_from_token(
+            token, self.config.secret_key or ""
+        )
+        return self.entity_service.get(entity_id)
 
     def generate_and_send_new_token(
         self,
@@ -118,7 +122,16 @@ class TokenService:
                             f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
                             data={
                                 "chat_id": entity.auth["telegram_id"],
-                                "text": login_link,
+                                "text": f"refinance login: <b>{entity.name}</b>",
+                                "reply_markup": json.dumps({
+                                    "inline_keyboard": [[
+                                        {
+                                            "text": f"Login as {entity.name}",
+                                            "url": login_link
+                                        }
+                                    ]]
+                                }),
+                                "parse_mode": "HTML",
                             },
                             timeout=5,
                         )
