@@ -2,13 +2,19 @@
 
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class CryptAPIDepositCreateSchema(BaseModel):
     to_entity_id: int
     amount: Decimal
     coin: str
+
+    @field_validator("amount")
+    def amount_must_be_positive(cls, v):
+        if v > 0:
+            return v
+        raise ValueError("Amount must be greater than 0")
 
 
 # https://docs.cryptapi.io/#operation/confirmedcallbackget

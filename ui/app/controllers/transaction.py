@@ -11,7 +11,7 @@ from wtforms import (
     StringField,
     SubmitField,
 )
-from wtforms.validators import DataRequired, NumberRange
+from wtforms.validators import DataRequired, NumberRange, Optional
 
 transaction_bp = Blueprint("transaction", __name__)
 
@@ -24,7 +24,10 @@ class TransactionForm(FlaskForm):
     comment = StringField("Comment")
     amount = FloatField(
         "Amount",
-        validators=[DataRequired()],
+        validators=[
+            DataRequired(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
     currency = StringField(
@@ -75,10 +78,18 @@ class TransactionFilterForm(FlaskForm):
     amount_min = FloatField(
         "Amount Min",
         render_kw={"placeholder": "10.00", "class": "small"},
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="Amount must be non-negative"),
+        ],
     )
     amount_max = FloatField(
         "Amount Max",
         render_kw={"placeholder": "20.00", "class": "small"},
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="Amount must be non-negative"),
+        ],
     )
     currency = StringField(
         "Currency",

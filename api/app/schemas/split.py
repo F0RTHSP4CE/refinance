@@ -22,9 +22,9 @@ class SplitParticipantAddSchema(BaseModel):
     fixed_amount: Decimal | None = None
 
     @field_validator("fixed_amount")
-    def fixed_amount_must_be_non_negative(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("Fixed amount must be non-negative")
+    def fixed_amount_must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Fixed amount must be greater than 0")
         return v
 
 

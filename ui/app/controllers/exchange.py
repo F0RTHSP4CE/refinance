@@ -12,28 +12,35 @@ exchange_bp = Blueprint("exchange", __name__)
 
 class CurrencyExchangeForm(FlaskForm):
     entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    source_currency = StringField(
+        "Source Currency ←",
+        validators=[DataRequired()],
+        render_kw={"placeholder": "USD", "class": "small"},
+    )
     source_amount = FloatField(
         "Source Amount",
         render_kw={"placeholder": "10.00", "class": "small"},
-        validators=[Optional()],
+        description="Leave empty if target amount is provided.",
+        validators=[
+            Optional(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
     )
-    source_currency = StringField(
-        "Source Currency →",
-        description="Amount must be either source or target.<br>Leave another amount blank.",
+    target_currency = StringField(
+        "Target Currency →",
         validators=[DataRequired()],
         render_kw={"placeholder": "GEL", "class": "small"},
     )
     target_amount = FloatField(
         "Target Amount",
-        render_kw={"placeholder": "20.00", "class": "small"},
-        validators=[Optional()],
+        render_kw={"placeholder": "27.00", "class": "small"},
+        description="Leave empty if source amount is provided.",
+        validators=[
+            Optional(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
     )
-    target_currency = StringField(
-        "Target Currency ←",
-        validators=[DataRequired()],
-        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "USD", "class": "small"},
-    )
+
     entity_name = StringField("Entity")
 
 

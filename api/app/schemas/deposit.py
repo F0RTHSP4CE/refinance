@@ -38,6 +38,12 @@ class DepositCreateSchema(BaseUpdateSchema):
     to_treasury_id: int | None = None
     tag_ids: list[int] = []
 
+    @field_validator("amount")
+    def amount_must_be_positive(cls, v):
+        if v > 0:
+            return v
+        raise ValueError("Amount must be greater than 0")
+
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()

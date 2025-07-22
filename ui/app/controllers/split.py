@@ -25,7 +25,10 @@ class SplitForm(FlaskForm):
     comment = StringField("Comment")
     amount = FloatField(
         "Amount",
-        validators=[DataRequired()],
+        validators=[
+            DataRequired(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
     currency = StringField(
@@ -46,7 +49,10 @@ class SplitAddParticipant(FlaskForm):
     fixed_amount = FloatField(
         "Amount",
         render_kw={"placeholder": "10.00", "class": "small"},
-        validators=[Optional()],
+        validators=[
+            Optional(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
         description="Optional. Automatic share will be recalculated with each participant. Fixed amount will be sent as is.",
     )
     submit = SubmitField("Submit")
@@ -60,7 +66,10 @@ class SplitAddParticipantByTag(FlaskForm):
     fixed_amount = FloatField(
         "Amount",
         render_kw={"placeholder": "10.00", "class": "small"},
-        validators=[Optional()],
+        validators=[
+            Optional(),
+            NumberRange(min=0.01, message="Amount must be greater than 0"),
+        ],
     )
     submit = SubmitField("Submit by Tag")
 
@@ -83,10 +92,18 @@ class SplitFilterForm(FlaskForm):
     amount_min = FloatField(
         "Amount Min",
         render_kw={"placeholder": "10.00", "class": "small"},
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="Amount must be non-negative"),
+        ],
     )
     amount_max = FloatField(
         "Amount Max",
         render_kw={"placeholder": "20.00", "class": "small"},
+        validators=[
+            Optional(),
+            NumberRange(min=0, message="Amount must be non-negative"),
+        ],
     )
     currency = StringField(
         "Currency",

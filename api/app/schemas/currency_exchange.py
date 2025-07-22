@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas.base import BaseSchema, CurrencyDecimal
 from app.schemas.transaction import TransactionSchema
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 
 
 class CurrencyExchangePreviewRequestSchema(BaseSchema):
@@ -14,6 +14,12 @@ class CurrencyExchangePreviewRequestSchema(BaseSchema):
     source_amount: Optional[Decimal] = None
     target_currency: str
     target_amount: Optional[Decimal] = None
+
+    @field_validator("source_amount", "target_amount")
+    def amount_must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Amount must be greater than 0")
+        return v
 
     @model_validator(mode="after")
     def check_amounts(self) -> "CurrencyExchangePreviewRequestSchema":
@@ -41,6 +47,12 @@ class CurrencyExchangeRequestSchema(BaseSchema):
     source_amount: Optional[Decimal] = None
     target_currency: str
     target_amount: Optional[Decimal] = None
+
+    @field_validator("source_amount", "target_amount")
+    def amount_must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Amount must be greater than 0")
+        return v
 
     @model_validator(mode="after")
     def check_amounts(self) -> "CurrencyExchangeRequestSchema":

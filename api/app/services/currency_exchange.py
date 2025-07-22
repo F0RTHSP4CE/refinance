@@ -7,6 +7,7 @@ from decimal import ROUND_DOWN, Decimal
 from typing import Optional, TypeVar
 
 import requests
+from app.errors.currency_exchange import CurrencyExchangeSourceOrTargetAmountZero
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
@@ -103,6 +104,8 @@ class CurrencyExchangeService:
             raise ValueError(
                 "Exactly one of source_amount or target_amount must be provided."
             )
+        if computed_target <= 0 or computed_source <= 0:
+            raise CurrencyExchangeSourceOrTargetAmountZero
 
         return (
             computed_source.quantize(Decimal("0.01"), rounding=ROUND_DOWN),
@@ -120,6 +123,9 @@ class CurrencyExchangeService:
             source_currency=preview.source_currency,
             target_currency=preview.target_currency,
         )
+        if computed_target <= 0 or computed_source <= 0:
+            raise CurrencyExchangeSourceOrTargetAmountZero
+
         data = preview.model_dump()
         # Remove the existing amount fields to avoid duplicates.
         data.pop("source_amount", None)

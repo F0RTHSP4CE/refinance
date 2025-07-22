@@ -100,7 +100,7 @@ open http://localhost:8000/docs and http://localhost:9000
 - [ ] migrations
 - [x] pass tags as a list, not as add/delete operations
     - [x] fix ui tag management
-- [ ] misc validation of amounts (>0.00)
+- [x] misc validation of amounts (>0.00)
 - [ ] improve split ux
 - [ ] make a uniform deposit api CRUD, provider should be enum
 - [ ] update all boolean attrs to status enums
