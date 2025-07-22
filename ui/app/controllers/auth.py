@@ -1,16 +1,18 @@
 import re
+
 import requests
+from app.config import config
+from app.external.refinance import get_refinance_api_client
 from flask import (
     Blueprint,
+    Response,
+    current_app,
     redirect,
     render_template,
     request,
     session,
     url_for,
-    current_app,
-    Response,
 )
-from app.external.refinance import get_refinance_api_client
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 
@@ -62,13 +64,16 @@ def _proxy_oidc_backend(backend_url, params):
         cookies=request.cookies,
         stream=True,
         headers={"Host": request.host},
+        verify=False,  # Disable SSL verification for local development
     )
     set_cookie_headers = (
         resp.raw.headers.get_all("Set-Cookie")
         if hasattr(resp.raw.headers, "get_all")
-        else resp.headers.getlist("Set-Cookie")
-        if hasattr(resp.headers, "getlist")
-        else []
+        else (
+            resp.headers.getlist("Set-Cookie")
+            if hasattr(resp.headers, "getlist")
+            else []
+        )
     )
     headers = [
         (k, v)
@@ -82,19 +87,14 @@ def _proxy_oidc_backend(backend_url, params):
 
 @auth_bp.route("/oidc/login", methods=["GET"])
 def oidc_login():
-    backend_url = (
-        current_app.config.get("OIDC_BACKEND_URL") or "http://api:8000/auth/oidc/login"
-    )
+    backend_url = f"{config.REFINANCE_API_BASE_URL}/auth/oidc/login"
     resp, headers = _proxy_oidc_backend(backend_url, request.args)
     return Response(resp.content, status=resp.status_code, headers=headers)
 
 
 @auth_bp.route("/oidc/callback", methods=["GET"])
 def oidc_callback():
-    backend_url = (
-        current_app.config.get("OIDC_BACKEND_CALLBACK_URL")
-        or "http://api:8000/auth/oidc/callback"
-    )
+    backend_url = f"{config.REFINANCE_API_BASE_URL}/auth/oidc/callback"
     resp, headers = _proxy_oidc_backend(backend_url, request.args)
     if resp.is_redirect and resp.headers.get("Location", "").startswith("/auth/token/"):
         token = resp.headers["Location"].split("/auth/token/")[-1]

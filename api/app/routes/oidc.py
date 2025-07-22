@@ -1,16 +1,17 @@
 """OIDC (OpenID Connect) authentication endpoints"""
 
-from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import RedirectResponse, JSONResponse
-from authlib.integrations.starlette_client import OAuth, OAuthError
-from app.config import get_config
-from app.services.token import TokenService
-from app.services.entity import EntityService
-from app.models.entity import Entity
-from app.schemas.entity import EntityCreateSchema, EntityAuthSchema
-from sqlalchemy.orm import Session
-from app.uow import get_uow
 import logging
+
+from app.config import get_config
+from app.models.entity import Entity
+from app.schemas.entity import EntityAuthSchema, EntityCreateSchema
+from app.services.entity import EntityService
+from app.services.token import TokenService
+from app.uow import get_uow
+from authlib.integrations.starlette_client import OAuth, OAuthError
+from fastapi import APIRouter, Depends, Request, status
+from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/auth/oidc", tags=["OIDC"])
 
@@ -31,9 +32,11 @@ def get_oauth():
 
 
 @router.get("/login")
-async def login(request: Request):
-    oauth = get_oauth()
-    config = get_config()
+async def login(
+    request: Request,
+    oauth: OAuth = Depends(get_oauth),
+    config: dict = Depends(get_config),
+):
     redirect_uri = config.oidc_redirect_uri
     return await oauth.oidc.authorize_redirect(request, redirect_uri)
 
@@ -85,9 +88,8 @@ async def auth_callback(
             EntityCreateSchema(
                 name=name,
                 auth=EntityAuthSchema(
-                    oidc_email=userinfo.get("email"),
-                    oidc_sub=userinfo.get("sub")
-                )
+                    oidc_email=userinfo.get("email"), oidc_sub=userinfo.get("sub")
+                ),
             )
         )
 

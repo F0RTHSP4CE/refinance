@@ -1,0 +1,163 @@
+---
+server:
+  address: 'tcp://0.0.0.0:9091'
+  disable_healthcheck: false
+  tls:
+    key: ""
+    certificate: ""
+  endpoints:
+    enable_pprof: false
+    enable_expvars: false
+  ## Development only - disable HTTPS requirement
+  buffers:
+    read: 4096
+    write: 4096
+  timeouts:
+    read: 6s
+    write: 6s
+    idle: 30s
+
+log:
+  level: debug
+  format: text
+  file_path: ""
+  keep_stdout: true
+
+totp:
+  disable: false
+  issuer: refinance-local
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+
+authentication_backend:
+  refresh_interval: 5m
+  password_reset:
+    disable: false
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 1
+      salt_length: 16
+      parallelism: 8
+      memory: 64
+
+access_control:
+  default_policy: bypass
+  rules:
+    - domain: "localhost.local"
+      policy: bypass
+    - domain: "app.localhost.local"
+      policy: bypass
+    - domain: "api.localhost.local"
+      policy: bypass
+    - domain: "authelia.localhost.local"
+      policy: bypass
+
+session:
+  name: authelia_session
+  secret: insecure_session_secret
+  same_site: lax
+  expiration: 1h
+  inactivity: 5m
+  remember_me: 1M
+  cookies:
+    - domain: localhost.local
+      authelia_url: https://authelia.localhost.local
+      default_redirection_url: https://app.localhost.local
+      
+regulation:
+  max_retries: 3
+  find_time: 120
+  ban_time: 300
+
+storage:
+  encryption_key: this_is_a_very_important_secret_change_me_in_production
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  disable_startup_check: false
+  filesystem:
+    filename: /config/notification.txt
+
+identity_validation:
+  reset_password:
+    jwt_secret: change_me_this_is_a_jwt_secret_for_password_reset
+    jwt_lifespan: 5m
+    jwt_algorithm: HS256
+
+identity_providers:
+  oidc:
+    jwks:
+      - key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDlnaU7VC0RIzFz
+          uzKwQsGEhKlf4ucm/ij1TTIJkspoBKIQV/HsBPIo1GvlOlNYyW7zxRIa8Y2hN7AH
+          cOnAJNxS5MfS/08QQYTiYxWgiAkpAnp0nwqlyaNJZ/1ylBdu6ZjrFvHlnbw0vvfQ
+          bO2KCZuQSU/WO3vnGLDvUbFXOF/8yMzxC3wYPulfjOVRoIsZcmXJ8tP9dGQ4P+Q8
+          htiXBK7U01CffijHr8MgIrtRkbgrJcW8r57zmPjzihCS879d+vxJaxfYElU3/81u
+          2HgVNn21lIBc602VMprdfp9lbzguYI3Ha4Fld8rSlQGG8l1YTXpQ7eCiRSc8zW0t
+          w3phrPp3AgMBAAECggEAA/4LNu5eQDuH6xa4qWbnvXmfBktIMJ3fsXAvrAnw2gEm
+          njkhPDTTzxDudVRfyZ3q/3MQPwavKzvwJBj6/3vElu5iaRFGWyaAfH0zjZB/9EYW
+          QfvX8A0C+U5FEl5vz95g6cmC2Da3ZIVjgqy6Lpm/KjGUIUn0fA6qWObnOfiBdsAw
+          nSBmE9aQVtMw1abA0RY1ehslJVhU1DaGCPa2e3+mQS0CdGWBRcOWhnkfILyWJ3xh
+          qtD4KYx1NCaCB+aYIOD1ROGvC+3krg9JreJgwAJ+C+dAcRDlywbRsFtih0+Kbsbl
+          c3/uWlkbp2ppvgnkYG5e48SJ7x2asFHCN8ntIxSM+QKBgQD3+EQFxs+v0GeFY9Q3
+          55yTVC/CbPE6E/HvzOLDKooMD7HIWHSZAxxJkSeHryYaBCfFUqOdHcA9QyGhb4H2
+          QQQb3no6I+NpWruopaoI7ojUyQWrZXzXwunnKYbFUZBosfy7zZSBcvNmAnqJyFCb
+          kF43ziY4z7H9+1npujkOmHBT+QKBgQDtDThrl/IpaJwvGc/QeoHI9BsUJnpdITFB
+          RcxsGFB0h4PKr4Nm0cABPUjMjCGBJ6h77spMh9zVKebDvlHD1vaeZ1te+GGOwNqc
+          tzIcY557kPEny28qdwv+z+v4eaAwIXDpXSp+ewHA6wwqlbarWs5/7Jxc+eG5R6Qk
+          29zjTb597wKBgQDvl79KAZYM34YW+aVEuxKru+1Fo/PU1Q6wUDxOrRyjmMqDtQw8
+          CChd4NXcIVzkSF2RKE8UcXmc9+9Xx6FAKgPpVaat5J1H37Zwtlk7thcZ2n4S5MWi
+          yB8vDw28PBoXPtrfLz0tcr9BMmXqGVXhabXPn+2IeQ4XRLTUw+17b8khKQKBgHUw
+          dvcB7A66j5Pdb9ZB6g19WDGzAAUwVphNOE0sDAI/yFCYSh63jPNP58BvelTOVUXH
+          fC0vcWXUTCfy25s0l0EiGZKuuhQHlUuqaVSNjxjJQ98HfFKC/eQfyClTf3Sr45UK
+          oOpcRzanPKGE2ASIZNPrFjYEtqmRGD28j8uzcHvzAoGBAM96LFh0cZJskFFqPcE+
+          fhtCfz8NKM8GCMQVQfjt9JsmHiaB+9BzYJtfFiwQbqUmRB3eSN/M+jcdib/b9Ocx
+          Q/NWqYd2Cm3D8Nxj8Kj2zgfbi781Rr13fj1Rc9mpVtEt4nMUemZjHiDUBIxObPjF
+          a6JiYrpGzEUhdynSsHhxZQum
+          -----END PRIVATE KEY-----
+        algorithm: 'RS256'
+    cors:
+      endpoints:
+        - authorization
+        - token
+        - revocation
+        - introspection
+      allowed_origins:
+        - http://api:8000
+        - http://localhost:8000
+        - http://127.0.0.1:8000
+        - http://localhost:9000
+        - http://127.0.0.1:9000
+        - http://localhost.local:9000
+        - http://localhost.local:9091
+        - https://api.localhost.local
+        - https://app.localhost.local
+        - https://authelia.localhost.local
+      allowed_origins_from_client_redirect_uris: true
+    clients:
+      - client_id: refinance-app
+        client_name: Refinance Application
+        client_secret: $argon2id$v=19$m=65536,t=3,p=4$HrkvYUGkjCiPjIvn/yc4MA$5i2AGif2wmZbVoc1RP9aLpeSQ/37M/ARefMyYQ8r3nk
+        public: false
+        authorization_policy: two_factor
+        redirect_uris:
+          - https://app.localhost.local/auth/oidc/callback
+        scopes:
+          - openid
+          - profile
+          - email
+        response_types:
+          - code
+        grant_types:
+          - authorization_code
+        response_modes:
+          - form_post
+          - query
+          - fragment
+        userinfo_signed_response_alg: none

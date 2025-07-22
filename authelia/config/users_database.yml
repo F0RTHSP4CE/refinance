@@ -1,0 +1,37 @@
+---
+users:
+  admin:
+    displayname: "Administrator"
+    password: "$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJNNkBiKJriIXjqEOQXpOlJBJdE6AMAEwR/lGVgmcBhcPDNjK4nBrqQ"  # Password: authelia
+    email: admin@example.com
+    groups:
+      - admins
+      - dev
+
+  user1:
+    displayname: "John Doe"
+    password: "$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJNNkBiKJriIXjqEOQXpOlJBJdE6AMAEwR/lGVgmcBhcPDNjK4nBrqQ"  # Password: authelia
+    email: john.doe@example.com
+    groups:
+      - dev
+
+  user2:
+    displayname: "Jane Smith"
+    password: "$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJNNkBiKJriIXjqEOQXpOlJBJdE6AMAEwR/lGVgmcBhcPDNjK4nBrqQ"  # Password: authelia
+    email: jane.smith@example.com
+    groups:
+      - dev
+
+  finance:
+    displayname: "Finance User"
+    password: "$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJNNkBiKJriIXjqEOQXpOlJBJdE6AMAEwR/lGVgmcBhcPDNjK4nBrqQ"  # Password: authelia
+    email: finance@example.com
+    groups:
+      - finance
+
+  guest:
+    displayname: "Guest User"
+    password: "$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJNNkBiKJriIXjqEOQXpOlJBJdE6AMAEwR/lGVgmcBhcPDNjK4nBrqQ"  # Password: authelia
+    email: guest@example.com
+    groups:
+      - users
