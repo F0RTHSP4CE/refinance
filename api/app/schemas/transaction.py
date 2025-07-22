@@ -43,6 +43,12 @@ class TransactionCreateSchema(BaseUpdateSchema):
     to_treasury_id: int | None = None
     tag_ids: list[int] = []
 
+    @field_validator("amount")
+    def amount_must_be_positive(cls, v):
+        if v > 0:
+            return v
+        raise ValueError("Amount must be greater than 0")
+
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
         return v.lower()
@@ -64,9 +70,15 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     to_treasury_id: int | None = None
     tag_ids: list[int] | None = None
 
+    @field_validator("amount")
+    def amount_must_be_positive(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("Amount must be greater than 0")
+        return v
+
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
-        return v.lower()
+        return v.lower() if v else v
 
     @field_validator("from_treasury_id", mode="before")
     def normalize_from_treasury(cls, v):
