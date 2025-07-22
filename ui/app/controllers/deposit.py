@@ -34,7 +34,7 @@ class CryptAPIDepositForm(FlaskForm):
             DataRequired(),
         ],
         render_kw={"placeholder": "5.00", "class": "small"},
-        description="Fees are calculated automatically by CryptAPI, actual deposited amount can vary up to 10%  ⚠️",
+        description="Fees are calculated automatically by CryptAPI, actual deposited amount can vary ⚠️ <a href='https://cryptapi.io/cryptocurrencies' target='_blank'>See fees</a>",
     )
     submit = SubmitField("Create Deposit")
 
