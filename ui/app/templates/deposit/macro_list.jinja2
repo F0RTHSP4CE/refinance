@@ -1,0 +1,65 @@
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
+
+{% macro deposit_list(deposits) %}
+{% if deposits %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Date</td>
+                <td>From</td>
+                <td>To</td>
+                <td>Amount</td>
+                <td>Currency</td>
+                <td>Status</td>
+                <td>Provider</td>
+                <td>Treasury</td>
+                <td>Actor</td>
+            </tr>
+        </thead>
+        {% for deposit in deposits %}
+        <tr {% if deposit.status=="pending" %} class="secondary" {%endif%}>
+            <td><a href="{{ url_for('deposit.detail', id=deposit.id) }}">{{ deposit.id }}</a></td>
+
+            <td>{{ deposit.created_at }}</td>
+
+            <td>
+                <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}">{{ deposit.from_entity.name
+                    }}</a>
+                {% for tag in deposit.from_entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
+
+            <td>
+                <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}">{{ deposit.to_entity.name
+                    }}</a>
+                {% for tag in deposit.to_entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
+
+            <td class="right-align">{{ deposit.amount }}</td>
+            <td>{{ deposit.currency | upper }}</td>
+            <td>{{ deposit.status }}</td>
+            <td>{{ deposit.provider }}</td>
+
+            <td>
+                {% if deposit.to_treasury_id %}
+                {{ treasury_inline(deposit.to_treasury) }}
+                {% endif %}
+            </td>
+
+            <td>
+                <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}">{{deposit.actor_entity.name}}</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<p>No deposits.</p>
+{% endif %}
+{% endmacro %}

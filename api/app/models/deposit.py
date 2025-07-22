@@ -8,7 +8,17 @@ from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.treasury import Treasury
-from sqlalchemy import DECIMAL, JSON, Column, Enum, ForeignKey, String, Table, Uuid
+from sqlalchemy import (
+    DECIMAL,
+    JSON,
+    Column,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 deposits_tags = Table(
@@ -17,6 +27,10 @@ deposits_tags = Table(
     Column("deposit_id", ForeignKey("deposits.id")),
     Column("tag_id", ForeignKey("tags.id")),
 )
+
+
+class DepositProvider(enum.Enum):
+    CRYPTAPI = "cryptapi"
 
 
 class DepositStatus(enum.Enum):
