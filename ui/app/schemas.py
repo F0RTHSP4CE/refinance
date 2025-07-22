@@ -43,6 +43,13 @@ class TransactionStatus(enum.Enum):
     COMPLETED = "completed"
 
 
+class DepositStatus(enum.Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 @dataclass
 class Transaction(Base):
     amount: Decimal
@@ -59,6 +66,35 @@ class Transaction(Base):
     to_treasury_id: int | None = None
     from_treasury: Treasury | None = None
     to_treasury: Treasury | None = None
+
+
+class DepositProvider(enum.Enum):
+    CRYPTAPI = "cryptapi"
+
+
+class DepositStatus(enum.Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class Deposit(Base):
+    amount: Decimal
+    actor_entity_id: int
+    actor_entity: Entity
+    from_entity_id: int
+    from_entity: Entity
+    to_entity_id: int
+    to_entity: Entity
+    to_treasury_id: int | None
+    to_treasury: Treasury | None
+    currency: str
+    status: DepositStatus
+    provider: DepositProvider
+    details: dict | None
+    tags: list[Tag]
 
 
 @dataclass

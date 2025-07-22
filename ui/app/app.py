@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlencode
 
 from app.controllers.auth import auth_bp
+from app.controllers.deposit import deposit_bp
 from app.controllers.entity import entity_bp
 from app.controllers.exchange import exchange_bp
 from app.controllers.index import index_bp
@@ -34,6 +35,7 @@ app.register_blueprint(index_bp, url_prefix="/")
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(entity_bp, url_prefix="/entities")
 app.register_blueprint(transaction_bp, url_prefix="/transactions")
+app.register_blueprint(deposit_bp, url_prefix="/deposits")
 app.register_blueprint(split_bp, url_prefix="/splits")
 app.register_blueprint(tag_bp, url_prefix="/tags")
 app.register_blueprint(exchange_bp, url_prefix="/exchange")

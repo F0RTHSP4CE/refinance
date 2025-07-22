@@ -9,6 +9,7 @@ from app.models.deposit import Deposit, DepositStatus
 from app.models.transaction import TransactionStatus
 from app.schemas.deposit import DepositFiltersSchema, DepositUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
+from app.seeding import deposit_tag
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
@@ -39,11 +40,13 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             query = query.filter(
                 or_(
                     self.model.to_entity_id == filters.entity_id,
-                    self.model.actor_entity_id == filters.actor_entity_id,
+                    self.model.actor_entity_id == filters.entity_id,
                 )
             )
         if filters.actor_entity_id is not None:
             query = query.filter(self.model.actor_entity_id == filters.actor_entity_id)
+        if filters.from_entity_id is not None:
+            query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
             query = query.filter(self.model.to_entity_id == filters.to_entity_id)
         if filters.amount_min is not None:
@@ -54,6 +57,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             query = query.filter(self.model.currency == filters.currency)
         if filters.status is not None:
             query = query.filter(self.model.status == filters.status)
+        if filters.provider is not None:
+            query = query.filter(self.model.provider == filters.provider)
         if filters.to_treasury_id is not None:
             query = query.filter(self.model.to_treasury_id == filters.to_treasury_id)
         if filters.tags_ids:
@@ -83,6 +88,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
                     status=TransactionStatus.COMPLETED,
                     to_treasury_id=db_obj.to_treasury_id,
                     from_treasury_id=None,  # deposits are not from treasuries
+                    tag_ids=[deposit_tag.id],
+                    comment=f"deposit #{db_obj.id}: cryptapi",
                 ),
                 overrides={"actor_entity_id": db_obj.actor_entity_id},
             )

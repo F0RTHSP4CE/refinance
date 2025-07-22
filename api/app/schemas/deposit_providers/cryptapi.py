@@ -1,6 +1,7 @@
 """DTO for CryptAPI Deposit Provider"""
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, field_validator
 
@@ -8,7 +9,7 @@ from pydantic import BaseModel, field_validator
 class CryptAPIDepositCreateSchema(BaseModel):
     to_entity_id: int
     amount: Decimal
-    coin: str
+    coin: Literal["trc20/usdt"] | Literal["erc20/usdt"]
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
@@ -19,14 +20,14 @@ class CryptAPIDepositCreateSchema(BaseModel):
 
 # https://docs.cryptapi.io/#operation/confirmedcallbackget
 class CryptAPICallbackSchema(BaseModel):
-    address_in: str | None = None
-    address_out: str | None = None
-    txid_in: str | None = None
-    txid_out: str | None = None
-    confirmations: int | None = None
-    value_coin: Decimal | None = None
-    value_forwarded_coin: Decimal | None = None
-    fee_coin: Decimal | None = None
-    coin: str | None = None
-    price: Decimal | None = None
-    pending: int | None = None
+    address_in: str
+    address_out: str
+    txid_in: str
+    txid_out: str
+    confirmations: int
+    value_coin: Decimal
+    value_forwarded_coin: Decimal
+    fee_coin: Decimal
+    coin: str
+    price: Decimal
+    pending: int

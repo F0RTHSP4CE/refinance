@@ -102,7 +102,7 @@ open http://localhost:8000/docs and http://localhost:9000
     - [x] fix ui tag management
 - [x] misc validation of amounts (>0.00)
 - [ ] improve split ux
-- [ ] make a uniform deposit api CRUD, provider should be enum
+- [x] make a uniform deposit api CRUD, provider should be enum
 - [ ] update all boolean attrs to status enums
 - [ ] mobile ui
 - [ ] rename base to common where applicable

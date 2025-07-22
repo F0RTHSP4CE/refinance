@@ -1,0 +1,96 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
+
+{% block title %}Deposit {{ deposit.id }}{% endblock %}
+{% block content %}
+<table>
+    <tr>
+        <td>ID</td>
+        <td>{{ deposit.id }}</td>
+    </tr>
+    <tr>
+        <td>From</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}">{{deposit.from_entity.name}}</a>
+            {% for tag in deposit.from_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>To</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}">{{deposit.to_entity.name}}</a>
+            {% for tag in deposit.to_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>Amount</td>
+        <td>{{ deposit.amount }}</td>
+    </tr>
+    <tr>
+        <td>Currency</td>
+        <td>{{ deposit.currency | upper }}</td>
+    </tr>
+    <tr>
+        <td>Status</td>
+        <td>{{ deposit.status }}</td>
+    </tr>
+    <tr>
+        <td>Provider</td>
+        <td>{{ deposit.provider }}</td>
+    </tr>
+    {% if deposit.to_treasury_id %}
+    <tr>
+        <td>Treasury</td>
+        <td>{{ treasury_inline(deposit.to_treasury) }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <td>Actor</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}">{{deposit.actor_entity.name}}</a>
+        </td>
+    </tr>
+    <tr>
+        <td>Created</td>
+        <td>{{ deposit.created_at }}</td>
+    </tr>
+    <tr>
+        <td>Modified</td>
+        <td>{{ deposit.modified_at or '' }}</td>
+    </tr>
+    {% if deposit.details and deposit.details.get('address') and deposit.status == 'pending' %}
+    <tr>
+        <td>Address QR Code</td>
+        <td>
+            <p>Send <strong>{{ deposit.amount }} {{ deposit.details.coin | upper }}</strong> to:</p>
+            <div id="qrcode" style="margin: 10px 0;"></div>
+            <p><code>{{ deposit.details.address }}</code></p>
+        </td>
+    </tr>
+    {% else %}
+    <tr>
+        <td>Details</td>
+        <td>
+            <pre>{{ deposit.details | tojson(indent=2) }}</pre>
+        </td>
+    </tr>
+    {% endif %}
+</table>
+
+<p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
+
+{% if deposit.details and deposit.details.get('address') %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+    const qr = qrcode(0, 'M');
+    qr.addData('{{ deposit.details.address }}');
+    qr.make();
+    document.getElementById('qrcode').innerHTML = qr.createImgTag(8, 16);
+</script>
+{% endif %}
+{% endblock %}

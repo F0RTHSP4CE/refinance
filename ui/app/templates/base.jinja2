@@ -25,6 +25,9 @@
             <li {% if 'transaction' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('transaction.list') }}">Transaction</a>
             </li>
+            <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
+                <a href="{{ url_for('deposit.list') }}">Deposit</a>
+            </li>
             <li {% if 'fee' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('resident_fee.index') }}">Fee</a>
             </li>

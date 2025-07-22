@@ -12,14 +12,19 @@ from app.schemas.base import (
 from app.schemas.entity import EntitySchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
+from app.schemas.treasury import TreasurySchema
 from pydantic import field_validator
 
 
 class DepositSchema(BaseReadSchema):
     actor_entity_id: int
     actor_entity: EntitySchema
+    from_entity_id: int
+    from_entity: EntitySchema
     to_entity_id: int
     to_entity: EntitySchema
+    to_treasury_id: int | None = None
+    to_treasury: TreasurySchema | None = None
     amount: CurrencyDecimal
     currency: str
     status: str
@@ -50,6 +55,7 @@ class DepositCreateSchema(BaseUpdateSchema):
 
 
 class DepositUpdateSchema(BaseUpdateSchema):
+    amount: Decimal | None = None
     status: DepositStatus | None = None
     details: dict | None = None
     tag_ids: list[int] | None = None
@@ -58,7 +64,7 @@ class DepositUpdateSchema(BaseUpdateSchema):
 class DepositFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     entity_id: int | None = None
     actor_entity_id: int | None = None
-    from_entity_id: int
+    from_entity_id: int | None = None
     to_entity_id: int | None = None
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None

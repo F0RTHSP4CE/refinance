@@ -1,0 +1,70 @@
+{% extends "base.jinja2" %}
+{% from "deposit/macro_list.jinja2" import deposit_list with context %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Deposits{% endblock %}
+
+{% block content %}
+<details>
+    <summary>read manual</summary>
+    <p>Deposit — is an incoming transfer of money from external sources (payment providers) to entities.</p>
+    <p>Deposits are created through payment providers and are automatically converted to transactions when completed.
+    </p>
+    <h3>Deposit status</h3>
+    <p>Deposit can be Pending (waiting for payment), Completed (payment received and processed),
+        Failed (payment processing failed), or Cancelled (deposit was cancelled).</p>
+    <h3>Providers</h3>
+    <p>Currently supported providers: CryptAPI for cryptocurrency deposits.</p>
+</details>
+
+<p><a href="{{ url_for('deposit.add_cryptapi') }}">Add CryptAPI Deposit</a></p>
+
+<p>
+<details>
+    <summary>search</summary>
+    <p>
+    <form method="get">
+        <table>
+            <tr>
+                <td>Entity</td>
+                <td>
+                    {{ entity_selector('entity', filter_form.entity_name.data, filter_form.entity_id.data) }}
+                </td>
+            </tr>
+            <tr>
+                <td>To Entity</td>
+                <td>
+                    {{ entity_selector('to_entity', filter_form.to_entity_name.data, filter_form.to_entity_id.data) }}
+                </td>
+            </tr>
+            <tr>
+                <td>From Entity</td>
+                <td>
+                    {{ entity_selector('from_entity', filter_form.from_entity_name.data,
+                    filter_form.from_entity_id.data)
+                    }}
+                </td>
+            </tr>
+            <tr>
+                <td>Actor Entity</td>
+                <td>
+                    {{ entity_selector('actor_entity', filter_form.actor_entity_name.data,
+                    filter_form.actor_entity_id.data)
+                    }}
+                </td>
+            </tr>
+            {{ render_form(filter_form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id',
+            'actor_entity_name', 'actor_entity_id', 'entity_name', 'entity_id', 'csrf_token'), new_table=False) }}
+        </table>
+    </form>
+    </p>
+</details>
+</p>
+
+{{ deposit_list(deposits) }}
+{{ pagination_control(page, total, limit) }}
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}
