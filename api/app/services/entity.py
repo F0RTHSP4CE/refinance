@@ -64,3 +64,14 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         if not db_obj:
             raise NotFoundError(f"{self.model.__name__} {name=}")
         return db_obj
+
+    def get_by_oidc_email(self, email: str) -> Entity:
+        # SQLite requires JSON_EXTRACT for JSON column queries
+        db_obj = (
+            self.db.query(self.model)
+            .filter(func.json_extract(self.model.auth, "$.oidc_email") == email)
+            .first()
+        )
+        if not db_obj:
+            raise NotFoundError(f"{self.model.__name__}.auth.oidc_email={email}")
+        return db_obj
