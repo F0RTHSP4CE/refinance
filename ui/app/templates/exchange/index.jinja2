@@ -25,4 +25,83 @@
 </form>
 
 <script src="/static/js/entitySelector.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle source currency
+    const sourceCurrencySelect = document.getElementById('source_currency');
+    const sourceCustomField = document.getElementById('source_custom_currency');
+    const sourceCustomRow = sourceCustomField ? sourceCustomField.closest('tr') : null;
+    
+    // Handle target currency
+    const targetCurrencySelect = document.getElementById('target_currency');
+    const targetCustomField = document.getElementById('target_custom_currency');
+    const targetCustomRow = targetCustomField ? targetCustomField.closest('tr') : null;
+    
+    // Handle amount fields mutual exclusivity
+    const sourceAmountField = document.getElementById('source_amount');
+    const targetAmountField = document.getElementById('target_amount');
+    
+    function toggleCustomCurrency(select, field, row) {
+        if (select && row) {
+            if (select.value === 'other') {
+                row.style.display = '';
+                field.required = true;
+            } else {
+                row.style.display = 'none';
+                field.required = false;
+                field.value = '';
+            }
+        }
+    }
+    
+    // Clear target amount when source amount is entered
+    if (sourceAmountField && targetAmountField) {
+        sourceAmountField.addEventListener('input', function() {
+            if (this.value) {
+                targetAmountField.value = '';
+                targetAmountField.disabled = true;
+                targetAmountField.placeholder = 'Disabled (source amount provided)';
+            } else {
+                targetAmountField.disabled = false;
+                targetAmountField.placeholder = '27.00';
+            }
+        });
+        
+        // Clear source amount when target amount is entered
+        targetAmountField.addEventListener('input', function() {
+            if (this.value) {
+                sourceAmountField.value = '';
+                sourceAmountField.disabled = true;
+                sourceAmountField.placeholder = 'Disabled (target amount provided)';
+            } else {
+                sourceAmountField.disabled = false;
+                sourceAmountField.placeholder = '10.00';
+            }
+        });
+        
+        // Initialize state based on current values
+        if (sourceAmountField.value) {
+            targetAmountField.disabled = true;
+            targetAmountField.placeholder = 'Disabled (source amount provided)';
+        } else if (targetAmountField.value) {
+            sourceAmountField.disabled = true;
+            sourceAmountField.placeholder = 'Disabled (target amount provided)';
+        }
+    }
+    
+    if (sourceCurrencySelect) {
+        sourceCurrencySelect.addEventListener('change', function() {
+            toggleCustomCurrency(sourceCurrencySelect, sourceCustomField, sourceCustomRow);
+        });
+        toggleCustomCurrency(sourceCurrencySelect, sourceCustomField, sourceCustomRow);
+    }
+    
+    if (targetCurrencySelect) {
+        targetCurrencySelect.addEventListener('change', function() {
+            toggleCustomCurrency(targetCurrencySelect, targetCustomField, targetCustomRow);
+        });
+        toggleCustomCurrency(targetCurrencySelect, targetCustomField, targetCustomRow);
+    }
+});
+</script>
 {% endblock %}

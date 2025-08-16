@@ -1,3 +1,4 @@
+from app.constants import ALLOW_CUSTOM_CURRENCY, CURRENCIES, DEFAULT_CURRENCY
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Split, Tag, Transaction
@@ -31,11 +32,25 @@ class SplitForm(FlaskForm):
         ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
-    currency = StringField(
+    # Currency field with dropdown
+    currency_choices = CURRENCIES.copy()
+    if ALLOW_CUSTOM_CURRENCY:
+        currency_choices.append(("other", "Other (custom)"))
+
+    currency = SelectField(
         "Currency",
+        choices=currency_choices,
+        default=DEFAULT_CURRENCY,
         validators=[DataRequired()],
-        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL", "class": "small"},
+        description="Select a currency from the list",
+        render_kw={"class": "small"},
+    )
+
+    # Optional field for custom currency (only shown when "other" is selected)
+    custom_currency = StringField(
+        "Custom Currency",
+        description="Enter custom currency code (3 letters preferred)",
+        render_kw={"placeholder": "XXX", "class": "small", "style": "display:none;"},
     )
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this split"
@@ -162,6 +177,12 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+
+        # Handle custom currency option
+        if data.get("currency") == "other" and data.get("custom_currency"):
+            data["currency"] = data["custom_currency"].lower()
+        data.pop("custom_currency", None)  # Remove custom_currency field from data
+
         api.http("POST", "splits", data=data)
         return redirect(url_for("split.list"))
     return render_template("split/add.jinja2", form=form, all_tags=all_tags)
@@ -173,9 +194,20 @@ def edit(id):
     api = get_refinance_api_client()
     split_data = api.http("GET", f"splits/{id}").json()
 
+    # Check if the existing currency is in our predefined list
+    existing_currency = split_data.get("currency", "").upper()
+    currency_in_list = any(code == existing_currency for code, _ in CURRENCIES)
+
     # Prepare form data with tag_ids
     form_data = split_data.copy()
     form_data["tag_ids"] = [tag["id"] for tag in split_data.get("tags", [])]
+
+    # Handle custom currency for backward compatibility
+    if not currency_in_list and ALLOW_CUSTOM_CURRENCY and existing_currency:
+        form_data["currency"] = "other"
+        form_data["custom_currency"] = existing_currency
+    elif existing_currency:
+        form_data["currency"] = existing_currency
 
     form = SplitForm(data=form_data)
 
@@ -186,6 +218,12 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+
+        # Handle custom currency option
+        if data.get("currency") == "other" and data.get("custom_currency"):
+            data["currency"] = data["custom_currency"].lower()
+        data.pop("custom_currency", None)  # Remove custom_currency field from data
+
         api.http("PATCH", f"splits/{id}", data=data)
         return redirect(url_for("split.detail", id=id))
 

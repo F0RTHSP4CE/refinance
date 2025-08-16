@@ -21,4 +21,29 @@
 {% endif %}
 
 <script src="/static/js/multiSelect.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const currencySelect = document.getElementById('currency');
+    const customCurrencyField = document.getElementById('custom_currency');
+    const customCurrencyRow = customCurrencyField ? customCurrencyField.closest('tr') : null;
+    
+    function toggleCustomCurrency() {
+        if (currencySelect && customCurrencyRow) {
+            if (currencySelect.value === 'other') {
+                customCurrencyRow.style.display = '';
+                customCurrencyField.required = true;
+            } else {
+                customCurrencyRow.style.display = 'none';
+                customCurrencyField.required = false;
+                // Don't clear the value on edit page if it's already set
+            }
+        }
+    }
+    
+    if (currencySelect) {
+        currencySelect.addEventListener('change', toggleCustomCurrency);
+        toggleCustomCurrency(); // Initial state
+    }
+});
+</script>
 {% endblock %}
