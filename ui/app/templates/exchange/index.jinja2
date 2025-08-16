@@ -59,10 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
         sourceAmountField.addEventListener('input', function() {
             if (this.value) {
                 targetAmountField.value = '';
-                targetAmountField.disabled = true;
+                targetAmountField.readOnly = true;
+                targetAmountField.style.backgroundColor = '#f0f0f0';
                 targetAmountField.placeholder = 'Disabled (source amount provided)';
             } else {
-                targetAmountField.disabled = false;
+                targetAmountField.readOnly = false;
+                targetAmountField.style.backgroundColor = '';
                 targetAmountField.placeholder = '27.00';
             }
         });
@@ -71,20 +73,24 @@ document.addEventListener('DOMContentLoaded', function() {
         targetAmountField.addEventListener('input', function() {
             if (this.value) {
                 sourceAmountField.value = '';
-                sourceAmountField.disabled = true;
+                sourceAmountField.readOnly = true;
+                sourceAmountField.style.backgroundColor = '#f0f0f0';
                 sourceAmountField.placeholder = 'Disabled (target amount provided)';
             } else {
-                sourceAmountField.disabled = false;
+                sourceAmountField.readOnly = false;
+                sourceAmountField.style.backgroundColor = '';
                 sourceAmountField.placeholder = '10.00';
             }
         });
         
         // Initialize state based on current values
         if (sourceAmountField.value) {
-            targetAmountField.disabled = true;
+            targetAmountField.readOnly = true;
+            targetAmountField.style.backgroundColor = '#f0f0f0';
             targetAmountField.placeholder = 'Disabled (source amount provided)';
         } else if (targetAmountField.value) {
-            sourceAmountField.disabled = true;
+            sourceAmountField.readOnly = true;
+            sourceAmountField.style.backgroundColor = '#f0f0f0';
             sourceAmountField.placeholder = 'Disabled (target amount provided)';
         }
     }
