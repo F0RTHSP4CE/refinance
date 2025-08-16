@@ -118,27 +118,47 @@ class TokenService:
                 # Send via Telegram if available
                 if "telegram_id" in entity.auth:
                     try:
+                        data = {
+                            "chat_id": entity.auth["telegram_id"],
+                            "text": f"refinance login: <b>{entity.name}</b>",
+                            "reply_markup": json.dumps(
+                                {
+                                    "inline_keyboard": [
+                                        [
+                                            {
+                                                "text": f"Login as {entity.name}",
+                                                "url": login_link,
+                                            }
+                                        ]
+                                    ]
+                                }
+                            ),
+                            "parse_mode": "HTML",
+                        }
+
                         response = requests.post(
                             f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
-                            data={
-                                "chat_id": entity.auth["telegram_id"],
-                                "text": f"refinance login: <b>{entity.name}</b>",
-                                "reply_markup": json.dumps({
-                                    "inline_keyboard": [[
-                                        {
-                                            "text": f"Login as {entity.name}",
-                                            "url": login_link
-                                        }
-                                    ]]
-                                }),
-                                "parse_mode": "HTML",
-                            },
+                            data=data,
                             timeout=5,
                         )
                         if response.status_code == 200:
                             sent_count += 1
                         else:
                             logger.error(f"response: {response.text}")
+                        if "inline keyboard button URL" in response.json().get(
+                            "description"
+                        ):
+                            response = requests.post(
+                                f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
+                                data={
+                                    "chat_id": entity.auth["telegram_id"],
+                                    "text": f"Login as {entity.name}: {login_link}",
+                                },
+                            )
+                            if response.status_code == 200:
+                                sent_count += 1
+                            else:
+                                logger.error(f"response: {response.text}")
                     except Exception:
                         pass
 
