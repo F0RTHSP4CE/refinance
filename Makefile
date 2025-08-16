@@ -40,3 +40,9 @@ down:
 test: dev-daemon
 	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) exec api pytest
 	make down
+
+.PHONY: add-entity
+add-entity:
+	# Example: make add-entity NAME=skywinder TELEGRAM_ID=123456789 ID=201
+	@if [ -z "$(NAME)" ]; then echo "Usage: make add-entity NAME=<name> [TELEGRAM_ID=<id>] [ID=<id>]"; exit 1; fi
+	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) exec api python -m app.scripts.add_entity --name "$(NAME)" $(if $(ID),--id $(ID),) $(if $(TELEGRAM_ID),--telegram-id $(TELEGRAM_ID),)
