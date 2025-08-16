@@ -6,11 +6,13 @@ services:
       - db
     environment:
       REFINANCE_DATABASE_URL: postgresql://postgres:postgres@db:5432/refinance
+    ports:
+      - "127.0.0.1:8000:8000"
   ui:
     env_file:
       - secrets.prod.env
     ports:
-      - "80:9000"
+      - "127.0.0.1:9000:9000"
   db:
     image: postgres:17
     restart: unless-stopped
