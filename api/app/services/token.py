@@ -77,6 +77,14 @@ class TokenService:
         Once the entity is found, a login link is generated and sent via all providers
         found in the entity's JSON `auth` field.
         """
+        # Log input received for tracing
+        logger.info(
+            "TokenService.generate_and_send_new_token inputs: entity_id=%s, entity_name=%s, entity_telegram_id=%s",
+            entity_id,
+            entity_name,
+            entity_telegram_id,
+        )
+
         # Create an empty report for tracking progress
         report = TokenSendReportSchema(
             entity_found=False, token_generated=False, message_sent=False
@@ -103,11 +111,18 @@ class TokenService:
 
         if entity is not None:
             report.entity_found = True
+            logger.info(
+                "TokenService: entity found id=%s name=%s auth_keys=%s",
+                entity.id,
+                entity.name,
+                list(entity.auth.keys()) if isinstance(entity.auth, dict) else None,
+            )
 
             # Generate a login token
             token = self._generate_new_token(entity_id=entity.id)
             if token:
                 report.token_generated = True
+                logger.info("TokenService: token generated for entity_id=%s", entity.id)
 
             # Build the login link message
             login_link = f"{self.config.ui_url}/auth/token/{token}"
@@ -144,7 +159,11 @@ class TokenService:
                         if response.status_code == 200:
                             sent_count += 1
                         else:
-                            logger.error(f"response: {response.text}")
+                            logger.error(
+                                "TokenService: telegram sendMessage failed status=%s body=%s",
+                                response.status_code,
+                                response.text,
+                            )
                         if "inline keyboard button URL" in response.json().get(
                             "description"
                         ):
@@ -158,10 +177,35 @@ class TokenService:
                             if response.status_code == 200:
                                 sent_count += 1
                             else:
-                                logger.error(f"response: {response.text}")
-                    except Exception:
-                        pass
+                                logger.error(
+                                    "TokenService: fallback telegram sendMessage failed status=%s body=%s",
+                                    response.status_code,
+                                    response.text,
+                                )
+                    except Exception as exc:
+                        logger.exception(
+                            "TokenService: exception during telegram send for entity_id=%s: %s",
+                            entity.id,
+                            exc,
+                        )
+                else:
+                    logger.info(
+                        "TokenService: entity_id=%s has no telegram_id in auth. auth_keys=%s",
+                        entity.id,
+                        list(entity.auth.keys()),
+                    )
+            else:
+                logger.info(
+                    "TokenService: entity_id=%s has no auth providers configured (auth is %s)",
+                    entity.id,
+                    type(entity.auth).__name__,
+                )
 
             report.message_sent = sent_count > 0
+            if not report.message_sent:
+                logger.warning(
+                    "TokenService: message not sent for entity_id=%s. Check telegram_id presence and bot token/chat access.",
+                    entity.id,
+                )
 
         return report
