@@ -70,9 +70,16 @@ def load_current_user_and_balance():
 @token_required
 def hx_search():
     api = get_refinance_api_client()
-    entities = api.http(
-        "GET", "entities", params=dict(name=request.args.get("name"))
-    ).json()["items"]
+    search_name = request.args.get("name", "").strip()
+
+    # If search is empty, return all entities (with a reasonable limit)
+    if not search_name:
+        entities = api.http("GET", "entities", params={"limit": 50}).json()["items"]
+    else:
+        entities = api.http("GET", "entities", params=dict(name=search_name)).json()[
+            "items"
+        ]
+
     return render_template("widgets/hx_entity_selector.jinja2", entities=entities)
 
 

@@ -3,7 +3,7 @@
     <!-- Search input: uses a fixed name 'name' so that the query parameter is always 'name' -->
     <div class="entity-selector-row">
         <input id="{{ prefix }}_name" type="search" name="name" placeholder="Search entity..." autocomplete="off"
-            hx-trigger="input changed delay:250ms, name" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
+            hx-trigger="input changed delay:250ms, name, focus" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
             value="{{ initial_name or '' }}" class="entity-search-field">
         <!-- ID input remains unique per widget -->
         <div class="entity-id-wrapper">
