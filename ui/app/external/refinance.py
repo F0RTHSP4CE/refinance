@@ -32,6 +32,14 @@ class RefinanceAPI:
         data = data.copy()
         RefinanceAPI._clean_nested_dicts(data)
         try:
+            logger.info(
+                "UI->API %s %s params=%s data=%s token_present=%s",
+                method,
+                endpoint,
+                params,
+                data,
+                bool(self.token),
+            )
             r = requests.request(
                 method,
                 f"{self.url}/{endpoint}",
@@ -40,8 +48,18 @@ class RefinanceAPI:
                 timeout=5,
                 headers={"X-Token": self.token} if self.token else {},
             )
+            logger.info(
+                "UI<-API %s %s status=%s body=%s",
+                method,
+                endpoint,
+                r.status_code,
+                r.text,
+            )
             if r.status_code != 200:
-                e = r.json()
+                try:
+                    e = r.json()
+                except Exception:
+                    e = {"error": r.text, "status_code": r.status_code}
                 raise ApplicationError(e)
             return r
         except requests.exceptions.RequestException as e:
