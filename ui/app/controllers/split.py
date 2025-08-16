@@ -50,7 +50,7 @@ class SplitForm(FlaskForm):
     custom_currency = StringField(
         "Custom Currency",
         description="Enter custom currency code (3 letters preferred)",
-        render_kw={"placeholder": "XXX", "class": "small", "style": "display:none;"},
+        render_kw={"placeholder": "XXX", "class": "small"},
     )
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this split"

@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const targetAmountField = document.getElementById('target_amount');
     
     function toggleCustomCurrency(select, field, row) {
-        if (select && row) {
+        if (select && row && field) {
             if (select.value === 'other') {
                 row.style.display = '';
                 field.required = true;
@@ -95,17 +95,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    if (sourceCurrencySelect) {
+    if (sourceCurrencySelect && sourceCustomField && sourceCustomRow) {
         sourceCurrencySelect.addEventListener('change', function() {
             toggleCustomCurrency(sourceCurrencySelect, sourceCustomField, sourceCustomRow);
         });
+        // Initial state - hide if not "other"
         toggleCustomCurrency(sourceCurrencySelect, sourceCustomField, sourceCustomRow);
     }
     
-    if (targetCurrencySelect) {
+    if (targetCurrencySelect && targetCustomField && targetCustomRow) {
         targetCurrencySelect.addEventListener('change', function() {
             toggleCustomCurrency(targetCurrencySelect, targetCustomField, targetCustomRow);
         });
+        // Initial state - hide if not "other"
         toggleCustomCurrency(targetCurrencySelect, targetCustomField, targetCustomRow);
     }
 });

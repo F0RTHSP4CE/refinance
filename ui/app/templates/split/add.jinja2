@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const customCurrencyRow = customCurrencyField ? customCurrencyField.closest('tr') : null;
     
     function toggleCustomCurrency() {
-        if (currencySelect && customCurrencyRow) {
+        if (currencySelect && customCurrencyRow && customCurrencyField) {
             if (currencySelect.value === 'other') {
                 customCurrencyRow.style.display = '';
                 customCurrencyField.required = true;
@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (currencySelect) {
         currencySelect.addEventListener('change', toggleCustomCurrency);
-        toggleCustomCurrency(); // Initial state
+        // Initial state - hide if not "other"
+        toggleCustomCurrency();
     }
 });
 </script>

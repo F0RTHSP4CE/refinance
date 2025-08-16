@@ -36,7 +36,7 @@ class CurrencyExchangeForm(FlaskForm):
     source_custom_currency = StringField(
         "Custom Source Currency",
         description="Enter custom currency code",
-        render_kw={"placeholder": "XXX", "class": "small", "style": "display:none;"},
+        render_kw={"placeholder": "XXX", "class": "small"},
     )
 
     source_amount = FloatField(
@@ -59,7 +59,7 @@ class CurrencyExchangeForm(FlaskForm):
     target_custom_currency = StringField(
         "Custom Target Currency",
         description="Enter custom currency code",
-        render_kw={"placeholder": "XXX", "class": "small", "style": "display:none;"},
+        render_kw={"placeholder": "XXX", "class": "small"},
     )
 
     target_amount = FloatField(
