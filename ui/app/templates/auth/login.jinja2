@@ -7,23 +7,60 @@
     <div class="login-card">
         <div class="login-header">
             <h2 class="login-title">Welcome to Refinance</h2>
-            <p class="login-subtitle">Enter your name to access your account</p>
+            <p class="login-subtitle">Enter your information to request access</p>
         </div>
 
+        {% if not report %}
         <form method="post" class="login-form">
             {{ form.csrf_token }}
 
             <div class="form-group">
                 <label for="{{ form.entity_name.id }}" class="form-label">{{ form.entity_name.label.text }}</label>
                 <div class="input-wrapper">
-                    {{ form.entity_name(class="form-input", placeholder="Enter your name", autocomplete="username") }}
+                    {{ form.entity_name(class="form-input", placeholder="username", autocomplete="username") }}
                 </div>
+                {% if form.entity_name.description %}
+                <div class="field-description">{{ form.entity_name.description|safe }}</div>
+                {% endif %}
             </div>
 
             <div class="form-group">
                 {{ form.submit(class="login-button") }}
             </div>
         </form>
+        {% else %}
+        <div class="auth-status">
+            <h3 class="status-title">Authentication Status</h3>
+            <div class="status-steps">
+                <div class="status-step">
+                    <span class="status-icon">{{ '✅' if report.entity_found else '❌' }}</span>
+                    <span class="status-text">Entity found</span>
+                </div>
+                <div class="status-step">
+                    <span class="status-icon">{{ '✅' if report.token_generated else '❌' }}</span>
+                    <span class="status-text">Token generated</span>
+                </div>
+                <div class="status-step">
+                    <span class="status-icon">{{ '✅' if report.message_sent else '❌' }}</span>
+                    <span class="status-text">Message sent</span>
+                </div>
+            </div>
+
+            {% if report.entity_found and report.token_generated and report.message_sent %}
+            <div class="success-message">
+                <p><strong>Success!</strong> Check your Telegram for the login link.</p>
+            </div>
+            {% else %}
+            <div class="error-message">
+                <p>Authentication request failed. Please check your information and try again.</p>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <a href="{{ url_for('auth.login') }}" class="login-button back-button">Try Again</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

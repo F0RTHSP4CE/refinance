@@ -12,18 +12,31 @@ entity_bp = Blueprint("entity", __name__)
 
 
 class TokenRequestForm(FlaskForm):
-    entity_name = StringField("Name")
-    submit = SubmitField("Request")
+    entity_name = StringField(
+        "Name",
+        description="Enter your Telegram username or Entity name",
+        render_kw={"placeholder": "username"},
+    )
+    submit = SubmitField("Login")
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     form = TokenRequestForm()
+    report = None
+
     if form.validate_on_submit():
         api = get_refinance_api_client()
-        report = api.http("POST", "tokens/request", data=form.data)
-        return render_template("auth/report.jinja2", report=report.json())
-    return render_template("auth/login.jinja2", form=form)
+
+        # Prepare the data for the API request
+        data = {}
+        if form.entity_name.data:
+            data["entity_name"] = form.entity_name.data
+
+        response = api.http("POST", "tokens/request", data=data)
+        report = response.json()
+
+    return render_template("auth/login.jinja2", form=form, report=report)
 
 
 @auth_bp.route("/token/<token>", methods=["GET"])

@@ -320,6 +320,22 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   color: #999;
 }
 
+.field-description {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.3;
+}
+
+.field-description a {
+  color: black;
+  text-decoration: underline;
+}
+
+.field-description a:hover {
+  text-decoration: none;
+}
+
 .login-button {
   width: 100%;
   padding: 1rem;
@@ -343,8 +359,101 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 }
 
 .login-button:active {
-  transform: translate(0, 0);
-  box-shadow: 2px 2px 0px black;
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+/* Authentication Status Styles */
+.auth-status {
+  width: 100%;
+}
+
+.status-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: black;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+}
+
+.status-steps {
+  margin: 1.5rem 0;
+}
+
+.status-step {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.status-step:last-child {
+  border-bottom: none;
+}
+
+.status-icon {
+  font-size: 1.25rem;
+  margin-right: 1rem;
+  min-width: 2rem;
+}
+
+.status-text {
+  font-size: 1rem;
+  color: black;
+}
+
+.success-message {
+  background: #f0f8f0;
+  border: 2px solid #28a745;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.success-message p {
+  margin: 0;
+  color: #155724;
+  font-weight: 500;
+}
+
+.error-message {
+  background: #fff5f5;
+  border: 2px solid #e74c3c;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.error-message p {
+  margin: 0;
+  color: #721c24;
+  font-weight: 500;
+}
+
+.back-button {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  text-align: center;
+  text-decoration: none;
+  background: #f8f9fa;
+  color: black;
+  border: 2px solid black;
+  border-radius: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+}
+
+.back-button:hover {
+  background: black;
+  color: white;
+  box-shadow: 4px 4px 0px #ccc;
+  transform: translate(-2px, -2px);
 }
 
 .form-error {
