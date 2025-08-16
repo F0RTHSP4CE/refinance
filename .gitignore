@@ -5,3 +5,4 @@ __pycache__
 .venv
 secrets.prod.env
 secrets.dev.env
+secrets.env
