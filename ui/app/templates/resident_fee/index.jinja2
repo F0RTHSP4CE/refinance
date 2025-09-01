@@ -1,4 +1,7 @@
 {% extends "base.jinja2" %}
+
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
 {% block title %}Resident Fee{% endblock %}
 {% block content %}
 {% set month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] %}
@@ -31,7 +34,12 @@
         {% for resident_fee in fees %}
         <tr>
             <td>
-                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}">{{resident_fee.entity.name}}</a>
+                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}">{{
+                    resident_fee.entity.name
+                    }}</a>
+                {% for tag in resident_fee.entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
             </td>
 
             {% for fee in resident_fee.fees %}
