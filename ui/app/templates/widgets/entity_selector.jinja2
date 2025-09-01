@@ -1,13 +1,18 @@
 {% macro entity_selector(prefix, initial_name='', initial_id='') %}
 <div class="entity-selector" id="{{ prefix }}_widget" data-fetch-url="/hx/entity-name">
     <!-- Search input: uses a fixed name 'name' so that the query parameter is always 'name' -->
-    <input id="{{ prefix }}_name" type="search" name="name" placeholder="search..." autocomplete="off"
-        hx-trigger="input changed delay:250ms, name" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
-        value="{{ initial_name or '' }}">
-    <!-- ID input remains unique per widget -->
-    id: <input id="{{ prefix }}_id" class="entity-id-field small" type="number" name="{{ prefix }}_id" placeholder="id"
-        value="{{ initial_id or '' }}">
+    <div class="entity-selector-row">
+        <input id="{{ prefix }}_name" type="search" name="name" placeholder="Search entity..." autocomplete="off"
+            hx-trigger="input changed delay:250ms, name, focus" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
+            value="{{ initial_name or '' }}" class="entity-search-field">
+        <!-- ID input remains unique per widget -->
+        <div class="entity-id-wrapper">
+            <label for="{{ prefix }}_id">ID:</label>
+            <input id="{{ prefix }}_id" class="entity-id-field small" type="number" name="{{ prefix }}_id" placeholder="ID"
+                value="{{ initial_id or '' }}">
+        </div>
+    </div>
     <!-- Container for search results -->
-    <div id="{{ prefix }}_search_results"></div>
+    <div id="{{ prefix }}_search_results" class="search-results-dropdown"></div>
 </div>
 {% endmacro %}

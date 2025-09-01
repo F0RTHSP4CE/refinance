@@ -497,3 +497,121 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
     transform: translate(-1px, -1px);
   }
 }
+
+/* Entity selector styles (desktop) */
+.entity-selector {
+  margin: 0.5rem 0;
+}
+
+.entity-selector-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.entity-search-field {
+  flex: 1;
+  max-width: 300px;
+}
+
+.entity-id-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.entity-id-wrapper label {
+  font-weight: 600;
+}
+
+.search-results-dropdown {
+  position: relative;
+  z-index: 10;
+}
+
+.search-results-dropdown:not(:empty) {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  max-height: 250px;
+  overflow-y: auto;
+  margin-top: 0.25rem;
+}
+
+.search-result-item {
+  padding: 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.search-result-item:hover {
+  background-color: #f8f9fa;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+/* Mobile entity selector improvements */
+@media (max-width: 768px) {
+  .entity-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .entity-selector-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .entity-search-field {
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .entity-id-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .entity-id-wrapper label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  
+  .entity-selector .entity-id-field {
+    width: 80px;
+  }
+  
+  /* Search results dropdown */
+  .entity-selector div[id$="_search_results"] {
+    position: relative;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 0.25rem;
+  }
+  
+  .search-result-item {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .search-result-item:hover {
+    background: #f8f9fa;
+  }
+  
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+}
