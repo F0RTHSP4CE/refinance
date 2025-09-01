@@ -1,3 +1,10 @@
-{% for entity in entities %}
-<a href="#" class="search-result-item" x-id="{{ entity.id }}" x-name="{{ entity.name }}">{{ entity.name }}</a>
-{% endfor %}
+{% if entities %}
+    {% for entity in entities %}
+    <a href="#" class="search-result-item" x-id="{{ entity.id }}" x-name="{{ entity.name }}">
+        {{ entity.name }}
+        <span style="color: #666; font-size: 0.85em; margin-left: 0.5em;">#{{ entity.id }}</span>
+    </a>
+    {% endfor %}
+{% else %}
+    <div style="padding: 0.5rem; color: #666; text-align: center;">No entities found</div>
+{% endif %}

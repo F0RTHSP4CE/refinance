@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>UI Test - Refinance</title>
+    <link rel="stylesheet" href="ui/app/static/style.css">
+</head>
+<body>
+    <nav>
+        <ul>
+            <li class="active"><a href="#">Transaction</a></li>
+            <li><a href="#">Deposit</a></li>
+            <li><a href="#">Fee</a></li>
+            <li><a href="#">Split</a></li>
+            <li><a href="#">Exchange</a></li>
+            <li><a href="#">Stats</a></li>
+            <li><a href="#">Treasury</a></li>
+            <li><a href="#">Entity</a></li>
+            <li><a href="#">Tag</a></li>
+            <li class="user">
+                <a href="#" class="amount-negative">-50 USD</a>
+                <a href="#">100 EUR</a>
+                <a href="#"><strong>John Doe</strong></a>
+                <a href="#">Log out</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="message">This is a success message</div>
+        <div class="message error">This is an error message</div>
+        <div class="message warning">This is a warning message</div>
+
+        <h1>Test UI Components</h1>
+
+        <details>
+            <summary>Expandable Section</summary>
+            <p>This is the content inside the expandable section. It should be nicely styled and easy to read.</p>
+        </details>
+
+        <h2>Form Example</h2>
+        <form>
+            <table>
+                <tr>
+                    <td>Name</td>
+                    <td><input type="text" placeholder="Enter your name"></td>
+                </tr>
+                <tr>
+                    <td>Email</td>
+                    <td><input type="email" placeholder="Enter your email"></td>
+                </tr>
+                <tr>
+                    <td>Amount</td>
+                    <td><input type="number" class="small" placeholder="0"></td>
+                </tr>
+                <tr>
+                    <td>Description</td>
+                    <td>
+                        <textarea placeholder="Enter description"></textarea>
+                        <div class="description">This is a field description with helpful information.</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><input type="submit" value="Submit"></td>
+                </tr>
+            </table>
+        </form>
+
+        <h2>Entity Selector</h2>
+        <div class="entity-selector">
+            <div class="entity-selector-row">
+                <input type="search" placeholder="Search entity..." class="entity-search-field">
+                <div class="entity-id-wrapper">
+                    <label>ID:</label>
+                    <input type="number" class="entity-id-field small" placeholder="ID">
+                </div>
+            </div>
+            <div class="search-results-dropdown">
+                <div class="search-result-item">Entity 1</div>
+                <div class="search-result-item">Entity 2</div>
+                <div class="search-result-item">Entity 3</div>
+            </div>
+        </div>
+
+        <h2>Tags</h2>
+        <div class="tag-selector">
+            <div class="tag-options">
+                <label class="tag-option">
+                    <input type="checkbox">
+                    <span class="tag-badge">Tag 1</span>
+                </label>
+                <label class="tag-option">
+                    <input type="checkbox" checked>
+                    <span class="tag-badge">Tag 2</span>
+                </label>
+                <label class="tag-option">
+                    <input type="checkbox">
+                    <span class="tag-badge">Tag 3</span>
+                </label>
+                <label class="tag-option">
+                    <input type="checkbox">
+                    <span class="tag-badge">Tag 4</span>
+                </label>
+            </div>
+        </div>
+
+        <h2>Table Example</h2>
+        <div class="wide-table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Transaction 1</td>
+                        <td class="right-align">100.00</td>
+                        <td>Completed</td>
+                        <td>2024-01-01</td>
+                        <td><a href="#">View</a> | <a href="#">Edit</a></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Transaction 2</td>
+                        <td class="right-align amount-negative">-50.00</td>
+                        <td>Pending</td>
+                        <td>2024-01-02</td>
+                        <td><a href="#">View</a> | <a href="#">Edit</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h2>Pagination</h2>
+        <div class="pagination">
+            <span class="pagination-btn disabled">← Previous</span>
+            <span class="pagination-info">Page 2 of 5</span>
+            <a href="#" class="pagination-btn">Next →</a>
+        </div>
+
+        <h2>Treasury Badge</h2>
+        <p>This transaction uses <span class="treasury-badge"><a href="#">Main Treasury</a></span> for funding.</p>
+    </main>
+</body>
+</html>

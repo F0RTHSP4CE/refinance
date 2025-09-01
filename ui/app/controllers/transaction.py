@@ -1,3 +1,4 @@
+from app.constants import ALLOW_CUSTOM_CURRENCY, CURRENCIES, DEFAULT_CURRENCY
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Tag, Transaction, TransactionStatus
@@ -30,11 +31,26 @@ class TransactionForm(FlaskForm):
         ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
-    currency = StringField(
+    # Currency field with dropdown
+    # If custom currencies are allowed, we add an "other" option
+    currency_choices = CURRENCIES.copy()
+    if ALLOW_CUSTOM_CURRENCY:
+        currency_choices.append(("other", "Other (custom)"))
+
+    currency = SelectField(
         "Currency",
+        choices=currency_choices,
+        default=DEFAULT_CURRENCY,
         validators=[DataRequired()],
-        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL", "class": "small"},
+        description="Select a currency from the list",
+        render_kw={"class": "small"},
+    )
+
+    # Optional field for custom currency (only shown when "other" is selected)
+    custom_currency = StringField(
+        "Custom Currency",
+        description="Enter custom currency code (3 letters preferred)",
+        render_kw={"placeholder": "XXX", "class": "small"},
     )
     status = SelectField(
         "Status",
@@ -91,9 +107,11 @@ class TransactionFilterForm(FlaskForm):
             NumberRange(min=0, message="Amount must be non-negative"),
         ],
     )
-    currency = StringField(
+    # Currency filter with dropdown including "All" option
+    currency = SelectField(
         "Currency",
-        render_kw={"placeholder": "GEL", "class": "small"},
+        choices=[("", "All")] + CURRENCIES,
+        render_kw={"class": "small"},
     )
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in TransactionStatus]
@@ -172,6 +190,12 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+
+        # Handle custom currency option
+        if data.get("currency") == "other" and data.get("custom_currency"):
+            data["currency"] = data["custom_currency"].lower()
+        data.pop("custom_currency", None)  # Remove custom_currency field from data
+
         tx = api.http("POST", "transactions", data=data)
         if tx.status_code == 200:
             return redirect(url_for("transaction.detail", id=tx.json()["id"]))
@@ -183,6 +207,11 @@ def add():
 def edit(id):
     api = get_refinance_api_client()
     transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
+
+    # Check if the existing currency is in our predefined list
+    existing_currency = transaction.currency.upper()
+    currency_in_list = any(code == existing_currency for code, _ in CURRENCIES)
+
     # initialize form with transaction data and treasury IDs
     init_data = {
         **transaction.__dict__,
@@ -192,6 +221,14 @@ def edit(id):
             tag["id"] if isinstance(tag, dict) else tag.id for tag in transaction.tags
         ],
     }
+
+    # Handle custom currency for backward compatibility
+    if not currency_in_list and ALLOW_CUSTOM_CURRENCY:
+        init_data["currency"] = "other"
+        init_data["custom_currency"] = existing_currency
+    else:
+        init_data["currency"] = existing_currency
+
     form = TransactionForm(data=init_data)
 
     # populate treasury dropdowns
@@ -206,6 +243,12 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+
+        # Handle custom currency option
+        if data.get("currency") == "other" and data.get("custom_currency"):
+            data["currency"] = data["custom_currency"].lower()
+        data.pop("custom_currency", None)  # Remove custom_currency field from data
+
         api.http("PATCH", f"transactions/{id}", data=data)
         return redirect(url_for("transaction.detail", id=id))
 
