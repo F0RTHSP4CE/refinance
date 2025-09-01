@@ -13,6 +13,9 @@ utilities_tag = Tag(
     id=4, name="utilities", comment="gas, electricity, water, internet, etc"
 )
 resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
+ex_resident_tag = Tag(id=13, name="ex-resident", comment="former hackerspace resident")
+member_tag = Tag(id=14, name="member", comment="hackerspace members")
+guest_tag = Tag(id=15, name="guest", comment="hackerspace guests")
 rent_tag = Tag(id=7, name="rent", comment="monthly rent for the physical place")
 f0_tag = Tag(id=8, name="hackerspace", comment="F0RTHSPACE hackerspace")
 deposit_tag = Tag(id=9, name="deposit", comment="money input into system")
@@ -65,6 +68,9 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         deposit_tag,
         withdrawal_tag,
         currency_exchange_tag,
+        ex_resident_tag,
+        member_tag,
+        guest_tag,
     ],
     Entity: [
         # hackerspace
