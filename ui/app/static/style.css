@@ -54,7 +54,7 @@ nav {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 nav>ul {
@@ -82,7 +82,7 @@ nav>ul>li>a {
 
 nav>ul>li.active>a {
   color: white;
-  background-color: rgba(255,255,255,0.2);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 nav .user {
@@ -97,19 +97,18 @@ nav .user {
 @media (max-width: 768px) {
   nav>ul {
     padding: 0.5rem;
-    font-size: 14px;
   }
-  
+
   nav>ul>li>a {
     padding: 0.5rem;
   }
-  
+
   nav .user {
     width: 100%;
     justify-content: center;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(255,255,255,0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
   }
 }
 
