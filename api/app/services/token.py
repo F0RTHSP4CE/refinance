@@ -164,9 +164,6 @@ class TokenService:
                                 response.status_code,
                                 response.text,
                             )
-                        if "inline keyboard button URL" in response.json().get(
-                            "description"
-                        ):
                             response = requests.post(
                                 f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
                                 data={
