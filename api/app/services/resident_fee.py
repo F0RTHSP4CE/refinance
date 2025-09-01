@@ -9,11 +9,12 @@ from decimal import Decimal
 from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.resident_fee import ResidentFeeFiltersSchema
-from app.seeding import f0_entity, resident_tag
+from app.seeding import ex_resident_tag, f0_entity, member_tag, resident_tag
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 
@@ -61,7 +62,10 @@ class ResidentFeeService(BaseService):
         residents = (
             self.db.query(Entity)
             .filter(
-                Entity.tags.contains(resident_tag),
+                or_(
+                    Entity.tags.contains(resident_tag),
+                    Entity.tags.contains(member_tag),
+                )
             )
             .order_by(Entity.active.desc(), Entity.name)
             .all()

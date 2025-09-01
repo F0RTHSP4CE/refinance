@@ -202,9 +202,9 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   background-color: hsla(127, 100%, 60%, 0.1);
 }
 
-.fee-not-paid {
+/* .fee-not-paid {
   background-color: hsla(0, 100%, 60%, 0.1);
-}
+} */
 
 /* 
 .fee-current-month {
