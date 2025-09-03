@@ -106,6 +106,10 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         Entity(id=9, name="internet", comment="internet bill", tags=[utilities_tag]),
         Entity(id=10, name="rent", comment="rent bill", tags=[rent_tag]),
         currency_exchange_entity,
+        Entity(id=12, name="crypto_in", comment="crypto deposit", tags=[deposit_tag]),
+        Entity(
+            id=13, name="crypto_out", comment="crypto withdrawal", tags=[withdrawal_tag]
+        ),
         # payment providers
         cryptapi_deposit_provider,
         # residents
