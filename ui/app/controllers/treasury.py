@@ -27,7 +27,7 @@ class DeleteForm(FlaskForm):
 @token_required
 def list():
     page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 10, type=int)
+    limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
     api = get_refinance_api_client()
     resp = api.http("GET", "treasuries", params={"skip": skip, "limit": limit}).json()
