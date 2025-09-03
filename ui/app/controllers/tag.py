@@ -27,7 +27,7 @@ class DeleteForm(FlaskForm):
 def list():
     # Get current page and limit from query parameters (defaults: page 1, 10 items per page)
     page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 10, type=int)
+    limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
 
     api = get_refinance_api_client()
