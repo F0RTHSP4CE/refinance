@@ -20,6 +20,7 @@
     </thead>
     <thead>
         <tr>
+            <th>#</th>
             <th></th>
             {% if fees %}
             {% for month in fees[0].fees %}
@@ -33,6 +34,7 @@
     <tbody>
         {% for resident_fee in fees %}
         <tr>
+            <td>{{ loop.index }}</td>
             <td>
                 <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}">{{
                     resident_fee.entity.name
