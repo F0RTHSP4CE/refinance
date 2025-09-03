@@ -28,7 +28,7 @@
             {# <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('deposit.list') }}">Deposit</a>
             </li> #}
-            <li {% if 'fee' in request.url_rule.endpoint %} class="active" {% endif %}>
+            <li {% if 'resident_fee' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('resident_fee.index') }}">Fee</a>
             </li>
             <li {% if 'split' in request.url_rule.endpoint %} class="active" {% endif %}>
@@ -40,7 +40,7 @@
             <li {% if 'stats' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('stats.index') }}">Stats</a>
             </li>
-            <li {% if 'treasuries' in request.url_rule.endpoint %} class="active" {% endif %}>
+            <li {% if 'treasury' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('treasury.list') }}">Treasury</a>
             </li>
             <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
