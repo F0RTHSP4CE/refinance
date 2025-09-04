@@ -241,6 +241,11 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   color: red;
 }
 
+.user .amount-negative {
+  background: red;
+  color: white;
+}
+
 .fee-paid {
   background-color: hsla(127, 100%, 60%, 0.1);
 }
