@@ -3,12 +3,14 @@
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import Any, Mapping
 
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.transaction import Transaction
 from app.seeding import f0_entity, resident_tag
 from app.services.base import BaseService
+from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
 from app.services.resident_fee import ResidentFeeService
 from app.uow import get_uow
@@ -23,10 +25,49 @@ class StatsService(BaseService):
         db: Session = Depends(get_uow),
         resident_fee_service: ResidentFeeService = Depends(),
         entity_service: EntityService = Depends(),
+        currency_exchange_service: CurrencyExchangeService = Depends(),
     ):
         self.db = db
         self._resident_fee_service = resident_fee_service
         self._entity_service = entity_service
+        self._currency_exchange_service = currency_exchange_service
+
+    # --- internal helpers -------------------------------------------------
+    def _amount_to_usd(self, currency: str, amount: Decimal) -> Decimal:
+        """Convert an amount in any supported currency to USD using the latest rates.
+
+        The CurrencyExchangeService uses GEL as base; we leverage its `calculate_conversion`.
+        """
+        if amount is None:
+            return Decimal("0")
+        if currency.lower() == "usd":
+            return amount
+        # Use calculate_conversion to convert source currency -> usd.
+        # (source_amount, target_amount, rate) returned; target_amount is the USD value.
+        try:
+            _, usd_amount, _ = self._currency_exchange_service.calculate_conversion(
+                source_amount=amount,
+                target_amount=None,
+                source_currency=currency,
+                target_currency="usd",
+            )
+            return usd_amount
+        except Exception:
+            # Fail safe: ignore unknown currency.
+            return Decimal("0")
+
+    def _sum_amounts_usd(self, amounts: Mapping[str, Any]) -> float:
+        total = Decimal("0")
+        for cur, amt in amounts.items():
+            if amt in (None, ""):
+                continue
+            try:
+                if not isinstance(amt, Decimal):
+                    amt = Decimal(str(amt))
+                total += self._amount_to_usd(cur, amt)
+            except Exception:
+                continue
+        return float(total)
 
     def get_resident_fee_sum_by_month(
         self, timeframe_from: date | None = None, timeframe_to: date | None = None
@@ -75,15 +116,18 @@ class StatsService(BaseService):
 
             monthly_totals[(year, month)][t.currency] += t.amount
 
-        result = [
-            {
-                "year": year,
-                "month": month,
-                "amounts": {k: float(v) for k, v in amounts.items()},
-            }
-            for (year, month), amounts in sorted(monthly_totals.items())
-        ]
-
+        result = []
+        for (year, month), amounts in sorted(monthly_totals.items()):
+            amounts_float = {k: float(v) for k, v in amounts.items()}
+            total_usd = self._sum_amounts_usd(amounts)
+            result.append(
+                {
+                    "year": year,
+                    "month": month,
+                    "amounts": amounts_float,
+                    "total_usd": total_usd,
+                }
+            )
         return result
 
     def get_entity_transactions_by_day(
@@ -140,15 +184,18 @@ class StatsService(BaseService):
         for row in query_result:
             weekly_totals[(row.year, row.week)][row.currency] = row.total_amount
 
-        result = [
-            {
-                "year": year,
-                "week": week,
-                "amounts": {k: float(v) for k, v in amounts.items()},
-            }
-            for (year, week), amounts in sorted(weekly_totals.items())
-        ]
-
+        result = []
+        for (year, week), amounts in sorted(weekly_totals.items()):
+            amounts_float = {k: float(v) for k, v in amounts.items()}
+            total_usd = self._sum_amounts_usd(amounts)
+            result.append(
+                {
+                    "year": year,
+                    "week": week,
+                    "amounts": amounts_float,
+                    "total_usd": total_usd,
+                }
+            )
         return result
 
     def get_entity_balance_change_by_day(
@@ -202,14 +249,17 @@ class StatsService(BaseService):
         for row in outgoing_q:
             balance_changes[row.day][row.currency] -= row.total
 
-        result = [
-            {
-                "day": day,
-                "balance_changes": {k: float(v) for k, v in changes.items()},
-            }
-            for day, changes in sorted(balance_changes.items())
-        ]
-
+        result = []
+        for day, changes in sorted(balance_changes.items()):
+            changes_float = {k: float(v) for k, v in changes.items()}
+            total_usd = self._sum_amounts_usd(changes)
+            result.append(
+                {
+                    "day": day,
+                    "balance_changes": changes_float,
+                    "total_usd": total_usd,
+                }
+            )
         return result
 
     def get_transactions_sum_by_tag_by_month(
@@ -267,11 +317,17 @@ class StatsService(BaseService):
                 monthly_totals[ym][t.currency] += t.amount
 
         # format result preserving month order
-        return [
-            {
-                "year": y,
-                "month": m,
-                "amounts": {c: float(v) for c, v in monthly_totals[(y, m)].items()},
-            }
-            for (y, m) in months
-        ]
+        result = []
+        for y, m in months:
+            amounts = monthly_totals[(y, m)]
+            amounts_float = {c: float(v) for c, v in amounts.items()}
+            total_usd = self._sum_amounts_usd(amounts)
+            result.append(
+                {
+                    "year": y,
+                    "month": m,
+                    "amounts": amounts_float,
+                    "total_usd": total_usd,
+                }
+            )
+        return result
