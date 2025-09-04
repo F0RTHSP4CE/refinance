@@ -9,6 +9,7 @@
     <thead>
         <tr>
             <th></th>
+            <th></th>
             {% for month in fees[0].fees %}
             {% if month.month==current_month and month.year==current_year %}
             <th class="center-align">▼</th>
@@ -24,7 +25,7 @@
             <th></th>
             {% if fees %}
             {% for month in fees[0].fees %}
-            <th>
+            <th class="center-align">
                 {{ month_names[month.month] }} {{ month.year }}
             </th>
             {% endfor %}
