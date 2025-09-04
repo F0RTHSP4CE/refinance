@@ -540,3 +540,12 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
     transform: translate(-1px, -1px);
   }
 }
+
+/* Date Toggle Styles */
+.human-date {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(0, 0, 0, 0.3);
+  text-underline-offset: 0.3em;
+}

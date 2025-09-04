@@ -57,11 +57,11 @@
     </tr>
     <tr>
         <td>Created</td>
-        <td>{{ deposit.created_at }}</td>
+        <td>{{ human_readable_date(deposit.created_at) | safe }}</td>
     </tr>
     <tr>
         <td>Modified</td>
-        <td>{{ deposit.modified_at or '' }}</td>
+        <td>{{ human_readable_date(deposit.modified_at) | safe if deposit.modified_at else '' }}</td>
     </tr>
     {% if deposit.details and deposit.details.get('address') and deposit.status == 'pending' %}
     <tr>

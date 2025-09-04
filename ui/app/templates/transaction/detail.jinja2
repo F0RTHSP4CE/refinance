@@ -53,11 +53,11 @@
     </tr>
     <tr>
         <td>Created at</td>
-        <td>{{ transaction.created_at }}</a></td>
+        <td>{{ human_readable_date(transaction.created_at) | safe }}</a></td>
     </tr>
     <tr>
         <td>Modified at</td>
-        <td>{{ transaction.modified_at or '' }}</a></td>
+        <td>{{ human_readable_date(transaction.modified_at) | safe if transaction.modified_at else '' }}</a></td>
     </tr>
 </table>
 {% if transaction.status != "completed" %}

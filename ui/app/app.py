@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from app.controllers.auth import auth_bp
@@ -101,7 +102,84 @@ def update_query_params(**kwargs):
     return "?" + urlencode(current_params)
 
 
+def human_readable_date(date_string):
+    """
+    Convert ISO datetime string to human readable format with tooltip.
+    Returns HTML with human readable text and ISO datetime in title attribute.
+    """
+    if not date_string:
+        return ""
+
+    try:
+        # Parse the ISO datetime string
+        if isinstance(date_string, str):
+            # Handle both with and without milliseconds
+            if "." in date_string and date_string.endswith("Z"):
+                dt = datetime.fromisoformat(date_string.replace("Z", "+00:00"))
+            elif "T" in date_string:
+                # Handle formats like 2025-09-01T10:32:28 or 2025-09-01T10:32:28.123
+                if date_string.endswith("Z"):
+                    dt = datetime.fromisoformat(date_string.replace("Z", "+00:00"))
+                elif "+" in date_string[-6:] or date_string.endswith(("T", "Z")):
+                    dt = datetime.fromisoformat(date_string)
+                else:
+                    # Assume UTC if no timezone info
+                    dt = datetime.fromisoformat(date_string).replace(
+                        tzinfo=timezone.utc
+                    )
+            else:
+                dt = datetime.fromisoformat(date_string)
+        else:
+            dt = date_string
+
+        # Ensure we have timezone info
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        now = datetime.now(timezone.utc)
+        diff = now - dt
+
+        # Calculate time differences
+        seconds = diff.total_seconds()
+        minutes = seconds / 60
+        hours = minutes / 60
+        days = hours / 24
+        weeks = days / 7
+        months = days / 30.44  # Average month length
+
+        # Format based on time difference
+        if seconds < 60:
+            human_text = "just now"
+        elif minutes < 60:
+            human_text = f"{int(minutes)} min ago"
+        elif hours < 24:
+            human_text = f"{int(hours)} hour{'s' if int(hours) != 1 else ''} ago"
+        elif days < 2:
+            human_text = "yesterday"
+        elif days < 7:
+            human_text = f"{int(days)} day{'s' if int(days) != 1 else ''} ago"
+        elif weeks < 4:
+            human_text = f"{int(weeks)} week{'s' if int(weeks) != 1 else ''} ago"
+        elif months < 6:
+            human_text = f"{int(months)} month{'s' if int(months) != 1 else ''} ago"
+        else:
+            # For older dates, show full date without time
+            # Only show year if it's different from current year
+            if dt.year == now.year:
+                human_text = dt.strftime("%d %B")
+            else:
+                human_text = dt.strftime("%d %B %Y")
+
+        # Return HTML with tooltip and date-toggle class
+        return f'<span class="human-date" title="{date_string}">{human_text}</span>'
+
+    except (ValueError, TypeError):
+        # If parsing fails, return the original string
+        return str(date_string)
+
+
 app.jinja_env.globals["update_query_params"] = update_query_params
+app.jinja_env.globals["human_readable_date"] = human_readable_date
 
 
 # dev

@@ -83,11 +83,11 @@
             </tr>
             <tr>
                 <td>Created at</td>
-                <td>{{ entity.created_at }}</td>
+                <td>{{ human_readable_date(entity.created_at) | safe }}</td>
             </tr>
             <tr>
                 <td>Modified at</td>
-                <td>{{ entity.modified_at or "" }}</td>
+                <td>{{ human_readable_date(entity.modified_at) | safe if entity.modified_at else "" }}</td>
             </tr>
             <tr>
                 <td>Authentication</td>
