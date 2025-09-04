@@ -55,11 +55,11 @@
     </tr>
     <tr>
         <td>Created at</td>
-        <td>{{ split.created_at }}</td>
+        <td>{{ human_readable_date(split.created_at) | safe }}</td>
     </tr>
     <tr>
         <td>Modified at</td>
-        <td>{{ split.modified_at or "" }}</td>
+        <td>{{ human_readable_date(split.modified_at) | safe if split.modified_at else "" }}</td>
     </tr>
     <tr>
         <td>Performed</td>

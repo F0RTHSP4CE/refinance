@@ -26,11 +26,11 @@
         </tr>
         <tr>
             <td>Created at</td>
-            <td>{{ treasury.created_at }}</td>
+            <td>{{ human_readable_date(treasury.created_at) | safe }}</td>
         </tr>
         <tr>
             <td>Modified at</td>
-            <td>{{ treasury.modified_at or "" }}</td>
+            <td>{{ human_readable_date(treasury.modified_at) | safe if treasury.modified_at else "" }}</td>
         </tr>
     </table>
     <p><a href="{{ url_for('treasury.edit', id=treasury.id) }}">Edit</a> |
