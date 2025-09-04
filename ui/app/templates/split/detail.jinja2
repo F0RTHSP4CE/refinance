@@ -51,6 +51,9 @@
             <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
                 {{ split.actor_entity.name }}
             </a>
+            {% for tag in split.actor_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
         </td>
     </tr>
     <tr>
