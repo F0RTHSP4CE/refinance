@@ -125,6 +125,11 @@ class ResidentFeeService(BaseService):
                     year -= 1
                 amounts = fees_by_resident_by_month[r.id].get((year, month), {})
                 monthly_fees.append({"year": year, "month": month, "amounts": amounts})
+
+            # Trim trailing empty months (which correspond to the earliest months in the window)
+            # Keep at least the current month so UI has an anchor row.
+            while len(monthly_fees) > 1 and monthly_fees[-1]["amounts"] in ({}, None):
+                monthly_fees.pop()
             # Future months with payments (up to 12 months ahead)
             future_fees = []
             for (y, m), currs in fees_by_resident_by_month[r.id].items():

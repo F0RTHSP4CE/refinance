@@ -138,15 +138,8 @@ class TestResidentFeeService:
 
         # --- Assertions for Resident Two ---
         fees2 = sorted(resident2_data["fees"], key=lambda x: (x["year"], x["month"]))
-        # Expecting fees for previous (empty) and current month
-        assert len(fees2) == 2
-
-        # Previous month (no payment)
-        assert fees2[0]["year"] == prev_year
-        assert fees2[0]["month"] == prev_month
-        assert fees2[0]["amounts"] == {}
-
-        # Current month (payment from transaction with no date in comment)
-        assert fees2[1]["year"] == current_year
-        assert fees2[1]["month"] == current_month
-        assert fees2[1]["amounts"] == {"eur": "50.00"}
+        # Leading empty past months trimmed; only first month with data
+        assert len(fees2) == 1
+        assert fees2[0]["year"] == current_year
+        assert fees2[0]["month"] == current_month
+        assert fees2[0]["amounts"] == {"eur": "50.00"}
