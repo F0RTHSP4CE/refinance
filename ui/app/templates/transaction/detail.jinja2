@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
-{% from 'widgets/tag_inline.jinja2' import tag_inline %}s
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
 
 {% block title %}Transaction {{ transaction.id }}{% endblock %}
 {% block content %}
@@ -7,6 +8,10 @@
     <tr>
         <td>ID</td>
         <td>{{ transaction.id }}</td>
+    </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ human_readable_date(transaction.created_at) | safe }}</td>
     </tr>
     <tr>
         <td>From</td>
@@ -28,16 +33,15 @@
     </tr>
     <tr>
         <td>Amount</td>
-        <td>{{ transaction.amount }}</a></td>
+        <td>{{ transaction.amount }}</td>
     </tr>
     <tr>
         <td>Currency</td>
-        <td>{{ transaction.currency | upper }}</a></td>
+        <td>{{ transaction.currency | upper }}</td>
     </tr>
-
     <tr>
         <td>Comment</td>
-        <td>{{ transaction.comment or '' }}</a></td>
+        <td>{{ transaction.comment or '' }}</td>
     </tr>
     <tr>
         <td>Tags</td>
@@ -48,17 +52,47 @@
         </td>
     </tr>
     <tr>
-        <td>Status</td>
-        <td>{{ transaction.status }}</a></td>
+        <td>Treasury</td>
+        <td>
+            {% if transaction.from_treasury_id or transaction.to_treasury_id %}
+            {% if transaction.from_treasury_id %}
+            {{ treasury_inline(transaction.from_treasury) }}
+            {% else %}
+            x
+            {% endif %}
+            →
+            {% if transaction.to_treasury_id %}
+            {{ treasury_inline(transaction.to_treasury) }}
+            {% else %}
+            x
+            {% endif %}
+            {% endif %}
+        </td>
     </tr>
-    <tr>
-        <td>Created at</td>
-        <td>{{ human_readable_date(transaction.created_at) | safe }}</a></td>
-    </tr>
+
+
     <tr>
         <td>Modified at</td>
-        <td>{{ human_readable_date(transaction.modified_at) | safe if transaction.modified_at else '' }}</a></td>
+        <td>
+            {{ human_readable_date(transaction.modified_at) | safe }}
+        </td>
     </tr>
+
+    <tr>
+        <td>Status</td>
+        <td>{{ transaction.status }}</td>
+    </tr>
+    <tr>
+        <td>Actor</td>
+        <td>
+            <a
+                href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}">{{transaction.actor_entity.name}}</a>
+            {% for tag in transaction.actor_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+
 </table>
 {% if transaction.status != "completed" %}
 <p><a href="{{ url_for('transaction.complete', id=transaction.id) }}">Complete</a></p>
