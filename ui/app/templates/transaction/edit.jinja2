@@ -8,12 +8,13 @@
 {% if transaction.status != "completed" %}
 <form method="post">
     <table>
+
+        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
+        new_table=False) }}
         <tr>
             <td>Tags</td>
             <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
         </tr>
-        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
-        new_table=False) }}
     </table>
 </form>
 {% else %}
