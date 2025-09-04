@@ -3,7 +3,7 @@
 {% macro tag_selector(field_name, available_tags, selected_tag_ids=[]) %}
 <div class="tag-selector">
     <div class="tag-options">
-        {% for tag in available_tags %}
+        {% for tag in available_tags|sort(attribute='name') %}
         <label class="tag-option">
             <input type="checkbox" name="{{ field_name }}" value="{{ tag.id }}" {% if tag.id in selected_tag_ids
                 %}checked{% endif %}>

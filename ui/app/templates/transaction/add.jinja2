@@ -8,10 +8,7 @@
 {% block content %}
 <form method="post">
     <table>
-        <tr>
-            <td>Tags</td>
-            <td>{{ tag_selector('tag_ids', all_tags, []) }}</td>
-        </tr>
+
         <tr>
             <td><b>From</b></td>
             <td>
@@ -27,7 +24,10 @@
         </tr>
         {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
         new_table=False) }}
-
+        <tr>
+            <td>Tags</td>
+            <td>{{ tag_selector('tag_ids', all_tags, []) }}</td>
+        </tr>
     </table>
 </form>
 
