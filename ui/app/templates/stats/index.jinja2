@@ -57,16 +57,29 @@
                 residentFeeDatasets[currency] = {
                     label: currency,
                     data: [],
-                    borderWidth: 1
+                    borderWidth: 1,
+                    type: 'bar'
                 };
             }
         }
     });
 
+    // Total USD line dataset
+    residentFeeDatasets['total_usd'] = {
+        label: 'total_usd',
+        data: [],
+        borderWidth: 2,
+        type: 'line',
+        tension: 0.2,
+        yAxisID: 'y'
+    };
+
     residentFeeData.forEach(item => {
-        for (const currency in residentFeeDatasets) {
-            residentFeeDatasets[currency].data.push(item.amounts[currency] || 0);
+        for (const key in residentFeeDatasets) {
+            if (key === 'total_usd') continue; // handle after loop
+            residentFeeDatasets[key].data.push(item.amounts[key] || 0);
         }
+        residentFeeDatasets['total_usd'].data.push(item.total_usd || 0);
     });
 
     new Chart(document.getElementById('resident-fee-chart'), {
@@ -94,16 +107,28 @@
                 transactionsDatasets[currency] = {
                     label: currency,
                     data: [],
-                    borderWidth: 1
+                    borderWidth: 1,
+                    type: 'bar'
                 };
             }
         }
     });
 
+    transactionsDatasets['total_usd'] = {
+        label: 'total_usd',
+        data: [],
+        borderWidth: 2,
+        type: 'line',
+        tension: 0.2,
+        yAxisID: 'y'
+    };
+
     transactionsData.forEach(item => {
-        for (const currency in transactionsDatasets) {
-            transactionsDatasets[currency].data.push(item.amounts[currency] || 0);
+        for (const key in transactionsDatasets) {
+            if (key === 'total_usd') continue;
+            transactionsDatasets[key].data.push(item.amounts[key] || 0);
         }
+        transactionsDatasets['total_usd'].data.push(item.total_usd || 0);
     });
 
     new Chart(document.getElementById('transactions-week-chart'), {

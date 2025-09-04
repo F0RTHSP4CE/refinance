@@ -9,6 +9,7 @@ class ResidentFeeSumByMonthSchema(BaseModel):
     year: int
     month: int
     amounts: dict[str, float]
+    total_usd: float
 
 
 class EntityTransactionsByDaySchema(BaseModel):
@@ -20,14 +21,17 @@ class TransactionsSumByWeekSchema(BaseModel):
     year: int
     week: int
     amounts: dict[str, float]
+    total_usd: float
 
 
 class EntityBalanceChangeByDaySchema(BaseModel):
     day: date
     balance_changes: dict[str, float]
+    total_usd: float
 
 
 class TransactionsSumByTagByMonthSchema(BaseModel):
     year: int
     month: int
     amounts: dict[str, float]
+    total_usd: float
