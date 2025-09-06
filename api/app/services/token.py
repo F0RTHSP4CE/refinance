@@ -60,149 +60,149 @@ class TokenService:
         )
         return self.entity_service.get(entity_id)
 
-    def generate_and_send_new_token(
+    def get_token(
         self,
-        entity_id: int | None = None,
-        entity_name: str | None = None,
-        entity_telegram_id: int | None = None,
-    ) -> TokenSendReportSchema:
-        """
-        Generate a new signed token and send it to all available auth providers for the entity.
-
-        Search is performed using the following criteria (in order):
-          - Primary entity_id
-          - Telegram ID, Signal ID, WhatsApp Number, Email
-          - Entity name
-
-        Once the entity is found, a login link is generated and sent via all providers
-        found in the entity's JSON `auth` field.
-        """
-        # Log input received for tracing
-        logger.info(
-            "TokenService.generate_and_send_new_token inputs: entity_id=%s, entity_name=%s, entity_telegram_id=%s",
-            entity_id,
-            entity_name,
-            entity_telegram_id,
-        )
-
-        # Create an empty report for tracking progress
-        report = TokenSendReportSchema(
-            entity_found=False, token_generated=False, message_sent=False
-        )
-        entity: Entity | None = None
-
-        # Define search criteria as tuples: (value, search_function)
+        telegram_id: int | None = None,
+        card_hash: str | None = None,
+    ) -> str:
         search_criteria = [
-            (entity_id, self.entity_service.get),
-            (entity_telegram_id, self.entity_service.get_by_telegram_id),
-            (entity_name, self.entity_service.get_by_name),
+            (telegram_id, self.entity_service.get_by_telegram_id),
+            (card_hash, self.entity_service.get_by_card_hash),
         ]
 
-        # Look for the entity using the provided criteria
-        for criteria, search_function in search_criteria:
-            if criteria is not None:
+        for value, method in search_criteria:
+            if value is not None:
                 try:
-                    result = search_function(criteria)
-                except NotFoundError:
+                    entity = method(value)
+                    return self._generate_new_token(entity.id)
+                except Exception:
                     continue
-                if result is not None:
-                    entity = result
-                    break  # Stop at the first found entity
 
-        if entity is not None:
-            report.entity_found = True
-            logger.info(
-                "TokenService: entity found id=%s name=%s auth_keys=%s",
-                entity.id,
-                entity.name,
-                list(entity.auth.keys()) if isinstance(entity.auth, dict) else None,
+        raise NotFoundError()
+
+    def generate_and_send_new_token(self, entity_name: str) -> TokenSendReportSchema:
+        """Generate a token for entity by name and send it via Telegram."""
+        try:
+            # Find entity by name
+            entity = self.entity_service.get_by_name(entity_name)
+            entity_found = True
+
+            # Generate token
+            token = self._generate_new_token(entity.id)
+            token_generated = True
+
+            # Try to send via Telegram if telegram_id exists
+            message_sent = False
+            if entity.auth and entity.auth.get("telegram_id"):
+                try:
+                    telegram_id_raw = entity.auth.get("telegram_id")
+                    # Convert to int if it's a string
+                    if isinstance(telegram_id_raw, str):
+                        telegram_id = int(telegram_id_raw)
+                    elif isinstance(telegram_id_raw, int):
+                        telegram_id = telegram_id_raw
+                    else:
+                        raise ValueError(
+                            f"Invalid telegram_id type: {type(telegram_id_raw)}"
+                        )
+
+                    message_sent = self._send_telegram_message(
+                        telegram_id, token, entity
+                    )
+                except Exception as e:
+                    telegram_id_str = str(entity.auth.get("telegram_id", "unknown"))
+                    logger.error(
+                        f"Failed to send Telegram message to {telegram_id_str}: {e}"
+                    )
+                    message_sent = False
+
+            return TokenSendReportSchema(
+                entity_found=entity_found,
+                token_generated=token_generated,
+                message_sent=message_sent,
             )
 
-            # Generate a login token
-            token = self._generate_new_token(entity_id=entity.id)
-            if token:
-                report.token_generated = True
-                logger.info("TokenService: token generated for entity_id=%s", entity.id)
+        except Exception:
+            return TokenSendReportSchema(
+                entity_found=False, token_generated=False, message_sent=False
+            )
 
-            # Build the login link message
-            login_link = f"{self.config.ui_url}/auth/token/{token}"
+    def _send_telegram_message(
+        self, telegram_id: int, token: str, entity: Entity
+    ) -> bool:
+        """Send a login token to a Telegram user."""
+        if not self.config.telegram_bot_api_token:
+            logger.warning("TokenService: Telegram bot token not configured")
+            return False
 
-            sent_count = 0
+        if not self.config.ui_url:
+            logger.warning("TokenService: UI URL not configured")
+            return False
 
-            if isinstance(entity.auth, dict):
-                # Send via Telegram if available
-                if "telegram_id" in entity.auth:
-                    try:
-                        data = {
-                            "chat_id": entity.auth["telegram_id"],
-                            "text": f"refinance login: <b>{entity.name}</b>",
-                            "reply_markup": json.dumps(
+        # Build the login link message
+        login_link = f"{self.config.ui_url}/auth/token/{token}"
+
+        # Try to send with inline keyboard first
+        try:
+            data = {
+                "chat_id": telegram_id,
+                "text": f"refinance login: <b>{entity.name}</b>",
+                "reply_markup": json.dumps(
+                    {
+                        "inline_keyboard": [
+                            [
                                 {
-                                    "inline_keyboard": [
-                                        [
-                                            {
-                                                "text": f"Login as {entity.name}",
-                                                "url": login_link,
-                                            }
-                                        ]
-                                    ]
+                                    "text": f"Login as {entity.name}",
+                                    "url": login_link,
                                 }
-                            ),
-                            "parse_mode": "HTML",
-                        }
+                            ]
+                        ]
+                    }
+                ),
+                "parse_mode": "HTML",
+            }
 
-                        response = requests.post(
-                            f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
-                            data=data,
-                            timeout=5,
-                        )
-                        if response.status_code == 200:
-                            sent_count += 1
-                        else:
-                            logger.error(
-                                "TokenService: telegram sendMessage failed status=%s body=%s",
-                                response.status_code,
-                                response.text,
-                            )
-                            response = requests.post(
-                                f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
-                                data={
-                                    "chat_id": entity.auth["telegram_id"],
-                                    "text": f"Login as {entity.name}: {login_link}",
-                                },
-                            )
-                            if response.status_code == 200:
-                                sent_count += 1
-                            else:
-                                logger.error(
-                                    "TokenService: fallback telegram sendMessage failed status=%s body=%s",
-                                    response.status_code,
-                                    response.text,
-                                )
-                    except Exception as exc:
-                        logger.exception(
-                            "TokenService: exception during telegram send for entity_id=%s: %s",
-                            entity.id,
-                            exc,
-                        )
-                else:
-                    logger.info(
-                        "TokenService: entity_id=%s has no telegram_id in auth. auth_keys=%s",
-                        entity.id,
-                        list(entity.auth.keys()),
-                    )
-            else:
+            response = requests.post(
+                f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
+                data=data,
+                timeout=5,
+            )
+            if response.status_code == 200:
                 logger.info(
-                    "TokenService: entity_id=%s has no auth providers configured (auth is %s)",
-                    entity.id,
-                    type(entity.auth).__name__,
+                    f"TokenService: Telegram message sent successfully to {telegram_id}"
+                )
+                return True
+            else:
+                logger.error(
+                    "TokenService: telegram sendMessage failed status=%s body=%s",
+                    response.status_code,
+                    response.text,
                 )
 
-            report.message_sent = sent_count > 0
-            if not report.message_sent:
-                logger.warning(
-                    "TokenService: message not sent for entity_id=%s. Check telegram_id presence and bot token/chat access.",
-                    entity.id,
+                # Fallback to simple text message
+                fallback_response = requests.post(
+                    f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage",
+                    data={
+                        "chat_id": telegram_id,
+                        "text": f"Login as {entity.name}: {login_link}",
+                    },
+                    timeout=5,
                 )
+                if fallback_response.status_code == 200:
+                    logger.info(
+                        f"TokenService: Fallback Telegram message sent successfully to {telegram_id}"
+                    )
+                    return True
+                else:
+                    logger.error(
+                        "TokenService: fallback telegram sendMessage failed status=%s body=%s",
+                        fallback_response.status_code,
+                        fallback_response.text,
+                    )
+                    return False
 
-        return report
+        except Exception as e:
+            logger.error(
+                f"TokenService: Exception sending Telegram message to {telegram_id}: {e}"
+            )
+            return False

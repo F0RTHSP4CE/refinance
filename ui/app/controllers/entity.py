@@ -39,6 +39,11 @@ class AuthForm(FlaskForm):
         description="Your Signal identifier",
         render_kw={"placeholder": "+12398732132"},
     )
+    card_hash = StringField(
+        "Card Hash",
+        description="Unique card identifier for authentication",
+        render_kw={"placeholder": "a1bc23d45e678f90g123h456i789j0kl"},
+    )
 
     submit = SubmitField("Submit")
 
@@ -137,6 +142,10 @@ def edit(id):
     # extract them (or default to an empty dict).
     auth_data = entity_data.get("auth", {})
     auth_form = AuthForm(prefix="auth", data=auth_data)
+    if auth_form.card_hash.data == "":
+        del (
+            auth_form.card_hash
+        )  # Prevent overwriting existing card_hash with empty string.
 
     # Populate tag choices
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]

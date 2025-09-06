@@ -28,12 +28,11 @@ def login():
     if form.validate_on_submit():
         api = get_refinance_api_client()
 
-        # Prepare the data for the API request
         data = {}
         if form.entity_name.data:
             data["entity_name"] = form.entity_name.data
 
-        response = api.http("POST", "tokens/request", data=data)
+        response = api.http("POST", "tokens/send", data=data)
         report = response.json()
 
     return render_template("auth/login.jinja2", form=form, report=report)

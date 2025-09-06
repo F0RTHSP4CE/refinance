@@ -3,10 +3,16 @@
 from app.schemas.base import BaseSchema
 
 
-class TokenRequestSchema(BaseSchema):
-    entity_id: int | None = None
-    entity_name: str | None = None
-    entity_telegram_id: int | None = None
+class TokenSendRequestSchema(BaseSchema):
+    entity_name: str
+
+
+class TokenByCardHashRequestSchema(BaseSchema):
+    card_hash: str
+
+
+class TokenResponseSchema(BaseSchema):
+    token: str
 
 
 class TokenSendReportSchema(BaseSchema):
