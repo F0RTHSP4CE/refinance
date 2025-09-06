@@ -48,11 +48,9 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
                 == filters.auth_telegram_id
             )
         if filters.auth_card_hash is not None:
-            # Use json_extract for portability (SQLite/MySQL) while avoiding raw text SQL
-            query = query.filter(
-                func.json_extract(self.model.auth, "$.card_hash")
-                == filters.auth_card_hash
-            )
+            # Use JSON path lookup + cast. Some dialects (SQLite) return quoted JSON strings, so trim quotes.
+            card_hash_expr = func.trim(cast(self.model.auth["card_hash"], Text), '"')
+            query = query.filter(card_hash_expr == filters.auth_card_hash)
         if filters.tags_ids:
             query = self._apply_tag_filters(query, filters.tags_ids)
         return query
@@ -80,11 +78,8 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         return db_obj
 
     def get_by_card_hash(self, card_hash: str) -> Entity:
-        db_obj = (
-            self.db.query(self.model)
-            .filter(func.json_extract(self.model.auth, "$.card_hash") == card_hash)
-            .first()
-        )
+        card_hash_expr = func.trim(cast(self.model.auth["card_hash"], Text), '"')
+        db_obj = self.db.query(self.model).filter(card_hash_expr == card_hash).first()
         if not db_obj:
             raise NotFoundError(f"{self.model.__name__}.auth.{card_hash=}")
         return db_obj
