@@ -105,12 +105,13 @@
                             "telegram_id": "Telegram ID",
                             "signal_id": "Signal ID",
                             "whatsapp_number": "WhatsApp Number",
-                            "email": "Email"
+                            "email": "Email",
+                            "card_hash": "Card Hash"
                             } %}
                             {% for key, value in entity.auth.items() %}
                             <tr>
                                 <td>{{ labels.get(key, key.replace('_', ' ').title()) }}</td>
-                                <td>{{ value }}</td>
+                                <td>{{ value or " "}}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
