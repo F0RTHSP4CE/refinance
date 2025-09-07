@@ -16,6 +16,7 @@ resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
 ex_resident_tag = Tag(id=13, name="ex-resident", comment="former hackerspace resident")
 member_tag = Tag(id=14, name="member", comment="hackerspace members")
 guest_tag = Tag(id=15, name="guest", comment="hackerspace guests")
+pos_tag = Tag(id=16, name="pos", comment="point of sale (card payments)")
 rent_tag = Tag(id=7, name="rent", comment="monthly rent for the physical place")
 f0_tag = Tag(id=8, name="hackerspace", comment="F0RTHSPACE hackerspace")
 deposit_tag = Tag(id=9, name="deposit", comment="money input into system")
@@ -71,6 +72,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         ex_resident_tag,
         member_tag,
         guest_tag,
+        pos_tag,
     ],
     Entity: [
         # hackerspace
