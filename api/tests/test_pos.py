@@ -6,16 +6,24 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture(scope="class")
 def card_entity(test_app: TestClient, token):
+    # Create entity first
     r = test_app.post(
         "/entities",
         json={
             "name": "Card User",
-            "auth": {"card_hash": "hash_123"},
         },
         headers={"x-token": token},
     )
     assert r.status_code == 200, r.text
-    return r.json()["id"], "hash_123"
+    entity_id = r.json()["id"]
+    # Add card via new endpoint
+    r2 = test_app.post(
+        f"/entities/{entity_id}/cards",
+        json={"comment": "demo_card", "card_hash": "hash_123"},
+        headers={"x-token": token},
+    )
+    assert r2.status_code == 200, r2.text
+    return entity_id, "hash_123"
 
 
 @pytest.fixture(scope="class")

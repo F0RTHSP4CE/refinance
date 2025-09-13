@@ -32,13 +32,11 @@ class TestTokenAuth:
         assert response.status_code == 200
         entity_id = response.json()["id"]
 
-        # Add a card_hash to the entity's auth array
-        card_hash = "test_card_hash_12345"
-
-        # Update entity to include card_hash in auth
-        response = test_app.patch(
-            f"/entities/{entity_id}",
-            json={"auth": {"card_hash": card_hash}},
+        # Add a card via the new endpoint
+        card_hash = "test_card_hash_uniq_a"
+        response = test_app.post(
+            f"/entities/{entity_id}/cards",
+            json={"comment": "test-card", "card_hash": card_hash},
             headers={"x-token": token},
         )
         assert response.status_code == 200
@@ -103,15 +101,15 @@ class TestTokenAuth:
         assert result["token_generated"] is False
         assert result["message_sent"] is False
 
-    def test_card_hash_exposed_in_api_response(self, test_app: TestClient, token):
-        """Test that card_hash is returned as boolean in entity API responses"""
-        # Create an entity with card_hash
+    def test_card_hash_not_exposed_in_api_response(self, test_app: TestClient, token):
+        """Test that card_hash is NOT returned in entity API responses"""
+        # Create an entity
         response = test_app.post(
             "/entities",
             json={
                 "name": "Test Entity for Card Hash",
                 "comment": "test entity",
-                "auth": {"card_hash": "test_card_hash_12345", "telegram_id": 987654321},
+                "auth": {"telegram_id": 987654321},
             },
             headers={"x-token": token},
         )
@@ -119,57 +117,46 @@ class TestTokenAuth:
         entity_data = response.json()
         entity_id = entity_data["id"]
 
-        # Verify card_hash is returned as boolean True (indicating presence)
-        assert entity_data["auth"]["card_hash"] is True
-        assert entity_data["auth"]["telegram_id"] == 987654321
+        # Add a card to the entity
+        unique_hash = "test_card_hash_uniq_1"
+        response = test_app.post(
+            f"/entities/{entity_id}/cards",
+            json={"comment": "test-card", "card_hash": unique_hash},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
 
         # Get the entity and verify card_hash is exposed as boolean
         response = test_app.get(f"/entities/{entity_id}", headers={"x-token": token})
         assert response.status_code == 200
         entity_data = response.json()
 
-        # Verify card_hash is returned as boolean True along with telegram_id
-        assert entity_data["auth"]["card_hash"] is True
+        # Verify auth still includes telegram_id, but no card_hash field
         assert entity_data["auth"]["telegram_id"] == 987654321
+        assert "card_hash" not in entity_data["auth"]
 
         # Verify we can still get token by card_hash (internal functionality works)
         response = test_app.post(
-            "/tokens/by-card-hash", json={"card_hash": "test_card_hash_12345"}
+            "/tokens/by-card-hash", json={"card_hash": unique_hash}
         )
         assert response.status_code == 200
         token_data = response.json()
         assert "token" in token_data
 
-    def test_card_hash_boolean_when_empty(self, test_app: TestClient, token):
-        """Test that card_hash returns False when empty or None"""
-        # Create an entity with empty card_hash
-        response = test_app.post(
-            "/entities",
-            json={
-                "name": "Test Entity Empty Card Hash",
-                "comment": "test entity",
-                "auth": {"card_hash": "", "telegram_id": 123456789},
-            },
-            headers={"x-token": token},
-        )
-        assert response.status_code == 200
-        entity_data = response.json()
-
-        # Verify empty card_hash is returned as False
-        assert entity_data["auth"]["card_hash"] is False
-
-        # Create an entity without card_hash
+    def test_card_hash_field_removed_from_auth(self, test_app: TestClient, token):
+        """Ensure auth.card_hash is ignored on input and not exposed on output"""
+        # Create an entity with an extra auth.card_hash field (should be ignored by schema)
         response = test_app.post(
             "/entities",
             json={
                 "name": "Test Entity No Card Hash",
                 "comment": "test entity",
-                "auth": {"telegram_id": 123456789},
+                # card_hash provided here should be ignored (card management is via /entities/{id}/cards)
+                "auth": {"telegram_id": 123456789, "card_hash": "should_be_ignored"},
             },
             headers={"x-token": token},
         )
         assert response.status_code == 200
         entity_data = response.json()
-
-        # Verify missing card_hash is returned as None
-        assert entity_data["auth"]["card_hash"] is None
+        # Ensure the extra field is not present in the API response
+        assert "card_hash" not in entity_data.get("auth", {})

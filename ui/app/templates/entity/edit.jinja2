@@ -23,4 +23,41 @@
     </table>
 </form>
 
+<h2>Cards</h2>
+{% if cards and cards|length > 0 %}
+<p>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Comment</th>
+            <th>Created at</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in cards %}
+        <tr>
+            <td>#{{ c.id }}</td>
+            <td>{{ c.comment or '—' }}</td>
+            <td>{{ human_readable_date(c.created_at) | safe }}</td>
+            <td>
+                <a href="{{ url_for('entity.delete_card', id=entity.id, card_id=c.id) }}">X</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</p>
+{% else %}
+<p>No cards.</p>
+{% endif %}
+
+<details>
+    <summary>Add Card</summary>
+    <form method="post" action="{{ url_for('entity.add_card', id=entity.id) }}">
+        {{ render_form(add_card_form) }}
+    </form>
+</details>
+
 {% endblock %}
