@@ -11,25 +11,13 @@ from pydantic import BaseModel, field_serializer, model_serializer
 class EntityAuthSchema(BaseModel):
     telegram_id: int | str | None = None
     signal_id: int | str | None = None
-    card_hash: str | None = None
 
 
 class EntityAuthReadSchema(BaseModel):
-    """Auth schema for API responses - excludes card_hash for security"""
+    """Auth schema for API responses - card management moved to entity_cards"""
 
     telegram_id: int | str | None = None
     signal_id: int | str | None = None
-    card_hash: str | bool | None = None  # Accept string, serialize to boolean
-
-    @field_serializer("card_hash")
-    def serialize_card_hash(self, value):
-        """Convert string card_hash to boolean presence indicator"""
-        if isinstance(value, str) and value.strip():
-            return True  # If it's a non-empty string, we have a card_hash
-        elif value is None:
-            return None
-        else:
-            return bool(value)  # Handle any other cases
 
 
 class EntitySchema(BaseReadSchema):
@@ -56,4 +44,3 @@ class EntityFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     name: str | None = None
     active: bool | None = None
     auth_telegram_id: int | None = None
-    auth_card_hash: str | None = None

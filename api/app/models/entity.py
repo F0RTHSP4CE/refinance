@@ -3,6 +3,7 @@
 from typing import List
 
 from app.models.base import BaseModel
+from app.models.entity_card import EntityCard
 from app.models.tag import Tag
 from sqlalchemy import JSON, Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -25,3 +26,8 @@ class Entity(BaseModel):
     # dictionary with telegram id, signal id, matrix id, etc.
     # where to send an authentication link.
     auth: Mapped[dict] = mapped_column(JSON, nullable=True, default=None)
+
+    # Cards owned by the entity
+    cards: Mapped[List[EntityCard]] = relationship(
+        back_populates="entity", cascade="all, delete-orphan"
+    )

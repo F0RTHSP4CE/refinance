@@ -9,6 +9,7 @@ from app.schemas.entity import (
     EntitySchema,
     EntityUpdateSchema,
 )
+from app.schemas.entity_card import EntityCardCreateSchema, EntityCardReadSchema
 from app.services.entity import EntityService
 from fastapi import APIRouter, Depends
 
@@ -59,3 +60,38 @@ def update_entity(
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.update(entity_id, entity_update)
+
+
+# ---- Cards management -----------------------------------------------------
+
+
+@entity_router.get("/{entity_id}/cards", response_model=list[EntityCardReadSchema])
+def list_entity_cards(
+    entity_id: int,
+    entity_service: EntityService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    return entity_service.list_cards(entity_id)
+
+
+@entity_router.post("/{entity_id}/cards", response_model=EntityCardReadSchema)
+def add_entity_card(
+    entity_id: int,
+    payload: EntityCardCreateSchema,
+    entity_service: EntityService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    card = entity_service.add_card(
+        entity_id, card_hash=payload.card_hash, comment=payload.comment
+    )
+    return card
+
+
+@entity_router.delete("/{entity_id}/cards/{card_id}")
+def remove_entity_card(
+    entity_id: int,
+    card_id: int,
+    entity_service: EntityService = Depends(),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    return entity_service.remove_card(entity_id, card_id)

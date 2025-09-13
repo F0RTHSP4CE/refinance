@@ -4,6 +4,7 @@ import datetime
 
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
+from app.models.entity_card import EntityCard
 from app.schemas.base import BaseFilterSchema
 from app.schemas.entity import (
     EntityCreateSchema,
@@ -47,10 +48,6 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
                 cast(cast(self.model.auth["telegram_id"], Text), Integer)
                 == filters.auth_telegram_id
             )
-        if filters.auth_card_hash is not None:
-            # Use JSON path lookup + cast. Some dialects (SQLite) return quoted JSON strings, so trim quotes.
-            card_hash_expr = func.trim(cast(self.model.auth["card_hash"], Text), '"')
-            query = query.filter(card_hash_expr == filters.auth_card_hash)
         if filters.tags_ids:
             query = self._apply_tag_filters(query, filters.tags_ids)
         return query
@@ -78,17 +75,21 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         return db_obj
 
     def get_by_card_hash(self, card_hash: str) -> Entity:
-        card_hash_expr = func.trim(cast(self.model.auth["card_hash"], Text), '"')
-        db_obj = self.db.query(self.model).filter(card_hash_expr == card_hash).first()
-        if not db_obj:
-            raise NotFoundError(f"{self.model.__name__}.auth.{card_hash=}")
-        return db_obj
+        """Resolve entity by card_hash using EntityCard table."""
+        entity = (
+            self.db.query(self.model)
+            .join(EntityCard, EntityCard.entity_id == self.model.id)
+            .filter(EntityCard.card_hash == card_hash)
+            .first()
+        )
+        if not entity:
+            raise NotFoundError(f"{self.model.__name__}.card_hash={card_hash}")
+        return entity
 
     def update(self, obj_id: int, schema: EntityUpdateSchema, overrides: dict = {}):  # type: ignore[override]
         """Update entity with special handling for auth.card_hash.
 
-        If schema.auth.card_hash is None (explicitly provided), we DO NOT overwrite
-        an existing stored card_hash. Other auth fields are merged.
+        Card management moved to EntityCard, so auth.card_hash is ignored.
         """
         obj = self.get(obj_id)
         data = schema.dump()
@@ -105,9 +106,8 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         if auth_update is not None:
             # Merge with existing auth instead of replacing wholesale
             existing_auth = obj.auth or {}
-            # Skip card_hash update if explicitly None
-            if "card_hash" in auth_update and auth_update["card_hash"] is None:
-                auth_update.pop("card_hash")
+            # Explicitly drop any card_hash remnants in payload
+            auth_update.pop("card_hash", None)
             merged_auth = {**existing_auth, **auth_update}
             obj.auth = merged_auth
 
@@ -119,3 +119,33 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         self.db.flush()
         self.db.refresh(obj)
         return obj
+
+    # ---- Card management -------------------------------------------------
+    def list_cards(self, entity_id: int) -> list[EntityCard]:
+        entity = self.get(entity_id)
+        # Ensure relationship is loaded
+        return list(entity.cards)
+
+    def add_card(
+        self, entity_id: int, *, card_hash: str, comment: str | None = None
+    ) -> EntityCard:
+        # Ensure entity exists
+        _ = self.get(entity_id)
+        card = EntityCard(entity_id=entity_id, card_hash=card_hash, comment=comment)
+        self.db.add(card)
+        self.db.flush()
+        self.db.refresh(card)
+        return card
+
+    def remove_card(self, entity_id: int, card_id: int) -> int:
+        # Delete by primary key and ensure ownership by entity
+        card = (
+            self.db.query(EntityCard)
+            .filter(EntityCard.entity_id == entity_id, EntityCard.id == card_id)
+            .first()
+        )
+        if not card:
+            raise NotFoundError(f"EntityCard entity_id={entity_id}, card_id={card_id}")
+        self.db.delete(card)
+        self.db.flush()
+        return card.id
