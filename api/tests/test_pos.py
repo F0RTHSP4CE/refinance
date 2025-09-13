@@ -38,7 +38,7 @@ def test_pos_charges_accumulate_balance(
 
     # First charge 25.00
     r1 = test_app.post(
-        "/pos",
+        "/pos/charge/by-card",
         json={
             "card_hash": card_hash,
             "amount": "25.00",
@@ -54,7 +54,7 @@ def test_pos_charges_accumulate_balance(
 
     # Second charge 10.00 (cumulative should be -35.00)
     r2 = test_app.post(
-        "/pos",
+        "/pos/charge/by-card",
         json={
             "card_hash": card_hash,
             "amount": "10.00",

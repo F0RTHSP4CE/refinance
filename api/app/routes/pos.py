@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 pos_router = APIRouter(prefix="/pos", tags=["POS"])
 
 
-@pos_router.post("/transaction/by-card", response_model=POSChargeResponse)
+@pos_router.post("/charge/by-card", response_model=POSChargeResponse)
 def pos_charge(
     payload: POSChargeRequest,
     pos_service: POSService = Depends(),
