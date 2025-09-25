@@ -42,3 +42,10 @@ class TopEntityStatSchema(BaseModel):
     entity_name: str
     amounts: dict[str, float]
     total_usd: float
+
+
+class TopTagStatSchema(BaseModel):
+    tag_id: int
+    tag_name: str
+    amounts: dict[str, float]
+    total_usd: float

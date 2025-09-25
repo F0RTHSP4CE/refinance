@@ -18,7 +18,7 @@ from app.services.resident_fee import ResidentFeeService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import and_, extract, func, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 
 class StatsService(BaseService):
@@ -358,6 +358,85 @@ class StatsService(BaseService):
         results.sort(key=lambda item: item["total_usd"], reverse=True)
         return results[:limit]
 
+    def _get_top_tags(
+        self,
+        limit: int,
+        months: int,
+        timeframe_to: date | None,
+        entity_filter,
+        fallback_entity_attr: str,
+    ) -> list[dict[str, Any]]:
+        if limit <= 0:
+            return []
+
+        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+
+        transactions = (
+            self.db.query(Transaction)
+            .options(
+                selectinload(Transaction.tags),
+                selectinload(Transaction.from_entity).selectinload(Entity.tags),
+                selectinload(Transaction.to_entity).selectinload(Entity.tags),
+            )
+            .filter(
+                Transaction.created_at >= start_dt,
+                Transaction.created_at <= end_dt,
+                entity_filter,
+            )
+            .all()
+        )
+
+        if not transactions:
+            return []
+
+        totals: dict[int, dict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        tag_names: dict[int, str] = {}
+
+        for tx in transactions:
+            tags = tx.tags if tx.tags else []
+            if not tags:
+                fallback_entity = getattr(tx, fallback_entity_attr, None)
+                if fallback_entity:
+                    tags = fallback_entity.tags
+
+            if not tags:
+                continue
+
+            unique_tags: dict[int, Tag] = {}
+            for tag in tags:
+                if tag and tag.id is not None:
+                    unique_tags[int(tag.id)] = tag
+
+            if not unique_tags:
+                continue
+
+            for tag_id, tag in unique_tags.items():
+                totals[tag_id][tx.currency] += tx.amount
+                tag_names[tag_id] = tag.name
+
+        if not totals:
+            return []
+
+        results = []
+        for tag_id, amounts in totals.items():
+            amounts_float = {
+                currency: float(amount) for currency, amount in amounts.items()
+            }
+            total_usd = self._sum_amounts_usd(amounts)
+            results.append(
+                {
+                    "tag_id": tag_id,
+                    "tag_name": tag_names.get(tag_id, "Unknown"),
+                    "amounts": amounts_float,
+                    "total_usd": total_usd,
+                }
+            )
+
+        results.sort(key=lambda item: item["total_usd"], reverse=True)
+        return results[:limit]
+
     def get_top_incoming_entities(
         self,
         limit: int = 5,
@@ -392,6 +471,42 @@ class StatsService(BaseService):
             months,
             timeframe_to,
             Transaction.from_entity_id == entity_id,
+        )
+
+    def get_top_incoming_tags(
+        self,
+        limit: int = 5,
+        months: int = 3,
+        timeframe_to: date | None = None,
+        entity_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the top tags for incoming transactions within the timeframe."""
+
+        entity_id = entity_id or f0_entity.id
+        return self._get_top_tags(
+            limit,
+            months,
+            timeframe_to,
+            Transaction.to_entity_id == entity_id,
+            "from_entity",
+        )
+
+    def get_top_outgoing_tags(
+        self,
+        limit: int = 5,
+        months: int = 3,
+        timeframe_to: date | None = None,
+        entity_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the top tags for outgoing transactions within the timeframe."""
+
+        entity_id = entity_id or f0_entity.id
+        return self._get_top_tags(
+            limit,
+            months,
+            timeframe_to,
+            Transaction.from_entity_id == entity_id,
+            "to_entity",
         )
 
     def get_transactions_sum_by_tag_by_month(

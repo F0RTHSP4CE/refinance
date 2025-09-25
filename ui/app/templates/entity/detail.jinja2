@@ -28,38 +28,82 @@
         }
     }
 
-    .charts {
+    .charts-grid {
         display: flex;
         flex-wrap: wrap;
-        justify-content: space-around;
+        gap: 20px;
     }
 
-    .chart-container {
-        flex: 1 1 45%;
-        max-width: 45%;
+    .chart-cell {
+        flex: 1 1 calc(50% - 20px);
+        min-width: 280px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.9));
+        border: 1px solid rgba(226, 232, 240, 0.8);
         box-sizing: border-box;
     }
 
-    .chart-container canvas {
+    .chart-cell h2 {
+        margin: 0;
+        color: #1e293b;
+        font-size: 1.05rem;
+        letter-spacing: 0.01em;
+    }
+
+    .chart-cell canvas {
         width: 100% !important;
         height: auto !important;
     }
 
-    .chart-container.pie-chart canvas {
-        width: 50% !important;
-        max-width: 260px;
-        display: block;
-        margin: 0 auto;
+    .pie-pair {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        justify-content: space-around;
+    }
+
+    .pie-chart {
+        flex: 1 1 calc(50% - 16px);
+        min-width: 160px;
+        max-width: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .pie-chart h3 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #334155;
+        margin: 0;
+        text-align: center;
+    }
+
+    .pie-chart canvas {
+        width: 100% !important;
+        max-width: 220px;
+    }
+
+    @media (max-width: 900px) {
+        .chart-cell {
+            flex: 1 1 100%;
+            min-width: 0;
+        }
+
+        .pie-pair {
+            justify-content: center;
+        }
     }
 
     @media (max-width: 600px) {
-        .chart-container {
+        .pie-chart {
             flex: 1 1 100%;
-            max-width: 100%;
-        }
-
-        .chart-container.pie-chart canvas {
-            width: 70% !important;
+            max-width: 260px;
         }
     }
 
@@ -261,30 +305,56 @@
                 class="{% if stats_limit == limit_option %}active{% endif %}">{{ limit_option }}</a>
             {% endfor %}
         </div>
-        <div class="charts">
-            <div class="chart-container">
+        <div class="charts-grid">
+            <div class="chart-cell">
                 <h2>Balance Change by Day</h2>
                 <canvas id="balance-change-chart"></canvas>
             </div>
-            <div class="chart-container">
+            <div class="chart-cell">
                 <h2>Transactions by Day</h2>
                 <canvas id="transactions-day-chart"></canvas>
             </div>
-            <div class="chart-container pie-chart">
-                <h2>Top Income Sources (last {{ stats_months }} months)</h2>
-                {% if top_incoming %}
-                <canvas id="top-incoming-chart"></canvas>
-                {% else %}
-                <p class="chart-placeholder">No incoming transactions in the selected timeframe.</p>
-                {% endif %}
+            <div class="chart-cell">
+                <h2>Incoming Activity (last {{ stats_months }} months)</h2>
+                <div class="pie-pair">
+                    <div class="pie-chart">
+                        <h3>Top Income Sources</h3>
+                        {% if top_incoming %}
+                        <canvas id="top-incoming-chart"></canvas>
+                        {% else %}
+                        <p class="chart-placeholder">No incoming transactions in the selected timeframe.</p>
+                        {% endif %}
+                    </div>
+                    <div class="pie-chart">
+                        <h3>Top Incoming Tags</h3>
+                        {% if top_incoming_tags %}
+                        <canvas id="top-incoming-tags-chart"></canvas>
+                        {% else %}
+                        <p class="chart-placeholder">No tagged incoming activity in the selected timeframe.</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-            <div class="chart-container pie-chart">
-                <h2>Top Expense Destinations (last {{ stats_months }} months)</h2>
-                {% if top_outgoing %}
-                <canvas id="top-outgoing-chart"></canvas>
-                {% else %}
-                <p class="chart-placeholder">No outgoing transactions in the selected timeframe.</p>
-                {% endif %}
+            <div class="chart-cell">
+                <h2>Outgoing Activity (last {{ stats_months }} months)</h2>
+                <div class="pie-pair">
+                    <div class="pie-chart">
+                        <h3>Top Expense Destinations</h3>
+                        {% if top_outgoing %}
+                        <canvas id="top-outgoing-chart"></canvas>
+                        {% else %}
+                        <p class="chart-placeholder">No outgoing transactions in the selected timeframe.</p>
+                        {% endif %}
+                    </div>
+                    <div class="pie-chart">
+                        <h3>Top Outgoing Tags</h3>
+                        {% if top_outgoing_tags %}
+                        <canvas id="top-outgoing-tags-chart"></canvas>
+                        {% else %}
+                        <p class="chart-placeholder">No tagged outgoing activity in the selected timeframe.</p>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
         <script>
@@ -292,6 +362,8 @@
             const txDayData = {{ transactions_by_day | tojson }};
             const topIncoming = {{ top_incoming | tojson }};
             const topOutgoing = {{ top_outgoing | tojson }};
+            const topIncomingTags = {{ top_incoming_tags | tojson }};
+            const topOutgoingTags = {{ top_outgoing_tags | tojson }};
 
             const formatUSD = (value) => {
                 if (!Number.isFinite(value)) {
@@ -310,9 +382,9 @@
                 return hash;
             };
 
-            const colorFromEntity = (entityId, fallbackIndex) => {
-                const key = entityId ?? `fallback-${fallbackIndex}`;
-                const hash = Math.abs(hashString(key));
+            const colorFromIdentifier = (identifier, fallbackIndex) => {
+                const key = identifier ?? `fallback-${fallbackIndex}`;
+                const hash = Math.abs(hashString(String(key)));
                 const hue = (hash * 137.508) % 360;
                 const saturation = 55 + (hash % 30); // 55% - 84%
                 const lightness = 42 + ((hash >> 3) % 28); // 42% - 69%
@@ -325,16 +397,27 @@
                 };
             };
 
-            const buildEntityColors = (items) => {
+            const buildPalette = (items, keyBuilder) => {
                 const bases = [];
                 const hovers = [];
                 items.forEach((item, index) => {
-                    const { base, hover } = colorFromEntity(item.entity_id, index);
+                    const identifier = keyBuilder(item, index);
+                    const { base, hover } = colorFromIdentifier(identifier, index);
                     bases.push(base);
                     hovers.push(hover);
                 });
                 return { bases, hovers };
             };
+
+            const buildEntityColors = (items) => buildPalette(
+                items,
+                (item, index) => item.entity_id ?? `entity-${index}`,
+            );
+
+            const buildTagColors = (items) => buildPalette(
+                items,
+                (item, index) => `tag-${item.tag_id ?? index}`,
+            );
 
             const buildDoughnutOptions = (dataValues) => {
                 const total = dataValues.reduce((sum, current) => sum + current, 0) || 1;
@@ -483,6 +566,54 @@
                             ],
                         },
                         options: buildDoughnutOptions(expenseValues),
+                    }
+                );
+            }
+
+            if (topIncomingTags.length) {
+                const incomingTagLabels = topIncomingTags.map(item => item.tag_name || `Tag #${item.tag_id}`);
+                const incomingTagValues = topIncomingTags.map(item => item.total_usd);
+                const incomingTagColors = buildTagColors(topIncomingTags);
+
+                new Chart(
+                    document.getElementById('top-incoming-tags-chart'),
+                    {
+                        type: 'doughnut',
+                        data: {
+                            labels: incomingTagLabels,
+                            datasets: [
+                                buildDoughnutDataset(
+                                    incomingTagValues,
+                                    incomingTagColors.bases,
+                                    incomingTagColors.hovers,
+                                ),
+                            ],
+                        },
+                        options: buildDoughnutOptions(incomingTagValues),
+                    }
+                );
+            }
+
+            if (topOutgoingTags.length) {
+                const outgoingTagLabels = topOutgoingTags.map(item => item.tag_name || `Tag #${item.tag_id}`);
+                const outgoingTagValues = topOutgoingTags.map(item => item.total_usd);
+                const outgoingTagColors = buildTagColors(topOutgoingTags);
+
+                new Chart(
+                    document.getElementById('top-outgoing-tags-chart'),
+                    {
+                        type: 'doughnut',
+                        data: {
+                            labels: outgoingTagLabels,
+                            datasets: [
+                                buildDoughnutDataset(
+                                    outgoingTagValues,
+                                    outgoingTagColors.bases,
+                                    outgoingTagColors.hovers,
+                                ),
+                            ],
+                        },
+                        options: buildDoughnutOptions(outgoingTagValues),
                     }
                 );
             }
