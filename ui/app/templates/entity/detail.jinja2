@@ -193,6 +193,7 @@
     <div class="stats">
         <!-- Entity stats charts -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
         <div class="charts">
             <div class="chart-container">
                 <h2>Balance Change by Day</h2>
@@ -207,38 +208,77 @@
             const balanceData = {{ balance_changes | tojson }};
             const txDayData = {{ transactions_by_day | tojson }};
 
-            // Labels are days
-            const balanceLabels = balanceData.map(item => item.day);
-            const txLabels = txDayData.map(item => item.day);
-
-            const balanceSets = {};
+            const balanceDatasets = {};
             balanceData.forEach(item => {
                 for (const curr in item.balance_changes) {
-                    if (!balanceSets[curr]) balanceSets[curr] = { label: curr, data: [], borderWidth: 1 };
+                    if (!balanceDatasets[curr]) {
+                        balanceDatasets[curr] = {
+                            label: curr.toUpperCase(),
+                            data: [],
+                            borderWidth: 1,
+                            tension: 0.1
+                        };
+                    }
                 }
             });
+
             balanceData.forEach(item => {
-                for (const curr in balanceSets) {
-                    balanceSets[curr].data.push(item.balance_changes[curr] || 0);
+                const day = item.day;
+                for (const curr in item.balance_changes) {
+                    const value = item.balance_changes[curr];
+                    balanceDatasets[curr].data.push({ x: day, y: value });
                 }
             });
 
-            const txSets = {};
-            txDayData.forEach(item => {
-                for (const curr in item.transaction_count ? [] : item.transaction_count) { }
-            });
-            // Actually transaction_by_day has transaction_count, not per currency; so single dataset
-            const txCounts = txDayData.map(item => item.transaction_count);
+            const balanceChartConfig = {
+                type: 'line',
+                data: {
+                    datasets: Object.values(balanceDatasets)
+                },
+                options: {
+                    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+                    interaction: { intersect: false, mode: 'nearest' },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' }
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
 
-            new Chart(document.getElementById('balance-change-chart'), {
-                type: 'line', data: { labels: balanceLabels, datasets: Object.values(balanceSets) },
-                options: { scales: { y: { beginAtZero: true } } }
-            });
+            const txPoints = txDayData.map(item => ({ x: item.day, y: item.transaction_count }));
+            const txChartConfig = {
+                type: 'bar',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Transactions',
+                            data: txPoints,
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            precision: 0
+                        }
+                    }
+                }
+            };
 
-            new Chart(document.getElementById('transactions-day-chart'), {
-                type: 'bar', data: { labels: txLabels, datasets: [{ label: 'Transactions', data: txCounts, borderWidth: 1 }] },
-                options: { scales: { y: { beginAtZero: true } } }
-            });
+            new Chart(document.getElementById('balance-change-chart'), balanceChartConfig);
+            new Chart(document.getElementById('transactions-day-chart'), txChartConfig);
         </script>
     </div>
 </div>

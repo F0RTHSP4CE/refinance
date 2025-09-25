@@ -42,13 +42,13 @@ def get_transactions_sum_by_week(
     "/entity/{entity_id}/balance-change-by-day",
     response_model=List[EntityBalanceChangeByDaySchema],
 )
-def get_entity_balance_change_by_day(
+def get_entity_balance_history(
     entity_id: int,
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     stats_service: StatsService = Depends(),
 ):
-    return stats_service.get_entity_balance_change_by_day(
+    return stats_service.get_entity_balance_history(
         entity_id, timeframe_from, timeframe_to
     )
 
