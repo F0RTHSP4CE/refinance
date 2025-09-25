@@ -234,6 +234,26 @@ def detail(id):
             "entity_id": id,
         },
     ).json()
+    top_incoming_tags = api.http(
+        "GET",
+        "stats/top-incoming-tags",
+        params={
+            "limit": stats_limit,
+            "months": stats_months,
+            "timeframe_to": date.today().isoformat(),
+            "entity_id": id,
+        },
+    ).json()
+    top_outgoing_tags = api.http(
+        "GET",
+        "stats/top-outgoing-tags",
+        params={
+            "limit": stats_limit,
+            "months": stats_months,
+            "timeframe_to": date.today().isoformat(),
+            "entity_id": id,
+        },
+    ).json()
 
     return render_template(
         "entity/detail.jinja2",
@@ -248,6 +268,8 @@ def detail(id):
         cards=cards_data,
         top_incoming=top_incoming,
         top_outgoing=top_outgoing,
+        top_incoming_tags=top_incoming_tags,
+        top_outgoing_tags=top_outgoing_tags,
         stats_months=stats_months,
         stats_limit=stats_limit,
     )
