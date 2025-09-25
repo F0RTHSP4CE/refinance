@@ -35,3 +35,10 @@ class TransactionsSumByTagByMonthSchema(BaseModel):
     month: int
     amounts: dict[str, float]
     total_usd: float
+
+
+class TopEntityStatSchema(BaseModel):
+    entity_id: int
+    entity_name: str
+    amounts: dict[str, float]
+    total_usd: float

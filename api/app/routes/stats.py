@@ -7,6 +7,7 @@ from app.schemas.stats import (
     EntityBalanceChangeByDaySchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
+    TopEntityStatSchema,
     TransactionsSumByTagByMonthSchema,
     TransactionsSumByWeekSchema,
 )
@@ -80,4 +81,36 @@ def get_transactions_sum_by_tag_by_month(
 ):
     return stats_service.get_transactions_sum_by_tag_by_month(
         tag_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get("/top-incoming-entities", response_model=List[TopEntityStatSchema])
+def get_top_incoming_entities(
+    limit: int = 5,
+    months: int = 3,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(),
+):
+    return stats_service.get_top_incoming_entities(
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+        entity_id=entity_id,
+    )
+
+
+@router.get("/top-outgoing-entities", response_model=List[TopEntityStatSchema])
+def get_top_outgoing_entities(
+    limit: int = 5,
+    months: int = 3,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(),
+):
+    return stats_service.get_top_outgoing_entities(
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+        entity_id=entity_id,
     )
