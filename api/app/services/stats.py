@@ -2,7 +2,7 @@
 
 import calendar
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Mapping
 
@@ -276,6 +276,123 @@ class StatsService(BaseService):
                 except Exception:
                     normalized[currency] = Decimal("0")
         return normalized
+
+    def _calculate_timeframe_bounds(
+        self, months: int, timeframe_to: date | None
+    ) -> tuple[datetime, datetime]:
+        """Return datetime bounds spanning the last ``months`` months up to ``timeframe_to``."""
+
+        timeframe_to = timeframe_to or date.today()
+        months = max(1, months)
+        start_month = timeframe_to.replace(day=1)
+        if months > 1:
+            start_month = self._subtract_months(start_month, months - 1)
+
+        start_dt = datetime.combine(start_month, time.min)
+        end_dt = datetime.combine(timeframe_to, time.max)
+        return start_dt, end_dt
+
+    def _get_top_entities(
+        self,
+        entity_column,
+        limit: int,
+        months: int,
+        timeframe_to: date | None,
+        *additional_filters,
+    ) -> list[dict[str, Any]]:
+        if limit <= 0:
+            return []
+
+        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+
+        labeled_entity_col = entity_column.label("entity_id")
+        rows = (
+            self.db.query(
+                labeled_entity_col,
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_amount"),
+            )
+            .filter(
+                Transaction.created_at >= start_dt,
+                Transaction.created_at <= end_dt,
+                *additional_filters,
+            )
+            .group_by(labeled_entity_col, Transaction.currency)
+            .all()
+        )
+
+        if not rows:
+            return []
+
+        totals: dict[int, dict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        for row in rows:
+            totals[int(row.entity_id)][row.currency] += row.total_amount
+
+        entity_ids = list(totals.keys())
+        entity_names = {}
+        if entity_ids:
+            for entity_id, name in (
+                self.db.query(Entity.id, Entity.name)
+                .filter(Entity.id.in_(entity_ids))
+                .all()
+            ):
+                entity_names[int(entity_id)] = name
+
+        results = []
+        for entity_id, amounts in totals.items():
+            amounts_float = {
+                currency: float(amount) for currency, amount in amounts.items()
+            }
+            total_usd = self._sum_amounts_usd(amounts)
+            results.append(
+                {
+                    "entity_id": entity_id,
+                    "entity_name": entity_names.get(entity_id, "Unknown"),
+                    "amounts": amounts_float,
+                    "total_usd": total_usd,
+                }
+            )
+
+        results.sort(key=lambda item: item["total_usd"], reverse=True)
+        return results[:limit]
+
+    def get_top_incoming_entities(
+        self,
+        limit: int = 5,
+        months: int = 3,
+        timeframe_to: date | None = None,
+        entity_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the top entities receiving funds within the timeframe."""
+
+        entity_id = entity_id or f0_entity.id
+        return self._get_top_entities(
+            Transaction.from_entity_id,
+            limit,
+            months,
+            timeframe_to,
+            Transaction.to_entity_id == entity_id,
+        )
+
+    def get_top_outgoing_entities(
+        self,
+        limit: int = 5,
+        months: int = 3,
+        timeframe_to: date | None = None,
+        entity_id: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return the top entities sending funds within the timeframe."""
+
+        entity_id = entity_id or f0_entity.id
+        return self._get_top_entities(
+            Transaction.to_entity_id,
+            limit,
+            months,
+            timeframe_to,
+            Transaction.from_entity_id == entity_id,
+        )
 
     def get_transactions_sum_by_tag_by_month(
         self,

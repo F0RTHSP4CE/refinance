@@ -1,3 +1,5 @@
+from datetime import date
+
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Tag, Transaction
@@ -194,6 +196,11 @@ def detail(id):
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
 
+    stats_months = request.args.get("stats_months", 6, type=int)
+    stats_limit = request.args.get("stats_limit", 6, type=int)
+    stats_months = max(1, stats_months)
+    stats_limit = max(1, stats_limit)
+
     api = get_refinance_api_client()
     entity_data = api.http("GET", f"entities/{id}").json()
     cards_data = api.http("GET", f"entities/{id}/cards").json()
@@ -207,6 +214,26 @@ def detail(id):
     transactions_by_day = api.http(
         "GET", f"stats/entity/{id}/transactions-by-day"
     ).json()
+    top_incoming = api.http(
+        "GET",
+        "stats/top-incoming-entities",
+        params={
+            "limit": stats_limit,
+            "months": stats_months,
+            "timeframe_to": date.today().isoformat(),
+            "entity_id": id,
+        },
+    ).json()
+    top_outgoing = api.http(
+        "GET",
+        "stats/top-outgoing-entities",
+        params={
+            "limit": stats_limit,
+            "months": stats_months,
+            "timeframe_to": date.today().isoformat(),
+            "entity_id": id,
+        },
+    ).json()
 
     return render_template(
         "entity/detail.jinja2",
@@ -219,6 +246,10 @@ def detail(id):
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
         cards=cards_data,
+        top_incoming=top_incoming,
+        top_outgoing=top_outgoing,
+        stats_months=stats_months,
+        stats_limit=stats_limit,
     )
 
 

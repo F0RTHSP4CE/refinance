@@ -45,11 +45,64 @@
         height: auto !important;
     }
 
+    .chart-container.pie-chart canvas {
+        width: 50% !important;
+        max-width: 260px;
+        display: block;
+        margin: 0 auto;
+    }
+
     @media (max-width: 600px) {
         .chart-container {
             flex: 1 1 100%;
             max-width: 100%;
         }
+
+        .chart-container.pie-chart canvas {
+            width: 70% !important;
+        }
+    }
+
+    .stats-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .stats-controls span {
+        color: #475569;
+    }
+
+    .stats-controls a {
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: #e2e8f0;
+        color: inherit;
+        text-decoration: none;
+        transition: background 0.2s ease;
+    }
+
+    .stats-controls a:hover {
+        background: #cbd5f5;
+    }
+
+    .stats-controls a.active {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .stats-controls .divider {
+        color: #94a3b8;
+        margin: 0 4px;
+    }
+
+    .chart-placeholder {
+        color: #6b7280;
+        font-style: italic;
+        margin: 1rem 0;
     }
 </style>
 <div class="top-section">
@@ -191,9 +244,23 @@
         {% endif %}
     </div>
     <div class="stats">
+        <h2>Statistics</h2>
         <!-- Entity stats charts -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+        <div class="stats-controls">
+            <span>Timeframe:</span>
+            {% for months_option in [3, 6, 12] %}
+            <a href="{{ update_query_params(stats_months=months_option) }}"
+                class="{% if stats_months == months_option %}active{% endif %}">{{ months_option }}m</a>
+            {% endfor %}
+            <span class="divider">|</span>
+            <span>Top entries:</span>
+            {% for limit_option in [5, 8, 12] %}
+            <a href="{{ update_query_params(stats_limit=limit_option) }}"
+                class="{% if stats_limit == limit_option %}active{% endif %}">{{ limit_option }}</a>
+            {% endfor %}
+        </div>
         <div class="charts">
             <div class="chart-container">
                 <h2>Balance Change by Day</h2>
@@ -203,10 +270,102 @@
                 <h2>Transactions by Day</h2>
                 <canvas id="transactions-day-chart"></canvas>
             </div>
+            <div class="chart-container pie-chart">
+                <h2>Top Income Sources (last {{ stats_months }} months)</h2>
+                {% if top_incoming %}
+                <canvas id="top-incoming-chart"></canvas>
+                {% else %}
+                <p class="chart-placeholder">No incoming transactions in the selected timeframe.</p>
+                {% endif %}
+            </div>
+            <div class="chart-container pie-chart">
+                <h2>Top Expense Destinations (last {{ stats_months }} months)</h2>
+                {% if top_outgoing %}
+                <canvas id="top-outgoing-chart"></canvas>
+                {% else %}
+                <p class="chart-placeholder">No outgoing transactions in the selected timeframe.</p>
+                {% endif %}
+            </div>
         </div>
         <script>
             const balanceData = {{ balance_changes | tojson }};
             const txDayData = {{ transactions_by_day | tojson }};
+            const topIncoming = {{ top_incoming | tojson }};
+            const topOutgoing = {{ top_outgoing | tojson }};
+
+            const formatUSD = (value) => {
+                if (!Number.isFinite(value)) {
+                    return "$0.00";
+                }
+                return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            };
+
+            const hashString = (value) => {
+                const str = String(value ?? "");
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = (hash << 5) - hash + str.charCodeAt(i);
+                    hash |= 0; // Convert to 32bit integer
+                }
+                return hash;
+            };
+
+            const colorFromEntity = (entityId, fallbackIndex) => {
+                const key = entityId ?? `fallback-${fallbackIndex}`;
+                const hash = Math.abs(hashString(key));
+                const hue = (hash * 137.508) % 360;
+                const saturation = 55 + (hash % 30); // 55% - 84%
+                const lightness = 42 + ((hash >> 3) % 28); // 42% - 69%
+                const hoverLightness = Math.min(92, lightness + 12);
+                const hoverSaturation = Math.min(90, saturation + 6);
+
+                return {
+                    base: `hsl(${hue.toFixed(1)}, ${saturation}%, ${lightness}%)`,
+                    hover: `hsl(${hue.toFixed(1)}, ${hoverSaturation}%, ${hoverLightness}%)`,
+                };
+            };
+
+            const buildEntityColors = (items) => {
+                const bases = [];
+                const hovers = [];
+                items.forEach((item, index) => {
+                    const { base, hover } = colorFromEntity(item.entity_id, index);
+                    bases.push(base);
+                    hovers.push(hover);
+                });
+                return { bases, hovers };
+            };
+
+            const buildDoughnutOptions = (dataValues) => {
+                const total = dataValues.reduce((sum, current) => sum + current, 0) || 1;
+                return {
+                    cutout: '55%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.parsed;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${formatUSD(value)} (${percentage}%)`;
+                                },
+                            },
+                        },
+                    },
+                };
+            };
+
+            const buildDoughnutDataset = (values, colors, hoverColors) => ({
+                data: values,
+                backgroundColor: colors,
+                borderColor: '#f8fafc',
+                borderWidth: 2,
+                spacing: 2,
+                hoverOffset: 10,
+                hoverBackgroundColor: hoverColors ?? colors,
+            });
 
             const balanceDatasets = {};
             balanceData.forEach(item => {
@@ -215,7 +374,7 @@
                         balanceDatasets[curr] = {
                             label: curr.toUpperCase(),
                             data: [],
-                            borderWidth: 1,
+                            borderWidth: 2,
                             tension: 0.1
                         };
                     }
@@ -258,7 +417,7 @@
                         {
                             label: 'Transactions',
                             data: txPoints,
-                            borderWidth: 1
+                            borderWidth: 2
                         }
                     ]
                 },
@@ -279,6 +438,54 @@
 
             new Chart(document.getElementById('balance-change-chart'), balanceChartConfig);
             new Chart(document.getElementById('transactions-day-chart'), txChartConfig);
+
+            if (topIncoming.length) {
+                const incomeLabels = topIncoming.map(item => item.entity_name || `Entity #${item.entity_id}`);
+                const incomeValues = topIncoming.map(item => item.total_usd);
+                const incomeColors = buildEntityColors(topIncoming);
+
+                new Chart(
+                    document.getElementById('top-incoming-chart'),
+                    {
+                        type: 'doughnut',
+                        data: {
+                            labels: incomeLabels,
+                            datasets: [
+                                buildDoughnutDataset(
+                                    incomeValues,
+                                    incomeColors.bases,
+                                    incomeColors.hovers,
+                                ),
+                            ],
+                        },
+                        options: buildDoughnutOptions(incomeValues),
+                    }
+                );
+            }
+
+            if (topOutgoing.length) {
+                const expenseLabels = topOutgoing.map(item => item.entity_name || `Entity #${item.entity_id}`);
+                const expenseValues = topOutgoing.map(item => item.total_usd);
+                const expenseColors = buildEntityColors(topOutgoing);
+
+                new Chart(
+                    document.getElementById('top-outgoing-chart'),
+                    {
+                        type: 'doughnut',
+                        data: {
+                            labels: expenseLabels,
+                            datasets: [
+                                buildDoughnutDataset(
+                                    expenseValues,
+                                    expenseColors.bases,
+                                    expenseColors.hovers,
+                                ),
+                            ],
+                        },
+                        options: buildDoughnutOptions(expenseValues),
+                    }
+                );
+            }
         </script>
     </div>
 </div>
