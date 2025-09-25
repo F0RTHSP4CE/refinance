@@ -1,5 +1,6 @@
 """Stats service"""
 
+import calendar
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
@@ -9,6 +10,7 @@ from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.transaction import Transaction
 from app.seeding import f0_entity, resident_tag
+from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
@@ -24,11 +26,13 @@ class StatsService(BaseService):
         self,
         db: Session = Depends(get_uow),
         resident_fee_service: ResidentFeeService = Depends(),
+        balance_service: BalanceService = Depends(),
         entity_service: EntityService = Depends(),
         currency_exchange_service: CurrencyExchangeService = Depends(),
     ):
         self.db = db
         self._resident_fee_service = resident_fee_service
+        self._balance_service = balance_service
         self._entity_service = entity_service
         self._currency_exchange_service = currency_exchange_service
 
@@ -198,69 +202,80 @@ class StatsService(BaseService):
             )
         return result
 
-    def get_entity_balance_change_by_day(
+    def get_entity_balance_history(
         self,
         entity_id: int,
         timeframe_from: date | None = None,
         timeframe_to: date | None = None,
     ):
         timeframe_to = timeframe_to or date.today()
-        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        three_months_ago = self._subtract_months(timeframe_to, 3)
 
-        incoming_q = (
-            self.db.query(
-                func.date(Transaction.created_at).label("day"),
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total"),
-            )
-            .filter(
-                and_(
-                    Transaction.created_at >= timeframe_from,
-                    Transaction.created_at <= timeframe_to,
-                    Transaction.to_entity_id == entity_id,
-                )
-            )
-            .group_by("day", "currency")
-            .all()
-        )
+        if timeframe_from is None or timeframe_from < three_months_ago:
+            timeframe_from = three_months_ago
 
-        outgoing_q = (
-            self.db.query(
-                func.date(Transaction.created_at).label("day"),
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total"),
-            )
-            .filter(
-                and_(
-                    Transaction.created_at >= timeframe_from,
-                    Transaction.created_at <= timeframe_to,
-                    Transaction.from_entity_id == entity_id,
-                )
-            )
-            .group_by("day", "currency")
-            .all()
-        )
-
-        balance_changes = defaultdict(lambda: defaultdict(Decimal))
-
-        for row in incoming_q:
-            balance_changes[row.day][row.currency] += row.total
-
-        for row in outgoing_q:
-            balance_changes[row.day][row.currency] -= row.total
+        if timeframe_from > timeframe_to:
+            timeframe_from = timeframe_to
 
         result = []
-        for day, changes in sorted(balance_changes.items()):
-            changes_float = {k: float(v) for k, v in changes.items()}
-            total_usd = self._sum_amounts_usd(changes)
+        current_day = timeframe_from
+        last_completed_balances: dict[str, Decimal] | None = None
+
+        while current_day <= timeframe_to:
+            balances = self._balance_service.get_balances(
+                entity_id, end_date=current_day
+            )
+            completed_balances = self._normalize_currency_mapping(balances.completed)
+            if (
+                last_completed_balances is not None
+                and completed_balances == last_completed_balances
+            ):
+                current_day += timedelta(days=1)
+                continue
+
+            last_completed_balances = completed_balances.copy()
+
+            balances_float = {
+                currency: float(amount)
+                for currency, amount in completed_balances.items()
+            }
+            total_usd = self._sum_amounts_usd(completed_balances)
             result.append(
                 {
-                    "day": day,
-                    "balance_changes": changes_float,
+                    "day": current_day,
+                    "balance_changes": balances_float,
                     "total_usd": total_usd,
                 }
             )
+            current_day += timedelta(days=1)
+
         return result
+
+    def _subtract_months(self, dt: date, months: int) -> date:
+        year = dt.year
+        month = dt.month - months
+        while month <= 0:
+            month += 12
+            year -= 1
+        last_day = calendar.monthrange(year, month)[1]
+        day = min(dt.day, last_day)
+        return date(year, month, day)
+
+    def _normalize_currency_mapping(
+        self, values: Mapping[str, Any]
+    ) -> dict[str, Decimal]:
+        normalized: dict[str, Decimal] = {}
+        for currency, amount in values.items():
+            if isinstance(amount, Decimal):
+                normalized[currency] = amount
+            elif hasattr(amount, "to_decimal"):
+                normalized[currency] = amount.to_decimal()  # type: ignore[attr-defined]
+            else:
+                try:
+                    normalized[currency] = Decimal(str(amount))
+                except Exception:
+                    normalized[currency] = Decimal("0")
+        return normalized
 
     def get_transactions_sum_by_tag_by_month(
         self,

@@ -1,5 +1,6 @@
 """Balance service"""
 
+from datetime import date, datetime, time
 from decimal import Decimal
 
 from app.models.transaction import Transaction, TransactionStatus
@@ -30,7 +31,9 @@ class BalanceService:
     def invalidate_treasury_cache_entry(self, treasury_id: int):
         self._treasury_cache.pop(treasury_id, None)
 
-    def get_balances(self, entity_id: int) -> BalanceSchema:
+    def get_balances(
+        self, entity_id: int, end_date: date | None = None
+    ) -> BalanceSchema:
         """
         Calculate momentary balances for a given entity across all currencies.
         - status and non-status transactions are counted separately.
@@ -40,12 +43,14 @@ class BalanceService:
         Balance cache for a particular entity is invalidated when transaction from/to
         entity is created, edited (status) or deleted.
         """
-        if entity_id in self._cache:
-            return self._cache[entity_id]
-        else:
+        if end_date is None:
+            if entity_id in self._cache:
+                return self._cache[entity_id]
             result = self._get_balances(entity_id)
             self._cache[entity_id] = result
             return result
+
+        return self._get_balances(entity_id, end_date=end_date)
 
     def get_treasury_balances(self, treasury_id: int) -> BalanceSchema:
         """
@@ -106,9 +111,15 @@ class BalanceService:
         self._treasury_cache[treasury_id] = result
         return result
 
-    def _get_balances(self, entity_id: int) -> BalanceSchema:
+    def _get_balances(
+        self, entity_id: int, end_date: date | None = None
+    ) -> BalanceSchema:
         # Check that entity exists
         self.entity_service.get(entity_id)
+
+        end_datetime: datetime | None = None
+        if end_date is not None:
+            end_datetime = datetime.combine(end_date, time.max)
 
         # Function to sum transactions based on confirmation status
         def sum_transactions(status: TransactionStatus) -> dict[str, Decimal]:
@@ -121,6 +132,11 @@ class BalanceService:
                 Transaction.status == status,
             )
 
+            if end_datetime is not None:
+                credit_query = credit_query.where(
+                    Transaction.created_at <= end_datetime
+                )
+
             # Query to get sum of all outgoing transactions
             debit_query = select(
                 Transaction.currency,
@@ -129,6 +145,9 @@ class BalanceService:
                 Transaction.from_entity_id == entity_id,
                 Transaction.status == status,
             )
+
+            if end_datetime is not None:
+                debit_query = debit_query.where(Transaction.created_at <= end_datetime)
 
             # Group sums by currency
             credit_query = credit_query.group_by(Transaction.currency)
