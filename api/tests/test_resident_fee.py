@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from app.seeding import resident_tag
+from app.seeding import fee_tag, resident_tag
 from fastapi.testclient import TestClient
 
 
@@ -59,6 +59,7 @@ class TestResidentFeeService:
                 "amount": "100",
                 "currency": "USD",
                 "comment": f"Fee for {current_year}-{current_month:02d}",
+                "tag_ids": [fee_tag.id],
             },
             headers={"x-token": token},
         )
@@ -71,6 +72,7 @@ class TestResidentFeeService:
                 "amount": "100",
                 "currency": "USD",
                 "comment": f"Fee for {prev_year}-{prev_month:02d}",
+                "tag_ids": [fee_tag.id],
             },
             headers={"x-token": token},
         )
@@ -83,6 +85,7 @@ class TestResidentFeeService:
                 "amount": "100",
                 "currency": "USD",
                 "comment": f"Fee for {next_year}-{next_month:02d}",
+                "tag_ids": [fee_tag.id],
             },
             headers={"x-token": token},
         )
@@ -142,4 +145,4 @@ class TestResidentFeeService:
         assert len(fees2) == 1
         assert fees2[0]["year"] == current_year
         assert fees2[0]["month"] == current_month
-        assert fees2[0]["amounts"] == {"eur": "50.00"}
+        assert fees2[0]["amounts"] == {}
