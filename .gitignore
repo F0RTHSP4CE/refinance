@@ -7,3 +7,4 @@ __pycache__
 secrets.prod.env
 secrets.dev.env
 secrets.env
+backups/
