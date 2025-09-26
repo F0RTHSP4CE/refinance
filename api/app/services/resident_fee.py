@@ -5,12 +5,14 @@ import re
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
+from typing import Any, Mapping
 
 from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.resident_fee import ResidentFeeFiltersSchema
 from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
 from app.services.base import BaseService
+from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
@@ -23,9 +25,11 @@ class ResidentFeeService(BaseService):
         self,
         db: Session = Depends(get_uow),
         entity_service: EntityService = Depends(),
+        currency_exchange_service: CurrencyExchangeService = Depends(),
     ):
         self.db = db
         self._entity_service = entity_service
+        self._currency_exchange_service = currency_exchange_service
 
     def _parse_comment_for_date(self, comment: str | None) -> tuple[int, int] | None:
         if not comment:
@@ -56,6 +60,71 @@ class ResidentFeeService(BaseService):
             return year, month_names[month_key]
 
         return None
+
+    def _amount_to_usd(self, currency: str, amount: Decimal) -> Decimal:
+        if amount is None:
+            return Decimal("0")
+        if currency.lower() == "usd":
+            return amount
+
+        try:
+            _, usd_amount, _ = self._currency_exchange_service.calculate_conversion(
+                source_amount=amount,
+                target_amount=None,
+                source_currency=currency,
+                target_currency="usd",
+            )
+            return usd_amount
+        except Exception:
+            return Decimal("0")
+
+    def _sum_amounts_usd(self, amounts: Mapping[str, Decimal]) -> float:
+        total = Decimal("0")
+        for currency, raw_amount in amounts.items():
+            if raw_amount in (None, ""):
+                continue
+            try:
+                amount = (
+                    raw_amount
+                    if isinstance(raw_amount, Decimal)
+                    else Decimal(str(raw_amount))
+                )
+            except Exception:
+                continue
+            total += self._amount_to_usd(currency, amount)
+        return float(total)
+
+    def _normalize_amounts(
+        self, raw_amounts: Mapping[str, Any] | None
+    ) -> dict[str, Decimal]:
+        normalized: dict[str, Decimal] = {}
+        if not raw_amounts:
+            return normalized
+        for currency, raw_value in raw_amounts.items():
+            if raw_value in (None, ""):
+                continue
+            try:
+                amount = (
+                    raw_value
+                    if isinstance(raw_value, Decimal)
+                    else Decimal(str(raw_value))
+                )
+            except Exception:
+                continue
+            normalized[currency.lower()] = amount
+        return normalized
+
+    def _build_monthly_fee(
+        self, year: int, month: int, raw_amounts: Mapping[str, Any] | None
+    ) -> dict[str, Any]:
+        amounts = self._normalize_amounts(raw_amounts)
+        total_usd = self._sum_amounts_usd(amounts)
+        return {
+            "year": year,
+            "month": month,
+            "amounts": amounts,
+            "total_usd": total_usd,
+        }
 
     def get_fees(self, filters: ResidentFeeFiltersSchema) -> list[dict]:
         hackerspace = self._entity_service.get(f0_entity.id)
@@ -124,8 +193,13 @@ class ResidentFeeService(BaseService):
                 while month <= 0:
                     month += 12
                     year -= 1
-                amounts = fees_by_resident_by_month[r.id].get((year, month), {})
-                monthly_fees.append({"year": year, "month": month, "amounts": amounts})
+                monthly_fees.append(
+                    self._build_monthly_fee(
+                        year,
+                        month,
+                        fees_by_resident_by_month[r.id].get((year, month), {}),
+                    )
+                )
 
             # Trim trailing empty months (which correspond to the earliest months in the window)
             # Keep at least the current month so UI has an anchor row.
@@ -136,7 +210,7 @@ class ResidentFeeService(BaseService):
             for (y, m), currs in fees_by_resident_by_month[r.id].items():
                 idx = y * 12 + m
                 if idx > today_idx and idx <= max_future_idx:
-                    future_fees.append({"year": y, "month": m, "amounts": currs})
+                    future_fees.append(self._build_monthly_fee(y, m, currs))
             # Combine and sort chronologically
             all_fees = monthly_fees + future_fees
             all_fees.sort(key=lambda x: (x["year"], x["month"]))

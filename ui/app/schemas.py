@@ -2,6 +2,7 @@ import enum
 from dataclasses import dataclass, field, fields
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional, Tuple
 
 
 @dataclass
@@ -70,13 +71,6 @@ class Transaction(Base):
 
 class DepositProvider(enum.Enum):
     CRYPTAPI = "cryptapi"
-
-
-class DepositStatus(enum.Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -148,12 +142,17 @@ class MonthlyFee:
     year: int
     month: int
     amounts: dict[str, Decimal]
+    total_usd: Decimal
 
 
 @dataclass
 class ResidentFee:
     entity: Entity
     fees: list[MonthlyFee]
+    total_usd_series: list[Decimal] = field(default_factory=list)
+    sparkline_points: str = ""
+    sparkline_last_point: Optional[Tuple[float, float]] = None
+    max_total_usd: Decimal = Decimal("0")
 
 
 @dataclass

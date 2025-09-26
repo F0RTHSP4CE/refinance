@@ -32,6 +32,24 @@ td {
   padding-right: 0.5rem;
 }
 
+.fee-trend-cell {
+  width: 90px;
+  min-width: 90px;
+  padding-right: 0;
+  vertical-align: middle;
+}
+
+
+.fee-trend-graph {
+  width: 90px;
+  height: 24px;
+}
+
+.fee-trend-empty {
+  color: #999;
+  font-size: 0.85rem;
+}
+
 .right-align {
   text-align: right;
 }
