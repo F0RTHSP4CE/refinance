@@ -9,7 +9,7 @@ from decimal import Decimal
 from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.resident_fee import ResidentFeeFiltersSchema
-from app.seeding import ex_resident_tag, f0_entity, member_tag, resident_tag
+from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.uow import get_uow
@@ -86,6 +86,7 @@ class ResidentFeeService(BaseService):
             .filter(
                 Transaction.from_entity_id.in_([r.id for r in residents]),
                 Transaction.to_entity_id == hackerspace.id,
+                Transaction.tags.contains(fee_tag),
                 # Transaction.status == TransactionStatus.COMPLETED,
                 # We get all transactions and then filter by date in python
                 # because comment can override the date
