@@ -64,6 +64,16 @@ def index():
         rf.max_total_usd = max_total
         width = Decimal("90")
         height = Decimal("24")
+        padding_x = Decimal("2")
+        padding_y = Decimal("2")
+        usable_width = width - padding_x * 2
+        usable_height = height - padding_y * 2
+        if usable_width <= 0:
+            usable_width = width
+            padding_x = Decimal("0")
+        if usable_height <= 0:
+            usable_height = height
+            padding_y = Decimal("0")
         scale = max_total if max_total > 0 else Decimal("1")
         count = len(rf.total_usd_series)
         dot_points: list[tuple[float, float]] = []
@@ -72,14 +82,18 @@ def index():
 
         for idx, value in enumerate(rf.total_usd_series):
             if count <= 1:
-                x = Decimal("0")
+                x = width / Decimal("2")
             else:
-                x = (Decimal(idx) / Decimal(count - 1)) * width
+                x = padding_x + (Decimal(idx) / Decimal(count - 1)) * usable_width
             try:
                 ratio = (Decimal(value) / scale) if scale > 0 else Decimal("0")
             except Exception:
                 ratio = Decimal("0")
-            y = height - (ratio * height)
+            if ratio < 0:
+                ratio = Decimal("0")
+            if ratio > 1:
+                ratio = Decimal("1")
+            y = padding_y + (Decimal("1") - ratio) * usable_height
             point = (float(x), float(y))
 
             if value > 0:
