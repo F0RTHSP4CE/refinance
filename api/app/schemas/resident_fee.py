@@ -8,6 +8,7 @@ class MonthlyFeeSchema(BaseSchema):
     year: int
     month: int
     amounts: dict[str, CurrencyDecimal]
+    total_usd: float
 
 
 class ResidentFeeSchema(BaseSchema):
