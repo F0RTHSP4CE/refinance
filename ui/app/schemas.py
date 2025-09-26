@@ -151,6 +151,8 @@ class ResidentFee:
     fees: list[MonthlyFee]
     total_usd_series: list[Decimal] = field(default_factory=list)
     sparkline_points: str = ""
+    sparkline_segments: list[str] = field(default_factory=list)
+    sparkline_dots: list[Tuple[float, float]] = field(default_factory=list)
     sparkline_last_point: Optional[Tuple[float, float]] = None
     max_total_usd: Decimal = Decimal("0")
 
