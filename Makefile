@@ -5,6 +5,8 @@ COMPOSE_BASE = docker-compose.yml
 DEV_COMPOSE = docker-compose.dev.yml
 PROD_COMPOSE = docker-compose.prod.yml
 CI_COMPOSE = docker-compose.ci.yml
+BACKUP_DIR ?= backups
+BACKUP_FILE ?= $(BACKUP_DIR)/refinance-$(shell date +%Y%m%d-%H%M%S).sql
 
 .PHONY: dev prod ci down
 
@@ -40,6 +42,19 @@ down:
 test: dev-daemon
 	docker compose -f $(COMPOSE_BASE) -f $(DEV_COMPOSE) exec api pytest
 	make down
+
+.PHONY: prod-db-backup prod-db-restore
+
+prod-db-backup:
+	@mkdir -p $(dir $(BACKUP_FILE))
+	@echo "Backing up database to $(BACKUP_FILE)"
+	docker compose -f $(COMPOSE_BASE) -f $(PROD_COMPOSE) exec -T db pg_dump -U postgres -d refinance > $(BACKUP_FILE)
+
+prod-db-restore:
+	@if [ -z "$(BACKUP_FILE)" ]; then echo "Usage: make prod-db-restore BACKUP_FILE=<path-to-backup.sql>"; exit 1; fi
+	@if [ ! -f "$(BACKUP_FILE)" ]; then echo "Backup file $(BACKUP_FILE) not found"; exit 1; fi
+	@echo "Restoring database from $(BACKUP_FILE)"
+	docker compose -f $(COMPOSE_BASE) -f $(PROD_COMPOSE) exec -T db psql -U postgres -d refinance < $(BACKUP_FILE)
 
 .PHONY: add-entity
 add-entity:
