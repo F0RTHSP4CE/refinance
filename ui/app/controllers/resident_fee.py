@@ -66,7 +66,10 @@ def index():
         height = Decimal("24")
         scale = max_total if max_total > 0 else Decimal("1")
         count = len(rf.total_usd_series)
-        point_pairs: list[tuple[float, float]] = []
+        dot_points: list[tuple[float, float]] = []
+        segments: list[list[tuple[float, float]]] = []
+        current_segment: list[tuple[float, float]] = []
+
         for idx, value in enumerate(rf.total_usd_series):
             if count <= 1:
                 x = Decimal("0")
@@ -77,10 +80,27 @@ def index():
             except Exception:
                 ratio = Decimal("0")
             y = height - (ratio * height)
-            point_pairs.append((float(x), float(y)))
+            point = (float(x), float(y))
 
-        rf.sparkline_points = " ".join(f"{x:.2f},{y:.2f}" for x, y in point_pairs)
-        rf.sparkline_last_point = point_pairs[-1] if point_pairs else None
+            if value > 0:
+                dot_points.append(point)
+                current_segment.append(point)
+            else:
+                if len(current_segment) >= 1:
+                    segments.append(current_segment)
+                    current_segment = []
+
+        if current_segment:
+            segments.append(current_segment)
+
+        rf.sparkline_points = ""
+        rf.sparkline_segments = [
+            " ".join(f"{x:.2f},{y:.2f}" for x, y in segment)
+            for segment in segments
+            if len(segment) >= 2
+        ]
+        rf.sparkline_dots = dot_points
+        rf.sparkline_last_point = dot_points[-1] if dot_points else None
 
     current_date = datetime.utcnow()
     current_month = current_date.month
