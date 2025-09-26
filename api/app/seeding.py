@@ -43,7 +43,7 @@ f0_entity = Entity(
 currency_exchange_entity = Entity(
     id=11,
     name="exchange",
-    comment="automatic money caster eur(gel(usd(float(binary(...)))))",
+    comment="internal currency exchange",
     tags=[currency_exchange_tag],
 )
 cryptapi_deposit_provider = Entity(
