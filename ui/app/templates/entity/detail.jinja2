@@ -59,17 +59,43 @@
         height: auto !important;
     }
 
-    .pie-pair {
+    .activity-charts {
         display: flex;
         flex-wrap: wrap;
         gap: 16px;
+        align-items: stretch;
         justify-content: space-around;
     }
 
+    .bar-chart {
+        flex: 0 1 260px;
+        min-width: 220px;
+        max-width: 300px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+        height: 320px;
+    }
+
+    .bar-chart h3 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #334155;
+        margin: 0;
+    }
+
+    .bar-chart canvas {
+        flex: 1 1 auto;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: none;
+    }
+
     .pie-chart {
-        flex: 1 1 calc(50% - 16px);
-        min-width: 160px;
-        max-width: 220px;
+        flex: 0 1 300px;
+        min-width: 220px;
+        max-width: 320px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -86,7 +112,7 @@
 
     .pie-chart canvas {
         width: 100% !important;
-        max-width: 220px;
+        max-width: 300px;
     }
 
     @media (max-width: 900px) {
@@ -95,15 +121,25 @@
             min-width: 0;
         }
 
-        .pie-pair {
+        .activity-charts {
             justify-content: center;
         }
     }
 
     @media (max-width: 600px) {
+
+        .bar-chart,
         .pie-chart {
             flex: 1 1 100%;
-            max-width: 260px;
+            max-width: 100%;
+        }
+
+        .bar-chart {
+            height: 260px;
+        }
+
+        .pie-chart {
+            max-width: 320px;
         }
     }
 
@@ -316,8 +352,8 @@
             </div>
             <div class="chart-cell">
                 <h2>Incoming Activity (last {{ stats_months }} months)</h2>
-                <div class="pie-pair">
-                    <div class="pie-chart">
+                <div class="activity-charts">
+                    <div class="bar-chart">
                         <h3>Top Income Sources</h3>
                         {% if top_incoming %}
                         <canvas id="top-incoming-chart"></canvas>
@@ -337,8 +373,8 @@
             </div>
             <div class="chart-cell">
                 <h2>Outgoing Activity (last {{ stats_months }} months)</h2>
-                <div class="pie-pair">
-                    <div class="pie-chart">
+                <div class="activity-charts">
+                    <div class="bar-chart">
                         <h3>Top Expense Destinations</h3>
                         {% if top_outgoing %}
                         <canvas id="top-outgoing-chart"></canvas>
@@ -450,6 +486,72 @@
                 hoverBackgroundColor: hoverColors ?? colors,
             });
 
+            const buildBarDataset = (values, colors, hoverColors) => ({
+                label: 'Total (USD)',
+                data: values,
+                backgroundColor: colors,
+                hoverBackgroundColor: hoverColors ?? colors,
+                borderColor: colors.map(() => 'rgba(148, 163, 184, 0.35)'),
+                borderWidth: 1,
+                barPercentage: 1,
+                categoryPercentage: 1,
+                maxBarThickness: 32,
+            });
+
+            const buildVerticalBarOptions = () => ({
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 35,
+                            minRotation: 0,
+                        },
+                        grid: {
+                            display: false,
+                        },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (value) => formatUSD(Number(value)),
+                        },
+                        grid: {
+                            color: 'rgba(226, 232, 240, 0.5)',
+                        },
+                    },
+                },
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const value = context.parsed.y ?? context.parsed;
+                                return `${context.label}: ${formatUSD(Number(value))}`;
+                            },
+                        },
+                    },
+                },
+            });
+
+            const createVerticalBarChart = (canvasId, labels, values, colors) => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                return new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            buildBarDataset(values, colors.bases, colors.hovers),
+                        ],
+                    },
+                    options: buildVerticalBarOptions(),
+                });
+            };
+
             const balanceDatasets = {};
             balanceData.forEach(item => {
                 for (const curr in item.balance_changes) {
@@ -527,22 +629,11 @@
                 const incomeValues = topIncoming.map(item => item.total_usd);
                 const incomeColors = buildEntityColors(topIncoming);
 
-                new Chart(
-                    document.getElementById('top-incoming-chart'),
-                    {
-                        type: 'doughnut',
-                        data: {
-                            labels: incomeLabels,
-                            datasets: [
-                                buildDoughnutDataset(
-                                    incomeValues,
-                                    incomeColors.bases,
-                                    incomeColors.hovers,
-                                ),
-                            ],
-                        },
-                        options: buildDoughnutOptions(incomeValues),
-                    }
+                createVerticalBarChart(
+                    'top-incoming-chart',
+                    incomeLabels,
+                    incomeValues,
+                    incomeColors,
                 );
             }
 
@@ -551,22 +642,11 @@
                 const expenseValues = topOutgoing.map(item => item.total_usd);
                 const expenseColors = buildEntityColors(topOutgoing);
 
-                new Chart(
-                    document.getElementById('top-outgoing-chart'),
-                    {
-                        type: 'doughnut',
-                        data: {
-                            labels: expenseLabels,
-                            datasets: [
-                                buildDoughnutDataset(
-                                    expenseValues,
-                                    expenseColors.bases,
-                                    expenseColors.hovers,
-                                ),
-                            ],
-                        },
-                        options: buildDoughnutOptions(expenseValues),
-                    }
+                createVerticalBarChart(
+                    'top-outgoing-chart',
+                    expenseLabels,
+                    expenseValues,
+                    expenseColors,
                 );
             }
 
