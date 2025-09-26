@@ -1,6 +1,7 @@
 *.pyc
 __pycache__
 *.db
+*.db-journal
 .pytest_cache
 .venv
 secrets.prod.env
