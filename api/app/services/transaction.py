@@ -1,5 +1,7 @@
 """Transaction service"""
 
+from typing import TYPE_CHECKING
+
 from app.errors.transaction import (
     CompletedTransactionNotDeletable,
     CompletedTransactionNotEditable,
@@ -22,6 +24,9 @@ from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
 
+if TYPE_CHECKING:
+    from app.services.stats import StatsService
+
 
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):
     model = Transaction
@@ -39,16 +44,29 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         self._treasury_service = treasury_service
 
     def _invalidate_related_caches(
-        self, from_entity_id: int, to_entity_id: int, *treasury_ids: int | None
+        self,
+        from_entity_id: int | None,
+        to_entity_id: int | None,
+        *treasury_ids: int | None,
+        invalidate_stats: bool = False,
     ) -> None:
-        """Invalidate cache entries for entities and related treasuries."""
-        # invalidate entity caches
-        self._balance_service.invalidate_cache_entry(from_entity_id)
-        self._balance_service.invalidate_cache_entry(to_entity_id)
-        # invalidate treasury caches
+        """Invalidate cache entries for affected entities and treasuries."""
+
+        entity_ids: set[int] = set()
+        for entity_id in (from_entity_id, to_entity_id):
+            if entity_id is None:
+                continue
+            self._balance_service.invalidate_cache_entry(entity_id)
+            entity_ids.add(entity_id)
+
         for tid in treasury_ids:
             if tid is not None:
                 self._balance_service.invalidate_treasury_cache_entry(tid)
+
+        if invalidate_stats and entity_ids:
+            from app.services.stats import StatsService
+
+            StatsService.invalidate_entity_cache(*entity_ids)
 
     def _apply_filters(  # type: ignore[override]
         self, query: Query[Transaction], filters: TransactionFiltersSchema
@@ -90,6 +108,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             schema.to_entity_id,
             schema.from_treasury_id,
             schema.to_treasury_id,
+            invalidate_stats=True,
         )
         return super().create(schema, overrides)
 
@@ -114,8 +133,11 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             tx.to_treasury_id,
             schema.from_treasury_id,
             schema.to_treasury_id,
+            invalidate_stats=schema.status == TransactionStatus.COMPLETED
+            or tx.status == TransactionStatus.COMPLETED,
         )
-        return super().update(obj_id, schema, overrides)
+        updated_tx = super().update(obj_id, schema, overrides)
+        return updated_tx
 
     def delete(self, obj_id: int) -> int:  # type: ignore[override]
         tx = self.get(obj_id)
@@ -128,5 +150,6 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             tx.to_entity_id,
             tx.from_treasury_id,
             tx.to_treasury_id,
+            invalidate_stats=tx.status == TransactionStatus.COMPLETED,
         )
         return super().delete(obj_id)

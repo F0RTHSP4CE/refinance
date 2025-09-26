@@ -2,9 +2,11 @@
 
 import calendar
 from collections import defaultdict
+from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, Mapping
+from threading import Lock
+from typing import Any, Callable, Iterable, Mapping
 
 from app.models.entity import Entity
 from app.models.tag import Tag
@@ -22,6 +24,10 @@ from sqlalchemy.orm import Session, selectinload
 
 
 class StatsService(BaseService):
+    _cache: dict[str, Any] = {}
+    _entity_cache_index: defaultdict[int, set[str]] = defaultdict(set)
+    _cache_lock: Lock = Lock()
+
     def __init__(
         self,
         db: Session = Depends(get_uow),
@@ -35,6 +41,82 @@ class StatsService(BaseService):
         self._balance_service = balance_service
         self._entity_service = entity_service
         self._currency_exchange_service = currency_exchange_service
+
+    # --- cache management -------------------------------------------------
+    @classmethod
+    def invalidate_entity_cache(cls, *entity_ids: int | None) -> None:
+        if not entity_ids:
+            return
+
+        with cls._cache_lock:
+            keys_to_remove: set[str] = set()
+            for entity_id in entity_ids:
+                if entity_id is None:
+                    continue
+                keys_to_remove.update(
+                    cls._entity_cache_index.pop(int(entity_id), set())
+                )
+
+            if not keys_to_remove:
+                return
+
+            for key in keys_to_remove:
+                cls._cache.pop(key, None)
+
+            for tracked_keys in cls._entity_cache_index.values():
+                tracked_keys.difference_update(keys_to_remove)
+
+    @staticmethod
+    def _serialize_cache_value(value: Any) -> Any:
+        if isinstance(value, (date, datetime)):
+            return value.isoformat()
+        if isinstance(value, Decimal):
+            return str(value)
+        if isinstance(value, (list, tuple)):
+            return tuple(StatsService._serialize_cache_value(v) for v in value)
+        if isinstance(value, dict):
+            return tuple(
+                (k, StatsService._serialize_cache_value(v))
+                for k, v in sorted(value.items())
+            )
+        return value
+
+    @classmethod
+    def _build_cache_key(
+        cls, name: str, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> str:
+        serialized_args = tuple(cls._serialize_cache_value(arg) for arg in args)
+        serialized_kwargs = tuple(
+            (key, cls._serialize_cache_value(val))
+            for key, val in sorted(kwargs.items())
+        )
+        return repr((name, serialized_args, serialized_kwargs))
+
+    def _cached_result(
+        self,
+        cache_name: str,
+        entity_ids: Iterable[int | None],
+        args: tuple[Any, ...],
+        kwargs: dict[str, Any],
+        builder: Callable[[], Any],
+    ) -> Any:
+        cls = type(self)
+        cache_key = cls._build_cache_key(cache_name, args, kwargs)
+
+        with cls._cache_lock:
+            if cache_key in cls._cache:
+                return deepcopy(cls._cache[cache_key])
+
+        result = builder()
+
+        with cls._cache_lock:
+            cls._cache[cache_key] = deepcopy(result)
+            for entity_id in entity_ids:
+                if entity_id is None:
+                    continue
+                cls._entity_cache_index.setdefault(int(entity_id), set()).add(cache_key)
+
+        return result
 
     # --- internal helpers -------------------------------------------------
     def _amount_to_usd(self, currency: str, amount: Decimal) -> Decimal:
@@ -142,22 +224,37 @@ class StatsService(BaseService):
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
-        return (
-            self.db.query(
-                func.date(Transaction.created_at).label("day"),
-                func.count(Transaction.id).label("transaction_count"),
-            )
-            .filter(
-                and_(
-                    Transaction.created_at >= timeframe_from,
-                    Transaction.created_at <= timeframe_to,
-                    (Transaction.from_entity_id == entity_id)
-                    | (Transaction.to_entity_id == entity_id),
+        cache_args = (int(entity_id), timeframe_from, timeframe_to)
+
+        def builder() -> list[dict[str, Any]]:
+            rows = (
+                self.db.query(
+                    func.date(Transaction.created_at).label("day"),
+                    func.count(Transaction.id).label("transaction_count"),
                 )
+                .filter(
+                    and_(
+                        Transaction.created_at >= timeframe_from,
+                        Transaction.created_at <= timeframe_to,
+                        (Transaction.from_entity_id == entity_id)
+                        | (Transaction.to_entity_id == entity_id),
+                    )
+                )
+                .group_by("day")
+                .order_by("day")
+                .all()
             )
-            .group_by("day")
-            .order_by("day")
-            .all()
+            return [
+                {"day": row.day, "transaction_count": row.transaction_count}
+                for row in rows
+            ]
+
+        return self._cached_result(
+            "get_entity_transactions_by_day",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
         )
 
     def get_transactions_sum_by_week(
@@ -211,45 +308,58 @@ class StatsService(BaseService):
         timeframe_to = timeframe_to or date.today()
         three_months_ago = self._subtract_months(timeframe_to, 3)
 
-        if timeframe_from is None or timeframe_from < three_months_ago:
-            timeframe_from = three_months_ago
+        start_day = timeframe_from if timeframe_from is not None else three_months_ago
+        if start_day < three_months_ago:
+            start_day = three_months_ago
+        if start_day > timeframe_to:
+            start_day = timeframe_to
 
-        if timeframe_from > timeframe_to:
-            timeframe_from = timeframe_to
+        cache_args = (int(entity_id), start_day, timeframe_to)
 
-        result = []
-        current_day = timeframe_from
-        last_completed_balances: dict[str, Decimal] | None = None
+        def builder() -> list[dict[str, Any]]:
+            result: list[dict[str, Any]] = []
+            current_day = start_day
+            last_completed_balances: dict[str, Decimal] | None = None
 
-        while current_day <= timeframe_to:
-            balances = self._balance_service.get_balances(
-                entity_id, end_date=current_day
-            )
-            completed_balances = self._normalize_currency_mapping(balances.completed)
-            if (
-                last_completed_balances is not None
-                and completed_balances == last_completed_balances
-            ):
-                current_day += timedelta(days=1)
-                continue
+            while current_day <= timeframe_to:
+                balances = self._balance_service.get_balances(
+                    entity_id, end_date=current_day
+                )
+                completed_balances = self._normalize_currency_mapping(
+                    balances.completed
+                )
+                if (
+                    last_completed_balances is not None
+                    and completed_balances == last_completed_balances
+                ):
+                    current_day += timedelta(days=1)
+                    continue
 
-            last_completed_balances = completed_balances.copy()
+                last_completed_balances = completed_balances.copy()
 
-            balances_float = {
-                currency: float(amount)
-                for currency, amount in completed_balances.items()
-            }
-            total_usd = self._sum_amounts_usd(completed_balances)
-            result.append(
-                {
-                    "day": current_day,
-                    "balance_changes": balances_float,
-                    "total_usd": total_usd,
+                balances_float = {
+                    currency: float(amount)
+                    for currency, amount in completed_balances.items()
                 }
-            )
-            current_day += timedelta(days=1)
+                total_usd = self._sum_amounts_usd(completed_balances)
+                result.append(
+                    {
+                        "day": current_day,
+                        "balance_changes": balances_float,
+                        "total_usd": total_usd,
+                    }
+                )
+                current_day += timedelta(days=1)
 
-        return result
+            return result
+
+        return self._cached_result(
+            "get_entity_balance_history",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
+        )
 
     def _subtract_months(self, dt: date, months: int) -> date:
         year = dt.year
@@ -447,12 +557,20 @@ class StatsService(BaseService):
         """Return the top entities receiving funds within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        return self._get_top_entities(
-            Transaction.from_entity_id,
-            limit,
-            months,
-            timeframe_to,
-            Transaction.to_entity_id == entity_id,
+        cache_args = (entity_id, limit, months, timeframe_to)
+
+        return self._cached_result(
+            "get_top_incoming_entities",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_top_entities(
+                Transaction.from_entity_id,
+                limit,
+                months,
+                timeframe_to,
+                Transaction.to_entity_id == entity_id,
+            ),
         )
 
     def get_top_outgoing_entities(
@@ -465,12 +583,20 @@ class StatsService(BaseService):
         """Return the top entities sending funds within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        return self._get_top_entities(
-            Transaction.to_entity_id,
-            limit,
-            months,
-            timeframe_to,
-            Transaction.from_entity_id == entity_id,
+        cache_args = (entity_id, limit, months, timeframe_to)
+
+        return self._cached_result(
+            "get_top_outgoing_entities",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_top_entities(
+                Transaction.to_entity_id,
+                limit,
+                months,
+                timeframe_to,
+                Transaction.from_entity_id == entity_id,
+            ),
         )
 
     def get_top_incoming_tags(
@@ -483,12 +609,20 @@ class StatsService(BaseService):
         """Return the top tags for incoming transactions within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        return self._get_top_tags(
-            limit,
-            months,
-            timeframe_to,
-            Transaction.to_entity_id == entity_id,
-            "from_entity",
+        cache_args = (entity_id, limit, months, timeframe_to)
+
+        return self._cached_result(
+            "get_top_incoming_tags",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_top_tags(
+                limit,
+                months,
+                timeframe_to,
+                Transaction.to_entity_id == entity_id,
+                "from_entity",
+            ),
         )
 
     def get_top_outgoing_tags(
@@ -501,12 +635,20 @@ class StatsService(BaseService):
         """Return the top tags for outgoing transactions within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        return self._get_top_tags(
-            limit,
-            months,
-            timeframe_to,
-            Transaction.from_entity_id == entity_id,
-            "to_entity",
+        cache_args = (entity_id, limit, months, timeframe_to)
+
+        return self._cached_result(
+            "get_top_outgoing_tags",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_top_tags(
+                limit,
+                months,
+                timeframe_to,
+                Transaction.from_entity_id == entity_id,
+                "to_entity",
+            ),
         )
 
     def get_transactions_sum_by_tag_by_month(
