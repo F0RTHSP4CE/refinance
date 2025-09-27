@@ -1,17 +1,20 @@
 """Test configuration and shared fixtures"""
 
-import logging
 import os
 import sys
 import traceback
+import uuid
+from contextlib import contextmanager
 
 import pytest
 from app.app import app
 from app.config import Config, get_config
 from app.db import DatabaseConnection
 from app.services.token import TokenService
-from fastapi import Depends, FastAPI
+from fastapi import Depends
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 _original_request = TestClient.request
 
@@ -42,32 +45,68 @@ def logging_request(self, *args, **kwargs):
 TestClient.request = logging_request
 
 
-# each test class have it's own empty database
+DEFAULT_TEST_DATABASE_URL = "postgresql://postgres:postgres@db:5432/refinance_test"
+
+
+def _quote_database(name: str) -> str:
+    return f'"{name.replace("\"", "\"\"")}"'
+
+
+@contextmanager
+def _temporary_database(base_dsn: str):
+    url = make_url(base_dsn)
+    base_name = url.database or "refinance_test"
+    unique_name = f"{base_name}_{uuid.uuid4().hex[:8]}"
+    admin_url = url.set(database="postgres").render_as_string(hide_password=False)
+    database_url = url.set(database=unique_name)
+    quoted_name = _quote_database(unique_name)
+    engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(f"CREATE DATABASE {quoted_name}"))
+        yield database_url.render_as_string(hide_password=False)
+    finally:
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = :db"
+                ),
+                {"db": unique_name},
+            )
+            conn.execute(text(f"DROP DATABASE IF EXISTS {quoted_name}"))
+        engine.dispose()
+
+
+# each test class has its own isolated database
 @pytest.fixture(scope="class")
 def test_app():
-    test_config = Config(
-        # overwrite application name so it will use another database file
-        app_name="refinance-test"
-    )
-    app.dependency_overrides = {get_config: lambda: test_config}
+    base_dsn = os.getenv("REFINANCE_TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
+    with _temporary_database(base_dsn) as database_url:
+        test_config = Config(
+            app_name="refinance-test",
+            database_url_env=database_url,
+        )
+        app.dependency_overrides = {get_config: lambda: test_config}
 
-    # trigger table creation and bootstrapping
-    db_conn = DatabaseConnection(config=test_config)
-    db_conn.create_tables()
-    db_conn.seed_bootstrap_data()
+        # trigger table creation and bootstrapping
+        db_conn = DatabaseConnection(config=test_config)
+        db_conn.create_tables()
+        db_conn.seed_bootstrap_data()
 
-    # create private token generator route to be used only from tests
-    @app.get("/tokens/{entity_id}", include_in_schema=False)
-    def _generate_token(
-        entity_id: int, token_service: TokenService = Depends()
-    ) -> str | None:
-        return token_service._generate_new_token(entity_id=entity_id)
+        # create private token generator route to be used only from tests
+        @app.get("/tokens/{entity_id}", include_in_schema=False)
+        def _generate_token(
+            entity_id: int, token_service: TokenService = Depends()
+        ) -> str | None:
+            return token_service._generate_new_token(entity_id=entity_id)
 
-    client = TestClient(app)
-    yield client
-    # clean up test database file after tests
-    if os.path.exists(test_config.database_path):
-        os.remove(test_config.database_path)
+        client = TestClient(app)
+        try:
+            yield client
+        finally:
+            client.close()
+            app.dependency_overrides.clear()
+            db_conn.engine.dispose()
 
 
 # general fixture to get the token of any entity

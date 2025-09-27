@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass, field
 from os import getenv
-from pathlib import Path
 
 
 @dataclass
@@ -28,15 +27,11 @@ class Config:
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
 
     @property
-    def database_path(self) -> Path:
-        return Path("./data/") / Path(f"{self.app_name}.db")
-
-    @property
     def database_url(self) -> str:
-        # Use provided DATABASE_URL if available, else fall back to SQLite file
+        # Use provided DATABASE_URL if available, else fall back to Postgres service
         if self.database_url_env:
             return self.database_url_env
-        return f"sqlite:///{self.database_path}"
+        return "postgresql://postgres:postgres@db:5432/refinance"
 
 
 def get_config():
