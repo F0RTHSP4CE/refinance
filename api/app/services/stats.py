@@ -2,6 +2,8 @@
 
 import calendar
 from collections import defaultdict
+from collections.abc import Mapping as MappingABC
+from collections.abc import Sequence as SequenceABC
 from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
@@ -45,17 +47,18 @@ class StatsService(BaseService):
     # --- cache management -------------------------------------------------
     @classmethod
     def invalidate_entity_cache(cls, *entity_ids: int | None) -> None:
-        if not entity_ids:
+        entity_ids_set = {
+            int(entity_id) for entity_id in entity_ids if entity_id is not None
+        }
+        if not entity_ids_set:
             return
 
         with cls._cache_lock:
-            keys_to_remove: set[str] = set()
-            for entity_id in entity_ids:
-                if entity_id is None:
-                    continue
-                keys_to_remove.update(
-                    cls._entity_cache_index.pop(int(entity_id), set())
-                )
+            keys_to_remove = {
+                key
+                for entity_id in entity_ids_set
+                for key in cls._entity_cache_index.pop(entity_id, set())
+            }
 
             if not keys_to_remove:
                 return
@@ -72,13 +75,13 @@ class StatsService(BaseService):
             return value.isoformat()
         if isinstance(value, Decimal):
             return str(value)
-        if isinstance(value, (list, tuple)):
-            return tuple(StatsService._serialize_cache_value(v) for v in value)
-        if isinstance(value, dict):
+        if isinstance(value, MappingABC):
             return tuple(
                 (k, StatsService._serialize_cache_value(v))
                 for k, v in sorted(value.items())
             )
+        if isinstance(value, SequenceABC) and not isinstance(value, (str, bytes)):
+            return tuple(StatsService._serialize_cache_value(v) for v in value)
         return value
 
     @classmethod
@@ -103,18 +106,21 @@ class StatsService(BaseService):
         cls = type(self)
         cache_key = cls._build_cache_key(cache_name, args, kwargs)
 
+        entity_ids_set = {
+            int(entity_id) for entity_id in entity_ids if entity_id is not None
+        }
+
         with cls._cache_lock:
-            if cache_key in cls._cache:
-                return deepcopy(cls._cache[cache_key])
+            cached = cls._cache.get(cache_key)
+            if cached is not None:
+                return deepcopy(cached)
 
         result = builder()
 
         with cls._cache_lock:
             cls._cache[cache_key] = deepcopy(result)
-            for entity_id in entity_ids:
-                if entity_id is None:
-                    continue
-                cls._entity_cache_index.setdefault(int(entity_id), set()).add(cache_key)
+            for entity_id in entity_ids_set:
+                cls._entity_cache_index.setdefault(entity_id, set()).add(cache_key)
 
         return result
 
