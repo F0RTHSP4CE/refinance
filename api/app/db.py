@@ -1,8 +1,6 @@
 """Database connection and initialization"""
 
 import logging
-import os
-from contextlib import contextmanager
 from typing import Any, Generator, List, Type
 
 from app.config import Config, get_config
@@ -19,12 +17,10 @@ logger = logging.getLogger(__name__)
 class DatabaseConnection:
     engine: Engine
     session_local: sessionmaker[Session]
-    # Class-level flag ensures bootstrapping runs only once per process.
-    _bootstrapped: bool = False
+    # Track which database URLs have been bootstrapped to avoid duplicate work per DB.
+    _bootstrapped_urls: set[str] = set()
 
     def __init__(self, config: Config = Depends(get_config)) -> None:
-        # Ensure the database folder exists.
-        os.makedirs(config.database_path.parent, exist_ok=True)
         # Create engine with appropriate connection args for SQLite or other databases
         db_url = config.database_url
         if db_url.startswith("sqlite"):  # SQLite needs check_same_thread
@@ -39,10 +35,10 @@ class DatabaseConnection:
             bind=self.engine,
         )
         # Seed bootstrap data only once per process.
-        if not self.__class__._bootstrapped:
+        if db_url not in self.__class__._bootstrapped_urls:
             self.create_tables()
             self.seed_bootstrap_data()
-            self.__class__._bootstrapped = True
+            self.__class__._bootstrapped_urls.add(db_url)
 
     def create_tables(self) -> None:
         """Create all database tables defined in models."""

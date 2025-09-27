@@ -75,7 +75,7 @@ def application_exception_handler(request: Request, exc: ApplicationError):
 
 
 @app.exception_handler(SQLAlchemyError)
-def sqlite_exception_handler(request: Request, exc: SQLAlchemyError):
+def database_exception_handler(request: Request, exc: SQLAlchemyError):
     logger.error(exc)
     # Only print full traceback when in debug logging
     if logger.isEnabledFor(logging.DEBUG):

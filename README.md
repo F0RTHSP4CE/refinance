@@ -37,10 +37,11 @@ Environment variables used:
 - `REFINANCE_UI_URL`: Used to construct login links.
 - `REFINANCE_API_URL`: Used by deposit callbacks.
 - `REFINANCE_TELEGRAM_BOT_API_TOKEN`: Telegram bot token to deliver login links.
+- `REFINANCE_DATABASE_URL`: PostgreSQL connection string (defaults to `postgresql://postgres:postgres@db:5432/refinance` when running via docker compose).
 
 Testing locally:
 1) Create `secrets.dev.env`:
-```
+```console
 cp secrets.env.example secrets.dev.env
 # set:
 REFINANCE_SECRET_KEY=dev-secret-xxxx
@@ -48,15 +49,17 @@ REFINANCE_UI_URL=http://localhost:9000
 REFINANCE_API_URL=http://localhost:8000
 # Optional: set a real Telegram bot token if you want to receive login links in Telegram
 REFINANCE_TELEGRAM_BOT_API_TOKEN=123456:ABC...
+# Optional: override REFINANCE_DATABASE_URL if Postgres is running elsewhere
+REFINANCE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/refinance
 ```
 2) Start stack:
-```
+```console
 make dev
 ```
 3) Open UI `http://localhost:9000/auth/login`, enter an entity name that exists.
    - The seed includes `F0` and several system entities. To test personal login via Telegram, create your own entity and set `auth.telegram_id` to your Telegram numeric ID.
 4) Check API logs for debug info:
-```
+```console
 docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api
 ```
    - You will see whether `entity_found`, `token_generated`, and whether a Telegram message was sent.
@@ -65,7 +68,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f api
 Add user (entity) quickly:
 1) Start dev stack: `make dev`
 2) Add a new user using the Makefile helper (runs inside the API container):
-```
+```console
 make add-entity NAME=<name> [TELEGRAM_ID=<numeric_id>] [ID=<explicit_id>]
 # examples:
 make add-entity NAME=alice
@@ -80,7 +83,7 @@ Entity & user management:
 
 Troubleshooting:
 - If the login page shows failure, call the API directly to see details:
-```
+```console
 curl -s -X POST -H 'Content-Type: application/json' -d '{"entity_name":"skywinder"}' http://localhost:8000/tokens/request
 ```
 - `message_sent=false` usually means either:
@@ -88,11 +91,11 @@ curl -s -X POST -H 'Content-Type: application/json' -d '{"entity_name":"skywinde
   - `REFINANCE_TELEGRAM_BOT_API_TOKEN` is invalid, or
   - the bot cannot message your account (you have not started the bot in Telegram, or privacy settings block it).
 - Check UI -> API call logs:
-```
+```console
 docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f ui
 ```
 - Verify the bot token:
-```
+```console
 TOKEN=<paste bot token>
 curl -s https://api.telegram.org/bot${TOKEN}/getMe
 ```
@@ -139,13 +142,13 @@ uv sync
 ```
 
 install pre-commit hook
-```
+```console
 source ./.venv/bin/activate
 pre-commit install
 ```
 
 ### tests
-```
+```console
 make test
 ```
 
@@ -154,6 +157,7 @@ make test
 make dev
 ```
 open http://localhost:8000/docs and http://localhost:9000
+- Postgres is available at `localhost:5432` (user `postgres`, password `postgres`, database `refinance`).
 
 ### secrets files overview
 - `secrets.dev.env`: used by `make dev` (docker-compose.dev.yml)
