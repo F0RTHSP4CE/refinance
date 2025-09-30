@@ -3,13 +3,20 @@
 import calendar
 import re
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any, Mapping
 
 from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
-from app.schemas.resident_fee import ResidentFeeFiltersSchema
+from app.schemas.base import CurrencyDecimal
+from app.schemas.entity import EntitySchema
+from app.schemas.resident_fee import (
+    MonthlyFeeSchema,
+    ResidentFeeFiltersSchema,
+    ResidentFeeSchema,
+)
 from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
@@ -18,6 +25,37 @@ from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
+
+
+@dataclass(slots=True)
+class MonthlyFee:
+    year: int
+    month: int
+    amounts: dict[str, Decimal]
+    total_usd: float
+
+    def to_schema(self) -> MonthlyFeeSchema:
+        return MonthlyFeeSchema(
+            year=self.year,
+            month=self.month,
+            amounts={
+                currency: CurrencyDecimal(amount)
+                for currency, amount in self.amounts.items()
+            },
+            total_usd=self.total_usd,
+        )
+
+
+@dataclass(slots=True)
+class ResidentFeeRecord:
+    entity: Entity
+    fees: list[MonthlyFee]
+
+    def to_schema(self) -> ResidentFeeSchema:
+        return ResidentFeeSchema(
+            entity=EntitySchema.model_validate(self.entity),
+            fees=[fee.to_schema() for fee in self.fees],
+        )
 
 
 class ResidentFeeService(BaseService):
@@ -116,17 +154,17 @@ class ResidentFeeService(BaseService):
 
     def _build_monthly_fee(
         self, year: int, month: int, raw_amounts: Mapping[str, Any] | None
-    ) -> dict[str, Any]:
+    ) -> MonthlyFee:
         amounts = self._normalize_amounts(raw_amounts)
         total_usd = self._sum_amounts_usd(amounts)
-        return {
-            "year": year,
-            "month": month,
-            "amounts": amounts,
-            "total_usd": total_usd,
-        }
+        return MonthlyFee(
+            year=year,
+            month=month,
+            amounts=amounts,
+            total_usd=total_usd,
+        )
 
-    def get_fees(self, filters: ResidentFeeFiltersSchema) -> list[dict]:
+    def get_fees(self, filters: ResidentFeeFiltersSchema) -> list[ResidentFeeSchema]:
         hackerspace = self._entity_service.get(f0_entity.id)
         residents = (
             self.db.query(Entity)
@@ -183,10 +221,10 @@ class ResidentFeeService(BaseService):
             ] += t.amount
 
         # Build the final response structure
-        results = []
+        results: list[ResidentFeeRecord] = []
         for r in residents:
             # Past months window
-            monthly_fees = []
+            monthly_fees: list[MonthlyFee] = []
             for i in range(months):
                 year = today_year
                 month = today_month - i
@@ -203,18 +241,18 @@ class ResidentFeeService(BaseService):
 
             # Trim trailing empty months (which correspond to the earliest months in the window)
             # Keep at least the current month so UI has an anchor row.
-            while len(monthly_fees) > 1 and monthly_fees[-1]["amounts"] in ({}, None):
+            while len(monthly_fees) > 1 and monthly_fees[-1].amounts in ({}, None):
                 monthly_fees.pop()
             # Future months with payments (up to 12 months ahead)
-            future_fees = []
+            future_fees: list[MonthlyFee] = []
             for (y, m), currs in fees_by_resident_by_month[r.id].items():
                 idx = y * 12 + m
                 if idx > today_idx and idx <= max_future_idx:
                     future_fees.append(self._build_monthly_fee(y, m, currs))
             # Combine and sort chronologically
             all_fees = monthly_fees + future_fees
-            all_fees.sort(key=lambda x: (x["year"], x["month"]))
+            all_fees.sort(key=lambda x: (x.year, x.month))
 
-            results.append({"entity": r, "fees": all_fees})
+            results.append(ResidentFeeRecord(entity=r, fees=all_fees))
 
-        return results
+        return [record.to_schema() for record in results]
