@@ -2,9 +2,10 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic_core import core_schema
 
 
 class CurrencyDecimal:
@@ -19,27 +20,43 @@ class CurrencyDecimal:
         self.value = value
 
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(
+        cls, source_type: Any, handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.any_schema(),
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls.serialize,
+                info_arg=False,
+                return_schema=core_schema.str_schema(),
+            ),
+        )
 
     @classmethod
-    def validate(cls, v, field=None):
+    def validate(cls, value: Any) -> "CurrencyDecimal":
         # If already our custom type, just return it.
-        if isinstance(v, cls):
-            return v
+        if isinstance(value, cls):
+            return value
         # If it's a float, convert it to a string first to avoid precision issues.
-        if isinstance(v, float):
-            v = str(v)
+        if isinstance(value, float):
+            value = str(value)
         try:
-            d = v if isinstance(v, Decimal) else Decimal(v)
+            decimal_value = value if isinstance(value, Decimal) else Decimal(value)
         except Exception as e:
             raise ValueError("Invalid decimal value") from e
-        return cls(d)
+        return cls(decimal_value)
 
     @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
+    def __get_pydantic_json_schema__(
+        cls, core_schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ):
         # Represent the custom type as a string in the OpenAPI schema.
         return {"type": "string", "title": "CurrencyDecimal", "example": "10.00001"}
+
+    @staticmethod
+    def serialize(value: "CurrencyDecimal") -> str:
+        return str(value)
 
     def __str__(self) -> str:
         # d = self.value
@@ -65,7 +82,6 @@ class BaseSchema(BaseModel):
     model_config = ConfigDict(
         from_attributes=True,
         arbitrary_types_allowed=True,
-        json_encoders={CurrencyDecimal: lambda v: str(v)},
     )
 
     # default dump options to deserialize pydantic models
