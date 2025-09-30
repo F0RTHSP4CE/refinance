@@ -1,10 +1,1 @@
-services:
-  api:
-    env_file:
-      - secrets.env.example
-    depends_on:
-      - db
-
-  ui:
-    env_file:
-      - secrets.env.example
+# empty, see main docker-compose.yml
