@@ -111,7 +111,7 @@ cp secrets.env.example secrets.prod.env
 ```
 
 ```console
-make prod-daemon
+make prod
 ```
 
 API: http://0.0.0.0:8000/docs
