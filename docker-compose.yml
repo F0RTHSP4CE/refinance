@@ -3,8 +3,18 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+    environment:
+      REFINANCE_DATABASE_URL: postgresql://postgres:postgres@db:5432/refinance
 
   ui:
     build: 
       context: .
       dockerfile: ui/Dockerfile
+  
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: refinance

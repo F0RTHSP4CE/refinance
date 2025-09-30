@@ -4,8 +4,6 @@ services:
       - secrets.prod.env
     depends_on:
       - db
-    environment:
-      REFINANCE_DATABASE_URL: postgresql://postgres:postgres@db:5432/refinance
     ports:
       - "127.0.0.1:8000:8000"
   ui:
@@ -14,12 +12,6 @@ services:
     ports:
       - "127.0.0.1:9000:9000"
   db:
-    image: postgres:17
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: refinance
     volumes:
       - db-data:/var/lib/postgresql/data
 
