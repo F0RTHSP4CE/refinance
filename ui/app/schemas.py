@@ -143,6 +143,7 @@ class MonthlyFee:
     month: int
     amounts: dict[str, Decimal]
     total_usd: Decimal
+    paid: bool
 
 
 @dataclass

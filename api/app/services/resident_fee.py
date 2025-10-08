@@ -33,6 +33,7 @@ class MonthlyFee:
     month: int
     amounts: dict[str, Decimal]
     total_usd: float
+    paid: bool
 
     def to_schema(self) -> MonthlyFeeSchema:
         return MonthlyFeeSchema(
@@ -43,6 +44,7 @@ class MonthlyFee:
                 for currency, amount in self.amounts.items()
             },
             total_usd=self.total_usd,
+            paid=self.paid,
         )
 
 
@@ -162,6 +164,7 @@ class ResidentFeeService(BaseService):
             month=month,
             amounts=amounts,
             total_usd=total_usd,
+            paid=bool(amounts),
         )
 
     def get_fees(self, filters: ResidentFeeFiltersSchema) -> list[ResidentFeeSchema]:
@@ -252,6 +255,26 @@ class ResidentFeeService(BaseService):
             # Combine and sort chronologically
             all_fees = monthly_fees + future_fees
             all_fees.sort(key=lambda x: (x.year, x.month))
+
+            last_paid_idx: int | None = None
+            for fee in all_fees:
+                idx = fee.year * 12 + fee.month
+                if idx <= today_idx and fee.amounts:
+                    if last_paid_idx is None or idx > last_paid_idx:
+                        last_paid_idx = idx
+
+            for fee in all_fees:
+                idx = fee.year * 12 + fee.month
+                if idx > today_idx:
+                    fee.paid = bool(fee.amounts)
+                    continue
+                if last_paid_idx is None:
+                    fee.paid = bool(fee.amounts)
+                    continue
+                if idx <= last_paid_idx:
+                    fee.paid = True
+                else:
+                    fee.paid = False
 
             results.append(ResidentFeeRecord(entity=r, fees=all_fees))
 

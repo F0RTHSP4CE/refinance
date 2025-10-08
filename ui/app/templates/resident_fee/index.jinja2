@@ -49,13 +49,12 @@
 
             {% for fee in resident_fee.fees %}
             {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month) %}
-            <td {% if fee.amounts %} class="fee-paid" {% elif not is_future %} class="fee-not-paid" {% endif %}>
+            <td {% if fee.paid %} class="fee-paid" {% else %} class="fee-not-paid" {% endif %}>
                 {% if fee.amounts %}
                 {% for currency, amount in fee.amounts.items() %}
                 <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
                 {% endfor %}
                 {% else %}
-
                 {% endif %}
             </td>
             {% endfor %}

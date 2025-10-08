@@ -148,18 +148,21 @@ class TestResidentFeeService:
         assert fees1[0]["month"] == prev_month
         assert fees1[0]["amounts"] == {"usd": "100.00"}
         assert fees1[0]["total_usd"] == pytest.approx(100.0)
+        assert fees1[0]["paid"] is True
 
         # Current month
         assert fees1[1]["year"] == current_year
         assert fees1[1]["month"] == current_month
         assert fees1[1]["amounts"] == {"usd": "100.00"}
         assert fees1[1]["total_usd"] == pytest.approx(100.0)
+        assert fees1[1]["paid"] is True
 
         # Next month (future payment)
         assert fees1[2]["year"] == next_year
         assert fees1[2]["month"] == next_month
         assert fees1[2]["amounts"] == {"usd": "100.00"}
         assert fees1[2]["total_usd"] == pytest.approx(100.0)
+        assert fees1[2]["paid"] is True
 
         # --- Assertions for Resident Two ---
         fees2 = sorted(resident2_data["fees"], key=lambda x: (x["year"], x["month"]))
@@ -169,3 +172,200 @@ class TestResidentFeeService:
         assert fees2[0]["month"] == current_month
         assert fees2[0]["amounts"] == {}
         assert fees2[0]["total_usd"] == pytest.approx(0.0)
+        assert fees2[0]["paid"] is False
+
+    def test_get_fees_marks_unpaid_months(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        from app.services.currency_exchange import CurrencyExchangeService
+
+        monkeypatch.setattr(
+            CurrencyExchangeService,
+            "_raw_rates",
+            property(
+                lambda self: [
+                    {
+                        "currencies": [
+                            {"code": "usd", "rate": "3.00", "quantity": "1"},
+                            {"code": "eur", "rate": "3.50", "quantity": "1"},
+                            {"code": "gel", "rate": "1", "quantity": "1"},
+                        ]
+                    }
+                ]
+            ),
+        )
+
+        hackerspace_id = 1
+
+        resident_resp = test_app.post(
+            "/entities",
+            json={
+                "name": "Resident Gap",
+                "comment": "test resident",
+                "tag_ids": [resident_tag.id],
+            },
+            headers={"x-token": token},
+        )
+        assert resident_resp.status_code == 200
+        resident = resident_resp.json()
+
+        today = date.today()
+
+        def idx_from(year: int, month: int) -> int:
+            return year * 12 + (month - 1)
+
+        def year_month_from_idx(idx: int) -> tuple[int, int]:
+            year, month_zero = divmod(idx, 12)
+            return year, month_zero + 1
+
+        current_idx = idx_from(today.year, today.month)
+        first_paid_idx = current_idx - 3
+        first_paid_year, first_paid_month = year_month_from_idx(first_paid_idx)
+
+        test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": resident["id"],
+                "to_entity_id": hackerspace_id,
+                "amount": "75",
+                "currency": "USD",
+                "comment": f"Fee for {first_paid_year}-{first_paid_month:02d}",
+                "tag_ids": [fee_tag.id],
+            },
+            headers={"x-token": token},
+        )
+
+        response = test_app.get("/resident_fees/?months=4", headers={"x-token": token})
+        assert response.status_code == 200
+        data = response.json()
+
+        resident_data = next(
+            (r for r in data if r["entity"]["id"] == resident["id"]), None
+        )
+        assert resident_data is not None
+
+        fees = sorted(resident_data["fees"], key=lambda x: (x["year"], x["month"]))
+        assert len(fees) == 4
+
+        expected_indices = [first_paid_idx + offset for offset in range(4)]
+        expected_year_months = [year_month_from_idx(idx) for idx in expected_indices]
+
+        for i, (exp_year, exp_month) in enumerate(expected_year_months):
+            assert fees[i]["year"] == exp_year
+            assert fees[i]["month"] == exp_month
+
+        assert fees[0]["amounts"] == {"usd": "75.00"}
+        assert fees[0]["total_usd"] == pytest.approx(75.0)
+        assert fees[0]["paid"] is True
+
+        for fee in fees[1:]:
+            assert fee["amounts"] == {}
+            assert fee["total_usd"] == pytest.approx(0.0)
+            assert fee["paid"] is False
+
+    def test_months_before_latest_payment_marked_paid(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        from app.services.currency_exchange import CurrencyExchangeService
+
+        monkeypatch.setattr(
+            CurrencyExchangeService,
+            "_raw_rates",
+            property(
+                lambda self: [
+                    {
+                        "currencies": [
+                            {"code": "usd", "rate": "3.00", "quantity": "1"},
+                            {"code": "eur", "rate": "3.50", "quantity": "1"},
+                            {"code": "gel", "rate": "1", "quantity": "1"},
+                        ]
+                    }
+                ]
+            ),
+        )
+
+        hackerspace_id = 1
+
+        resident_resp = test_app.post(
+            "/entities",
+            json={
+                "name": "Resident Historical",
+                "comment": "test resident",
+                "tag_ids": [resident_tag.id],
+            },
+            headers={"x-token": token},
+        )
+        assert resident_resp.status_code == 200
+        resident = resident_resp.json()
+
+        today = date.today()
+
+        def idx_from(year: int, month: int) -> int:
+            return year * 12 + (month - 1)
+
+        def year_month_from_idx(idx: int) -> tuple[int, int]:
+            year, month_zero = divmod(idx, 12)
+            return year, month_zero + 1
+
+        current_idx = idx_from(today.year, today.month)
+        past_idx = current_idx - 3
+        past_year, past_month = year_month_from_idx(past_idx)
+
+        # Historic payment three months ago
+        test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": resident["id"],
+                "to_entity_id": hackerspace_id,
+                "amount": "25",
+                "currency": "USD",
+                "comment": f"Fee for {past_year}-{past_month:02d}",
+                "tag_ids": [fee_tag.id],
+            },
+            headers={"x-token": token},
+        )
+
+        # Latest payment this month
+        test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": resident["id"],
+                "to_entity_id": hackerspace_id,
+                "amount": "25",
+                "currency": "USD",
+                "comment": f"Fee for {today.year}-{today.month:02d}",
+                "tag_ids": [fee_tag.id],
+            },
+            headers={"x-token": token},
+        )
+
+        response = test_app.get("/resident_fees/?months=4", headers={"x-token": token})
+        assert response.status_code == 200
+        data = response.json()
+
+        resident_data = next(
+            (r for r in data if r["entity"]["id"] == resident["id"]), None
+        )
+        assert resident_data is not None
+
+        fees = sorted(resident_data["fees"], key=lambda x: (x["year"], x["month"]))
+        assert len(fees) == 4
+
+        expected_indices = [past_idx + offset for offset in range(4)]
+        expected_year_months = [year_month_from_idx(idx) for idx in expected_indices]
+
+        for fee, (exp_year, exp_month) in zip(fees, expected_year_months):
+            assert fee["year"] == exp_year
+            assert fee["month"] == exp_month
+
+        assert fees[0]["amounts"] == {"usd": "25.00"}
+        assert fees[0]["paid"] is True
+
+        assert fees[1]["amounts"] == {}
+        assert fees[1]["paid"] is True
+
+        assert fees[2]["amounts"] == {}
+        assert fees[2]["paid"] is True
+
+        assert fees[3]["amounts"] == {"usd": "25.00"}
+        assert fees[3]["paid"] is True

@@ -24,12 +24,14 @@ def index():
             }
             total_usd_raw = f.get("total_usd", 0)
             total_usd = Decimal(str(total_usd_raw or 0))
+            paid = bool(f.get("paid", False))
             converted.append(
                 MonthlyFee(
                     year=f["year"],
                     month=f["month"],
                     amounts=amounts,
                     total_usd=total_usd,
+                    paid=paid,
                 )
             )
         data["fees"] = converted
@@ -56,6 +58,7 @@ def index():
                         month=m,
                         amounts={},
                         total_usd=Decimal("0"),
+                        paid=False,
                     )
                 )
 
