@@ -169,6 +169,51 @@ class TestTransactionEndpoints:
         assert updated_data["comment"] == "aaa"
         assert updated_data["status"] == "completed"
 
+    def test_can_clear_treasury_reference(
+        self, test_app: TestClient, entity_one, entity_two, token
+    ):
+        treasury_response = test_app.post(
+            "/treasuries",
+            json={"name": "Temporary Treasury"},
+            headers={"x-token": token},
+        )
+        assert treasury_response.status_code == 200
+        treasury_id = treasury_response.json()["id"]
+
+        create_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": entity_one,
+                "to_entity_id": entity_two,
+                "amount": "125.00",
+                "currency": "usd",
+                "status": "draft",
+                "from_treasury_id": treasury_id,
+            },
+            headers={"x-token": token},
+        )
+        assert create_response.status_code == 200
+        tx_data = create_response.json()
+        tx_id = tx_data["id"]
+        assert tx_data["from_treasury_id"] == treasury_id
+
+        update_response = test_app.patch(
+            f"/transactions/{tx_id}",
+            json={"from_treasury_id": None},
+            headers={"x-token": token},
+        )
+        assert update_response.status_code == 200
+        updated_tx = update_response.json()
+        assert updated_tx["from_treasury_id"] is None
+
+        fetch_response = test_app.get(
+            f"/transactions/{tx_id}",
+            headers={"x-token": token},
+        )
+        assert fetch_response.status_code == 200
+        fetched_tx = fetch_response.json()
+        assert fetched_tx["from_treasury_id"] is None
+
 
 # @pytest.fixture
 # def multiple_transactions(test_app: TestClient, entity_one, entity_two, token):
