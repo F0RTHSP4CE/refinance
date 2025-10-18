@@ -70,6 +70,10 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     to_treasury_id: int | None = None
     tag_ids: list[int] | None = None
 
+    def dump(self):
+        # Include fields explicitly set to None so treasuries can be cleared.
+        return self.model_dump(exclude_unset=True)
+
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
         if v is not None and v <= 0:

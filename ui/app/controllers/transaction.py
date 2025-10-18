@@ -172,6 +172,10 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        if not data.get("from_treasury_id"):
+            data["from_treasury_id"] = None
+        if not data.get("to_treasury_id"):
+            data["to_treasury_id"] = None
         tx = api.http("POST", "transactions", data=data)
         if tx.status_code == 200:
             return redirect(url_for("transaction.detail", id=tx.json()["id"]))
@@ -206,6 +210,10 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        if not data.get("from_treasury_id"):
+            data["from_treasury_id"] = None
+        if not data.get("to_treasury_id"):
+            data["to_treasury_id"] = None
         api.http("PATCH", f"transactions/{id}", data=data)
         return redirect(url_for("transaction.detail", id=id))
 
