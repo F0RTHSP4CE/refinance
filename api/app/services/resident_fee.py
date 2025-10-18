@@ -191,7 +191,6 @@ class ResidentFeeService(BaseService):
         transactions = (
             self.db.query(Transaction)
             .filter(
-                Transaction.from_entity_id.in_([r.id for r in residents]),
                 Transaction.to_entity_id == hackerspace.id,
                 Transaction.tags.contains(fee_tag),
                 # Transaction.status == TransactionStatus.COMPLETED,

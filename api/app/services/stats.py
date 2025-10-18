@@ -13,7 +13,7 @@ from typing import Any, Callable, Iterable, Mapping
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.transaction import Transaction
-from app.seeding import f0_entity, resident_tag
+from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
@@ -178,8 +178,8 @@ class StatsService(BaseService):
         transactions = (
             self.db.query(Transaction)
             .filter(
-                Transaction.from_entity_id.in_([r.id for r in residents]),
                 Transaction.to_entity_id == hackerspace.id,
+                Transaction.tags.contains(fee_tag),
             )
             .all()
         )
