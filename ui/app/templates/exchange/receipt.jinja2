@@ -6,8 +6,9 @@
 
 {% block content %}
 <p>Exchanged {{ receipt.source_amount }} {{ receipt.source_currency}} to <strong>{{ receipt.target_amount }} {{
-                receipt.target_currency }}</strong>. Rate is {{ receipt.rate }}</p>
+        receipt.target_currency }}</strong>. Rate is {{ receipt.rate }}</p>
 
 {{ transaction_list(receipt.transactions) }}
+<p><strong>⚠️ DO NOT REFRESH THIS PAGE!</strong></p>
 
 {% endblock %}
