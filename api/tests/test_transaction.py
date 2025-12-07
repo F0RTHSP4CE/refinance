@@ -215,6 +215,147 @@ class TestTransactionEndpoints:
         assert fetched_tx["from_treasury_id"] is None
 
 
+class TestTransactionTreasuryFiltering:
+    """Tests for filtering transactions by treasury"""
+
+    @pytest.fixture(scope="class")
+    def treasury_one(self, test_app: TestClient, token):
+        """Create an isolated treasury for this test class."""
+        response = test_app.post(
+            "/treasuries",
+            json={"name": "Filter Test Treasury 1"},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    @pytest.fixture(scope="class")
+    def treasury_two(self, test_app: TestClient, token):
+        response = test_app.post(
+            "/treasuries",
+            json={"name": "Filter Test Treasury 2"},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    @pytest.fixture
+    def treasury_transactions(
+        self,
+        test_app: TestClient,
+        entity_one,
+        entity_two,
+        treasury_one,
+        treasury_two,
+        token,
+    ):
+        """Create transactions with different treasury combinations."""
+
+        payloads = [
+            # from_treasury only
+            {
+                "from_entity_id": entity_one,
+                "to_entity_id": entity_two,
+                "amount": "10.00",
+                "currency": "usd",
+                "status": "completed",
+                "from_treasury_id": treasury_one,
+            },
+            # to_treasury only
+            {
+                "from_entity_id": entity_two,
+                "to_entity_id": entity_one,
+                "amount": "20.00",
+                "currency": "usd",
+                "status": "completed",
+                "to_treasury_id": treasury_one,
+            },
+            # both treasuries but different
+            {
+                "from_entity_id": entity_one,
+                "to_entity_id": entity_two,
+                "amount": "30.00",
+                "currency": "usd",
+                "status": "completed",
+                "from_treasury_id": treasury_two,
+                "to_treasury_id": treasury_one,
+            },
+            # no treasuries
+            {
+                "from_entity_id": entity_two,
+                "to_entity_id": entity_one,
+                "amount": "40.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+        ]
+
+        ids = []
+        for payload in payloads:
+            response = test_app.post(
+                "/transactions", json=payload, headers={"x-token": token}
+            )
+            assert response.status_code == 200
+            ids.append(response.json()["id"])
+
+        return ids
+
+    def test_filter_by_treasury_id_matches_from_or_to(
+        self,
+        test_app: TestClient,
+        treasury_transactions,
+        treasury_one,
+        token,
+    ):
+        """Filtering by treasury_id should match from_treasury_id OR to_treasury_id."""
+
+        response = test_app.get(
+            "/transactions",
+            params={"treasury_id": treasury_one},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()["items"]
+
+        # We created three transactions that reference treasury_one
+        #   - one with from_treasury_id
+        #   - one with to_treasury_id
+        #   - one with to_treasury_id while from_treasury_id is different
+        assert len(data) == 3
+
+        # Ensure each returned transaction references treasury_one
+        for tx in data:
+            assert (
+                tx["from_treasury_id"] == treasury_one
+                or tx["to_treasury_id"] == treasury_one
+            )
+
+    def test_filter_by_treasury_id_excludes_others(
+        self,
+        test_app: TestClient,
+        treasury_transactions,
+        treasury_two,
+        token,
+    ):
+        """Filtering by a different treasury should not return unrelated ones."""
+
+        response = test_app.get(
+            "/transactions",
+            params={"treasury_id": treasury_two},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()["items"]
+
+        # All returned transactions must reference treasury_two
+        assert len(data) >= 1
+        for tx in data:
+            assert (
+                tx["from_treasury_id"] == treasury_two
+                or tx["to_treasury_id"] == treasury_two
+            )
+
+
 # @pytest.fixture
 # def multiple_transactions(test_app: TestClient, entity_one, entity_two, token):
 #     """Create multiple transactions to test filtering."""
