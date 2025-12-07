@@ -1,6 +1,8 @@
 {% extends "base.jinja2" %}
 {% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
 {% from 'form.jinja2' import render_form %}
+{% from 'transaction/macro_list.jinja2' import transaction_list with context %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
 
 {% block title %}Treasury {{ treasury_inline(treasury) }}{% endblock %}
 
@@ -66,6 +68,16 @@
         </tr>
         {% endfor %}
     </table>
+    {% endif %}
+</div>
+
+<div class="details-balance">
+    <h2>Transactions</h2>
+    {% if transactions %}
+    {{ transaction_list(transactions) }}
+    {{ pagination_control(page, total, limit) }}
+    {% else %}
+    <p>No transactions for this treasury yet.</p>
     {% endif %}
 </div>
 {% endblock %}
