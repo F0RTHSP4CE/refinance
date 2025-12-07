@@ -1,6 +1,6 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Treasury
+from app.schemas import Transaction, Treasury
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, StringField, SubmitField
@@ -58,12 +58,30 @@ def add():
 @treasury_bp.route("/<int:id>")
 @token_required
 def detail(id):
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    skip = (page - 1) * limit
+
     api = get_refinance_api_client()
     t_data = api.http("GET", f"treasuries/{id}").json()
     treasury = Treasury(**t_data)
-    # balances are already part of treasury.balances
+
+    # Fetch paginated transactions for this treasury
+    tx_page = api.http(
+        "GET",
+        "transactions",
+        params={"skip": skip, "limit": limit, "treasury_id": id},
+    ).json()
+    total = tx_page.get("total", 0)
+
     return render_template(
-        "treasury/detail.jinja2", treasury=treasury, balance=treasury.balances
+        "treasury/detail.jinja2",
+        treasury=treasury,
+        balance=treasury.balances,
+        transactions=[Transaction(**x) for x in tx_page.get("items", [])],
+        total=total,
+        page=page,
+        limit=limit,
     )
 
 
