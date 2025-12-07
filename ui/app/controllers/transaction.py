@@ -98,6 +98,13 @@ class TransactionFilterForm(FlaskForm):
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in TransactionStatus]
     )
+    treasury_id = SelectField(
+        "Treasury",
+        coerce=int,
+        choices=[],
+        default=0,
+        validators=[Optional()],
+    )
     submit = SubmitField("Search")
 
 
@@ -117,12 +124,19 @@ def list():
     skip = (page - 1) * limit
 
     filter_form = TransactionFilterForm(request.args)
+
+    # populate treasury dropdown for filtering
+    treasury_choices = _get_treasury_choices()
+    filter_form.treasury_id.choices = treasury_choices  # type: ignore
     # leave only non-empty filters
-    filters = {
-        key: value
-        for (key, value) in filter_form.data.items()
-        if value not in (None, "")
-    }
+    filters = {}
+    for key, value in filter_form.data.items():
+        if key == "treasury_id":
+            # treat 0 as "no filter" for select field
+            if value and value != 0:
+                filters[key] = value
+        elif value not in (None, ""):
+            filters[key] = value
 
     api = get_refinance_api_client()
     # Pass skip and limit to the FastAPI endpoint

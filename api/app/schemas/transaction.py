@@ -98,6 +98,7 @@ class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     actor_entity_id: int | None = None
     to_entity_id: int | None = None
     from_entity_id: int | None = None
+    treasury_id: int | None = None
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None
     currency: str | None = None

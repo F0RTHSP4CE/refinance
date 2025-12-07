@@ -85,6 +85,13 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
             query = query.filter(self.model.to_entity_id == filters.to_entity_id)
+        if filters.treasury_id is not None:
+            query = query.filter(
+                or_(
+                    self.model.from_treasury_id == filters.treasury_id,
+                    self.model.to_treasury_id == filters.treasury_id,
+                )
+            )
         if filters.amount_min is not None:
             query = query.filter(self.model.amount >= filters.amount_min)
         if filters.amount_max is not None:
