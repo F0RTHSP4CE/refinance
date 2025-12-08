@@ -424,8 +424,8 @@
                 const hue = (hash * 137.508) % 360;
                 const saturation = 55 + (hash % 30); // 55% - 84%
                 const lightness = 42 + ((hash >> 3) % 28); // 42% - 69%
-                const hoverLightness = Math.min(92, lightness + 12);
-                const hoverSaturation = Math.min(90, saturation + 6);
+                const hoverLightness = Math.min(92, lightness + 30);
+                const hoverSaturation = Math.min(50, saturation + 6);
 
                 return {
                     base: `hsl(${hue.toFixed(1)}, ${saturation}%, ${lightness}%)`,
@@ -551,16 +551,20 @@
                     options: buildVerticalBarOptions(),
                 });
             };
-
             const balanceDatasets = {};
             balanceData.forEach(item => {
                 for (const curr in item.balance_changes) {
                     if (!balanceDatasets[curr]) {
+                        const color = colorFromIdentifier(curr, 0);
                         balanceDatasets[curr] = {
                             label: curr.toUpperCase(),
                             data: [],
                             borderWidth: 2,
-                            tension: 0.1
+                            tension: 0.1,
+                            borderColor: color.base,
+                            backgroundColor: color.hover,
+                            pointRadius: 2,
+                            pointHoverRadius: 3,
                         };
                     }
                 }
@@ -574,10 +578,24 @@
                 }
             });
 
+            const totalUsdDataset = {
+                label: 'Total (USD)',
+                data: balanceData.map(item => ({ x: item.day, y: item.total_usd })),
+                borderWidth: 2,
+                tension: 0.1,
+                borderColor: 'rgba(37, 99, 235, 0.95)',
+                backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                pointRadius: 3,
+                pointHoverRadius: 4,
+            };
+
             const balanceChartConfig = {
                 type: 'line',
                 data: {
-                    datasets: Object.values(balanceDatasets)
+                    datasets: [
+                        ...Object.values(balanceDatasets),
+                        totalUsdDataset,
+                    ],
                 },
                 options: {
                     parsing: { xAxisKey: 'x', yAxisKey: 'y' },
@@ -585,14 +603,16 @@
                     scales: {
                         x: {
                             type: 'time',
-                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' }
+                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' },
                         },
                         y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
+                            beginAtZero: true,
+                        },
+                    },
+                },
             };
+
+            new Chart(document.getElementById('balance-change-chart'), balanceChartConfig);
 
             const txPoints = txDayData.map(item => ({ x: item.day, y: item.transaction_count }));
             const txChartConfig = {
@@ -621,7 +641,6 @@
                 }
             };
 
-            new Chart(document.getElementById('balance-change-chart'), balanceChartConfig);
             new Chart(document.getElementById('transactions-day-chart'), txChartConfig);
 
             if (topIncoming.length) {
