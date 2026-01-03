@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ResidentFeeSumByMonthSchema(BaseModel):
@@ -49,3 +49,15 @@ class TopTagStatSchema(BaseModel):
     tag_name: str
     amounts: dict[str, float]
     total_usd: float
+
+
+class EntityStatsBundleSchema(BaseModel):
+    cached: bool = True
+    balance_changes: list[EntityBalanceChangeByDaySchema] = Field(default_factory=list)
+    transactions_by_day: list[EntityTransactionsByDaySchema] = Field(
+        default_factory=list
+    )
+    top_incoming: list[TopEntityStatSchema] = Field(default_factory=list)
+    top_outgoing: list[TopEntityStatSchema] = Field(default_factory=list)
+    top_incoming_tags: list[TopTagStatSchema] = Field(default_factory=list)
+    top_outgoing_tags: list[TopTagStatSchema] = Field(default_factory=list)

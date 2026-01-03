@@ -124,6 +124,17 @@ class StatsService(BaseService):
 
         return result
 
+    @classmethod
+    def _get_cached_value(
+        cls, cache_name: str, args: tuple[Any, ...], kwargs: dict[str, Any]
+    ) -> Any | None:
+        cache_key = cls._build_cache_key(cache_name, args, kwargs)
+        with cls._cache_lock:
+            cached = cls._cache.get(cache_key)
+            if cached is None:
+                return None
+            return deepcopy(cached)
+
     # --- internal helpers -------------------------------------------------
     def _amount_to_usd(self, currency: str, amount: Decimal) -> Decimal:
         """Convert an amount in any supported currency to USD using the latest rates.
