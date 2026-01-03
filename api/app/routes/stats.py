@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from app.schemas.stats import (
     EntityBalanceChangeByDaySchema,
+    EntityMoneyFlowByDaySchema,
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
@@ -67,6 +68,21 @@ def get_entity_transactions_by_day(
     stats_service: StatsService = Depends(),
 ):
     return stats_service.get_entity_transactions_by_day(
+        entity_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get(
+    "/entity/{entity_id}/money-flow-by-day/",
+    response_model=List[EntityMoneyFlowByDaySchema],
+)
+def get_entity_money_flow_by_day(
+    entity_id: int,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(),
+):
+    return stats_service.get_entity_money_flow_by_day(
         entity_id, timeframe_from, timeframe_to
     )
 
@@ -188,6 +204,14 @@ def get_entity_stats_bundle(
         )
         tx_args = (int(entity_id), normalized_timeframe_from, normalized_timeframe_to)
 
+        # money flow chart uses the selected "months" window, aligned to month boundaries
+        flow_start_month = normalized_timeframe_to.replace(day=1)
+        if months > 1:
+            flow_start_month = stats_service._subtract_months(
+                flow_start_month, months - 1
+            )
+        flow_args = (int(entity_id), flow_start_month, normalized_timeframe_to)
+
         top_args = (int(entity_id), int(limit), int(months), normalized_timeframe_to)
 
         balance_changes = StatsService._get_cached_value(
@@ -195,6 +219,9 @@ def get_entity_stats_bundle(
         )
         transactions_by_day = StatsService._get_cached_value(
             "get_entity_transactions_by_day", tx_args, {}
+        )
+        money_flow_by_day = StatsService._get_cached_value(
+            "get_entity_money_flow_by_day", flow_args, {}
         )
         top_incoming = StatsService._get_cached_value(
             "get_top_incoming_entities", top_args, {}
@@ -214,6 +241,7 @@ def get_entity_stats_bundle(
             for x in (
                 balance_changes,
                 transactions_by_day,
+                money_flow_by_day,
                 top_incoming,
                 top_outgoing,
                 top_incoming_tags,
@@ -228,6 +256,7 @@ def get_entity_stats_bundle(
             "cached": True,
             "balance_changes": balance_changes,
             "transactions_by_day": transactions_by_day,
+            "money_flow_by_day": money_flow_by_day,
             "top_incoming": top_incoming,
             "top_outgoing": top_outgoing,
             "top_incoming_tags": top_incoming_tags,
@@ -239,6 +268,21 @@ def get_entity_stats_bundle(
     )
     transactions_by_day = stats_service.get_entity_transactions_by_day(
         entity_id, timeframe_from, timeframe_to
+    )
+
+    normalized_timeframe_to = timeframe_to or date.today()
+    flow_timeframe_from = timeframe_from
+    if flow_timeframe_from is None:
+        flow_timeframe_from = normalized_timeframe_to.replace(day=1)
+        if months > 1:
+            flow_timeframe_from = stats_service._subtract_months(
+                flow_timeframe_from, months - 1
+            )
+
+    money_flow_by_day = stats_service.get_entity_money_flow_by_day(
+        entity_id,
+        flow_timeframe_from,
+        normalized_timeframe_to,
     )
     top_incoming = stats_service.get_top_incoming_entities(
         limit=limit, months=months, timeframe_to=timeframe_to, entity_id=entity_id
@@ -257,6 +301,7 @@ def get_entity_stats_bundle(
         "cached": True,
         "balance_changes": balance_changes,
         "transactions_by_day": transactions_by_day,
+        "money_flow_by_day": money_flow_by_day,
         "top_incoming": top_incoming,
         "top_outgoing": top_outgoing,
         "top_incoming_tags": top_incoming_tags,
