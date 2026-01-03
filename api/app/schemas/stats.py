@@ -17,6 +17,12 @@ class EntityTransactionsByDaySchema(BaseModel):
     transaction_count: int
 
 
+class EntityMoneyFlowByDaySchema(BaseModel):
+    day: date
+    incoming_total_usd: float
+    outgoing_total_usd: float
+
+
 class TransactionsSumByWeekSchema(BaseModel):
     year: int
     week: int
@@ -57,6 +63,7 @@ class EntityStatsBundleSchema(BaseModel):
     transactions_by_day: list[EntityTransactionsByDaySchema] = Field(
         default_factory=list
     )
+    money_flow_by_day: list[EntityMoneyFlowByDaySchema] = Field(default_factory=list)
     top_incoming: list[TopEntityStatSchema] = Field(default_factory=list)
     top_outgoing: list[TopEntityStatSchema] = Field(default_factory=list)
     top_incoming_tags: list[TopTagStatSchema] = Field(default_factory=list)

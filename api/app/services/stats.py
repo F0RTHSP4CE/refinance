@@ -21,7 +21,7 @@ from app.services.entity import EntityService
 from app.services.resident_fee import ResidentFeeService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import and_, extract, func, or_
+from sqlalchemy import and_, case, extract, func, or_
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -268,6 +268,91 @@ class StatsService(BaseService):
 
         return self._cached_result(
             "get_entity_transactions_by_day",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
+        )
+
+    def get_entity_money_flow_by_day(
+        self,
+        entity_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return incoming vs outgoing totals (USD) per day.
+
+        Both totals are always positive and represent the sum of transactions where
+        the entity is the receiver (incoming) or sender (outgoing), converted to USD.
+        """
+
+        timeframe_to = timeframe_to or date.today()
+        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        cache_args = (int(entity_id), timeframe_from, timeframe_to)
+
+        def builder() -> list[dict[str, Any]]:
+            day_col = func.date(Transaction.created_at)
+            direction = case(
+                (Transaction.to_entity_id == entity_id, "incoming"),
+                (Transaction.from_entity_id == entity_id, "outgoing"),
+                else_="other",
+            ).label("direction")
+
+            rows = (
+                self.db.query(
+                    day_col.label("day"),
+                    direction,
+                    Transaction.currency.label("currency"),
+                    func.sum(Transaction.amount).label("total_amount"),
+                )
+                .filter(
+                    and_(
+                        day_col >= timeframe_from,
+                        day_col <= timeframe_to,
+                        (Transaction.from_entity_id == entity_id)
+                        | (Transaction.to_entity_id == entity_id),
+                    )
+                )
+                .group_by("day", "direction", "currency")
+                .order_by("day")
+                .all()
+            )
+
+            totals_by_day: defaultdict[date, dict[str, defaultdict[str, Decimal]]] = (
+                defaultdict(
+                    lambda: {
+                        "incoming": defaultdict(Decimal),
+                        "outgoing": defaultdict(Decimal),
+                    }
+                )
+            )
+
+            for row in rows:
+                if row.direction not in ("incoming", "outgoing"):
+                    continue
+                if row.total_amount is None:
+                    continue
+                totals_by_day[row.day][row.direction][row.currency] += row.total_amount
+
+            result: list[dict[str, Any]] = []
+            for day in sorted(totals_by_day.keys()):
+                incoming_amounts = totals_by_day[day]["incoming"]
+                outgoing_amounts = totals_by_day[day]["outgoing"]
+                result.append(
+                    {
+                        "day": day,
+                        "incoming_total_usd": float(
+                            self._sum_amounts_usd(incoming_amounts)
+                        ),
+                        "outgoing_total_usd": float(
+                            self._sum_amounts_usd(outgoing_amounts)
+                        ),
+                    }
+                )
+            return result
+
+        return self._cached_result(
+            "get_entity_money_flow_by_day",
             [entity_id],
             cache_args,
             {},
