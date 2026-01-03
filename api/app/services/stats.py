@@ -408,11 +408,9 @@ class StatsService(BaseService):
         timeframe_to: date | None = None,
     ):
         timeframe_to = timeframe_to or date.today()
-        three_months_ago = self._subtract_months(timeframe_to, 3)
+        default_start_day = self._subtract_months(timeframe_to, 3)
 
-        start_day = timeframe_from if timeframe_from is not None else three_months_ago
-        if start_day < three_months_ago:
-            start_day = three_months_ago
+        start_day = timeframe_from if timeframe_from is not None else default_start_day
         if start_day > timeframe_to:
             start_day = timeframe_to
 
@@ -423,6 +421,18 @@ class StatsService(BaseService):
             current_day = start_day
             last_completed_balances: dict[str, Decimal] | None = None
 
+            # To avoid rendering a long empty stretch at the beginning of the timeframe,
+            # only emit the first day if there is an actual balance change versus the
+            # previous day. This keeps the chart aligned with other stats charts that
+            # naturally begin at the first available datapoint.
+            previous_day = start_day - timedelta(days=1)
+            previous_balances = self._balance_service.get_balances(
+                entity_id, end_date=previous_day
+            )
+            previous_completed = self._normalize_currency_mapping(
+                previous_balances.completed
+            )
+
             while current_day <= timeframe_to:
                 balances = self._balance_service.get_balances(
                     entity_id, end_date=current_day
@@ -430,6 +440,14 @@ class StatsService(BaseService):
                 completed_balances = self._normalize_currency_mapping(
                     balances.completed
                 )
+
+                if current_day == start_day:
+                    # Emit start_day only if it differs from the previous day.
+                    if completed_balances == previous_completed:
+                        last_completed_balances = completed_balances.copy()
+                        current_day += timedelta(days=1)
+                        continue
+
                 if (
                     last_completed_balances is not None
                     and completed_balances == last_completed_balances

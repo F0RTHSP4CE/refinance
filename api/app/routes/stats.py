@@ -186,33 +186,32 @@ def get_entity_stats_bundle(
         # but do not call them (to avoid doing DB work on cache misses).
         normalized_timeframe_to = timeframe_to or date.today()
 
-        # get_entity_balance_history normalizes timeframe_from -> start_day, clamps to [three_months_ago, timeframe_to]
-        three_months_ago = stats_service._subtract_months(normalized_timeframe_to, 3)
-        start_day = timeframe_from if timeframe_from is not None else three_months_ago
-        if start_day < three_months_ago:
-            start_day = three_months_ago
-        if start_day > normalized_timeframe_to:
-            start_day = normalized_timeframe_to
+        normalized_months = max(1, int(months))
+        normalized_limit = max(1, int(limit))
 
-        balance_args = (int(entity_id), start_day, normalized_timeframe_to)
+        # Bundle timeframe: if timeframe_from is not provided, use the selected
+        # months window aligned to month boundaries (same as the UI control).
+        bundle_timeframe_from = timeframe_from
+        if bundle_timeframe_from is None:
+            bundle_timeframe_from = normalized_timeframe_to.replace(day=1)
+            if normalized_months > 1:
+                bundle_timeframe_from = stats_service._subtract_months(
+                    bundle_timeframe_from, normalized_months - 1
+                )
 
-        # get_entity_transactions_by_day defaults timeframe_from to last 365 days.
-        normalized_timeframe_from = (
-            timeframe_from
-            if timeframe_from is not None
-            else normalized_timeframe_to - timedelta(days=365)
+        if bundle_timeframe_from > normalized_timeframe_to:
+            bundle_timeframe_from = normalized_timeframe_to
+
+        # Keep cache args consistent with the non-cached path below.
+        balance_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
+        tx_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
+        flow_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
+        top_args = (
+            int(entity_id),
+            int(normalized_limit),
+            int(normalized_months),
+            normalized_timeframe_to,
         )
-        tx_args = (int(entity_id), normalized_timeframe_from, normalized_timeframe_to)
-
-        # money flow chart uses the selected "months" window, aligned to month boundaries
-        flow_start_month = normalized_timeframe_to.replace(day=1)
-        if months > 1:
-            flow_start_month = stats_service._subtract_months(
-                flow_start_month, months - 1
-            )
-        flow_args = (int(entity_id), flow_start_month, normalized_timeframe_to)
-
-        top_args = (int(entity_id), int(limit), int(months), normalized_timeframe_to)
 
         balance_changes = StatsService._get_cached_value(
             "get_entity_balance_history", balance_args, {}
@@ -263,21 +262,33 @@ def get_entity_stats_bundle(
             "top_outgoing_tags": top_outgoing_tags,
         }
 
+    normalized_timeframe_to = timeframe_to or date.today()
+
+    normalized_months = max(1, int(months))
+    normalized_limit = max(1, int(limit))
+    bundle_timeframe_from = timeframe_from
+    if bundle_timeframe_from is None:
+        bundle_timeframe_from = normalized_timeframe_to.replace(day=1)
+        if normalized_months > 1:
+            bundle_timeframe_from = stats_service._subtract_months(
+                bundle_timeframe_from, normalized_months - 1
+            )
+    if bundle_timeframe_from > normalized_timeframe_to:
+        bundle_timeframe_from = normalized_timeframe_to
+
+    # Use the same bundle timeframe for all time-series charts.
     balance_changes = stats_service.get_entity_balance_history(
-        entity_id, timeframe_from, timeframe_to
+        entity_id,
+        bundle_timeframe_from,
+        normalized_timeframe_to,
     )
     transactions_by_day = stats_service.get_entity_transactions_by_day(
-        entity_id, timeframe_from, timeframe_to
+        entity_id,
+        bundle_timeframe_from,
+        normalized_timeframe_to,
     )
 
-    normalized_timeframe_to = timeframe_to or date.today()
-    flow_timeframe_from = timeframe_from
-    if flow_timeframe_from is None:
-        flow_timeframe_from = normalized_timeframe_to.replace(day=1)
-        if months > 1:
-            flow_timeframe_from = stats_service._subtract_months(
-                flow_timeframe_from, months - 1
-            )
+    flow_timeframe_from = bundle_timeframe_from
 
     money_flow_by_day = stats_service.get_entity_money_flow_by_day(
         entity_id,
@@ -285,16 +296,28 @@ def get_entity_stats_bundle(
         normalized_timeframe_to,
     )
     top_incoming = stats_service.get_top_incoming_entities(
-        limit=limit, months=months, timeframe_to=timeframe_to, entity_id=entity_id
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+        entity_id=entity_id,
     )
     top_outgoing = stats_service.get_top_outgoing_entities(
-        limit=limit, months=months, timeframe_to=timeframe_to, entity_id=entity_id
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+        entity_id=entity_id,
     )
     top_incoming_tags = stats_service.get_top_incoming_tags(
-        limit=limit, months=months, timeframe_to=timeframe_to, entity_id=entity_id
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+        entity_id=entity_id,
     )
     top_outgoing_tags = stats_service.get_top_outgoing_tags(
-        limit=limit, months=months, timeframe_to=timeframe_to, entity_id=entity_id
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+        entity_id=entity_id,
     )
 
     return {
