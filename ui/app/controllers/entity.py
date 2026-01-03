@@ -196,6 +196,13 @@ def detail(id):
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
 
+    stats_requested = request.args.get("stats", "", type=str).lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
     stats_months = request.args.get("stats_months", 6, type=int)
     stats_limit = request.args.get("stats_limit", 6, type=int)
     stats_months = max(1, stats_months)
@@ -209,51 +216,71 @@ def detail(id):
         "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
     ).json()
     total = transactions_page["total"]
-    # Fetch stats for this entity
-    balance_changes = api.http("GET", f"stats/entity/{id}/balance-change-by-day").json()
-    transactions_by_day = api.http(
-        "GET", f"stats/entity/{id}/transactions-by-day"
-    ).json()
-    top_incoming = api.http(
+
+    def _apply_stats_bundle(bundle: dict):
+        if not bundle or bundle.get("cached") is False:
+            return False, [], [], [], [], [], []
+        return (
+            True,
+            bundle.get("balance_changes", []),
+            bundle.get("transactions_by_day", []),
+            bundle.get("top_incoming", []),
+            bundle.get("top_outgoing", []),
+            bundle.get("top_incoming_tags", []),
+            bundle.get("top_outgoing_tags", []),
+        )
+
+    stats_loaded = False
+    balance_changes = []
+    transactions_by_day = []
+    top_incoming = []
+    top_outgoing = []
+    top_incoming_tags = []
+    top_outgoing_tags = []
+
+    # Always try to preload from cache (fast on hit, no DB work on miss).
+    cached_bundle = api.http(
         "GET",
-        "stats/top-incoming-entities",
+        f"stats/entity/{id}",
         params={
             "limit": stats_limit,
             "months": stats_months,
             "timeframe_to": date.today().isoformat(),
-            "entity_id": id,
+            "cached_only": 1,
         },
     ).json()
-    top_outgoing = api.http(
-        "GET",
-        "stats/top-outgoing-entities",
-        params={
-            "limit": stats_limit,
-            "months": stats_months,
-            "timeframe_to": date.today().isoformat(),
-            "entity_id": id,
-        },
-    ).json()
-    top_incoming_tags = api.http(
-        "GET",
-        "stats/top-incoming-tags",
-        params={
-            "limit": stats_limit,
-            "months": stats_months,
-            "timeframe_to": date.today().isoformat(),
-            "entity_id": id,
-        },
-    ).json()
-    top_outgoing_tags = api.http(
-        "GET",
-        "stats/top-outgoing-tags",
-        params={
-            "limit": stats_limit,
-            "months": stats_months,
-            "timeframe_to": date.today().isoformat(),
-            "entity_id": id,
-        },
-    ).json()
+
+    (
+        stats_loaded,
+        balance_changes,
+        transactions_by_day,
+        top_incoming,
+        top_outgoing,
+        top_incoming_tags,
+        top_outgoing_tags,
+    ) = _apply_stats_bundle(cached_bundle)
+
+    if not stats_loaded and stats_requested:
+        # User explicitly requested calculation/loading.
+        stats_bundle = api.http(
+            "GET",
+            f"stats/entity/{id}",
+            params={
+                "limit": stats_limit,
+                "months": stats_months,
+                "timeframe_to": date.today().isoformat(),
+            },
+        ).json()
+
+        (
+            stats_loaded,
+            balance_changes,
+            transactions_by_day,
+            top_incoming,
+            top_outgoing,
+            top_incoming_tags,
+            top_outgoing_tags,
+        ) = _apply_stats_bundle(stats_bundle)
 
     return render_template(
         "entity/detail.jinja2",
@@ -270,8 +297,34 @@ def detail(id):
         top_outgoing=top_outgoing,
         top_incoming_tags=top_incoming_tags,
         top_outgoing_tags=top_outgoing_tags,
+        stats_loaded=stats_loaded,
         stats_months=stats_months,
         stats_limit=stats_limit,
+    )
+
+
+@entity_bp.route("/<int:id>/stats")
+@token_required
+def stats(id):
+    """Trigger calculation / loading of cached statistics for an entity."""
+
+    page = request.args.get("page", 1, type=int)
+    limit = request.args.get("limit", 20, type=int)
+    stats_months = request.args.get("stats_months", 6, type=int)
+    stats_limit = request.args.get("stats_limit", 6, type=int)
+    stats_months = max(1, stats_months)
+    stats_limit = max(1, stats_limit)
+
+    return redirect(
+        url_for(
+            "entity.detail",
+            id=id,
+            page=page,
+            limit=limit,
+            stats=1,
+            stats_months=stats_months,
+            stats_limit=stats_limit,
+        )
     )
 
 
