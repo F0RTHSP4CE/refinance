@@ -19,7 +19,7 @@ from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 
 class TreasuryService(BaseService[Treasury]):
@@ -50,6 +50,15 @@ class TreasuryService(BaseService[Treasury]):
             balances = self._balance_service.get_treasury_balances(treasury.id)
             setattr(treasury, "balances", balances.dump())
         return pagination
+
+    def _apply_filters(
+        self, query: Query[Treasury], filters: TreasuryFiltersSchema
+    ) -> Query[Treasury]:
+        if filters.name is not None:
+            query = query.filter(self.model.name.ilike(f"%{filters.name}%"))
+        if filters.active is not None:
+            query = query.filter(self.model.active == filters.active)
+        return query
 
     def delete(self, obj_id: int) -> int:  # type: ignore[override]
         """Delete a treasury if it is not in use by any transaction."""

@@ -6,6 +6,7 @@ from app.schemas import Balance, Entity, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
+    BooleanField,
     FormField,
     SelectField,
     SelectMultipleField,
@@ -25,6 +26,7 @@ class EntityForm(FlaskForm):
         render_kw={"placeholder": "h4ck3r"},
     )
     comment = StringField("Comment")
+    active = BooleanField("Active", default=True)
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this entity"
     )
@@ -174,6 +176,7 @@ def edit(id):
             "comment": entity_form.comment.data,
             "tag_ids": entity_form.tag_ids.data,
             "auth": auth_form.data,  # This is the dict containing telegram_id, signal_id, etc.
+            "active": entity_form.active.data,
         }
         api.http("PATCH", f"entities/{id}", data=combined_data)
         return redirect(url_for("entity.detail", id=id))

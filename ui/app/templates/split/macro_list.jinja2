@@ -26,13 +26,15 @@
                 <td><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.id }}</a></td>
 
                 <td>
-                    <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}">
+                    <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}"
+                        class="{% if not split.actor_entity.active %}secondary inactive{% endif %}">
                         {{ split.actor_entity.name }}
                     </a>
                 </td>
                 <td>{{ human_readable_date(split.created_at) | safe }}</td>
                 <td>
-                    <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}">
+                    <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}"
+                        class="{% if not split.recipient_entity.active %}secondary inactive{% endif %}">
                         {{ split.recipient_entity.name }}
                     </a>
                     {% for tag in split.recipient_entity.tags %}

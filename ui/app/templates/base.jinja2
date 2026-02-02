@@ -22,6 +22,7 @@
     <nav>
         <ul>
             {% if g.actor_entity %}
+            <li><a href="{{ url_for('index.index') }}">Refinance</a></li>
             <li {% if 'transaction' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('transaction.list') }}">Transaction</a>
             </li>
@@ -57,7 +58,8 @@
                     class="amount-negative" {% endif %}>{{ value }} {{ currency |
                     upper}}</a>
                 {% endfor %}
-                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong>{{ g.actor_entity.name
+                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong
+                        class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name
                         }}</strong></a>
                 <a href="{{ url_for('auth.logout') }}">Log out</a>
             </li>

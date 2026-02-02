@@ -1,7 +1,8 @@
 {% extends 'base.jinja2' %}
 {% from 'form.jinja2' import render_form %}
 
-{% block title %}Remove split {{ split.id }} participant {{ entity.name }}?{% endblock %}
+{% block title %}Remove split {{ split.id }} participant <span
+    class="{% if not entity.active %}secondary inactive{% endif %}">{{ entity.name }}</span>?{% endblock %}
 
 {% block content %}
 <form method="post">

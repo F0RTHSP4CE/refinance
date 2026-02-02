@@ -32,7 +32,8 @@
             {% for entity in entities %}
             <tr>
                 <td>
-                    <a href="{{ url_for('entity.detail', id=entity.id) }}">
+                    <a href="{{ url_for('entity.detail', id=entity.id) }}"
+                        class="{% if not entity.active %}secondary inactive{% endif %}">
                         {{ entity.name }}
                     </a>
                 </td>

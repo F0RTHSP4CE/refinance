@@ -16,7 +16,8 @@
     <tr>
         <td>From</td>
         <td>
-            <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}">{{transaction.from_entity.name}}</a>
+            <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}"
+                class="{% if not transaction.from_entity.active %}secondary inactive{% endif %}">{{transaction.from_entity.name}}</a>
             {% for tag in transaction.from_entity.tags %}
             {{ tag_inline(tag) }}
             {% endfor %}
@@ -25,7 +26,8 @@
     <tr>
         <td>To</td>
         <td>
-            <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}">{{transaction.to_entity.name}}</a>
+            <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}"
+                class="{% if not transaction.to_entity.active %}secondary inactive{% endif %}">{{transaction.to_entity.name}}</a>
             {% for tag in transaction.to_entity.tags %}
             {{ tag_inline(tag) }}
             {% endfor %}
@@ -85,8 +87,8 @@
     <tr>
         <td>Actor</td>
         <td>
-            <a
-                href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}">{{transaction.actor_entity.name}}</a>
+            <a href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}"
+                class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{transaction.actor_entity.name}}</a>
             {% for tag in transaction.actor_entity.tags %}
             {{ tag_inline(tag) }}
             {% endfor %}

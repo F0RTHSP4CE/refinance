@@ -16,7 +16,7 @@
         </tr>
         <tr>
             <td>Name</td>
-            <td>{{ treasury.name }}</td>
+            <td><span class="{% if not treasury.active %}secondary inactive{% endif %}">{{ treasury.name }}</span></td>
         </tr>
         <tr>
             <td>Comment</td>

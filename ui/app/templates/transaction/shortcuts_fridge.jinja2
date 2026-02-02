@@ -1,0 +1,67 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Pay to Fridge{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        <tr>
+            <td><b>From</b></td>
+            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
+                    (id: {{ g.actor_entity.id }})</span></td>
+        </tr>
+        <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
+        <tr>
+            <td><b>To</b></td>
+            <td>Fridge (id: 141)</td>
+        </tr>
+        <input type="hidden" name="to_entity_id" value="141">
+        <tr>
+            <td>Preset</td>
+            <td>
+                <select name="fee_preset">
+                    <option value="5_GEL">5 GEL</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </td>
+        </tr>
+        <tr id="custom_amount_row" style="display: none;">
+            <td>Custom Amount</td>
+            <td><input name="custom_amount" type="number" step="0.01" placeholder="5.00"></td>
+        </tr>
+        <tr id="custom_currency_row" style="display: none;">
+            <td>Custom Currency</td>
+            <td>
+                <select name="custom_currency">
+                    <option value="GEL" selected>GEL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Comment</td>
+            <td><input name="comment" type="text" placeholder="optional"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><button type="submit">Create Fridge Payment</button></td>
+        </tr>
+    </table>
+</form>
+
+<script>
+    const fridgePreset = document.querySelector('select[name="fee_preset"]');
+    const customAmountRow = document.getElementById('custom_amount_row');
+    const customCurrencyRow = document.getElementById('custom_currency_row');
+
+    const updateCustomRows = () => {
+        const isCustom = fridgePreset.value === 'custom';
+        customAmountRow.style.display = isCustom ? '' : 'none';
+        customCurrencyRow.style.display = isCustom ? '' : 'none';
+    };
+
+    fridgePreset.addEventListener('change', updateCustomRows);
+    updateCustomRows();
+</script>
+{% endblock %}

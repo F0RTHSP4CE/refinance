@@ -39,7 +39,8 @@
         <tr>
             <td>{{ loop.index }}</td>
             <td>
-                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}">{{
+                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}"
+                    class="{% if not resident_fee.entity.active %}secondary inactive{% endif %}">{{
                     resident_fee.entity.name
                     }}</a>
                 {% for tag in resident_fee.entity.tags %}

@@ -3,7 +3,8 @@
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
 
-{% block title %}Entity {{ entity.name }}{% endblock %}
+{% block title %}Entity <span class="{% if not entity.active %}secondary inactive{% endif %}">{{ entity.name }}</span>{%
+endblock %}
 
 {% block content %}
 <style>
@@ -196,7 +197,7 @@
             </tr>
             <tr>
                 <td>Name</td>
-                <td>{{entity.name}}</td>
+                <td><span class="{% if not entity.active %}secondary inactive{% endif %}">{{entity.name}}</span></td>
             </tr>
             <tr>
                 <td>Comment</td>

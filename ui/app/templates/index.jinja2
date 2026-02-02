@@ -3,4 +3,32 @@
 {% block content %}
 <p>Welcome to refinance! Wanna <a href="{{ url_for('transaction.add') }}">make a transaction</a>?</p>
 
+<h2>Fee & Deposit</h2>
+<p>
+<div class="button-group">
+	<a class="button" href="{{ url_for('transaction.shortcut_monthly_fee') }}">🧾 Pay fee</a>
+	<a class="button" href="{{ url_for('transaction.shortcut_deposit') }}">💰 Deposit money</a>
+	</p>
+</div>
+<h2>Fridge & Coffee</h2>
+<p>
+<div class="button-group">
+	<a class="button" href="{{ url_for('transaction.shortcut_fridge') }}">🍷 Pay to fridge</a>
+	<a class="button" href="{{ url_for('transaction.shortcut_coffee') }}">☕ Pay for coffee</a>
+	<a class="button" href="{{ url_for('transaction.shortcut_reimburse') }}">➕ Reimburse</a>
+	</p>
+</div>
+<h2>Between residents / members</h2>
+<p>
+<div class="button-group">
+	<a class="button" href="{{ url_for('transaction.shortcut_pay') }}">💸 Pay to another entity</a>
+	<a class="button" href="{{ url_for('transaction.shortcut_request') }}">🙏 Request money</a>
+	</p>
+</div>
+<h2>Get your money back</h2>
+<p>
+<div class="button-group">
+	<a class="button" href="{{ url_for('transaction.shortcut_withdraw') }}">🏧 Withdraw cash/crypto</a>
+	</p>
+</div>
 {% endblock content %}

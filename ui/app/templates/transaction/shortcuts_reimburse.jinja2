@@ -1,0 +1,47 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Reimburse for Drinks/Coffee{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        <tr>
+            <td><b>From</b></td>
+            <td>
+                <select name="from_entity_id" required>
+                    <option value="141">Fridge (id: 141)</option>
+                    <option value="150">Coffee machine (id: 150)</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><b>To</b></td>
+            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
+                    (id: {{ g.actor_entity.id }})</span></td>
+        </tr>
+        <input type="hidden" name="to_entity_id" value="{{ g.actor_entity.id }}">
+        <tr>
+            <td>Amount</td>
+            <td><input name="amount" type="number" step="0.01" placeholder="5.00" required></td>
+        </tr>
+        <tr>
+            <td>Currency</td>
+            <td>
+                <select name="currency" required>
+                    <option value="GEL" selected>GEL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Comment</td>
+            <td><input name="comment" type="text" placeholder="optional"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><button type="submit">Create Reimbursement</button></td>
+        </tr>
+    </table>
+</form>
+{% endblock %}
