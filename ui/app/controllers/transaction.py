@@ -351,6 +351,48 @@ def shortcut_monthly_fee():
         "42_USD": (42, "USD"),
     }
 
+    def _get_default_fee_preset(actor_entity, balance) -> str:
+        if not actor_entity:
+            return "70_GEL"
+
+        tags = actor_entity.get("tags") or []
+        tag_ids = {
+            tag.get("id")
+            for tag in tags
+            if isinstance(tag, dict) and tag.get("id") is not None
+        }
+        is_resident = 2 in tag_ids
+        is_member = 14 in tag_ids
+
+        completed = (balance or {}).get("completed") or {}
+        normalized_balances: dict[str, float] = {}
+        for currency, amount in completed.items():
+            if amount is None:
+                continue
+            try:
+                normalized_balances[str(currency).lower()] = float(amount)
+            except (TypeError, ValueError):
+                continue
+
+        def _has_funds(currency: str, required: float) -> bool:
+            return normalized_balances.get(currency.lower(), 0.0) >= required
+
+        if is_resident:
+            if _has_funds("usd", 42):
+                return "42_USD"
+            if _has_funds("gel", 115):
+                return "115_GEL"
+            return "115_GEL"
+
+        if is_member:
+            if _has_funds("usd", 25):
+                return "25_USD"
+            if _has_funds("gel", 70):
+                return "70_GEL"
+            return "70_GEL"
+
+        return "70_GEL"
+
     today = date.today()
 
     def _month_label(offset: int) -> str:
@@ -392,10 +434,16 @@ def shortcut_monthly_fee():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
+    default_fee_preset = _get_default_fee_preset(
+        g.actor_entity if hasattr(g, "actor_entity") else None,
+        g.actor_entity_balance if hasattr(g, "actor_entity_balance") else None,
+    )
+
     return render_template(
         "transaction/shortcuts_monthly_fee.jinja2",
         comment_options=comment_options,
         default_comment=default_comment,
+        default_fee_preset=default_fee_preset,
         fee_row=fee_row,
         current_month=current_month,
         current_year=current_year,
