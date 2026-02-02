@@ -64,9 +64,9 @@ class DepositFilterForm(FlaskForm):
             NumberRange(min=0, message="Amount must be non-negative"),
         ],
     )
-    currency = StringField(
+    currency = SelectField(
         "Currency",
-        render_kw={"placeholder": "USD", "class": "small"},
+        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
     )
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in DepositStatus]

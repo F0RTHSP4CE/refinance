@@ -12,10 +12,11 @@ exchange_bp = Blueprint("exchange", __name__)
 
 class CurrencyExchangeForm(FlaskForm):
     entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
-    source_currency = StringField(
+    source_currency = SelectField(
         "Source Currency ←",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        default="GEL",
         validators=[DataRequired()],
-        render_kw={"placeholder": "USD", "class": "small"},
     )
     source_amount = FloatField(
         "Source Amount",
@@ -26,10 +27,11 @@ class CurrencyExchangeForm(FlaskForm):
             NumberRange(min=0.01, message="Amount must be greater than 0"),
         ],
     )
-    target_currency = StringField(
+    target_currency = SelectField(
         "Target Currency →",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        default="GEL",
         validators=[DataRequired()],
-        render_kw={"placeholder": "GEL", "class": "small"},
     )
     target_amount = FloatField(
         "Target Amount",

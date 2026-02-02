@@ -16,6 +16,26 @@ a {
   text-decoration: none;
 }
 
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #222;
+  border: 1px solid #222;
+}
+
+.button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
 table td {
   padding-top: 0.15rem;
   padding-bottom: 0.15rem;
@@ -280,6 +300,10 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 
 .secondary {
   filter: opacity(0.5);
+}
+
+.inactive {
+  text-decoration: line-through;
 }
 
 /* LMAO */

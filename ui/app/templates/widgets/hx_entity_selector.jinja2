@@ -1,3 +1,4 @@
 {% for entity in entities %}
-<a href="#" class="search-result-item" x-id="{{ entity.id }}" x-name="{{ entity.name }}">{{ entity.name }}</a>
+<a href="#" class="search-result-item{% if not entity.active %} secondary inactive{% endif %}" x-id="{{ entity.id }}"
+    x-name="{{ entity.name }}">{{ entity.name }}</a>
 {% endfor %}

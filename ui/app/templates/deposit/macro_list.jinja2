@@ -25,7 +25,9 @@
             <td>{{ human_readable_date(deposit.created_at) | safe }}</td>
 
             <td>
-                <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}">{{ deposit.from_entity.name
+                <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}"
+                    class="{% if not deposit.from_entity.active %}secondary inactive{% endif %}">{{
+                    deposit.from_entity.name
                     }}</a>
                 {% for tag in deposit.from_entity.tags %}
                 {{ tag_inline(tag) }}
@@ -33,7 +35,8 @@
             </td>
 
             <td>
-                <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}">{{ deposit.to_entity.name
+                <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}"
+                    class="{% if not deposit.to_entity.active %}secondary inactive{% endif %}">{{ deposit.to_entity.name
                     }}</a>
                 {% for tag in deposit.to_entity.tags %}
                 {{ tag_inline(tag) }}
@@ -52,7 +55,8 @@
             </td>
 
             <td>
-                <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}">{{deposit.actor_entity.name}}</a>
+                <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}"
+                    class="{% if not deposit.actor_entity.active %}secondary inactive{% endif %}">{{deposit.actor_entity.name}}</a>
             </td>
         </tr>
         {% endfor %}

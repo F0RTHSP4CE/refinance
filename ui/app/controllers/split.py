@@ -31,11 +31,11 @@ class SplitForm(FlaskForm):
         ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
-    currency = StringField(
+    currency = SelectField(
         "Currency",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        default="GEL",
         validators=[DataRequired()],
-        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL", "class": "small"},
     )
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this split"
@@ -105,9 +105,9 @@ class SplitFilterForm(FlaskForm):
             NumberRange(min=0, message="Amount must be non-negative"),
         ],
     )
-    currency = StringField(
+    currency = SelectField(
         "Currency",
-        render_kw={"placeholder": "GEL", "class": "small"},
+        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
     )
     comment = StringField("Comment")
     performed = SelectField(

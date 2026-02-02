@@ -1,7 +1,11 @@
+import calendar
+from datetime import date, datetime
+from decimal import Decimal
+
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Tag, Transaction, TransactionStatus
-from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, g, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     FloatField,
@@ -30,11 +34,11 @@ class TransactionForm(FlaskForm):
         ],
         render_kw={"placeholder": "10.00", "class": "small"},
     )
-    currency = StringField(
+    currency = SelectField(
         "Currency",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        default="GEL",
         validators=[DataRequired()],
-        description="Any string, but prefer <a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes_(list_one)'>ISO 4217</a>. Case insensitive.",
-        render_kw={"placeholder": "GEL", "class": "small"},
     )
     status = SelectField(
         "Status",
@@ -91,9 +95,9 @@ class TransactionFilterForm(FlaskForm):
             NumberRange(min=0, message="Amount must be non-negative"),
         ],
     )
-    currency = StringField(
+    currency = SelectField(
         "Currency",
-        render_kw={"placeholder": "GEL", "class": "small"},
+        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
     )
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in TransactionStatus]
@@ -113,6 +117,77 @@ def _get_treasury_choices():
     api = get_refinance_api_client()
     items = api.http("GET", "treasuries").json().get("items", [])
     return [(0, "")] + [(t["id"], t["name"]) for t in items]
+
+
+DEPOSIT_TAG_ID = 9
+WITHDRAWAL_TAG_ID = 10
+FEE_TAG_ID = 3
+
+
+def _get_active_treasuries(api):
+    """Fetch active treasuries"""
+    return (
+        api.http("GET", "treasuries", params={"active": "true"}).json().get("items", [])
+    )
+
+
+def _get_entities_by_tag_id(api, tag_id: int | None, active_only: bool = False):
+    if not tag_id:
+        return []
+    params = {"tags_ids": tag_id, "limit": 500}
+    if active_only:
+        params["active"] = "true"
+    return api.http("GET", "entities", params=params).json().get("items", [])
+
+
+def _build_resident_fees(api):
+    raw_fees = api.http("GET", "resident_fees").json()
+    fees = []
+    for data in raw_fees:
+        converted = []
+        for f in data.get("fees", []):
+            raw_amounts = f.get("amounts", {})
+            amounts = {
+                currency: Decimal(str(value)) for currency, value in raw_amounts.items()
+            }
+            total_usd_raw = f.get("total_usd", 0)
+            total_usd = Decimal(str(total_usd_raw or 0))
+            converted.append(
+                {
+                    "year": f["year"],
+                    "month": f["month"],
+                    "amounts": amounts,
+                    "total_usd": total_usd,
+                }
+            )
+        data["fees"] = converted
+        fees.append(data)
+
+    timeline_set = set()
+    for rf in fees:
+        for f in rf.get("fees", []):
+            timeline_set.add((f["year"], f["month"]))
+    timeline = sorted(timeline_set)
+
+    for rf in fees:
+        fee_map = {(f["year"], f["month"]): f for f in rf.get("fees", [])}
+        rf["fees"] = []
+        for y, m in timeline:
+            existing = fee_map.get((y, m))
+            if existing is not None:
+                rf["fees"].append(existing)
+            else:
+                rf["fees"].append(
+                    {
+                        "year": y,
+                        "month": m,
+                        "amounts": {},
+                        "total_usd": Decimal("0"),
+                    }
+                )
+
+    current_date = datetime.utcnow()
+    return fees, current_date.month, current_date.year
 
 
 @transaction_bp.route("/")
@@ -194,6 +269,255 @@ def add():
         if tx.status_code == 200:
             return redirect(url_for("transaction.detail", id=tx.json()["id"]))
     return render_template("transaction/add.jinja2", form=form, all_tags=all_tags)
+
+
+@transaction_bp.route("/shortcuts/deposit", methods=["GET", "POST"])
+@token_required
+def shortcut_deposit():
+    api = get_refinance_api_client()
+    deposit_entities = _get_entities_by_tag_id(api, DEPOSIT_TAG_ID, active_only=True)
+    treasuries = _get_active_treasuries(api)
+
+    if request.method == "POST":
+        to_treasury_id = request.form.get("to_treasury_id")
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": float(request.form["amount"]),
+            "currency": request.form["currency"],
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [DEPOSIT_TAG_ID],
+            "to_treasury_id": int(to_treasury_id) if to_treasury_id else None,
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template(
+        "transaction/shortcuts_deposit.jinja2",
+        deposit_entities=deposit_entities,
+        treasuries=treasuries,
+    )
+
+
+@transaction_bp.route("/shortcuts/pay", methods=["GET", "POST"])
+@token_required
+def shortcut_pay():
+    api = get_refinance_api_client()
+    if request.method == "POST":
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": float(request.form["amount"]),
+            "currency": request.form["currency"],
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template("transaction/shortcuts_pay.jinja2")
+
+
+@transaction_bp.route("/shortcuts/request", methods=["GET", "POST"])
+@token_required
+def shortcut_request():
+    api = get_refinance_api_client()
+    if request.method == "POST":
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": float(request.form["amount"]),
+            "currency": request.form["currency"],
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template("transaction/shortcuts_request.jinja2")
+
+
+@transaction_bp.route("/shortcuts/monthly-fee", methods=["GET", "POST"])
+@token_required
+def shortcut_monthly_fee():
+    api = get_refinance_api_client()
+    preset_map = {
+        "70_GEL": (70, "GEL"),
+        "115_GEL": (115, "GEL"),
+        "25_USD": (25, "USD"),
+        "42_USD": (42, "USD"),
+    }
+
+    today = date.today()
+
+    def _month_label(offset: int) -> str:
+        base_index = (today.year * 12 + (today.month - 1)) + offset
+        year = base_index // 12
+        month = base_index % 12 + 1
+        return f"fee {calendar.month_abbr[month].lower()} {year}"
+
+    comment_options = [_month_label(offset) for offset in range(-6, 7)]
+    default_comment = _month_label(0)
+
+    fee_row = None
+    fees, current_month, current_year = _build_resident_fees(api)
+    actor_id = g.actor_entity.get("id") if g.actor_entity else None
+    if actor_id is not None:
+        for rf in fees:
+            entity_data = rf.get("entity") or {}
+            if entity_data.get("id") == actor_id or rf.get("entity_id") == actor_id:
+                fee_row = rf
+                break
+
+    if request.method == "POST":
+        preset = request.form.get("fee_preset", "70_GEL")
+        if preset == "custom":
+            amount = float(request.form["custom_amount"])
+            currency = request.form["custom_currency"]
+        else:
+            amount, currency = preset_map[preset]
+
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": amount,
+            "currency": currency,
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [FEE_TAG_ID],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template(
+        "transaction/shortcuts_monthly_fee.jinja2",
+        comment_options=comment_options,
+        default_comment=default_comment,
+        fee_row=fee_row,
+        current_month=current_month,
+        current_year=current_year,
+    )
+
+
+@transaction_bp.route("/shortcuts/withdraw", methods=["GET", "POST"])
+@token_required
+def shortcut_withdraw():
+    api = get_refinance_api_client()
+    withdrawal_entities = _get_entities_by_tag_id(api, WITHDRAWAL_TAG_ID)
+    treasuries = _get_active_treasuries(api)
+
+    if request.method == "POST":
+        from_treasury_id = request.form.get("from_treasury_id")
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": float(request.form["amount"]),
+            "currency": request.form["currency"],
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [WITHDRAWAL_TAG_ID],
+            "from_treasury_id": int(from_treasury_id) if from_treasury_id else None,
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template(
+        "transaction/shortcuts_withdraw.jinja2",
+        withdrawal_entities=withdrawal_entities,
+        treasuries=treasuries,
+    )
+
+
+@transaction_bp.route("/shortcuts/fridge", methods=["GET", "POST"])
+@token_required
+def shortcut_fridge():
+    api = get_refinance_api_client()
+    preset_map = {
+        "5_GEL": (5, "GEL"),
+    }
+
+    if request.method == "POST":
+        preset = request.form.get("fee_preset", "5_GEL")
+        if preset == "custom":
+            amount = float(request.form["custom_amount"])
+            currency = request.form["custom_currency"]
+        else:
+            amount, currency = preset_map[preset]
+
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": amount,
+            "currency": currency,
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template("transaction/shortcuts_fridge.jinja2")
+
+
+@transaction_bp.route("/shortcuts/coffee", methods=["GET", "POST"])
+@token_required
+def shortcut_coffee():
+    api = get_refinance_api_client()
+    preset_map = {
+        "5_GEL": (5, "GEL"),
+    }
+
+    if request.method == "POST":
+        preset = request.form.get("fee_preset", "5_GEL")
+        if preset == "custom":
+            amount = float(request.form["custom_amount"])
+            currency = request.form["custom_currency"]
+        else:
+            amount, currency = preset_map[preset]
+
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": amount,
+            "currency": currency,
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template("transaction/shortcuts_coffee.jinja2")
+
+
+@transaction_bp.route("/shortcuts/reimburse", methods=["GET", "POST"])
+@token_required
+def shortcut_reimburse():
+    api = get_refinance_api_client()
+
+    if request.method == "POST":
+        data = {
+            "from_entity_id": int(request.form["from_entity_id"]),
+            "to_entity_id": int(request.form["to_entity_id"]),
+            "amount": float(request.form["amount"]),
+            "currency": request.form["currency"],
+            "comment": request.form.get("comment", ""),
+            "status": "draft",
+            "tag_ids": [],
+        }
+        tx = api.http("POST", "transactions", data=data)
+        return redirect(url_for("transaction.detail", id=tx.json()["id"]))
+
+    return render_template("transaction/shortcuts_reimburse.jinja2")
+
+
+@transaction_bp.route("/shortcuts/exchange")
+@token_required
+def shortcut_exchange():
+    return redirect(url_for("exchange.index"))
 
 
 @transaction_bp.route("/<int:id>/edit", methods=["GET", "POST"])

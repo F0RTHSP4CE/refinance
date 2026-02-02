@@ -1,0 +1,129 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Pay Monthly Fee{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        <tr>
+            <td><b>From</b></td>
+            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
+                    (id: {{ g.actor_entity.id }})</span></td>
+        </tr>
+        <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
+        <tr>
+            <td><b>To</b></td>
+            <td>F0 (id: 1)</td>
+        </tr>
+        <input type="hidden" name="to_entity_id" value="1">
+        <tr>
+            <td>Preset</td>
+            <td>
+                <select name="fee_preset">
+                    <option value="70_GEL">70 GEL</option>
+                    <option value="115_GEL">115 GEL</option>
+                    <option value="25_USD">25 USD</option>
+                    <option value="42_USD">42 USD</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </td>
+        </tr>
+        <tr id="custom_amount_row" style="display: none;">
+            <td>Custom Amount</td>
+            <td><input name="custom_amount" type="number" step="0.01" placeholder="10.00"></td>
+        </tr>
+        <tr id="custom_currency_row" style="display: none;">
+            <td>Custom Currency</td>
+            <td>
+                <select name="custom_currency">
+                    <option value="GEL" selected>GEL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Comment</td>
+            <td>
+                <select name="comment">
+                    {% for option in comment_options %}
+                    <option value="{{ option }}" {% if option==default_comment %}selected{% endif %}>
+                        {{ option }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><button type="submit">Create Fee Payment</button></td>
+        </tr>
+    </table>
+</form>
+
+{% if fee_row %}
+<h2>Your fee history</h2>
+{% set month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] %}
+<table>
+    <thead>
+        <tr>
+            <th></th>
+            {% for month in fee_row.fees %}
+            {% if month.month==current_month and month.year==current_year %}
+            <th class="center-align">▼</th>
+            {% else %}
+            <th></th>
+            {% endif %}
+            {% endfor %}
+        </tr>
+    </thead>
+    <thead>
+        <tr>
+            <th></th>
+            {% for month in fee_row.fees %}
+            <th class="center-align">
+                {{ month_names[month.month] }} {{ month.year }}
+            </th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>
+                <a href="{{ url_for('entity.detail', id=fee_row.entity.id) }}"
+                    class="{% if not fee_row.entity.active %}secondary inactive{% endif %}">{{
+                    fee_row.entity.name
+                    }}</a>
+            </td>
+            {% for fee in fee_row.fees %}
+            {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month) %}
+            <td {% if fee.amounts %} class="fee-paid" {% elif not is_future %} class="fee-not-paid" {% endif %}>
+                {% if fee.amounts %}
+                {% for currency, amount in fee.amounts.items() %}
+                <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
+                {% endfor %}
+                {% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+    </tbody>
+</table>
+{% else %}
+<p>No fee history for this entity.</p>
+{% endif %}
+
+<script>
+    const feePreset = document.querySelector('select[name="fee_preset"]');
+    const customAmountRow = document.getElementById('custom_amount_row');
+    const customCurrencyRow = document.getElementById('custom_currency_row');
+
+    const updateCustomAmountVisibility = () => {
+        const isCustom = feePreset.value === 'custom';
+        customAmountRow.style.display = isCustom ? '' : 'none';
+        customCurrencyRow.style.display = isCustom ? '' : 'none';
+    };
+
+    feePreset.addEventListener('change', updateCustomAmountVisibility);
+    updateCustomAmountVisibility();
+</script>
+{% endblock %}

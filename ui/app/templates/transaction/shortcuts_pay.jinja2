@@ -1,0 +1,45 @@
+{% extends 'base.jinja2' %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+
+{% block title %}Pay to Another Entity{% endblock %}
+
+{% block content %}
+<form method="post">
+    <table>
+        <tr>
+            <td><b>From</b></td>
+            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
+                    (id: {{ g.actor_entity.id }})</span></td>
+        </tr>
+        <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
+        <tr>
+            <td><b>To</b></td>
+            <td>{{ entity_selector('to_entity') }}</td>
+        </tr>
+        <tr>
+            <td>Amount</td>
+            <td><input name="amount" type="number" step="0.01" placeholder="10.00" required></td>
+        </tr>
+        <tr>
+            <td>Currency</td>
+            <td>
+                <select name="currency" required>
+                    <option value="GEL" selected>GEL</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Comment</td>
+            <td><input name="comment" type="text" placeholder="optional"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td><button type="submit">Create Payment</button></td>
+        </tr>
+    </table>
+</form>
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}

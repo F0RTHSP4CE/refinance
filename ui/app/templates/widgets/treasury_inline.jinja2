@@ -3,6 +3,7 @@
 {%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
 
 <small class="treasury-badge" style="background-color: {{ color }}">
-    <a href="{{ url_for('treasury.detail', id=treasury.id) }}">{{ treasury.name }}</a>
+    <a href="{{ url_for('treasury.detail', id=treasury.id) }}"
+        class="{% if not treasury.active %}secondary inactive{% endif %}">{{ treasury.name }}</a>
 </small>
 {% endmacro %}

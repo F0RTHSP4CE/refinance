@@ -7,7 +7,7 @@
 {% block content %}
 <form method="post">
     <h2>Entity</h2>
-    {{ render_form(entity_form, except=('entity-tag_ids',)) }}
+    {{ render_form(entity_form, except=('entity-tag_ids', 'entity-active')) }}
 
     <table>
         <tr>
