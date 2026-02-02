@@ -13,14 +13,16 @@
         <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
         <tr>
             <td><b>To</b></td>
-            <td>Coffee (id: 150)</td>
+            <td>Coffee (id: {{ coffee_entity_id }})</td>
         </tr>
-        <input type="hidden" name="to_entity_id" value="150">
+        <input type="hidden" name="to_entity_id" value="{{ coffee_entity_id }}">
         <tr>
             <td>Preset</td>
             <td>
                 <select name="fee_preset">
-                    <option value="5_GEL">5 GEL</option>
+                    {% for preset in preset_options %}
+                    <option value="{{ preset.value }}">{{ preset.label }}</option>
+                    {% endfor %}
                     <option value="custom">Custom</option>
                 </select>
             </td>

@@ -1,7 +1,9 @@
 import calendar
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Dict, List
 
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Tag, Transaction, TransactionStatus
@@ -119,9 +121,9 @@ def _get_treasury_choices():
     return [(0, "")] + [(t["id"], t["name"]) for t in items]
 
 
-DEPOSIT_TAG_ID = 9
-WITHDRAWAL_TAG_ID = 10
-FEE_TAG_ID = 3
+DEPOSIT_TAG_ID = Config.TAG_IDS["deposit"]
+WITHDRAWAL_TAG_ID = Config.TAG_IDS["withdrawal"]
+FEE_TAG_ID = Config.TAG_IDS["fee"]
 
 
 def _get_active_treasuries(api):
@@ -344,16 +346,46 @@ def shortcut_request():
 @token_required
 def shortcut_monthly_fee():
     api = get_refinance_api_client()
+    fee_presets = Config.DEFAULT_MONTHLY_FEE_PRESETS
+
+    def _build_fee_presets_list(presets: dict) -> List[Dict[str, float | str]]:
+        items: List[Dict[str, float | str]] = []
+        for group_key, currencies in presets.items():
+            if not isinstance(currencies, dict):
+                continue
+            group_label = str(group_key).replace("_", " ").title()
+            for currency, amount in currencies.items():
+                if amount is None:
+                    continue
+                amount_value = float(amount)
+                items.append(
+                    {
+                        "value": f"{amount_value}_{str(currency).upper()}",
+                        "label": f"{amount_value:g} {str(currency).upper()} — {group_label}",
+                        "amount": amount_value,
+                        "currency": str(currency).upper(),
+                    }
+                )
+        return items
+
+    fee_preset_options = _build_fee_presets_list(fee_presets)
     preset_map = {
-        "70_GEL": (70, "GEL"),
-        "115_GEL": (115, "GEL"),
-        "25_USD": (25, "USD"),
-        "42_USD": (42, "USD"),
+        option["value"]: (option["amount"], option["currency"])
+        for option in fee_preset_options
     }
 
-    def _get_default_fee_preset(actor_entity, balance) -> str:
+    def _get_default_fee_preset(actor_entity, balance, presets: dict) -> str:
+        def _first_available_preset() -> str:
+            for group in presets.keys():
+                group_presets = presets.get(group) or {}
+                for currency in group_presets.keys():
+                    amount = group_presets.get(currency)
+                    if amount is not None:
+                        return f"{float(amount)}_{currency.upper()}"
+            return "custom"
+
         if not actor_entity:
-            return "70_GEL"
+            return _first_available_preset()
 
         tags = actor_entity.get("tags") or []
         tag_ids = {
@@ -361,8 +393,8 @@ def shortcut_monthly_fee():
             for tag in tags
             if isinstance(tag, dict) and tag.get("id") is not None
         }
-        is_resident = 2 in tag_ids
-        is_member = 14 in tag_ids
+        is_resident = Config.TAG_IDS["resident"] in tag_ids
+        is_member = Config.TAG_IDS["member"] in tag_ids
 
         completed = (balance or {}).get("completed") or {}
         normalized_balances: dict[str, float] = {}
@@ -377,21 +409,21 @@ def shortcut_monthly_fee():
         def _has_funds(currency: str, required: float) -> bool:
             return normalized_balances.get(currency.lower(), 0.0) >= required
 
+        def _choose_for(group: str) -> str | None:
+            group_presets = presets.get(group) or {}
+            for currency in group_presets.keys():
+                amount = group_presets.get(currency)
+                if amount is not None:
+                    return f"{float(amount)}_{currency.upper()}"
+            return None
+
         if is_resident:
-            if _has_funds("usd", 42):
-                return "42_USD"
-            if _has_funds("gel", 115):
-                return "115_GEL"
-            return "115_GEL"
+            return _choose_for("resident") or _first_available_preset()
 
         if is_member:
-            if _has_funds("usd", 25):
-                return "25_USD"
-            if _has_funds("gel", 70):
-                return "70_GEL"
-            return "70_GEL"
+            return _choose_for("member") or _first_available_preset()
 
-        return "70_GEL"
+        return _first_available_preset()
 
     today = date.today()
 
@@ -437,6 +469,7 @@ def shortcut_monthly_fee():
     default_fee_preset = _get_default_fee_preset(
         g.actor_entity if hasattr(g, "actor_entity") else None,
         g.actor_entity_balance if hasattr(g, "actor_entity_balance") else None,
+        fee_presets,
     )
 
     return render_template(
@@ -444,9 +477,11 @@ def shortcut_monthly_fee():
         comment_options=comment_options,
         default_comment=default_comment,
         default_fee_preset=default_fee_preset,
+        fee_presets=fee_preset_options,
         fee_row=fee_row,
         current_month=current_month,
         current_year=current_year,
+        f0_entity_id=Config.ENTITY_IDS["f0"],
     )
 
 
@@ -483,8 +518,22 @@ def shortcut_withdraw():
 @token_required
 def shortcut_fridge():
     api = get_refinance_api_client()
+    preset_options: List[Dict[str, float | str]] = []
+    for preset in Config.FRIDGE_PRESETS:
+        amount = float(preset.get("amount", 0))
+        currency = str(preset.get("currency", "")).upper()
+        label = preset.get("label") or f"{amount:g} {currency}"
+        preset_options.append(
+            {
+                "value": f"{amount}_{currency}",
+                "label": label,
+                "amount": amount,
+                "currency": currency,
+            }
+        )
     preset_map = {
-        "5_GEL": (5, "GEL"),
+        option["value"]: (option["amount"], option["currency"])
+        for option in preset_options
     }
 
     if request.method == "POST":
@@ -507,15 +556,33 @@ def shortcut_fridge():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
-    return render_template("transaction/shortcuts_fridge.jinja2")
+    return render_template(
+        "transaction/shortcuts_fridge.jinja2",
+        fridge_entity_id=Config.ENTITY_IDS["fridge"],
+        preset_options=preset_options,
+    )
 
 
 @transaction_bp.route("/shortcuts/coffee", methods=["GET", "POST"])
 @token_required
 def shortcut_coffee():
     api = get_refinance_api_client()
+    preset_options: List[Dict[str, float | str]] = []
+    for preset in Config.COFFEE_PRESETS:
+        amount = float(preset.get("amount", 0))
+        currency = str(preset.get("currency", "")).upper()
+        label = preset.get("label") or f"{amount:g} {currency}"
+        preset_options.append(
+            {
+                "value": f"{amount}_{currency}",
+                "label": label,
+                "amount": amount,
+                "currency": currency,
+            }
+        )
     preset_map = {
-        "5_GEL": (5, "GEL"),
+        option["value"]: (option["amount"], option["currency"])
+        for option in preset_options
     }
 
     if request.method == "POST":
@@ -538,7 +605,11 @@ def shortcut_coffee():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
-    return render_template("transaction/shortcuts_coffee.jinja2")
+    return render_template(
+        "transaction/shortcuts_coffee.jinja2",
+        coffee_entity_id=Config.ENTITY_IDS["coffee"],
+        preset_options=preset_options,
+    )
 
 
 @transaction_bp.route("/shortcuts/reimburse", methods=["GET", "POST"])
@@ -559,7 +630,11 @@ def shortcut_reimburse():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
-    return render_template("transaction/shortcuts_reimburse.jinja2")
+    return render_template(
+        "transaction/shortcuts_reimburse.jinja2",
+        fridge_entity_id=Config.ENTITY_IDS["fridge"],
+        coffee_entity_id=Config.ENTITY_IDS["coffee"],
+    )
 
 
 @transaction_bp.route("/shortcuts/exchange")
