@@ -20,11 +20,11 @@
             <td>Preset</td>
             <td>
                 <select name="fee_preset">
-                    <option value="70_GEL">70 GEL — Members</option>
-                    <option value="25_USD">25 USD — Members</option>
-                    <option value="115_GEL">115 GEL — Residents</option>
-                    <option value="42_USD">42 USD — Residents</option>
-                    <option value="custom">Custom</option>
+                    <option value="70_GEL" {% if default_fee_preset == "70_GEL" %}selected{% endif %}>70 GEL — Members</option>
+                    <option value="25_USD" {% if default_fee_preset == "25_USD" %}selected{% endif %}>25 USD — Members</option>
+                    <option value="115_GEL" {% if default_fee_preset == "115_GEL" %}selected{% endif %}>115 GEL — Residents</option>
+                    <option value="42_USD" {% if default_fee_preset == "42_USD" %}selected{% endif %}>42 USD — Residents</option>
+                    <option value="custom" {% if default_fee_preset == "custom" %}selected{% endif %}>Custom</option>
                 </select>
             </td>
         </tr>
