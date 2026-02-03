@@ -55,12 +55,22 @@
         </tr>
         <tr>
             <td></td>
-            <td><button type="submit">Create Deposit</button></td>
+            <td><button type="submit">Pre-create a deposit</button></td>
         </tr>
     </table>
 </form>
+<p><strong>Note:</strong> This action MUST be confirmed by a financier.<br>You can create a draft with this form to
+    speed
+    up the process.</p>
 
 {% if deposit_entities|length == 0 %}
 <p>No deposit-tagged entities available.</p>
 {% endif %}
+
+<h2>What is a deposit?</h2>
+<p>A deposit is a transaction that represents money coming into your account from an external source. It
+    could be a bank transfer, cash or crypto.</p>
+<p>When you create a deposit, you specify the source of the funds and the Treasury these funds are put into.</p>
+<img src="{{ url_for('static', filename='/images/transaction/shortcuts/deposit.jpg') }}" alt="Deposit Diagram"
+    style="max-width: 50rem">
 {% endblock %}

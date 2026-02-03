@@ -1,6 +1,6 @@
 {% extends 'base.jinja2' %}
 
-{% block title %}Pay to Coffee{% endblock %}
+{% block title %}Pay for Coffee{% endblock %}
 
 {% block content %}
 <form method="post">
@@ -13,7 +13,7 @@
         <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
         <tr>
             <td><b>To</b></td>
-            <td>Coffee (id: {{ coffee_entity_id }})</td>
+            <td>Coffee Machine (id: {{ coffee_entity_id }})</td>
         </tr>
         <input type="hidden" name="to_entity_id" value="{{ coffee_entity_id }}">
         <tr>
@@ -47,7 +47,7 @@
         </tr>
         <tr>
             <td></td>
-            <td><button type="submit">Create Coffee Payment</button></td>
+            <td><button type="submit">Pay for coffee</button></td>
         </tr>
     </table>
 </form>
@@ -66,4 +66,6 @@
     coffeePreset.addEventListener('change', updateCustomRows);
     updateCustomRows();
 </script>
+
+<img src="{{ url_for('static', filename='/images/transaction/shortcuts/coffee.jpg') }}" style="max-width: 20rem">
 {% endblock %}
