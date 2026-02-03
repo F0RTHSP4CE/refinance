@@ -63,4 +63,10 @@
 {% if withdrawal_entities|length == 0 %}
 <p>No withdrawal-tagged entities available.</p>
 {% endif %}
+
+<h2>What is a withdrawal?</h2>
+<p>A withdrawal is a transaction that represents money going out of your account to an external destination. It
+    could be a bank transfer, cash or crypto.</p>
+<img src="{{ url_for('static', filename='/images/transaction/shortcuts/withdraw.jpg') }}" alt="Withdrawal Diagram"
+    style="max-width: 50rem">
 {% endblock %}

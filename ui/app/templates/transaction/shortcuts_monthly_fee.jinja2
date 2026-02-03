@@ -1,6 +1,6 @@
 {% extends 'base.jinja2' %}
 
-{% block title %}Pay Monthly Fee{% endblock %}
+{% block title %}Pay Member/Resident Fee{% endblock %}
 
 {% block content %}
 <form method="post">
@@ -21,11 +21,11 @@
             <td>
                 <select name="fee_preset">
                     {% for preset in fee_presets %}
-                    <option value="{{ preset.value }}" {% if preset.value == default_fee_preset %}selected{% endif %}>
+                    <option value="{{ preset.value }}" {% if preset.value==default_fee_preset %}selected{% endif %}>
                         {{ preset.label }}
                     </option>
                     {% endfor %}
-                    <option value="custom" {% if default_fee_preset == "custom" %}selected{% endif %}>Custom</option>
+                    <option value="custom" {% if default_fee_preset=="custom" %}selected{% endif %}>Custom</option>
                 </select>
             </td>
         </tr>
@@ -57,7 +57,7 @@
         </tr>
         <tr>
             <td></td>
-            <td><button type="submit">Create Fee Payment</button></td>
+            <td><button type="submit">Pay the fee</button></td>
         </tr>
     </table>
 </form>
@@ -127,4 +127,17 @@
     feePreset.addEventListener('change', updateCustomAmountVisibility);
     updateCustomAmountVisibility();
 </script>
+
+<h2>What is a Fee?</h2>
+<p>Fee is a monthly payment from a resident/member to the hackerspace. It is used to pay for rent and utilities.</p>
+<h2>How to pay it?</h2>
+<ol>
+    <li><a href="{{ url_for('transaction.shortcut_deposit') }}">Deposit funds</a></li>
+    <li>Select a month and an amount</li>
+    <li>Click Pay</li>
+    <li>Repeat to pay for <strong>future months</strong></li>
+</ol>
+<img src="{{ url_for('static', filename='/images/transaction/shortcuts/fee.jpg') }}" alt="Monthly Fee Diagram"
+    style="max-width: 50rem">
+
 {% endblock %}

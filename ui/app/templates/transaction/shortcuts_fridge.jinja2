@@ -47,10 +47,13 @@
         </tr>
         <tr>
             <td></td>
-            <td><button type="submit">Create Fridge Payment</button></td>
+            <td><button type="submit">Pay for a drink</button></td>
         </tr>
     </table>
 </form>
+
+<img src="{{ url_for('static', filename='/images/transaction/shortcuts/fridge.jpg') }}" alt="Fridge Payment Diagram"
+    style="max-width: 25rem">
 
 <script>
     const fridgePreset = document.querySelector('select[name="fee_preset"]');
