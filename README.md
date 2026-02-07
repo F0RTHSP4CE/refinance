@@ -101,7 +101,6 @@ make test
 - [ ] update all boolean attrs to status enums
 - [ ] mobile ui
 - [ ] rename base to common where applicable
-- [ ] ~~remove _in and _out postfixes for entities~~ not needed
 - [ ] remove base service class
 
 ## todo future features
