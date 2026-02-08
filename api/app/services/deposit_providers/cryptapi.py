@@ -5,6 +5,7 @@ from uuid import UUID
 
 import requests
 from app.config import Config, get_config
+from app.dependencies.services import get_deposit_service
 from app.errors.deposit import DepositAmountIncorrect
 from app.models.deposit import Deposit
 from app.models.entity import Entity
@@ -29,7 +30,7 @@ class CryptAPIDepositProviderService(BaseService[Entity]):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        deposit_service: DepositService = Depends(),
+        deposit_service: DepositService = Depends(get_deposit_service),
         config: Config = Depends(get_config),
     ):
         self.db = db

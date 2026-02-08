@@ -3,6 +3,7 @@
 from datetime import date, timedelta
 from typing import List, Optional
 
+from app.dependencies.services import get_stats_service
 from app.schemas.stats import (
     EntityBalanceChangeByDaySchema,
     EntityMoneyFlowByDaySchema,
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/stats", tags=["Stats"])
 def get_resident_fee_sum_by_month(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_resident_fee_sum_by_month(timeframe_from, timeframe_to)
 
@@ -37,7 +38,7 @@ def get_resident_fee_sum_by_month(
 def get_transactions_sum_by_week(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_transactions_sum_by_week(timeframe_from, timeframe_to)
 
@@ -50,7 +51,7 @@ def get_entity_balance_history(
     entity_id: int,
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_entity_balance_history(
         entity_id, timeframe_from, timeframe_to
@@ -65,7 +66,7 @@ def get_entity_transactions_by_day(
     entity_id: int,
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_entity_transactions_by_day(
         entity_id, timeframe_from, timeframe_to
@@ -80,7 +81,7 @@ def get_entity_money_flow_by_day(
     entity_id: int,
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_entity_money_flow_by_day(
         entity_id, timeframe_from, timeframe_to
@@ -95,7 +96,7 @@ def get_transactions_sum_by_tag_by_month(
     tag_id: int,
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_transactions_sum_by_tag_by_month(
         tag_id, timeframe_from, timeframe_to
@@ -108,7 +109,7 @@ def get_top_incoming_entities(
     months: int = 3,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_top_incoming_entities(
         limit=limit,
@@ -124,7 +125,7 @@ def get_top_outgoing_entities(
     months: int = 3,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_top_outgoing_entities(
         limit=limit,
@@ -140,7 +141,7 @@ def get_top_incoming_tags(
     months: int = 3,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_top_incoming_tags(
         limit=limit,
@@ -156,7 +157,7 @@ def get_top_outgoing_tags(
     months: int = 3,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_top_outgoing_tags(
         limit=limit,
@@ -174,7 +175,7 @@ def get_entity_stats_bundle(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     cached_only: bool = False,
-    stats_service: StatsService = Depends(),
+    stats_service: StatsService = Depends(get_stats_service),
 ):
     """Return all entity stats in a single request.
 

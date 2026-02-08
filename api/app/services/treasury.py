@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from app.dependencies.services import get_balance_service
 from app.errors.common import NotFoundError
 from app.errors.treasury import TreasuryDeletionError
 from app.models.transaction import Transaction, TransactionStatus
@@ -28,7 +29,7 @@ class TreasuryService(BaseService[Treasury]):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        balance_service: BalanceService = Depends(),
+        balance_service: BalanceService = Depends(get_balance_service),
     ):
         self.db = db
         self._balance_service = balance_service
@@ -75,24 +76,34 @@ class TreasuryService(BaseService[Treasury]):
             raise TreasuryDeletionError(f"Treasury.id={obj_id}")
         return super().delete(obj_id)
 
-    def transaction_will_overdraft_treasury(self, tx_id: int) -> bool:
+    def transaction_will_overdraft_treasury(
+        self,
+        tx_id: int | None = None,
+        *,
+        treasury_id: int | None = None,
+        currency: str | None = None,
+        amount: Decimal | None = None,
+    ) -> bool:
         """
-        Check if a draft transaction will overdraft the treasury balance when applied.
+        Check if applying a transaction will overdraft a treasury balance.
         """
-        tx = self.db.query(Transaction).filter(Transaction.id == tx_id).first()
-        if not tx:
-            raise NotFoundError(f"Transaction id={tx_id}")
-        if tx.from_treasury_id is None or tx.status == TransactionStatus.COMPLETED:
+        if tx_id is not None:
+            tx = self.db.query(Transaction).filter(Transaction.id == tx_id).first()
+            if not tx:
+                raise NotFoundError(f"Transaction id={tx_id}")
+            if tx.from_treasury_id is None or tx.status == TransactionStatus.COMPLETED:
+                return False
+            treasury_id = tx.from_treasury_id
+            currency = tx.currency
+            amount = tx.amount
+        if treasury_id is None:
             return False
-        # get completed balances for treasury
-        # get balances; converted to raw Decimal values
-        balances = self._balance_service.get_treasury_balances(tx.from_treasury_id)
-        # get current balance; may be CurrencyDecimal or Decimal
-        current_val = balances.completed.get(tx.currency, Decimal(0))
-        # ensure Decimal type: unwrap CurrencyDecimal or accept Decimal
+        if currency is None or amount is None:
+            raise ValueError("currency and amount are required when tx_id is not set")
+        balances = self._balance_service.get_treasury_balances(treasury_id)
+        current_val = balances.completed.get(currency, Decimal(0))
         if isinstance(current_val, CurrencyDecimal):
             current_decimal: Decimal = current_val.to_decimal()  # type: ignore
         else:
             current_decimal: Decimal = current_val  # type: ignore
-        # simulate applying tx
-        return current_decimal - tx.amount < 0
+        return current_decimal - amount < 0

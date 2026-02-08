@@ -258,7 +258,7 @@ class TestTransactionTreasuryFiltering:
                 "to_entity_id": entity_two,
                 "amount": "10.00",
                 "currency": "usd",
-                "status": "completed",
+                "status": "draft",
                 "from_treasury_id": treasury_one,
             },
             # to_treasury only
@@ -276,7 +276,7 @@ class TestTransactionTreasuryFiltering:
                 "to_entity_id": entity_two,
                 "amount": "30.00",
                 "currency": "usd",
-                "status": "completed",
+                "status": "draft",
                 "from_treasury_id": treasury_two,
                 "to_treasury_id": treasury_one,
             },

@@ -2,6 +2,11 @@
 
 from decimal import ROUND_DOWN, Decimal
 
+from app.dependencies.services import (
+    get_entity_service,
+    get_tag_service,
+    get_transaction_service,
+)
 from app.errors.split import (
     EitherEntityOrTagIdRequired,
     MinimalNumberOfParticipantsRequired,
@@ -37,9 +42,9 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        transaction_service: TransactionService = Depends(),
-        entity_service: EntityService = Depends(),
-        tag_service: TagService = Depends(),
+        transaction_service: TransactionService = Depends(get_transaction_service),
+        entity_service: EntityService = Depends(get_entity_service),
+        tag_service: TagService = Depends(get_tag_service),
     ):
         self.db: Session = db
         self._transaction_service = transaction_service

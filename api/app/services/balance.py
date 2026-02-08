@@ -3,6 +3,7 @@
 from datetime import date, datetime, time
 from decimal import Decimal
 
+from app.dependencies.services import get_entity_service
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.balance import BalanceSchema
 from app.services.entity import EntityService
@@ -20,7 +21,7 @@ class BalanceService:
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        entity_service: EntityService = Depends(),
+        entity_service: EntityService = Depends(get_entity_service),
     ):
         self.db = db
         self.entity_service = entity_service

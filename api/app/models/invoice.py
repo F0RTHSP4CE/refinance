@@ -1,12 +1,13 @@
 """Invoice model"""
 
 import enum
+from datetime import date
 from typing import TYPE_CHECKING
 
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from sqlalchemy import JSON, Column, Enum, ForeignKey, String, Table
+from sqlalchemy import JSON, Column, Date, Enum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -43,6 +44,10 @@ class Invoice(BaseModel):
     to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
 
     amounts: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
+
+    billing_period: Mapped[date | None] = mapped_column(
+        Date, nullable=True, default=None
+    )
 
     status: Mapped[InvoiceStatus] = mapped_column(
         Enum(

@@ -8,6 +8,11 @@ entity and its updated balance after the transaction.
 from decimal import Decimal
 from typing import Tuple
 
+from app.dependencies.services import (
+    get_balance_service,
+    get_entity_service,
+    get_transaction_service,
+)
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.balance import BalanceSchema
@@ -22,9 +27,9 @@ from fastapi import Depends
 class POSService:
     def __init__(
         self,
-        entity_service: EntityService = Depends(),
-        transaction_service: TransactionService = Depends(),
-        balance_service: BalanceService = Depends(),
+        entity_service: EntityService = Depends(get_entity_service),
+        transaction_service: TransactionService = Depends(get_transaction_service),
+        balance_service: BalanceService = Depends(get_balance_service),
     ):
         self._entity_service = entity_service
         self._transaction_service = transaction_service

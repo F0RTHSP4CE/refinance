@@ -1,5 +1,6 @@
 """API routes for Entity manipulation"""
 
+from app.dependencies.services import get_entity_service
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -19,7 +20,7 @@ entity_router = APIRouter(prefix="/entities", tags=["Entities"])
 @entity_router.post("", response_model=EntitySchema)
 def create_entity(
     entity: EntityCreateSchema,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.create(entity)
@@ -35,7 +36,7 @@ def read_me(
 @entity_router.get("/{entity_id}", response_model=EntitySchema)
 def read_entity(
     entity_id: int,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.get(entity_id)
@@ -46,7 +47,7 @@ def read_entities(
     filters: EntityFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 100,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.get_all(filters, skip, limit)
@@ -56,7 +57,7 @@ def read_entities(
 def update_entity(
     entity_id: int,
     entity_update: EntityUpdateSchema,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.update(entity_id, entity_update)
@@ -68,7 +69,7 @@ def update_entity(
 @entity_router.get("/{entity_id}/cards", response_model=list[EntityCardReadSchema])
 def list_entity_cards(
     entity_id: int,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.list_cards(entity_id)
@@ -78,7 +79,7 @@ def list_entity_cards(
 def add_entity_card(
     entity_id: int,
     payload: EntityCardCreateSchema,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     card = entity_service.add_card(
@@ -91,7 +92,7 @@ def add_entity_card(
 def remove_entity_card(
     entity_id: int,
     card_id: int,
-    entity_service: EntityService = Depends(),
+    entity_service: EntityService = Depends(get_entity_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return entity_service.remove_card(entity_id, card_id)

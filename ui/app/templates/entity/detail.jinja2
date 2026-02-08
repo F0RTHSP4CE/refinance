@@ -1,5 +1,6 @@
 {% extends "base.jinja2" %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
+{% from "invoice/macro_list.jinja2" import invoice_list with context %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
 
@@ -870,5 +871,22 @@ endblock %}
     <h2>Transactions</h2>
     {{ transaction_list(transactions) }}
     {{ pagination_control(page, total, limit) }}
+</div>
+<div class="transactions-section">
+    <h2>Invoices</h2>
+    {{ invoice_list(invoices) }}
+    {% set invoice_total_pages = ((invoices_total - 1) // invoice_limit) + 1 if invoices_total else 1 %}
+    <p class="pagination">
+        {% if invoice_page > 1 %}
+        {% set prev_page = invoice_page - 1 %}
+        <a
+            href="{{ request.path }}{{ update_query_params(invoice_page=prev_page, invoice_limit=invoice_limit) }}">Previous</a>
+        {% endif %}
+        <span>Page {{ invoice_page }} of {{ invoice_total_pages }}</span>
+        {% if invoice_page < invoice_total_pages %} {% set next_page=invoice_page + 1 %} <a
+            href="{{ request.path }}{{ update_query_params(invoice_page=next_page, invoice_limit=invoice_limit) }}">
+            Next</a>
+            {% endif %}
+    </p>
 </div>
 {% endblock %}

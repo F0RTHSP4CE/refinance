@@ -1,5 +1,6 @@
 """API routes for Split manipulation"""
 
+from app.dependencies.services import get_split_service
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -19,7 +20,7 @@ split_router = APIRouter(prefix="/splits", tags=["Splits"])
 @split_router.post("", response_model=SplitSchema)
 def create_split(
     split: SplitCreateSchema,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(
@@ -30,7 +31,7 @@ def create_split(
 @split_router.get("/{split_id}", response_model=SplitSchema)
 def read_split(
     split_id: int,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(split_service.get(split_id))
@@ -41,7 +42,7 @@ def read_splits(
     filters: SplitFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 100,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return PaginationSchema.model_validate(split_service.get_all(filters, skip, limit))
@@ -51,7 +52,7 @@ def read_splits(
 def update_split(
     split_id: int,
     split_update: SplitUpdateSchema,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(split_service.update(split_id, split_update))
@@ -60,7 +61,7 @@ def update_split(
 @split_router.delete("/{split_id}")
 def delete_split(
     split_id: int,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ) -> int:
     return split_service.delete(split_id)
@@ -69,7 +70,7 @@ def delete_split(
 @split_router.post("/{split_id}/perform", response_model=SplitSchema)
 def perform_split(
     split_id: int,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(
@@ -81,7 +82,7 @@ def perform_split(
 def add_participant_to_split(
     split_id: int,
     participant_add_schema: SplitParticipantAddSchema,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(
@@ -93,7 +94,7 @@ def add_participant_to_split(
 def remove_participant_from_split(
     split_id: int,
     entity_id: int,
-    split_service: SplitService = Depends(),
+    split_service: SplitService = Depends(get_split_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return SplitSchema.model_validate(

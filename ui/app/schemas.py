@@ -1,6 +1,6 @@
 import enum
 from dataclasses import dataclass, field, fields
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, Tuple
 
@@ -94,6 +94,7 @@ class Invoice(Base):
     status: InvoiceStatus
     tags: list[Tag]
     transaction_id: int | None = None
+    billing_period: date | None = None
 
 
 class DepositProvider(enum.Enum):

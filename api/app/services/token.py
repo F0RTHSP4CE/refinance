@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import requests
 from app.config import Config, get_config
+from app.dependencies.services import get_entity_service
 from app.errors.common import NotFoundError
 from app.errors.token import TokenInvalid
 from app.models.entity import Entity
@@ -35,7 +36,7 @@ class TokenService:
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        entity_service: EntityService = Depends(),
+        entity_service: EntityService = Depends(get_entity_service),
         config: Config = Depends(get_config),
     ):
         self.db = db

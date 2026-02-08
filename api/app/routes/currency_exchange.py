@@ -1,5 +1,6 @@
 """API routes for currency exchange"""
 
+from app.dependencies.services import get_currency_exchange_service
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.currency_exchange import (
@@ -21,7 +22,9 @@ currency_exchange_router = APIRouter(
 )
 def exchange(
     exchange: CurrencyExchangeRequestSchema,
-    currency_exchange_service: CurrencyExchangeService = Depends(),
+    currency_exchange_service: CurrencyExchangeService = Depends(
+        get_currency_exchange_service
+    ),
     actor_entity: Entity = Depends(get_entity_from_token),  # auth
 ):
     return currency_exchange_service.exchange(exchange, actor_entity)
@@ -32,7 +35,9 @@ def exchange(
 )
 def preview(
     preview: CurrencyExchangePreviewRequestSchema,
-    currency_exchange_service: CurrencyExchangeService = Depends(),
+    currency_exchange_service: CurrencyExchangeService = Depends(
+        get_currency_exchange_service
+    ),
     _: Entity = Depends(get_entity_from_token),  # auth
 ):
     return currency_exchange_service.preview(preview)
@@ -40,7 +45,9 @@ def preview(
 
 @currency_exchange_router.get("/rates")
 def rates(
-    currency_exchange_service: CurrencyExchangeService = Depends(),
+    currency_exchange_service: CurrencyExchangeService = Depends(
+        get_currency_exchange_service
+    ),
     _: Entity = Depends(get_entity_from_token),  # auth
 ):
     # maybe someday i'll make a fancy list of rates, but for now it is what it is
