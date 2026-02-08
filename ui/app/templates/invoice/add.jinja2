@@ -18,8 +18,12 @@
         </tr>
         {{ render_form(form, except=(
         'from_entity_name','from_entity_id','to_entity_name','to_entity_id',
-        'amount_1','currency_1','amount_2','currency_2','amount_3','currency_3','tag_ids'
+        'billing_period','amount_1','currency_1','amount_2','currency_2','amount_3','currency_3','tag_ids'
         ), new_table=False) }}
+        <tr>
+            <td>Billing period</td>
+            <td>{{ form.billing_period() }}</td>
+        </tr>
         <tr>
             <td>Amount 1</td>
             <td>{{ form.amount_1() }} {{ form.currency_1() }}</td>

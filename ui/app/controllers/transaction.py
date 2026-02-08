@@ -46,7 +46,7 @@ class TransactionForm(FlaskForm):
         "Status",
         choices=[(e.value, e.value) for e in TransactionStatus],
         default=TransactionStatus.DRAFT.value,
-        description="Draft — can be edited. Completed — confirmed and executed, cannot be edited after confirmation.",
+        description="Draft — can be edited. Completed — final, cannot be edited (use when you absolutely sure that form is filled correctly).",
     )
     # Treasury dropdowns
     from_treasury_id = SelectField("From Treasury", coerce=int, choices=[], default=0)
@@ -55,9 +55,14 @@ class TransactionForm(FlaskForm):
         coerce=int,
         choices=[],
         default=0,
-        description="For deposits/withdrawals only. Physical money source and destination.",
+        description="Leave empty. Treasuries are exclusively for deposits/withdrawals. Physical money source and destination if real money (cash, crypto, bank) were moved between accounts or wallets.",
     )
-
+    invoice_id = IntegerField(
+        "Invoice ID",
+        validators=[Optional(), NumberRange(min=1)],
+        render_kw={"placeholder": "123", "class": "small"},
+        description="Optional Invoice ID. If provided, marks the Invoice as paid and links it to this transaction.",
+    )
     tag_ids = SelectMultipleField(
         "Tags", coerce=int, choices=[], description="Select tags for this transaction"
     )
@@ -295,6 +300,8 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        if not data.get("invoice_id"):
+            data["invoice_id"] = None
         if not data.get("from_treasury_id"):
             data["from_treasury_id"] = None
         if not data.get("to_treasury_id"):
@@ -712,6 +719,8 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        if not data.get("invoice_id"):
+            data["invoice_id"] = None
         if not data.get("from_treasury_id"):
             data["from_treasury_id"] = None
         if not data.get("to_treasury_id"):

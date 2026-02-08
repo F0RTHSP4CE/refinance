@@ -25,6 +25,11 @@ class InvoiceForm(FlaskForm):
     to_entity_name = StringField("To")
     to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     comment = StringField("Comment")
+    billing_period = StringField(
+        "Billing period",
+        validators=[Optional()],
+        render_kw={"type": "month", "class": "small"},
+    )
 
     amount_1 = FloatField(
         "Amount 1",
@@ -130,6 +135,15 @@ def _populate_amount_fields(form: InvoiceForm, amounts: list[dict]) -> None:
         currency_field.data = str(entry.get("currency", "")).upper()
 
 
+def _normalize_billing_period(value: str | None) -> str | None:
+    if not value:
+        return None
+    trimmed = value.strip()
+    if len(trimmed) == 7:
+        return f"{trimmed}-01"
+    return trimmed
+
+
 @invoice_bp.route("/")
 @token_required
 def list():
@@ -175,6 +189,7 @@ def add():
             "comment": form.comment.data,
             "amounts": _build_amounts_from_form(form),
             "tag_ids": form.tag_ids.data,
+            "billing_period": _normalize_billing_period(form.billing_period.data),
         }
         invoice = api.http("POST", "invoices", data=data).json()
         return redirect(url_for("invoice.detail", id=invoice["id"]))
@@ -220,6 +235,11 @@ def edit(id):
 
     form = InvoiceForm(data=invoice_data)
     _populate_amount_fields(form, invoice_data.get("amounts", []))
+    if invoice.billing_period is not None:
+        if isinstance(invoice.billing_period, str):
+            form.billing_period.data = invoice.billing_period[:7]
+        else:
+            form.billing_period.data = invoice.billing_period.strftime("%Y-%m")
 
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
@@ -230,6 +250,7 @@ def edit(id):
             "comment": form.comment.data,
             "amounts": _build_amounts_from_form(form),
             "tag_ids": form.tag_ids.data,
+            "billing_period": _normalize_billing_period(form.billing_period.data),
         }
         api.http("PATCH", f"invoices/{id}", data=data)
         return redirect(url_for("invoice.detail", id=id))
