@@ -1,0 +1,86 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% block title %}Invoice {{ invoice.id }}{% endblock %}
+{% block content %}
+<table>
+    <tr>
+        <td>ID</td>
+        <td>{{ invoice.id }}</td>
+    </tr>
+    <tr>
+        <td>Created at</td>
+        <td>{{ human_readable_date(invoice.created_at) | safe }}</td>
+    </tr>
+    <tr>
+        <td>From</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
+                invoice.from_entity.name
+                }}</a>
+            {% for tag in invoice.from_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>To</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
+                invoice.to_entity.name
+                }}</a>
+            {% for tag in invoice.to_entity.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>Amounts</td>
+        <td>
+            {% for item in invoice.amounts %}
+            {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} or {% endif %}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>Status</td>
+        <td>{{ invoice.status }}</td>
+    </tr>
+    <tr>
+        <td>Comment</td>
+        <td>{{ invoice.comment or '' }}</td>
+    </tr>
+    <tr>
+        <td>Tags</td>
+        <td>
+            {% for tag in invoice.tags %}
+            {{ tag_inline(tag) }}
+            {% endfor %}
+        </td>
+    </tr>
+    <tr>
+        <td>Actor</td>
+        <td>
+            <a href="{{ url_for('entity.detail', id=invoice.actor_entity_id) }}"
+                class="{% if not invoice.actor_entity.active %}secondary inactive{% endif %}">{{
+                invoice.actor_entity.name
+                }}</a>
+        </td>
+    </tr>
+    {% if transaction %}
+    <tr>
+        <td>Transaction</td>
+        <td>
+            <a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a>
+        </td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if invoice.status == "pending" %}
+<p><a href="{{ url_for('invoice.pay', id=invoice.id) }}">Pay</a></p>
+<p><a href="{{ url_for('invoice.edit', id=invoice.id) }}">Edit</a></p>
+{% endif %}
+{% endblock %}

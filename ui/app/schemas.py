@@ -63,10 +63,37 @@ class Transaction(Base):
     currency: str
     status: str
     tags: list[Tag]
+    invoice_id: int | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
     from_treasury: Treasury | None = None
     to_treasury: Treasury | None = None
+
+
+class InvoiceStatus(enum.Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    CANCELLED = "cancelled"
+
+
+@dataclass
+class InvoiceAmount:
+    currency: str
+    amount: Decimal
+
+
+@dataclass
+class Invoice(Base):
+    actor_entity_id: int
+    actor_entity: Entity
+    from_entity_id: int
+    from_entity: Entity
+    to_entity_id: int
+    to_entity: Entity
+    amounts: list[InvoiceAmount]
+    status: InvoiceStatus
+    tags: list[Tag]
+    transaction_id: int | None = None
 
 
 class DepositProvider(enum.Enum):

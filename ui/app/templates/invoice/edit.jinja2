@@ -1,0 +1,56 @@
+{% extends 'base.jinja2' %}
+{% from 'widgets/tag_selector.jinja2' import tag_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Edit invoice {{ invoice.id }}{% endblock %}
+
+{% block content %}
+{% if invoice.status != "paid" and invoice.status != "cancelled" %}
+<form method="post">
+    <table>
+        <tr>
+            <td>From</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                    class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.from_entity.name
+                    }}</a>
+            </td>
+        </tr>
+        <tr>
+            <td>To</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                    class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.to_entity.name
+                    }}</a>
+            </td>
+        </tr>
+        {{ render_form(form, except=(
+        'from_entity_name','from_entity_id','to_entity_name','to_entity_id',
+        'amount_1','currency_1','amount_2','currency_2','amount_3','currency_3','tag_ids'
+        ), new_table=False) }}
+        <tr>
+            <td>Amount 1</td>
+            <td>{{ form.amount_1() }} {{ form.currency_1() }}</td>
+        </tr>
+        <tr>
+            <td>Amount 2</td>
+            <td>{{ form.amount_2() }} {{ form.currency_2() }}</td>
+        </tr>
+        <tr>
+            <td>Amount 3</td>
+            <td>{{ form.amount_3() }} {{ form.currency_3() }}</td>
+        </tr>
+        <tr>
+            <td>Tags</td>
+            <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
+        </tr>
+    </table>
+</form>
+{% else %}
+<p>This invoice can not be edited anymore.</p>
+{% endif %}
+
+<script src="/static/js/multiSelect.js"></script>
+{% endblock %}

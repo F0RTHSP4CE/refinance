@@ -2,6 +2,7 @@
 
 import enum
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from app.models.base import BaseModel
 from app.models.entity import Entity
@@ -9,6 +10,9 @@ from app.models.tag import Tag
 from app.models.treasury import Treasury
 from sqlalchemy import DECIMAL, Column, Enum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.invoice import Invoice
 
 transactions_tags = Table(
     "transactions_tags",
@@ -38,6 +42,13 @@ class Transaction(BaseModel):
 
     to_entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
     to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
+
+    invoice_id: Mapped[int | None] = mapped_column(
+        ForeignKey("invoices.id"), nullable=True, unique=True
+    )
+    invoice: Mapped["Invoice | None"] = relationship(
+        "Invoice", back_populates="transaction"
+    )
 
     amount: Mapped[Decimal] = mapped_column(DECIMAL(scale=2), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False)  # ISO 4217

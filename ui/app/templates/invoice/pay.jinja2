@@ -1,0 +1,71 @@
+{% extends 'base.jinja2' %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Pay invoice {{ invoice.id }}{% endblock %}
+
+{% block content %}
+<form method="post">
+    {{ form.csrf_token }}
+    {{ form.invoice_id() }}
+    {{ form.from_entity_id() }}
+    {{ form.to_entity_id() }}
+    <table>
+        <tr>
+            <td>From</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                    class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.from_entity.name
+                    }}</a>
+            </td>
+        </tr>
+        <tr>
+            <td>To</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                    class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.to_entity.name
+                    }}</a>
+            </td>
+        </tr>
+        <tr>
+            <td>Currency</td>
+            <td>
+                <select name="currency" id="invoice-currency">
+                    {% for item in amounts %}
+                    <option value="{{ item.currency | upper }}" data-amount="{{ item.amount }}">
+                        {{ item.currency | upper }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>Amount</td>
+            <td>{{ form.amount() }}</td>
+        </tr>
+        {{ render_form(form, except=(
+        'invoice_id','from_entity_id','to_entity_id','amount','currency','csrf_token'
+        ), new_table=False) }}
+    </table>
+</form>
+
+<script>
+    (function () {
+        const currencySelect = document.getElementById('invoice-currency');
+        const amountInput = document.getElementById('{{ form.amount.id }}');
+        if (!currencySelect || !amountInput) {
+            return;
+        }
+        const applyAmount = () => {
+            const option = currencySelect.options[currencySelect.selectedIndex];
+            const amount = option ? option.getAttribute('data-amount') : null;
+            if (amount) {
+                amountInput.value = amount;
+            }
+        };
+        currencySelect.addEventListener('change', applyAmount);
+        applyAmount();
+    }());
+</script>
+{% endblock %}
