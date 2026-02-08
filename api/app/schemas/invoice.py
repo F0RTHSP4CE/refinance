@@ -92,3 +92,7 @@ class InvoiceFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     to_entity_id: int | None = None
     status: InvoiceStatus | None = None
     billing_period: date | None = None
+
+
+class InvoiceAutoPayReportSchema(BaseSchema):
+    paid: int
