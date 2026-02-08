@@ -4,10 +4,6 @@ from os import getenv
 
 class Config:
     REFINANCE_API_BASE_URL = getenv("REFINANCE_API_BASE_URL", "http://api:8000")
-    DEFAULT_MONTHLY_FEE_PRESETS = {
-        "member": {"gel": 70, "usd": 25},
-        "resident": {"gel": 115, "usd": 42},
-    }
     FRIDGE_PRESETS = [
         {"amount": 5, "currency": "GEL", "label": "5 GEL"},
     ]
