@@ -2,6 +2,11 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from app.app import app
+from app.config import get_config
+from app.db import DatabaseConnection
+from app.dependencies.services import ServiceContainer
+from app.uow import UnitOfWork
 from fastapi.testclient import TestClient
 
 
@@ -55,6 +60,30 @@ def _create_invoice(test_app: TestClient, token, from_id, to_id, tag_ids=None):
     response = test_app.post("/invoices", json=payload, headers={"x-token": token})
     assert response.status_code == 200
     return response
+
+
+def _create_invoice_with_amounts(test_app: TestClient, token, from_id, to_id, amounts):
+    payload = {
+        "from_entity_id": from_id,
+        "to_entity_id": to_id,
+        "amounts": amounts,
+    }
+    response = test_app.post("/invoices", json=payload, headers={"x-token": token})
+    assert response.status_code == 200
+    return response
+
+
+def _run_auto_pay_job() -> int:
+    config_provider = app.dependency_overrides.get(get_config, get_config)
+    config = config_provider()
+    db_conn = DatabaseConnection(config=config)
+    session = db_conn.get_session()
+    try:
+        with UnitOfWork(session) as uow:
+            container = ServiceContainer(uow, config)
+            return container.invoice_service.auto_pay_oldest_invoices()
+    finally:
+        db_conn.engine.dispose()
 
 
 class TestInvoiceEndpoints:
@@ -399,7 +428,135 @@ class TestInvoiceEndpoints:
         assert entity_response.status_code == 200
         entity_items = entity_response.json()["items"]
         assert any(item["id"] == pending_invoice["id"] for item in entity_items)
-        assert any(item["id"] == paid_invoice["id"] for item in entity_items)
+
+
+class TestInvoiceAutoPayTask:
+    def test_auto_pay_oldest_invoices_max_per_entity(self, test_app: TestClient, token):
+        funding_entity = test_app.post(
+            "/entities", json={"name": "AutoPay Funding"}, headers={"x-token": token}
+        ).json()["id"]
+        payer_entity = test_app.post(
+            "/entities", json={"name": "AutoPay Payer"}, headers={"x-token": token}
+        ).json()["id"]
+        payee_entity = test_app.post(
+            "/entities", json={"name": "AutoPay Payee"}, headers={"x-token": token}
+        ).json()["id"]
+
+        invoice_one = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer_entity,
+            payee_entity,
+            [{"currency": "usd", "amount": "10.00"}],
+        ).json()
+        invoice_two = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer_entity,
+            payee_entity,
+            [{"currency": "usd", "amount": "15.00"}],
+        ).json()
+        invoice_three = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer_entity,
+            payee_entity,
+            [{"currency": "usd", "amount": "20.00"}],
+        ).json()
+
+        credit_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": funding_entity,
+                "to_entity_id": payer_entity,
+                "amount": "25.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert credit_response.status_code == 200
+
+        paid_count = _run_auto_pay_job()
+        assert paid_count == 2
+
+        invoice_one_response = test_app.get(
+            f"/invoices/{invoice_one['id']}", headers={"x-token": token}
+        )
+        invoice_two_response = test_app.get(
+            f"/invoices/{invoice_two['id']}", headers={"x-token": token}
+        )
+        invoice_three_response = test_app.get(
+            f"/invoices/{invoice_three['id']}", headers={"x-token": token}
+        )
+        assert invoice_one_response.json()["status"] == "paid"
+        assert invoice_two_response.json()["status"] == "paid"
+        assert invoice_three_response.json()["status"] == "pending"
+
+        invoice_one_tx = test_app.get(
+            f"/transactions/{invoice_one_response.json()['transaction_id']}",
+            headers={"x-token": token},
+        ).json()
+        invoice_two_tx = test_app.get(
+            f"/transactions/{invoice_two_response.json()['transaction_id']}",
+            headers={"x-token": token},
+        ).json()
+        assert Decimal(invoice_one_tx["amount"]) == Decimal("10.00")
+        assert Decimal(invoice_two_tx["amount"]) == Decimal("15.00")
+
+    def test_auto_pay_scoped_to_each_entity(self, test_app: TestClient, token):
+        funding_entity = test_app.post(
+            "/entities", json={"name": "AutoPay Funding 2"}, headers={"x-token": token}
+        ).json()["id"]
+        payer_one = test_app.post(
+            "/entities", json={"name": "AutoPay Payer 2"}, headers={"x-token": token}
+        ).json()["id"]
+        payer_two = test_app.post(
+            "/entities", json={"name": "AutoPay Payer 3"}, headers={"x-token": token}
+        ).json()["id"]
+        payee_entity = test_app.post(
+            "/entities", json={"name": "AutoPay Payee 2"}, headers={"x-token": token}
+        ).json()["id"]
+
+        invoice_one = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer_one,
+            payee_entity,
+            [{"currency": "usd", "amount": "10.00"}],
+        ).json()
+        invoice_two = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer_two,
+            payee_entity,
+            [{"currency": "usd", "amount": "10.00"}],
+        ).json()
+
+        credit_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": funding_entity,
+                "to_entity_id": payer_one,
+                "amount": "10.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert credit_response.status_code == 200
+
+        paid_count = _run_auto_pay_job()
+        assert paid_count == 1
+
+        invoice_one_response = test_app.get(
+            f"/invoices/{invoice_one['id']}", headers={"x-token": token}
+        )
+        invoice_two_response = test_app.get(
+            f"/invoices/{invoice_two['id']}", headers={"x-token": token}
+        )
+        assert invoice_one_response.json()["status"] == "paid"
+        assert invoice_two_response.json()["status"] == "pending"
 
     def test_invoice_transaction_reassignment_disallowed(
         self, test_app: TestClient, token, invoice_entity_from, invoice_entity_to

@@ -162,15 +162,9 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             value = value.to_decimal()
         return value if isinstance(value, Decimal) else Decimal(str(value))
 
-    def _try_auto_pay(self, invoice: Invoice) -> None:
-        if invoice.transaction is not None:
-            return
-        if invoice.status != InvoiceStatus.PENDING:
-            return
-
-        balances = self._balance_service.get_balances(invoice.from_entity_id)
-        completed_balances = balances.completed or {}
-
+    def _select_auto_pay_amount(
+        self, invoice: Invoice, balances: dict[str, Decimal]
+    ) -> tuple[str, Decimal] | None:
         selected_currency = None
         selected_amount = None
         selected_balance = None
@@ -180,8 +174,8 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             if not currency:
                 continue
             required_amount = Decimal(str(entry.get("amount", "0")))
-            current_balance = self._balance_to_decimal(completed_balances.get(currency))
-            if current_balance < required_amount:
+            current_balance = balances.get(currency)
+            if current_balance is None or current_balance < required_amount:
                 continue
             if selected_balance is None or current_balance < selected_balance:
                 selected_balance = current_balance
@@ -189,7 +183,27 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                 selected_amount = required_amount
 
         if selected_currency is None or selected_amount is None:
+            return None
+
+        return selected_currency, selected_amount
+
+    def _try_auto_pay(self, invoice: Invoice) -> None:
+        if invoice.transaction is not None:
             return
+        if invoice.status != InvoiceStatus.PENDING:
+            return
+
+        balances = self._balance_service.get_balances(invoice.from_entity_id)
+        completed_balances = balances.completed or {}
+
+        available_balances = {
+            currency.lower(): self._balance_to_decimal(amount)
+            for currency, amount in completed_balances.items()
+        }
+        selection = self._select_auto_pay_amount(invoice, available_balances)
+        if selection is None:
+            return
+        selected_currency, selected_amount = selection
 
         tx_schema = TransactionCreateSchema(
             to_entity_id=invoice.to_entity_id,
@@ -205,6 +219,61 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         self._transaction_service.create(
             tx_schema, overrides={"actor_entity_id": invoice.actor_entity_id}
         )
+
+    def auto_pay_oldest_invoices(self) -> int:
+        pending_filter = [
+            self.model.status == InvoiceStatus.PENDING,
+            ~self.model.transaction.has(),
+        ]
+        entity_ids = (
+            self.db.query(self.model.from_entity_id)
+            .filter(*pending_filter)
+            .distinct()
+            .all()
+        )
+
+        paid_count = 0
+
+        for (entity_id,) in entity_ids:
+            balances = self._balance_service.get_balances(entity_id)
+            completed_balances = balances.completed or {}
+            available_balances = {
+                currency.lower(): self._balance_to_decimal(amount)
+                for currency, amount in completed_balances.items()
+            }
+
+            invoices = (
+                self.db.query(self.model)
+                .filter(*pending_filter)
+                .filter(self.model.from_entity_id == entity_id)
+                .order_by(self.model.created_at.asc(), self.model.id.asc())
+                .all()
+            )
+
+            for invoice in invoices:
+                selection = self._select_auto_pay_amount(invoice, available_balances)
+                if selection is None:
+                    continue
+                currency, amount = selection
+
+                tx_schema = TransactionCreateSchema(
+                    to_entity_id=invoice.to_entity_id,
+                    from_entity_id=invoice.from_entity_id,
+                    amount=amount,
+                    currency=currency,
+                    status=TransactionStatus.COMPLETED,
+                    invoice_id=invoice.id,
+                    comment=invoice.comment,
+                    tag_ids=[],
+                )
+
+                self._transaction_service.create(
+                    tx_schema, overrides={"actor_entity_id": invoice.actor_entity_id}
+                )
+                available_balances[currency] = available_balances[currency] - amount
+                paid_count += 1
+
+        return paid_count
 
     @staticmethod
     def _normalize_billing_period(

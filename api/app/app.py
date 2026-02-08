@@ -1,5 +1,7 @@
 """FastAPI app initialization, exception handling"""
 
+import asyncio
+import contextlib
 import json
 import logging
 import traceback
@@ -23,6 +25,7 @@ from app.routes.token import token_router
 from app.routes.transaction import transaction_router
 from app.routes.treasury import treasury_router
 from app.services.token import TokenService
+from app.tasks.invoice_auto_pay import schedule_invoice_auto_pay
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,7 +37,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 config: Config = get_config()
-app = FastAPI(title=config.app_name, version=config.app_version)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.invoice_auto_pay_task = asyncio.create_task(schedule_invoice_auto_pay())
+    try:
+        yield
+    finally:
+        task = getattr(app.state, "invoice_auto_pay_task", None)
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+
+app = FastAPI(title=config.app_name, version=config.app_version, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

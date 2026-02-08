@@ -5,6 +5,7 @@ from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
 from app.schemas.invoice import (
+    InvoiceAutoPayReportSchema,
     InvoiceCreateSchema,
     InvoiceFiltersSchema,
     InvoiceSchema,
@@ -64,3 +65,12 @@ def delete_invoice(
     actor_entity: Entity = Depends(get_entity_from_token),
 ) -> int:
     return invoice_service.delete(invoice_id)
+
+
+@invoice_router.post("/auto-pay", response_model=InvoiceAutoPayReportSchema)
+def trigger_invoice_auto_pay(
+    invoice_service: InvoiceService = Depends(get_invoice_service),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    paid_count = invoice_service.auto_pay_oldest_invoices()
+    return InvoiceAutoPayReportSchema(paid=paid_count)
