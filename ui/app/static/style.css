@@ -289,6 +289,44 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   background-color: hsla(127, 100%, 60%, 0.1);
 }
 
+.fee-unpaid-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: hsla(0, 100%, 60%, 0.2);
+  color: #900000;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.fee-unpaid-link:hover {
+  background-color: hsla(0, 100%, 60%, 0.35);
+  color: #700000;
+}
+
+.fee-paid-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: hsla(127, 100%, 35%, 0.2);
+  color: #0b5a20;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.fee-paid-link:hover {
+  background-color: hsla(127, 100%, 35%, 0.35);
+  color: #084517;
+}
+
 /* .fee-not-paid {
   background-color: hsla(0, 100%, 60%, 0.1);
 } */

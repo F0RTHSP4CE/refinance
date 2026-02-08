@@ -171,6 +171,9 @@ class MonthlyFee:
     month: int
     amounts: dict[str, Decimal]
     total_usd: Decimal
+    unpaid_invoice_id: int | None = None
+    paid_invoice_id: int | None = None
+    unpaid_invoice_amounts: dict[str, Decimal] | None = None
 
 
 @dataclass
