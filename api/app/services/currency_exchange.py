@@ -7,6 +7,7 @@ from decimal import ROUND_DOWN, Decimal
 from typing import Optional, TypeVar
 
 import requests
+from app.dependencies.services import get_entity_service, get_transaction_service
 from app.errors.currency_exchange import CurrencyExchangeSourceOrTargetAmountZero
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
@@ -38,8 +39,8 @@ class CurrencyExchangeService:
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        transaction_service: TransactionService = Depends(),
-        entity_service: EntityService = Depends(),
+        transaction_service: TransactionService = Depends(get_transaction_service),
+        entity_service: EntityService = Depends(get_entity_service),
     ):
         self.db = db
         self.transaction_service = transaction_service

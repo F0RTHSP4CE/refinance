@@ -2,6 +2,7 @@
 
 import datetime
 
+from app.dependencies.services import get_tag_service
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
 from app.models.entity_card import EntityCard
@@ -27,7 +28,7 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        tag_service: TagService = Depends(),
+        tag_service: TagService = Depends(get_tag_service),
     ):
         self.db = db
         self._tag_service = tag_service

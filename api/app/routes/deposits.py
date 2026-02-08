@@ -2,6 +2,10 @@
 
 from typing import Annotated
 
+from app.dependencies.services import (
+    get_cryptapi_deposit_provider_service,
+    get_deposit_service,
+)
 from app.errors.common import NotFoundError
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
@@ -23,7 +27,7 @@ def read_deposits(
     filters: DepositFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 100,
-    deposit_service: DepositService = Depends(),
+    deposit_service: DepositService = Depends(get_deposit_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return deposit_service.get_all(filters, skip, limit)
@@ -32,7 +36,7 @@ def read_deposits(
 @deposits_router.get("/{deposit_id}", response_model=DepositSchema)
 def read_deposit(
     deposit_id: int,
-    deposit_service: DepositService = Depends(),
+    deposit_service: DepositService = Depends(get_deposit_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return deposit_service.get(deposit_id)
@@ -41,7 +45,9 @@ def read_deposit(
 @deposits_router.post("/providers/cryptapi", response_model=DepositSchema)
 def cryptapi_create_deposit(
     schema: CryptAPIDepositCreateSchema = Depends(),
-    cryptapi_deposit_provider_service: CryptAPIDepositProviderService = Depends(),
+    cryptapi_deposit_provider_service: CryptAPIDepositProviderService = Depends(
+        get_cryptapi_deposit_provider_service
+    ),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return cryptapi_deposit_provider_service.create_deposit(schema, actor_entity)

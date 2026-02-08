@@ -3,6 +3,7 @@
 from typing import Any
 from uuid import UUID
 
+from app.dependencies.services import get_tag_service, get_transaction_service
 from app.errors.common import NotFoundError
 from app.errors.deposit import DepositAlreadyCompleted, DepositCannotBeEdited
 from app.models.deposit import Deposit, DepositStatus
@@ -26,8 +27,8 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        transaction_service: TransactionService = Depends(),
-        tag_service: TagService = Depends(),
+        transaction_service: TransactionService = Depends(get_transaction_service),
+        tag_service: TagService = Depends(get_tag_service),
     ):
         self.db = db
         self._transaction_service = transaction_service

@@ -1,5 +1,6 @@
 """DTO for Invoice"""
 
+from datetime import date
 from decimal import Decimal
 
 from app.models.invoice import InvoiceStatus
@@ -44,6 +45,7 @@ class InvoiceSchema(BaseReadSchema):
     to_entity_id: int
     to_entity: EntitySchema
     amounts: list[InvoiceAmountSchema]
+    billing_period: date | None = None
     status: InvoiceStatus
     tags: list[TagSchema]
     transaction_id: int | None = None
@@ -53,6 +55,7 @@ class InvoiceCreateSchema(BaseUpdateSchema):
     from_entity_id: int
     to_entity_id: int
     amounts: list[InvoiceAmountCreateSchema] = Field(default_factory=list)
+    billing_period: date | None = None
     tag_ids: list[int] = []
 
     @model_validator(mode="after")
@@ -67,6 +70,7 @@ class InvoiceCreateSchema(BaseUpdateSchema):
 
 class InvoiceUpdateSchema(BaseUpdateSchema):
     amounts: list[InvoiceAmountCreateSchema] | None = None
+    billing_period: date | None = None
     tag_ids: list[int] | None = None
 
     @model_validator(mode="after")
@@ -87,3 +91,15 @@ class InvoiceFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     from_entity_id: int | None = None
     to_entity_id: int | None = None
     status: InvoiceStatus | None = None
+    billing_period: date | None = None
+
+
+class FeeInvoiceIssueSchema(BaseSchema):
+    billing_period: date | None = None
+
+
+class FeeInvoiceIssueReportSchema(BaseSchema):
+    billing_period: date
+    created_count: int
+    skipped_count: int
+    invoice_ids: list[int]

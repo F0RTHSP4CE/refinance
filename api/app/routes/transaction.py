@@ -1,5 +1,6 @@
 """API routes for Transaction manipulation"""
 
+from app.dependencies.services import get_transaction_service
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -18,7 +19,7 @@ transaction_router = APIRouter(prefix="/transactions", tags=["Transactions"])
 @transaction_router.post("", response_model=TransactionSchema)
 def create_transaction(
     transaction: TransactionCreateSchema,
-    transaction_service: TransactionService = Depends(),
+    transaction_service: TransactionService = Depends(get_transaction_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.create(
@@ -29,7 +30,7 @@ def create_transaction(
 @transaction_router.get("/{transaction_id}", response_model=TransactionSchema)
 def read_transaction(
     transaction_id: int,
-    transaction_service: TransactionService = Depends(),
+    transaction_service: TransactionService = Depends(get_transaction_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.get(transaction_id)
@@ -40,7 +41,7 @@ def read_transactions(
     filters: TransactionFiltersSchema = Depends(),
     skip: int = 0,
     limit: int = 100,
-    transaction_service: TransactionService = Depends(),
+    transaction_service: TransactionService = Depends(get_transaction_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.get_all(filters, skip, limit)
@@ -50,7 +51,7 @@ def read_transactions(
 def update_transaction(
     transaction_id: int,
     transaction_update: TransactionUpdateSchema,
-    transaction_service: TransactionService = Depends(),
+    transaction_service: TransactionService = Depends(get_transaction_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return transaction_service.update(transaction_id, transaction_update)
@@ -59,7 +60,7 @@ def update_transaction(
 @transaction_router.delete("/{transaction_id}")
 def delete_transaction(
     transaction_id: int,
-    transaction_service: TransactionService = Depends(),
+    transaction_service: TransactionService = Depends(get_transaction_service),
     actor_entity: Entity = Depends(get_entity_from_token),
 ) -> int:
     return transaction_service.delete(transaction_id)

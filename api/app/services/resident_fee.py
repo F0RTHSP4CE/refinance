@@ -8,8 +8,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, Mapping
 
+from app.dependencies.services import (
+    get_currency_exchange_service,
+    get_entity_service,
+)
 from app.models.entity import Entity
-from app.models.transaction import Transaction, TransactionStatus
+from app.models.invoice import Invoice, InvoiceStatus
+from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
 from app.schemas.entity import EntitySchema
 from app.schemas.resident_fee import (
@@ -24,7 +29,7 @@ from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 
 @dataclass(slots=True)
@@ -62,8 +67,10 @@ class ResidentFeeService(BaseService):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        entity_service: EntityService = Depends(),
-        currency_exchange_service: CurrencyExchangeService = Depends(),
+        entity_service: EntityService = Depends(get_entity_service),
+        currency_exchange_service: CurrencyExchangeService = Depends(
+            get_currency_exchange_service
+        ),
     ):
         self.db = db
         self._entity_service = entity_service
@@ -187,15 +194,36 @@ class ResidentFeeService(BaseService):
         # number of past months to include
         months = min(filters.months, 12)
 
-        # Get all relevant transactions in one go
-        transactions = (
-            self.db.query(Transaction)
+        def subtract_months(base: date, months_back: int) -> date:
+            year = base.year
+            month = base.month - months_back
+            while month <= 0:
+                month += 12
+                year -= 1
+            return date(year, month, 1)
+
+        def add_months(base: date, months_forward: int) -> date:
+            year = base.year
+            month = base.month + months_forward
+            while month > 12:
+                month -= 12
+                year += 1
+            return date(year, month, 1)
+
+        resident_ids = [r.id for r in residents]
+        start_period = subtract_months(date(today_year, today_month, 1), months - 1)
+        max_future_period = add_months(date(today_year, today_month, 1), 12)
+
+        invoices = (
+            self.db.query(Invoice)
+            .options(selectinload(Invoice.transaction))
             .filter(
-                Transaction.to_entity_id == hackerspace.id,
-                Transaction.tags.contains(fee_tag),
-                # Transaction.status == TransactionStatus.COMPLETED,
-                # We get all transactions and then filter by date in python
-                # because comment can override the date
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.billing_period >= start_period,
+                Invoice.billing_period <= max_future_period,
+                Invoice.tags.contains(fee_tag),
+                Invoice.from_entity_id.in_(resident_ids),
             )
             .all()
         )
@@ -205,19 +233,19 @@ class ResidentFeeService(BaseService):
         fees_by_resident_by_month = defaultdict(
             lambda: defaultdict(lambda: defaultdict(Decimal))
         )
-        for t in transactions:
-            parsed_date = self._parse_comment_for_date(t.comment)
-            if parsed_date:
-                year, month = parsed_date
-            else:
-                year, month = t.created_at.year, t.created_at.month
-            idx = year * 12 + month
-            # accumulate all future transactions up to allowed window
-            # future months handled later per resident
-
-            fees_by_resident_by_month[t.from_entity_id][(year, month)][
-                t.currency
-            ] += t.amount
+        for invoice in invoices:
+            if invoice.billing_period is None:
+                continue
+            if invoice.status != InvoiceStatus.PAID:
+                continue
+            tx = invoice.transaction
+            if tx is None or tx.status != TransactionStatus.COMPLETED:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
+                tx.currency.lower()
+            ] += tx.amount
 
         # Build the final response structure
         results: list[ResidentFeeRecord] = []

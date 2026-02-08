@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from app.dependencies.services import get_pos_service
 from app.schemas.pos import POSChargeRequest, POSChargeResponse
 from app.services.pos import POSService
 from fastapi import APIRouter, Depends
@@ -12,7 +13,7 @@ pos_router = APIRouter(prefix="/pos", tags=["POS"])
 @pos_router.post("/charge/by-card", response_model=POSChargeResponse)
 def pos_charge(
     payload: POSChargeRequest,
-    pos_service: POSService = Depends(),
+    pos_service: POSService = Depends(get_pos_service),
 ):
     entity, balance = pos_service.pos(
         card_hash=payload.card_hash,

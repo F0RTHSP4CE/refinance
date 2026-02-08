@@ -10,9 +10,16 @@ from decimal import Decimal
 from threading import Lock
 from typing import Any, Callable, Iterable, Mapping
 
+from app.dependencies.services import (
+    get_balance_service,
+    get_currency_exchange_service,
+    get_entity_service,
+    get_resident_fee_service,
+)
 from app.models.entity import Entity
+from app.models.invoice import Invoice, InvoiceStatus
 from app.models.tag import Tag
-from app.models.transaction import Transaction
+from app.models.transaction import Transaction, TransactionStatus
 from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
 from app.services.balance import BalanceService
 from app.services.base import BaseService
@@ -33,10 +40,12 @@ class StatsService(BaseService):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        resident_fee_service: ResidentFeeService = Depends(),
-        balance_service: BalanceService = Depends(),
-        entity_service: EntityService = Depends(),
-        currency_exchange_service: CurrencyExchangeService = Depends(),
+        resident_fee_service: ResidentFeeService = Depends(get_resident_fee_service),
+        balance_service: BalanceService = Depends(get_balance_service),
+        entity_service: EntityService = Depends(get_entity_service),
+        currency_exchange_service: CurrencyExchangeService = Depends(
+            get_currency_exchange_service
+        ),
     ):
         self.db = db
         self._resident_fee_service = resident_fee_service
@@ -178,19 +187,13 @@ class StatsService(BaseService):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
         hackerspace = self._entity_service.get(f0_entity.id)
-        residents = (
-            self.db.query(Entity)
+        invoices = (
+            self.db.query(Invoice)
             .filter(
-                Entity.tags.contains(resident_tag),
-            )
-            .all()
-        )
-
-        transactions = (
-            self.db.query(Transaction)
-            .filter(
-                Transaction.to_entity_id == hackerspace.id,
-                Transaction.tags.contains(fee_tag),
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PAID,
             )
             .all()
         )
@@ -198,12 +201,15 @@ class StatsService(BaseService):
         monthly_totals = defaultdict(lambda: defaultdict(Decimal))
         today = date.today()
 
-        for t in transactions:
-            parsed_date = self._resident_fee_service._parse_comment_for_date(t.comment)
-            if parsed_date:
-                year, month = parsed_date
-            else:
-                year, month = t.created_at.year, t.created_at.month
+        for invoice in invoices:
+            if invoice.billing_period is None:
+                continue
+            if invoice.transaction is None:
+                continue
+            if invoice.transaction.status != TransactionStatus.COMPLETED:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
 
             # Skip future months
             if year > today.year or (year == today.year and month > today.month):
@@ -217,7 +223,9 @@ class StatsService(BaseService):
             if not (start_month <= fee_date <= end_month):
                 continue
 
-            monthly_totals[(year, month)][t.currency] += t.amount
+            monthly_totals[(year, month)][
+                invoice.transaction.currency.lower()
+            ] += invoice.transaction.amount
 
         result = []
         for (year, month), amounts in sorted(monthly_totals.items()):

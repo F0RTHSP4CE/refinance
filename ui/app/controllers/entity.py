@@ -2,7 +2,7 @@ from datetime import date
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Tag, Transaction
+from app.schemas import Balance, Entity, Invoice, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -199,6 +199,10 @@ def detail(id):
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
 
+    invoice_page = request.args.get("invoice_page", 1, type=int)
+    invoice_limit = request.args.get("invoice_limit", 20, type=int)
+    invoice_skip = (invoice_page - 1) * invoice_limit
+
     stats_requested = request.args.get("stats", "", type=str).lower() in (
         "1",
         "true",
@@ -219,6 +223,18 @@ def detail(id):
         "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
     ).json()
     total = transactions_page["total"]
+
+    invoices_page = api.http(
+        "GET",
+        "invoices",
+        params={
+            "skip": invoice_skip,
+            "limit": invoice_limit,
+            "entity_id": id,
+        },
+    ).json()
+    invoices_total = invoices_page["total"]
+    invoices = [Invoice(**item) for item in invoices_page["items"]]
 
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:
@@ -297,6 +313,10 @@ def detail(id):
         total=total,
         page=page,
         limit=limit,
+        invoices=invoices,
+        invoices_total=invoices_total,
+        invoice_page=invoice_page,
+        invoice_limit=invoice_limit,
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
         money_flow_by_day=money_flow_by_day,

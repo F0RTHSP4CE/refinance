@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -57,6 +58,61 @@ def _create_invoice(test_app: TestClient, token, from_id, to_id, tag_ids=None):
 
 
 class TestInvoiceEndpoints:
+    def test_invoice_auto_paid_on_create_with_balance(
+        self, test_app: TestClient, token
+    ):
+        funding_entity = test_app.post(
+            "/entities", json={"name": "Invoice Funding"}, headers={"x-token": token}
+        ).json()["id"]
+        payer_entity = test_app.post(
+            "/entities",
+            json={"name": "Invoice AutoPay Payer"},
+            headers={"x-token": token},
+        ).json()["id"]
+        payee_entity = test_app.post(
+            "/entities",
+            json={"name": "Invoice AutoPay Payee"},
+            headers={"x-token": token},
+        ).json()["id"]
+
+        credit_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": funding_entity,
+                "to_entity_id": payer_entity,
+                "amount": "11.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert credit_response.status_code == 200
+
+        invoice_response = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": payer_entity,
+                "to_entity_id": payee_entity,
+                "amounts": [
+                    {"currency": "usd", "amount": "10.00"},
+                    {"currency": "gel", "amount": "27.00"},
+                ],
+            },
+            headers={"x-token": token},
+        )
+        assert invoice_response.status_code == 200
+        invoice = invoice_response.json()
+        assert invoice["status"] == "paid"
+        assert invoice["transaction_id"] is not None
+
+        tx_response = test_app.get(
+            f"/transactions/{invoice['transaction_id']}", headers={"x-token": token}
+        )
+        assert tx_response.status_code == 200
+        tx = tx_response.json()
+        assert tx["currency"] == "usd"
+        assert Decimal(tx["amount"]) == Decimal("10.00")
+
     def test_create_invoice(
         self, test_app: TestClient, token, invoice_entity_from, invoice_entity_to
     ):
@@ -382,3 +438,50 @@ class TestInvoiceEndpoints:
             headers={"x-token": token},
         )
         assert clear_response.status_code == 418
+
+    def test_issue_fee_invoices_auto_pay(self, test_app: TestClient, token):
+        from app.seeding import fee_tag, resident_tag
+
+        funding_entity = test_app.post(
+            "/entities", json={"name": "Fee Funding"}, headers={"x-token": token}
+        ).json()["id"]
+        resident_entity = test_app.post(
+            "/entities",
+            json={"name": "Fee Resident", "tag_ids": [resident_tag.id]},
+            headers={"x-token": token},
+        ).json()["id"]
+
+        credit_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": funding_entity,
+                "to_entity_id": resident_entity,
+                "amount": "50.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert credit_response.status_code == 200
+
+        period = date.today().replace(day=1).isoformat()
+        issue_response = test_app.post(
+            "/invoices/issue-fees",
+            json={"billing_period": period},
+            headers={"x-token": token},
+        )
+        assert issue_response.status_code == 200
+
+        invoices_response = test_app.get(
+            "/invoices",
+            params={"entity_id": resident_entity, "billing_period": period},
+            headers={"x-token": token},
+        )
+        assert invoices_response.status_code == 200
+        invoices = invoices_response.json()["items"]
+        assert len(invoices) == 1
+
+        invoice = invoices[0]
+        assert invoice["status"] == "paid"
+        assert invoice["transaction_id"] is not None
+        assert any(tag["id"] == fee_tag.id for tag in invoice["tags"])

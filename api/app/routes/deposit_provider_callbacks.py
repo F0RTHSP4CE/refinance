@@ -3,6 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
+from app.dependencies.services import get_cryptapi_deposit_provider_service
 from app.errors.common import NotFoundError
 from app.schemas.deposit_providers.cryptapi import CryptAPICallbackSchema
 from app.services.deposit_providers.cryptapi import CryptAPIDepositProviderService
@@ -18,7 +19,9 @@ deposit_provider_callbacks_router = APIRouter(
 def cryptapi_callback(
     deposit_uuid: Annotated[UUID, Path()],
     cryptapi_callback: CryptAPICallbackSchema = Form(),
-    cryptapi_deposit_provider_service: CryptAPIDepositProviderService = Depends(),
+    cryptapi_deposit_provider_service: CryptAPIDepositProviderService = Depends(
+        get_cryptapi_deposit_provider_service
+    ),
 ):
     cryptapi_deposit_provider_service.complete_deposit(
         deposit_uuid=deposit_uuid,

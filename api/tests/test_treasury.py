@@ -189,6 +189,31 @@ class TestTreasuryEndpoints:
         )
         assert update_response.status_code == 418  # TransactionWillOverdraftTreasury
 
+    def test_completed_transaction_overdraft_prevention_on_create(
+        self, test_app: TestClient, token, entity_one, entity_two
+    ):
+        response = test_app.post(
+            "/treasuries",
+            json={"name": "Overdraft Create Treasury"},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        treasury_one = response.json()
+
+        tx_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": entity_one["id"],
+                "to_entity_id": entity_two["id"],
+                "from_treasury_id": treasury_one["id"],
+                "amount": "100.00",
+                "currency": "USD",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert tx_response.status_code == 418  # TransactionWillOverdraftTreasury
+
     def test_treasury_balances_in_schema(
         self, test_app: TestClient, token, entity_one, entity_two
     ):

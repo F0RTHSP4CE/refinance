@@ -68,59 +68,48 @@ class TestResidentFeeService:
         assert resident2_resp.status_code == 200
         resident2 = resident2_resp.json()
 
-        # Create transactions for Resident One
-        # Fee for current month
-        test_app.post(
-            "/transactions",
-            json={
-                "from_entity_id": resident1["id"],
-                "to_entity_id": hackerspace_id,
-                "amount": "100",
-                "currency": "USD",
-                "comment": f"Fee for {current_year}-{current_month:02d}",
-                "tag_ids": [fee_tag.id],
-            },
-            headers={"x-token": token},
-        )
-        # Fee for previous month
-        test_app.post(
-            "/transactions",
-            json={
-                "from_entity_id": resident1["id"],
-                "to_entity_id": hackerspace_id,
-                "amount": "100",
-                "currency": "USD",
-                "comment": f"Fee for {prev_year}-{prev_month:02d}",
-                "tag_ids": [fee_tag.id],
-            },
-            headers={"x-token": token},
-        )
-        # Fee for a future month
-        test_app.post(
-            "/transactions",
-            json={
-                "from_entity_id": resident1["id"],
-                "to_entity_id": hackerspace_id,
-                "amount": "100",
-                "currency": "USD",
-                "comment": f"Fee for {next_year}-{next_month:02d}",
-                "tag_ids": [fee_tag.id],
-            },
-            headers={"x-token": token},
-        )
+        def create_invoice(from_entity_id: int, year: int, month: int) -> int:
+            invoice_resp = test_app.post(
+                "/invoices",
+                json={
+                    "from_entity_id": from_entity_id,
+                    "to_entity_id": hackerspace_id,
+                    "amounts": [{"currency": "usd", "amount": "100"}],
+                    "billing_period": f"{year}-{month:02d}-01",
+                    "tag_ids": [fee_tag.id],
+                },
+                headers={"x-token": token},
+            )
+            assert invoice_resp.status_code == 200
+            return invoice_resp.json()["id"]
 
-        # Create transaction for Resident Two for the current month
-        # This one has no date in the comment, so created_at will be used
-        test_app.post(
-            "/transactions",
-            json={
-                "from_entity_id": resident2["id"],
-                "to_entity_id": hackerspace_id,
-                "amount": "50",
-                "currency": "EUR",
-            },
-            headers={"x-token": token},
-        )
+        def pay_invoice(invoice_id: int, from_entity_id: int) -> None:
+            tx_resp = test_app.post(
+                "/transactions",
+                json={
+                    "from_entity_id": from_entity_id,
+                    "to_entity_id": hackerspace_id,
+                    "amount": "100",
+                    "currency": "usd",
+                    "status": "completed",
+                    "invoice_id": invoice_id,
+                },
+                headers={"x-token": token},
+            )
+            assert tx_resp.status_code == 200
+
+        # Create invoices for Resident One and pay them
+        invoice_current = create_invoice(resident1["id"], current_year, current_month)
+        pay_invoice(invoice_current, resident1["id"])
+
+        invoice_previous = create_invoice(resident1["id"], prev_year, prev_month)
+        pay_invoice(invoice_previous, resident1["id"])
+
+        invoice_future = create_invoice(resident1["id"], next_year, next_month)
+        pay_invoice(invoice_future, resident1["id"])
+
+        # Create an unpaid invoice for Resident Two for the current month
+        _ = create_invoice(resident2["id"], current_year, current_month)
 
         # Call the endpoint to get resident fees for the last 2 months
         response = test_app.get("/resident_fees/?months=2", headers={"x-token": token})
