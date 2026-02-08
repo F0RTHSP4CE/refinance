@@ -22,7 +22,7 @@
         {% for deposit in deposits %}
         <tr>
             <td><a href="{{ url_for('deposit.detail', id=deposit.id) }}">{{ deposit.id }}</a></td>
-            <td>{{ human_readable_date(deposit.created_at) | safe }}</td>
+            <td>{{ human_readable_date(deposit.created_at) }}</td>
 
             <td>
                 <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}"

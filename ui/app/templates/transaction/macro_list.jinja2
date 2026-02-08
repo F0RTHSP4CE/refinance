@@ -25,7 +25,7 @@
         <tr {% if transaction.status=="draft" %} class="secondary" {%endif%}>
             <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
 
-            <td>{{ human_readable_date(transaction.created_at) | safe }}</td>
+            <td>{{ human_readable_date(transaction.created_at) }}</td>
 
             <td>
                 <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}"

@@ -40,7 +40,7 @@
         <tr>
             <td>#{{ c.id }}</td>
             <td>{{ c.comment or '—' }}</td>
-            <td>{{ human_readable_date(c.created_at) | safe }}</td>
+            <td>{{ human_readable_date(c.created_at) }}</td>
             <td>
                 <a href="{{ url_for('entity.delete_card', id=entity.id, card_id=c.id) }}">X</a>
             </td>
