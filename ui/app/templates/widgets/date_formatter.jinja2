@@ -1,7 +1,7 @@
 {% macro human_date(date_value) %}
-{{ human_readable_date(date_value) | safe }}
+{{ human_readable_date(date_value) }}
 {% endmacro %}
 
 {% macro human_date_or_empty(date_value) %}
-{{ human_readable_date(date_value) | safe if date_value else '' }}
+{{ human_readable_date(date_value) if date_value else '' }}
 {% endmacro %}

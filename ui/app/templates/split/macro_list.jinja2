@@ -31,7 +31,7 @@
                         {{ split.actor_entity.name }}
                     </a>
                 </td>
-                <td>{{ human_readable_date(split.created_at) | safe }}</td>
+                <td>{{ human_readable_date(split.created_at) }}</td>
                 <td>
                     <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}"
                         class="{% if not split.recipient_entity.active %}secondary inactive{% endif %}">

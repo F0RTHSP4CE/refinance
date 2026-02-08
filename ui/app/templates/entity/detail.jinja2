@@ -217,11 +217,11 @@ endblock %}
             </tr>
             <tr>
                 <td>Created at</td>
-                <td>{{ human_readable_date(entity.created_at) | safe }}</td>
+                <td>{{ human_readable_date(entity.created_at) }}</td>
             </tr>
             <tr>
                 <td>Modified at</td>
-                <td>{{ human_readable_date(entity.modified_at) | safe if entity.modified_at else "" }}</td>
+                <td>{{ human_readable_date(entity.modified_at) if entity.modified_at else "" }}</td>
             </tr>
             <tr>
                 <td>Authentication</td>
@@ -271,7 +271,7 @@ endblock %}
                             <tr>
                                 <td>#{{ c.id }}</td>
                                 <td>{{ c.comment or '—' }}</td>
-                                <td>{{ human_readable_date(c.created_at) | safe }}</td>
+                                <td>{{ human_readable_date(c.created_at) }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

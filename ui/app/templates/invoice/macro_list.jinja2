@@ -20,7 +20,7 @@
         {% for invoice in invoices %}
         <tr {% if invoice.status=="paid" %} class="secondary" {% endif %}>
             <td><a href="{{ url_for('invoice.detail', id=invoice.id) }}">{{ invoice.id }}</a></td>
-            <td>{{ human_readable_date(invoice.created_at) | safe }}</td>
+            <td>{{ human_readable_date(invoice.created_at) }}</td>
             <td>
                 <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
                     class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{

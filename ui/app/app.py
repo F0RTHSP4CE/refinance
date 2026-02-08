@@ -28,10 +28,13 @@ from flask import (
     url_for,
 )
 from flask_cors import CORS
+from jinja2 import select_autoescape
+from markupsafe import Markup, escape
 
 app = Flask(__name__)
 app.secret_key = "supersecret"
 CORS(app)
+app.jinja_env.autoescape = select_autoescape(["html", "htm", "xml", "xhtml", "jinja2"])
 
 app.register_blueprint(index_bp, url_prefix="/")
 app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -173,11 +176,15 @@ def human_readable_date(date_string):
                 human_text = dt.strftime("%d %B %Y")
 
         # Return HTML with tooltip and date-toggle class
-        return f'<span class="human-date" title="{date_string}">{human_text}</span>'
+        safe_title = escape(str(date_string))
+        safe_text = escape(str(human_text))
+        return Markup(
+            f'<span class="human-date" title="{safe_title}">{safe_text}</span>'
+        )
 
     except (ValueError, TypeError):
         # If parsing fails, return the original string
-        return str(date_string)
+        return escape(str(date_string))
 
 
 app.jinja_env.globals["update_query_params"] = update_query_params
