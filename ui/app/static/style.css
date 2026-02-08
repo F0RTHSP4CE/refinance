@@ -74,6 +74,38 @@ td {
   text-align: right;
 }
 
+.balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.balance-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.balance-amount {
+  min-width: 5.5rem;
+}
+
+.balance-cell {
+  vertical-align: top;
+  min-width: 4.5rem;
+}
+
+.balance-value,
+.balance-draft {
+  line-height: 1.1;
+}
+
+.balance-draft {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
 .center-align {
   text-align: center;
 }

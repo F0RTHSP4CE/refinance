@@ -112,3 +112,132 @@ class TestEntityFilters:
         assert response_inactive["total"] == 1
         assert response_active["total"] == len(SEEDING[Entity]) + 1
         assert response_total["total"] == len(SEEDING[Entity]) + 2
+
+
+class TestEntityBalanceSorting:
+    def _create_entity(self, test_app: TestClient, token, name: str) -> int:
+        response = test_app.post(
+            "/entities",
+            json={"name": name},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    def _create_transaction(
+        self,
+        test_app: TestClient,
+        token: str,
+        from_entity_id: int,
+        to_entity_id: int,
+        amount: str,
+        currency: str = "usd",
+        status: str = "completed",
+    ) -> None:
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": from_entity_id,
+                "to_entity_id": to_entity_id,
+                "amount": amount,
+                "currency": currency,
+                "status": status,
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+
+    def test_entities_sorted_by_balance_desc_and_asc(
+        self, test_app: TestClient, token_factory, token
+    ):
+        entity_a_id = self._create_entity(test_app, token, "BalanceSort A")
+        entity_b_id = self._create_entity(test_app, token, "BalanceSort B")
+        entity_c_id = self._create_entity(test_app, token, "BalanceSort C")
+
+        token_a = token_factory(entity_a_id)
+        token_b = token_factory(entity_b_id)
+        token_c = token_factory(entity_c_id)
+
+        self._create_transaction(
+            test_app,
+            token_a,
+            from_entity_id=entity_a_id,
+            to_entity_id=entity_b_id,
+            amount="100.00",
+        )
+        self._create_transaction(
+            test_app,
+            token_b,
+            from_entity_id=entity_b_id,
+            to_entity_id=entity_c_id,
+            amount="30.00",
+        )
+        self._create_transaction(
+            test_app,
+            token_c,
+            from_entity_id=entity_c_id,
+            to_entity_id=entity_a_id,
+            amount="5.00",
+        )
+
+        response_desc = test_app.get(
+            "/entities",
+            params={
+                "name": "BalanceSort",
+                "balance_currency": "usd",
+                "balance_status": "completed",
+                "balance_order": "desc",
+            },
+            headers={"x-token": token},
+        )
+        assert response_desc.status_code == 200
+        data_desc = response_desc.json()
+        assert data_desc["total"] == 3
+        ids_desc = [item["id"] for item in data_desc["items"]]
+        assert ids_desc == [entity_b_id, entity_c_id, entity_a_id]
+
+        response_asc = test_app.get(
+            "/entities",
+            params={
+                "name": "BalanceSort",
+                "balance_currency": "usd",
+                "balance_status": "completed",
+                "balance_order": "asc",
+            },
+            headers={"x-token": token},
+        )
+        assert response_asc.status_code == 200
+        data_asc = response_asc.json()
+        assert data_asc["total"] == 3
+        ids_asc = [item["id"] for item in data_asc["items"]]
+        assert ids_asc == [entity_a_id, entity_c_id, entity_b_id]
+
+    def test_entities_sorted_by_balance_defaults_to_completed(
+        self, test_app: TestClient, token_factory, token
+    ):
+        entity_a_id = self._create_entity(test_app, token, "BalanceSort D")
+        entity_b_id = self._create_entity(test_app, token, "BalanceSort E")
+
+        token_a = token_factory(entity_a_id)
+
+        self._create_transaction(
+            test_app,
+            token_a,
+            from_entity_id=entity_a_id,
+            to_entity_id=entity_b_id,
+            amount="42.00",
+        )
+
+        response = test_app.get(
+            "/entities",
+            params={
+                "name": "BalanceSort D",
+                "balance_currency": "usd",
+                "balance_order": "asc",
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["id"] == entity_a_id

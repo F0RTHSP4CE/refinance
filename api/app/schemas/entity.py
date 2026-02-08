@@ -1,11 +1,12 @@
 """DTO for Entity"""
 
-from typing import Optional
+from typing import Literal, Optional
 
+from app.models.transaction import TransactionStatus
 from app.schemas.base import BaseFilterSchema, BaseReadSchema, BaseUpdateSchema
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
-from pydantic import BaseModel, field_serializer, model_serializer
+from pydantic import BaseModel, field_serializer, field_validator, model_serializer
 
 
 class EntityAuthSchema(BaseModel):
@@ -44,3 +45,10 @@ class EntityFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     name: str | None = None
     active: bool | None = None
     auth_telegram_id: int | None = None
+    balance_currency: str | None = None
+    balance_status: TransactionStatus | None = None
+    balance_order: Literal["asc", "desc"] | None = None
+
+    @field_validator("balance_currency")
+    def normalize_balance_currency(cls, v: str | None) -> str | None:
+        return v.lower() if v else v

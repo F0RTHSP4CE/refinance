@@ -25,11 +25,15 @@
             <tr>
                 <td>Name</td>
                 <td>Tags</td>
+                {% for currency in currency_columns %}
+                <td class="right-align">{{ currency | upper }}</td>
+                {% endfor %}
                 <td>Comment</td>
             </tr>
         </thead>
         <tbody>
             {% for entity in entities %}
+            {% set balance = balances.get(entity.id) %}
             <tr>
                 <td>
                     <a href="{{ url_for('entity.detail', id=entity.id) }}"
@@ -42,6 +46,22 @@
                     {{ tag_inline(tag) }}
                     {% endfor %}
                 </td>
+                {% for currency in currency_columns %}
+                {% set completed_amount = balance.completed.get(currency) if balance else None %}
+                {% set draft_amount = balance.draft.get(currency) if balance else None %}
+                <td class="balance-cell right-align">
+                    {% if completed_amount is not none and completed_amount|float != 0 %}
+                    <div class="balance-value {% if completed_amount|float < 0 %}amount-negative{% endif %}">
+                        {{ completed_amount }}
+                    </div>
+                    {% endif %}
+                    {% if draft_amount is not none and draft_amount|float != 0 %}
+                    <div class="balance-draft {% if draft_amount|float < 0 %}amount-negative{% endif %}">
+                        {{ draft_amount }}*
+                    </div>
+                    {% endif %}
+                </td>
+                {% endfor %}
                 <td>{{ entity.comment or ""}}</td>
             </tr>
             {% endfor %}

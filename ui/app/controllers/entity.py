@@ -72,6 +72,15 @@ class EntityFilterForm(FlaskForm):
     active = SelectField(
         "Active", choices=[("", ""), ("true", "Active"), ("false", "Inactive")]
     )
+    balance_currency = StringField("Balance Currency")
+    balance_status = SelectField(
+        "Balance Status",
+        choices=[("", ""), ("completed", "Completed"), ("draft", "Draft")],
+    )
+    balance_order = SelectField(
+        "Balance Order",
+        choices=[("", ""), ("desc", "Highest first"), ("asc", "Lowest first")],
+    )
     submit = SubmitField("Search")
 
 
@@ -80,7 +89,7 @@ class EntityFilterForm(FlaskForm):
 def list():
     # Retrieve pagination parameters from the query string
     page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 20, type=int)
+    limit = request.args.get("limit", 50, type=int)
     skip = (page - 1) * limit
 
     filter_form = EntityFilterForm(request.args)
@@ -98,9 +107,21 @@ def list():
     entities = [Entity(**x) for x in response["items"]]
     total = response["total"]
 
+    balances = {}
+    currencies = set()
+    for entity in entities:
+        balance_data = api.http("GET", f"balances/{entity.id}").json()
+        balance = Balance(**balance_data)
+        balances[entity.id] = balance
+        currencies.update(balance.completed.keys())
+        currencies.update(balance.draft.keys())
+    currency_columns = sorted(currencies)
+
     return render_template(
         "entity/list.jinja2",
         entities=entities,
+        balances=balances,
+        currency_columns=currency_columns,
         total=total,
         page=page,
         limit=limit,
