@@ -174,7 +174,7 @@ class MonthlyFee:
 
 
 @dataclass
-class ResidentFee:
+class Fee:
     entity: Entity
     fees: list[MonthlyFee]
     total_usd_series: list[Decimal] = field(default_factory=list)
@@ -186,5 +186,5 @@ class ResidentFee:
 
 
 @dataclass
-class ResidentFeeFilters:
+class FeeFilters:
     months: int = 12

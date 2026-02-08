@@ -6,9 +6,9 @@ from app.controllers.auth import auth_bp
 from app.controllers.deposit import deposit_bp
 from app.controllers.entity import entity_bp
 from app.controllers.exchange import exchange_bp
+from app.controllers.fee import fee_bp
 from app.controllers.index import index_bp
 from app.controllers.invoice import invoice_bp
-from app.controllers.resident_fee import resident_fee_bp
 from app.controllers.split import split_bp
 from app.controllers.stats import stats_bp
 from app.controllers.tag import tag_bp
@@ -46,7 +46,7 @@ app.register_blueprint(invoice_bp, url_prefix="/invoices")
 app.register_blueprint(split_bp, url_prefix="/splits")
 app.register_blueprint(tag_bp, url_prefix="/tags")
 app.register_blueprint(exchange_bp, url_prefix="/exchange")
-app.register_blueprint(resident_fee_bp, url_prefix="/fee")
+app.register_blueprint(fee_bp, url_prefix="/fee")
 app.register_blueprint(stats_bp, url_prefix="/stats")
 app.register_blueprint(treasury_bp, url_prefix="/treasuries")
 

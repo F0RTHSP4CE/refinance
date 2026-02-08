@@ -23,7 +23,7 @@ class ServiceContainer:
         self._cryptapi_deposit_provider_service = None
         self._pos_service = None
         self._currency_exchange_service = None
-        self._resident_fee_service = None
+        self._fee_service = None
         self._stats_service = None
         self._token_service = None
 
@@ -161,16 +161,18 @@ class ServiceContainer:
         return self._currency_exchange_service
 
     @property
-    def resident_fee_service(self):
-        if self._resident_fee_service is None:
-            from app.services.resident_fee import ResidentFeeService
+    def fee_service(self):
+        if self._fee_service is None:
+            from app.services.fee import FeeService
 
-            self._resident_fee_service = ResidentFeeService(
+            self._fee_service = FeeService(
                 db=self.db,
                 entity_service=self.entity_service,
                 currency_exchange_service=self.currency_exchange_service,
+                invoice_service=self.invoice_service,
+                config=self.config,
             )
-        return self._resident_fee_service
+        return self._fee_service
 
     @property
     def stats_service(self):
@@ -179,7 +181,7 @@ class ServiceContainer:
 
             self._stats_service = StatsService(
                 db=self.db,
-                resident_fee_service=self.resident_fee_service,
+                fee_service=self.fee_service,
                 balance_service=self.balance_service,
                 entity_service=self.entity_service,
                 currency_exchange_service=self.currency_exchange_service,
@@ -252,8 +254,8 @@ def get_currency_exchange_service(container: ServiceContainer = Depends(get_cont
     return container.currency_exchange_service
 
 
-def get_resident_fee_service(container: ServiceContainer = Depends(get_container)):
-    return container.resident_fee_service
+def get_fee_service(container: ServiceContainer = Depends(get_container)):
+    return container.fee_service
 
 
 def get_stats_service(container: ServiceContainer = Depends(get_container)):

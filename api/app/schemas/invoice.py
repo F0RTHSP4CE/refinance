@@ -92,14 +92,3 @@ class InvoiceFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     to_entity_id: int | None = None
     status: InvoiceStatus | None = None
     billing_period: date | None = None
-
-
-class FeeInvoiceIssueSchema(BaseSchema):
-    billing_period: date | None = None
-
-
-class FeeInvoiceIssueReportSchema(BaseSchema):
-    billing_period: date
-    created_count: int
-    skipped_count: int
-    invoice_ids: list[int]

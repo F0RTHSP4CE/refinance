@@ -1,4 +1,4 @@
-"""ResidentFee service"""
+"""Fee service"""
 
 import calendar
 import re
@@ -8,24 +8,31 @@ from datetime import date
 from decimal import Decimal
 from typing import Any, Mapping
 
+from app.config import Config, get_config
 from app.dependencies.services import (
     get_currency_exchange_service,
     get_entity_service,
+    get_invoice_service,
 )
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
+from app.models.tag import Tag
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
 from app.schemas.entity import EntitySchema
-from app.schemas.resident_fee import (
+from app.schemas.fee import (
+    FeeAmountSchema,
+    FeeFiltersSchema,
+    FeeInvoiceIssueReportSchema,
+    FeeSchema,
     MonthlyFeeSchema,
-    ResidentFeeFiltersSchema,
-    ResidentFeeSchema,
 )
-from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
+from app.schemas.invoice import InvoiceCreateSchema
+from app.seeding import f0_entity, fee_tag, member_tag, resident_tag
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
+from app.services.invoice import InvoiceService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
@@ -52,18 +59,18 @@ class MonthlyFee:
 
 
 @dataclass(slots=True)
-class ResidentFeeRecord:
+class FeeRecord:
     entity: Entity
     fees: list[MonthlyFee]
 
-    def to_schema(self) -> ResidentFeeSchema:
-        return ResidentFeeSchema(
+    def to_schema(self) -> FeeSchema:
+        return FeeSchema(
             entity=EntitySchema.model_validate(self.entity),
             fees=[fee.to_schema() for fee in self.fees],
         )
 
 
-class ResidentFeeService(BaseService):
+class FeeService(BaseService):
     def __init__(
         self,
         db: Session = Depends(get_uow),
@@ -71,10 +78,14 @@ class ResidentFeeService(BaseService):
         currency_exchange_service: CurrencyExchangeService = Depends(
             get_currency_exchange_service
         ),
+        invoice_service: InvoiceService = Depends(get_invoice_service),
+        config: Config = Depends(get_config),
     ):
         self.db = db
         self._entity_service = entity_service
         self._currency_exchange_service = currency_exchange_service
+        self._invoice_service = invoice_service
+        self._config = config
 
     def _parse_comment_for_date(self, comment: str | None) -> tuple[int, int] | None:
         if not comment:
@@ -171,7 +182,7 @@ class ResidentFeeService(BaseService):
             total_usd=total_usd,
         )
 
-    def get_fees(self, filters: ResidentFeeFiltersSchema) -> list[ResidentFeeSchema]:
+    def get_fees(self, filters: FeeFiltersSchema) -> list[FeeSchema]:
         hackerspace = self._entity_service.get(f0_entity.id)
         residents = (
             self.db.query(Entity)
@@ -248,7 +259,7 @@ class ResidentFeeService(BaseService):
             ] += tx.amount
 
         # Build the final response structure
-        results: list[ResidentFeeRecord] = []
+        results: list[FeeRecord] = []
         for r in residents:
             # Past months window
             monthly_fees: list[MonthlyFee] = []
@@ -280,6 +291,158 @@ class ResidentFeeService(BaseService):
             all_fees = monthly_fees + future_fees
             all_fees.sort(key=lambda x: (x.year, x.month))
 
-            results.append(ResidentFeeRecord(entity=r, fees=all_fees))
+            results.append(FeeRecord(entity=r, fees=all_fees))
 
         return [record.to_schema() for record in results]
+
+    def get_fee_amounts(self) -> list[FeeAmountSchema]:
+        items: list[FeeAmountSchema] = []
+        for item in self._config.fee_presets:
+            try:
+                tag_id = int(item.get("tag_id"))
+                currency = str(item.get("currency", "")).lower().strip()
+                amount = Decimal(str(item.get("amount"))).quantize(Decimal("0.01"))
+            except Exception:
+                continue
+            if not currency:
+                continue
+            items.append(
+                FeeAmountSchema(
+                    tag_id=tag_id,
+                    currency=currency,
+                    amount=amount,
+                )
+            )
+        return items
+
+    @staticmethod
+    def _normalize_billing_period(
+        value: date | None,
+    ) -> date | None:
+        if value is None:
+            return None
+        return date(value.year, value.month, 1)
+
+    @staticmethod
+    def _select_fee_tag_id(
+        entity_tag_ids: set[int],
+        fee_amounts_by_tag: dict[int, list[dict[str, Decimal]]],
+    ) -> int | None:
+        priority = [resident_tag.id, member_tag.id]
+        for tag_id in priority:
+            if tag_id in entity_tag_ids and tag_id in fee_amounts_by_tag:
+                return tag_id
+        for tag_id in sorted(fee_amounts_by_tag.keys()):
+            if tag_id in entity_tag_ids:
+                return tag_id
+        return None
+
+    def _load_fee_amounts_by_tag(self) -> dict[int, list[dict[str, Decimal]]]:
+        fee_amounts_by_tag: dict[int, list[dict[str, Decimal]]] = defaultdict(list)
+        for item in self._config.fee_presets:
+            try:
+                tag_id = int(item.get("tag_id"))
+                currency = str(item.get("currency", "")).lower().strip()
+                amount = Decimal(str(item.get("amount"))).quantize(Decimal("0.01"))
+            except Exception:
+                continue
+            if not currency:
+                continue
+            fee_amounts_by_tag[tag_id].append({"currency": currency, "amount": amount})
+        return fee_amounts_by_tag
+
+    def issue_fee_invoices(
+        self,
+        *,
+        billing_period: date | None = None,
+        actor_entity_id: int | None = None,
+    ) -> FeeInvoiceIssueReportSchema:
+        period = self._normalize_billing_period(billing_period or date.today())
+        if period is None:
+            period = date.today().replace(day=1)
+        hackerspace = self.db.query(Entity).filter(Entity.id == f0_entity.id).first()
+        if hackerspace is None:
+            hackerspace = f0_entity
+
+        resolved_actor_id = actor_entity_id or hackerspace.id
+
+        fee_amounts_by_tag = self._load_fee_amounts_by_tag()
+        if not fee_amounts_by_tag:
+            return FeeInvoiceIssueReportSchema(
+                billing_period=period,
+                created_count=0,
+                skipped_count=0,
+                invoice_ids=[],
+            )
+
+        fee_tag_ids = sorted(fee_amounts_by_tag.keys())
+        tags = self.db.query(Tag).filter(Tag.id.in_(fee_tag_ids)).all()
+        tag_filters = [Entity.tags.contains(tag) for tag in tags]
+        if not tag_filters:
+            return FeeInvoiceIssueReportSchema(
+                billing_period=period,
+                created_count=0,
+                skipped_count=0,
+                invoice_ids=[],
+            )
+
+        targets = self.db.query(Entity).filter(or_(*tag_filters)).all()
+
+        existing = {
+            (inv.from_entity_id, inv.billing_period)
+            for inv in self.db.query(Invoice)
+            .filter(
+                Invoice.billing_period == period,
+                Invoice.tags.contains(fee_tag),
+            )
+            .all()
+        }
+
+        invoice_ids: list[int] = []
+        created_count = 0
+        skipped_count = 0
+        for resident in targets:
+            if not resident.active:
+                skipped_count += 1
+                continue
+            if (resident.id, period) in existing:
+                skipped_count += 1
+                continue
+
+            entity_tag_ids = {tag.id for tag in (resident.tags or [])}
+            fee_tag_id = self._select_fee_tag_id(entity_tag_ids, fee_amounts_by_tag)
+            if fee_tag_id is None:
+                skipped_count += 1
+                continue
+
+            fee_amounts = sorted(
+                fee_amounts_by_tag[fee_tag_id], key=lambda item: item["currency"]
+            )
+            amounts = [
+                {"currency": item["currency"], "amount": item["amount"]}
+                for item in fee_amounts
+            ]
+            if not amounts:
+                skipped_count += 1
+                continue
+
+            invoice = self._invoice_service.create(
+                InvoiceCreateSchema(
+                    from_entity_id=resident.id,
+                    to_entity_id=hackerspace.id,
+                    amounts=amounts,
+                    billing_period=period,
+                    tag_ids=[fee_tag.id],
+                    comment=f"Monthly fee {period.year}-{period.month:02d}",
+                ),
+                overrides={"actor_entity_id": resolved_actor_id},
+            )
+            invoice_ids.append(invoice.id)
+            created_count += 1
+
+        return FeeInvoiceIssueReportSchema(
+            billing_period=period,
+            created_count=created_count,
+            skipped_count=skipped_count,
+            invoice_ids=invoice_ids,
+        )

@@ -1,4 +1,4 @@
-"""Tests for ResidentFeeService"""
+"""Tests for FeeService"""
 
 from datetime import date
 
@@ -7,8 +7,8 @@ from app.seeding import fee_tag, resident_tag
 from fastapi.testclient import TestClient
 
 
-class TestResidentFeeService:
-    """Test ResidentFeeService logic through its API endpoint"""
+class TestFeeService:
+    """Test FeeService logic through its API endpoint"""
 
     def test_get_fees(self, test_app: TestClient, token, monkeypatch):
         from app.services.currency_exchange import CurrencyExchangeService
@@ -111,8 +111,8 @@ class TestResidentFeeService:
         # Create an unpaid invoice for Resident Two for the current month
         _ = create_invoice(resident2["id"], current_year, current_month)
 
-        # Call the endpoint to get resident fees for the last 2 months
-        response = test_app.get("/resident_fees/?months=2", headers={"x-token": token})
+        # Call the endpoint to get fees for the last 2 months
+        response = test_app.get("/fees/?months=2", headers={"x-token": token})
         assert response.status_code == 200
         data = response.json()
 

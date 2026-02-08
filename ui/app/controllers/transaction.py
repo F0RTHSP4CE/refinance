@@ -142,8 +142,8 @@ def _get_entities_by_tag_id(api, tag_id: int | None, active_only: bool = False):
     return api.http("GET", "entities", params=params).json().get("items", [])
 
 
-def _build_resident_fees(api):
-    raw_fees = api.http("GET", "resident_fees").json()
+def _build_fees(api):
+    raw_fees = api.http("GET", "fees").json()
     fees = []
     for data in raw_fees:
         converted = []
@@ -190,6 +190,38 @@ def _build_resident_fees(api):
 
     current_date = datetime.utcnow()
     return fees, current_date.month, current_date.year
+
+
+def _get_fee_presets(api) -> tuple[Dict[str, Dict[str, float]], Dict[int, str]]:
+    try:
+        items = api.http("GET", "fees/config").json()
+    except Exception:
+        return Config.DEFAULT_MONTHLY_FEE_PRESETS, {}
+
+    if not isinstance(items, list):
+        return Config.DEFAULT_MONTHLY_FEE_PRESETS, {}
+
+    presets: Dict[str, Dict[str, float]] = {}
+    tag_group_map: Dict[int, str] = {}
+    for item in items:
+        tag_id = item.get("tag_id")
+        tag_name = f"tag_{tag_id}" if tag_id is not None else None
+        currency = str(item.get("currency", "")).lower()
+        amount = item.get("amount")
+        if not tag_name or not currency or amount is None:
+            continue
+        try:
+            amount_value = float(amount)
+        except (TypeError, ValueError):
+            continue
+        presets.setdefault(tag_name, {})[currency] = amount_value
+        if tag_id is not None:
+            tag_group_map[int(tag_id)] = tag_name
+
+    if not presets:
+        return Config.DEFAULT_MONTHLY_FEE_PRESETS, {}
+
+    return presets, tag_group_map
 
 
 @transaction_bp.route("/")
@@ -346,7 +378,7 @@ def shortcut_request():
 @token_required
 def shortcut_monthly_fee():
     api = get_refinance_api_client()
-    fee_presets = Config.DEFAULT_MONTHLY_FEE_PRESETS
+    fee_presets, fee_tag_group_map = _get_fee_presets(api)
 
     def _build_fee_presets_list(presets: dict) -> List[Dict[str, float | str]]:
         items: List[Dict[str, float | str]] = []
@@ -374,7 +406,9 @@ def shortcut_monthly_fee():
         for option in fee_preset_options
     }
 
-    def _get_default_fee_preset(actor_entity, balance, presets: dict) -> str:
+    def _get_default_fee_preset(
+        actor_entity, balance, presets: dict, tag_group_map: dict[int, str]
+    ) -> str:
         def _first_available_preset() -> str:
             for group in presets.keys():
                 group_presets = presets.get(group) or {}
@@ -418,10 +452,16 @@ def shortcut_monthly_fee():
             return None
 
         if is_resident:
-            return _choose_for("resident") or _first_available_preset()
+            resident_key = tag_group_map.get(Config.TAG_IDS["resident"])
+            if resident_key:
+                return _choose_for(resident_key) or _first_available_preset()
+            return _first_available_preset()
 
         if is_member:
-            return _choose_for("member") or _first_available_preset()
+            member_key = tag_group_map.get(Config.TAG_IDS["member"])
+            if member_key:
+                return _choose_for(member_key) or _first_available_preset()
+            return _first_available_preset()
 
         return _first_available_preset()
 
@@ -437,7 +477,7 @@ def shortcut_monthly_fee():
     default_comment = _month_label(0)
 
     fee_row = None
-    fees, current_month, current_year = _build_resident_fees(api)
+    fees, current_month, current_year = _build_fees(api)
     actor_id = g.actor_entity.get("id") if g.actor_entity else None
     if actor_id is not None:
         for rf in fees:
@@ -470,6 +510,7 @@ def shortcut_monthly_fee():
         g.actor_entity if hasattr(g, "actor_entity") else None,
         g.actor_entity_balance if hasattr(g, "actor_entity_balance") else None,
         fee_presets,
+        fee_tag_group_map,
     )
 
     return render_template(

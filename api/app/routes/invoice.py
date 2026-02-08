@@ -5,8 +5,6 @@ from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
 from app.schemas.invoice import (
-    FeeInvoiceIssueReportSchema,
-    FeeInvoiceIssueSchema,
     InvoiceCreateSchema,
     InvoiceFiltersSchema,
     InvoiceSchema,
@@ -66,15 +64,3 @@ def delete_invoice(
     actor_entity: Entity = Depends(get_entity_from_token),
 ) -> int:
     return invoice_service.delete(invoice_id)
-
-
-@invoice_router.post("/issue-fees", response_model=FeeInvoiceIssueReportSchema)
-def issue_fee_invoices(
-    payload: FeeInvoiceIssueSchema,
-    invoice_service: InvoiceService = Depends(get_invoice_service),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return invoice_service.issue_fee_invoices(
-        billing_period=payload.billing_period,
-        actor_entity_id=actor_entity.id,
-    )

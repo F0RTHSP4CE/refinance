@@ -20,17 +20,14 @@ from app.errors.invoice import (
     InvoiceNotEditable,
     InvoiceTransactionAlreadyAttached,
 )
-from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.transaction import TransactionStatus
 from app.schemas.invoice import (
-    FeeInvoiceIssueReportSchema,
     InvoiceCreateSchema,
     InvoiceFiltersSchema,
     InvoiceUpdateSchema,
 )
 from app.schemas.transaction import TransactionCreateSchema
-from app.seeding import f0_entity, fee_tag, member_tag, resident_tag
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
@@ -216,88 +213,6 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         if value is None:
             return None
         return datetime.date(value.year, value.month, 1)
-
-    def issue_fee_invoices(
-        self,
-        *,
-        billing_period: datetime.date | None = None,
-        actor_entity_id: int | None = None,
-    ) -> FeeInvoiceIssueReportSchema:
-        period = self._normalize_billing_period(billing_period or datetime.date.today())
-        if period is None:
-            period = datetime.date.today().replace(day=1)
-        hackerspace = self.db.query(Entity).filter(Entity.id == f0_entity.id).first()
-        if hackerspace is None:
-            hackerspace = f0_entity
-
-        resolved_actor_id = actor_entity_id or hackerspace.id
-
-        targets = (
-            self.db.query(Entity)
-            .filter(
-                or_(
-                    Entity.tags.contains(resident_tag),
-                    Entity.tags.contains(member_tag),
-                )
-            )
-            .all()
-        )
-
-        existing = {
-            (inv.from_entity_id, inv.billing_period)
-            for inv in self.db.query(Invoice)
-            .filter(
-                Invoice.billing_period == period,
-                Invoice.tags.contains(fee_tag),
-            )
-            .all()
-        }
-
-        invoice_ids: list[int] = []
-        created_count = 0
-        skipped_count = 0
-        for resident in targets:
-            if not resident.active:
-                skipped_count += 1
-                continue
-            if (resident.id, period) in existing:
-                skipped_count += 1
-                continue
-
-            tag_ids = {tag.id for tag in (resident.tags or [])}
-            if resident_tag.id in tag_ids:
-                usd_amount = Decimal("42")
-                gel_amount = Decimal("115")
-            elif member_tag.id in tag_ids:
-                usd_amount = Decimal("25")
-                gel_amount = Decimal("70")
-            else:
-                skipped_count += 1
-                continue
-
-            invoice = self.create(
-                InvoiceCreateSchema(
-                    from_entity_id=resident.id,
-                    to_entity_id=hackerspace.id,
-                    amounts=[
-                        {"currency": "usd", "amount": usd_amount},
-                        {"currency": "gel", "amount": gel_amount},
-                    ],
-                    billing_period=period,
-                    tag_ids=[fee_tag.id],
-                    comment=f"Monthly fee {period.year}-{period.month:02d}",
-                ),
-                overrides={"actor_entity_id": resolved_actor_id},
-            )
-            invoice_ids.append(invoice.id)
-            created_count += 1
-
-        return FeeInvoiceIssueReportSchema(
-            billing_period=period,
-            created_count=created_count,
-            skipped_count=skipped_count,
-            invoice_ids=invoice_ids,
-        )
 
     def _required_amount_for_currency(
         self, invoice: Invoice, currency: str
