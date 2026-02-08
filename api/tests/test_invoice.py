@@ -466,7 +466,7 @@ class TestInvoiceEndpoints:
 
         period = date.today().replace(day=1).isoformat()
         issue_response = test_app.post(
-            "/invoices/issue-fees",
+            "/fees/issue-invoices",
             json={"billing_period": period},
             headers={"x-token": token},
         )

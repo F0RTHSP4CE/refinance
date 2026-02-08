@@ -2,18 +2,18 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
-from app.schemas import MonthlyFee, ResidentFee
+from app.schemas import Fee, MonthlyFee
 from flask import Blueprint, render_template, request
 
-resident_fee_bp = Blueprint("resident_fee", __name__, url_prefix="/resident_fee")
+fee_bp = Blueprint("fee", __name__)
 
 
-@resident_fee_bp.route("/")
+@fee_bp.route("/")
 def index():
     api = get_refinance_api_client()
-    raw_fees = api.http("GET", "resident_fees").json()
-    # build ResidentFee objects, converting nested fee dicts to MonthlyFee before constructing
-    fees: list[ResidentFee] = []
+    raw_fees = api.http("GET", "fees").json()
+    # build Fee objects, converting nested fee dicts to MonthlyFee before constructing
+    fees: list[Fee] = []
     for data in raw_fees:
         # convert inner fee dicts to MonthlyFee
         converted = []
@@ -33,7 +33,7 @@ def index():
                 )
             )
         data["fees"] = converted
-        fees.append(ResidentFee(**data))
+        fees.append(Fee(**data))
     # build unified timeline of (year, month)
     timeline_set = set()
     for rf in fees:
@@ -120,7 +120,7 @@ def index():
     current_month = current_date.month
     current_year = current_date.year
     return render_template(
-        "resident_fee/index.jinja2",
+        "fee/index.jinja2",
         fees=fees,
         current_month=current_month,
         current_year=current_year,

@@ -14,7 +14,7 @@ from app.dependencies.services import (
     get_balance_service,
     get_currency_exchange_service,
     get_entity_service,
-    get_resident_fee_service,
+    get_fee_service,
 )
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
@@ -25,7 +25,7 @@ from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
-from app.services.resident_fee import ResidentFeeService
+from app.services.fee import FeeService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import and_, case, extract, func, or_
@@ -40,7 +40,7 @@ class StatsService(BaseService):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        resident_fee_service: ResidentFeeService = Depends(get_resident_fee_service),
+        fee_service: FeeService = Depends(get_fee_service),
         balance_service: BalanceService = Depends(get_balance_service),
         entity_service: EntityService = Depends(get_entity_service),
         currency_exchange_service: CurrencyExchangeService = Depends(
@@ -48,7 +48,7 @@ class StatsService(BaseService):
         ),
     ):
         self.db = db
-        self._resident_fee_service = resident_fee_service
+        self._fee_service = fee_service
         self._balance_service = balance_service
         self._entity_service = entity_service
         self._currency_exchange_service = currency_exchange_service

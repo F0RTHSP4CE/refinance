@@ -7,7 +7,8 @@
 <p>
 <div class="button-group">
 	<a class="button" href="{{ url_for('transaction.shortcut_deposit') }}">💰 Deposit money</a>
-	<a class="button" href="{{ url_for('transaction.shortcut_monthly_fee') }}">🧾 Pay fee</a>
+	<a class="button" href="{{ url_for('invoice.list', status='pending', from_entity_id=g.actor_entity.id) }}">🧾 Pay
+		fee</a>
 	</p>
 </div>
 <h2>Fridge & Coffee</h2>
