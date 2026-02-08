@@ -233,17 +233,20 @@ def edit(id):
     invoice_data = api.http("GET", f"invoices/{id}").json()
     invoice = Invoice(**invoice_data)
 
-    form = InvoiceForm(data=invoice_data)
-    _populate_amount_fields(form, invoice_data.get("amounts", []))
-    if invoice.billing_period is not None:
-        if isinstance(invoice.billing_period, str):
-            form.billing_period.data = invoice.billing_period[:7]
-        else:
-            form.billing_period.data = invoice.billing_period.strftime("%Y-%m")
+    form = InvoiceForm(data=invoice_data if request.method == "GET" else None)
+    form.from_entity_id.data = invoice.from_entity_id
+    form.to_entity_id.data = invoice.to_entity_id
 
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
-    form.tag_ids.data = [tag["id"] for tag in invoice_data.get("tags", [])]
+    if request.method == "GET":
+        _populate_amount_fields(form, invoice_data.get("amounts", []))
+        if invoice.billing_period is not None:
+            if isinstance(invoice.billing_period, str):
+                form.billing_period.data = invoice.billing_period[:7]
+            else:
+                form.billing_period.data = invoice.billing_period.strftime("%Y-%m")
+        form.tag_ids.data = [tag["id"] for tag in invoice_data.get("tags", [])]
 
     if form.validate_on_submit():
         data = {
