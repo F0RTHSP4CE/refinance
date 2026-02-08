@@ -25,6 +25,7 @@ currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
+automatic_tag = Tag(id=17, name="automatic", comment="automatically generated / paid")
 # commonly used treasuries
 cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
@@ -73,6 +74,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         member_tag,
         guest_tag,
         pos_tag,
+        automatic_tag,
     ],
     Entity: [
         # hackerspace
