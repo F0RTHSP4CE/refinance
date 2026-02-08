@@ -22,6 +22,11 @@ def index():
             amounts = {
                 currency: Decimal(str(value)) for currency, value in raw_amounts.items()
             }
+            raw_unpaid_amounts = f.get("unpaid_invoice_amounts") or {}
+            unpaid_amounts = {
+                currency: Decimal(str(value))
+                for currency, value in raw_unpaid_amounts.items()
+            }
             total_usd_raw = f.get("total_usd", 0)
             total_usd = Decimal(str(total_usd_raw or 0))
             converted.append(
@@ -30,6 +35,9 @@ def index():
                     month=f["month"],
                     amounts=amounts,
                     total_usd=total_usd,
+                    unpaid_invoice_id=f.get("unpaid_invoice_id"),
+                    paid_invoice_id=f.get("paid_invoice_id"),
+                    unpaid_invoice_amounts=unpaid_amounts,
                 )
             )
         data["fees"] = converted
@@ -56,6 +64,9 @@ def index():
                         month=m,
                         amounts={},
                         total_usd=Decimal("0"),
+                        unpaid_invoice_id=None,
+                        paid_invoice_id=None,
+                        unpaid_invoice_amounts=None,
                     )
                 )
 

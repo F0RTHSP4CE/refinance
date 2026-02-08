@@ -199,6 +199,18 @@ def detail(id):
     )
 
 
+@invoice_bp.route("/<int:id>/delete", methods=["GET", "POST"])
+@token_required
+def delete(id):
+    api = get_refinance_api_client()
+    invoice = Invoice(**api.http("GET", f"invoices/{id}").json())
+    form = DeleteForm()
+    if form.validate_on_submit():
+        api.http("DELETE", f"invoices/{id}")
+        return redirect(url_for("invoice.list"))
+    return render_template("invoice/delete.jinja2", form=form, invoice=invoice)
+
+
 @invoice_bp.route("/<int:id>/edit", methods=["GET", "POST"])
 @token_required
 def edit(id):

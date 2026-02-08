@@ -45,6 +45,9 @@ class MonthlyFee:
     month: int
     amounts: dict[str, Decimal]
     total_usd: float
+    unpaid_invoice_id: int | None = None
+    paid_invoice_id: int | None = None
+    unpaid_invoice_amounts: dict[str, Decimal] | None = None
 
     def to_schema(self) -> MonthlyFeeSchema:
         return MonthlyFeeSchema(
@@ -55,6 +58,16 @@ class MonthlyFee:
                 for currency, amount in self.amounts.items()
             },
             total_usd=self.total_usd,
+            unpaid_invoice_id=self.unpaid_invoice_id,
+            paid_invoice_id=self.paid_invoice_id,
+            unpaid_invoice_amounts=(
+                {
+                    currency: CurrencyDecimal(amount)
+                    for currency, amount in (self.unpaid_invoice_amounts or {}).items()
+                }
+                if self.unpaid_invoice_amounts
+                else None
+            ),
         )
 
 
@@ -170,16 +183,50 @@ class FeeService(BaseService):
             normalized[currency.lower()] = amount
         return normalized
 
+    def _amounts_list_to_map(
+        self, items: list[Mapping[str, Any]] | None
+    ) -> dict[str, Decimal]:
+        if not items:
+            return {}
+        normalized: dict[str, Decimal] = {}
+        for item in items:
+            currency = str(item.get("currency", "")).lower().strip()
+            if not currency:
+                continue
+            raw_value = item.get("amount")
+            if raw_value in (None, ""):
+                continue
+            try:
+                amount = (
+                    raw_value
+                    if isinstance(raw_value, Decimal)
+                    else Decimal(str(raw_value))
+                )
+            except Exception:
+                continue
+            normalized[currency] = amount
+        return normalized
+
     def _build_monthly_fee(
-        self, year: int, month: int, raw_amounts: Mapping[str, Any] | None
+        self,
+        year: int,
+        month: int,
+        raw_amounts: Mapping[str, Any] | None,
+        unpaid_invoice_id: int | None,
+        paid_invoice_id: int | None,
+        unpaid_invoice_amounts: Mapping[str, Any] | None,
     ) -> MonthlyFee:
         amounts = self._normalize_amounts(raw_amounts)
+        unpaid_amounts = self._normalize_amounts(unpaid_invoice_amounts)
         total_usd = self._sum_amounts_usd(amounts)
         return MonthlyFee(
             year=year,
             month=month,
             amounts=amounts,
             total_usd=total_usd,
+            unpaid_invoice_id=unpaid_invoice_id,
+            paid_invoice_id=paid_invoice_id,
+            unpaid_invoice_amounts=unpaid_amounts,
         )
 
     def get_fees(self, filters: FeeFiltersSchema) -> list[FeeSchema]:
@@ -244,16 +291,48 @@ class FeeService(BaseService):
         fees_by_resident_by_month = defaultdict(
             lambda: defaultdict(lambda: defaultdict(Decimal))
         )
+        # Track unpaid invoices
+        # {resident_id: {(year, month): invoice_id}}
+        unpaid_invoice_by_resident_by_month: dict[int, dict[tuple[int, int], int]] = (
+            defaultdict(dict)
+        )
+        unpaid_amounts_by_resident_by_month: dict[
+            int, dict[tuple[int, int], dict[str, Decimal]]
+        ] = defaultdict(dict)
+        # Track paid invoices
+        # {resident_id: {(year, month): invoice_id}}
+        paid_invoice_by_resident_by_month: dict[int, dict[tuple[int, int], int]] = (
+            defaultdict(dict)
+        )
         for invoice in invoices:
             if invoice.billing_period is None:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            if invoice.status == InvoiceStatus.PENDING:
+                current = unpaid_invoice_by_resident_by_month[
+                    invoice.from_entity_id
+                ].get((year, month))
+                if current is None or invoice.id > current:
+                    unpaid_invoice_by_resident_by_month[invoice.from_entity_id][
+                        (year, month)
+                    ] = invoice.id
+                    unpaid_amounts_by_resident_by_month[invoice.from_entity_id][
+                        (year, month)
+                    ] = self._amounts_list_to_map(invoice.amounts or [])
                 continue
             if invoice.status != InvoiceStatus.PAID:
                 continue
             tx = invoice.transaction
             if tx is None or tx.status != TransactionStatus.COMPLETED:
                 continue
-            year = invoice.billing_period.year
-            month = invoice.billing_period.month
+            current_paid = paid_invoice_by_resident_by_month[
+                invoice.from_entity_id
+            ].get((year, month))
+            if current_paid is None or invoice.id > current_paid:
+                paid_invoice_by_resident_by_month[invoice.from_entity_id][
+                    (year, month)
+                ] = invoice.id
             fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
                 tx.currency.lower()
             ] += tx.amount
@@ -274,6 +353,11 @@ class FeeService(BaseService):
                         year,
                         month,
                         fees_by_resident_by_month[r.id].get((year, month), {}),
+                        unpaid_invoice_by_resident_by_month[r.id].get((year, month)),
+                        paid_invoice_by_resident_by_month[r.id].get((year, month)),
+                        unpaid_amounts_by_resident_by_month[r.id].get(
+                            (year, month), {}
+                        ),
                     )
                 )
 
@@ -286,7 +370,32 @@ class FeeService(BaseService):
             for (y, m), currs in fees_by_resident_by_month[r.id].items():
                 idx = y * 12 + m
                 if idx > today_idx and idx <= max_future_idx:
-                    future_fees.append(self._build_monthly_fee(y, m, currs))
+                    future_fees.append(
+                        self._build_monthly_fee(
+                            y,
+                            m,
+                            currs,
+                            unpaid_invoice_by_resident_by_month[r.id].get((y, m)),
+                            paid_invoice_by_resident_by_month[r.id].get((y, m)),
+                            unpaid_amounts_by_resident_by_month[r.id].get((y, m), {}),
+                        )
+                    )
+            for (y, m), invoice_id in unpaid_invoice_by_resident_by_month[r.id].items():
+                idx = y * 12 + m
+                if idx <= today_idx or idx > max_future_idx:
+                    continue
+                if any(fee.year == y and fee.month == m for fee in future_fees):
+                    continue
+                future_fees.append(
+                    self._build_monthly_fee(
+                        y,
+                        m,
+                        {},
+                        invoice_id,
+                        paid_invoice_by_resident_by_month[r.id].get((y, m)),
+                        unpaid_amounts_by_resident_by_month[r.id].get((y, m), {}),
+                    )
+                )
             # Combine and sort chronologically
             all_fees = monthly_fees + future_fees
             all_fees.sort(key=lambda x: (x.year, x.month))

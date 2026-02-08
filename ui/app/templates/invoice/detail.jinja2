@@ -13,6 +13,10 @@
         <td>{{ human_readable_date(invoice.created_at) }}</td>
     </tr>
     <tr>
+        <td>Billing period</td>
+        <td>{{ (invoice.billing_period|string)[:7] if invoice.billing_period else "" }}</td>
+    </tr>
+    <tr>
         <td>From</td>
         <td>
             <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
@@ -82,5 +86,8 @@
 {% if invoice.status == "pending" %}
 <p><a href="{{ url_for('invoice.pay', id=invoice.id) }}">Pay</a></p>
 <p><a href="{{ url_for('invoice.edit', id=invoice.id) }}">Edit</a></p>
+{% if not invoice.transaction_id %}
+<p><a href="{{ url_for('invoice.delete', id=invoice.id) }}">Delete</a></p>
+{% endif %}
 {% endif %}
 {% endblock %}

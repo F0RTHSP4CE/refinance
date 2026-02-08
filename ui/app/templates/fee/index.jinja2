@@ -50,32 +50,49 @@
 
             {% for fee in resident_fee.fees %}
             {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month) %}
-            <td {% if fee.amounts %} class="fee-paid" {% elif not is_future %} class="fee-not-paid" {% endif %}>
+            <td{% if not fee.amounts and not is_future %} class="fee-not-paid" {% endif %}>
                 {% if fee.amounts %}
+                {% if fee.paid_invoice_id %}
+                <a class="fee-paid-link" href="{{ url_for('invoice.detail', id=fee.paid_invoice_id) }}"
+                    title="Paid invoice {{ fee.paid_invoice_id }}">
+                    {% for currency, amount in fee.amounts.items() %}
+                    <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
+                    {% endfor %}
+                </a>
+                {% else %}
                 {% for currency, amount in fee.amounts.items() %}
                 <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
                 {% endfor %}
-                {% else %}
-
                 {% endif %}
-            </td>
-            {% endfor %}
-            <td class="fee-trend-cell">
-                {% if resident_fee.sparkline_segments or resident_fee.sparkline_dots %}
-                <svg class="fee-trend-graph" width="90" height="24" viewBox="0 0 90 24" preserveAspectRatio="none"
-                    aria-hidden="true" focusable="false">
-                    {% if resident_fee.sparkline_last_point %}
-                    <title>Latest total: {{ "%.2f"|format(resident_fee.total_usd_series[-1]|float) }} USD</title>
+                {% endif %}
+                {% if fee.unpaid_invoice_id %}
+                <a class="fee-unpaid-link" href="{{ url_for('invoice.detail', id=fee.unpaid_invoice_id) }}"
+                    title="Unpaid invoice {{ fee.unpaid_invoice_id }}">
+                    {% if fee.unpaid_invoice_amounts and fee.unpaid_invoice_amounts.get('usd') is not none %}
+                    <div>{{ " %.2f"|format(fee.unpaid_invoice_amounts.get('usd')|float) }} USD</div>
+                    {% else %}
+                    invoice
                     {% endif %}
-                    {% for segment in resident_fee.sparkline_segments %}
-                    <polyline points="{{ segment }}" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                    {% endfor %}
-                </svg>
-                {% else %}
-                <span class="fee-trend-empty"></span>
+                </a>
                 {% endif %}
-            </td>
+                </td>
+                {% endfor %}
+                <td class="fee-trend-cell">
+                    {% if resident_fee.sparkline_segments or resident_fee.sparkline_dots %}
+                    <svg class="fee-trend-graph" width="90" height="24" viewBox="0 0 90 24" preserveAspectRatio="none"
+                        aria-hidden="true" focusable="false">
+                        {% if resident_fee.sparkline_last_point %}
+                        <title>Latest total: {{ "%.2f"|format(resident_fee.total_usd_series[-1]|float) }} USD</title>
+                        {% endif %}
+                        {% for segment in resident_fee.sparkline_segments %}
+                        <polyline points="{{ segment }}" fill="none" stroke="#111" stroke-width="1.5"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        {% endfor %}
+                    </svg>
+                    {% else %}
+                    <span class="fee-trend-empty"></span>
+                    {% endif %}
+                </td>
         </tr>
         {% endfor %}
     </tbody>
