@@ -23,6 +23,7 @@ class TransactionSchema(BaseReadSchema):
     to_entity: EntitySchema
     from_entity_id: int
     from_entity: EntitySchema
+    invoice_id: int | None = None
     amount: CurrencyDecimal
     currency: str
     status: TransactionStatus
@@ -39,6 +40,7 @@ class TransactionCreateSchema(BaseUpdateSchema):
     amount: Decimal
     currency: str
     status: TransactionStatus | None = None
+    invoice_id: int | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
     tag_ids: list[int] = []
@@ -66,6 +68,7 @@ class TransactionUpdateSchema(BaseUpdateSchema):
     amount: Decimal | None = None
     currency: str | None = None
     status: TransactionStatus | None = None
+    invoice_id: int | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
     tag_ids: list[int] | None = None
@@ -98,6 +101,7 @@ class TransactionFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     actor_entity_id: int | None = None
     to_entity_id: int | None = None
     from_entity_id: int | None = None
+    invoice_id: int | None = None
     treasury_id: int | None = None
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None

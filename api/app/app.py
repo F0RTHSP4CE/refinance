@@ -13,6 +13,7 @@ from app.routes.currency_exchange import currency_exchange_router
 from app.routes.deposit_provider_callbacks import deposit_provider_callbacks_router
 from app.routes.deposits import deposits_router
 from app.routes.entity import entity_router
+from app.routes.invoice import invoice_router
 from app.routes.pos import pos_router
 from app.routes.resident_fee import router as resident_fee_router
 from app.routes.split import split_router
@@ -92,6 +93,7 @@ app.include_router(entity_router)
 app.include_router(tag_router)
 app.include_router(transaction_router)
 app.include_router(balance_router)
+app.include_router(invoice_router)
 app.include_router(split_router)
 app.include_router(currency_exchange_router)
 app.include_router(pos_router)

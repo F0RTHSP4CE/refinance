@@ -1,0 +1,51 @@
+{% extends "base.jinja2" %}
+{% from "invoice/macro_list.jinja2" import invoice_list with context %}
+{% from 'widgets/pagination.jinja2' import pagination_control %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Invoices{% endblock %}
+
+{% block content %}
+<p><a href="{{ url_for('invoice.add') }}">Add</a></p>
+
+<p>
+<details>
+    <summary>search</summary>
+    <p>
+    <form method="get">
+        <table>
+            <tr>
+                <td>Entity</td>
+                <td>{{ entity_selector('entity', filter_form.entity_name.data, filter_form.entity_id.data) }}</td>
+            </tr>
+            <tr>
+                <td>From Entity</td>
+                <td>{{ entity_selector('from_entity', filter_form.from_entity_name.data,
+                    filter_form.from_entity_id.data) }}</td>
+            </tr>
+            <tr>
+                <td>To Entity</td>
+                <td>{{ entity_selector('to_entity', filter_form.to_entity_name.data, filter_form.to_entity_id.data) }}
+                </td>
+            </tr>
+            <tr>
+                <td>Actor Entity</td>
+                <td>{{ entity_selector('actor_entity', filter_form.actor_entity_name.data,
+                    filter_form.actor_entity_id.data) }}</td>
+            </tr>
+            {{ render_form(filter_form, except=(
+            'entity_name','entity_id','from_entity_name','from_entity_id','to_entity_name','to_entity_id',
+            'actor_entity_name','actor_entity_id','csrf_token'
+            ), new_table=False) }}
+        </table>
+    </form>
+    </p>
+</details>
+</p>
+
+{{ invoice_list(invoices) }}
+{{ pagination_control(page, total, limit) }}
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}

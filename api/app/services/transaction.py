@@ -16,6 +16,7 @@ from app.schemas.transaction import (
 )
 from app.services.balance import BalanceService
 from app.services.base import BaseService
+from app.services.invoice import InvoiceService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
 from app.services.treasury import TreasuryService
@@ -37,11 +38,13 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         balance_service: BalanceService = Depends(),
         tag_service: TagService = Depends(),
         treasury_service: TreasuryService = Depends(),
+        invoice_service: InvoiceService = Depends(),
     ):
         self.db = db
         self._balance_service = balance_service
         self._tag_service = tag_service
         self._treasury_service = treasury_service
+        self._invoice_service = invoice_service
 
     def _invalidate_related_caches(
         self,
@@ -85,6 +88,8 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             query = query.filter(self.model.from_entity_id == filters.from_entity_id)
         if filters.to_entity_id is not None:
             query = query.filter(self.model.to_entity_id == filters.to_entity_id)
+        if filters.invoice_id is not None:
+            query = query.filter(self.model.invoice_id == filters.invoice_id)
         if filters.treasury_id is not None:
             query = query.filter(
                 or_(
@@ -109,6 +114,16 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     def create(  # type: ignore[override]
         self, schema: TransactionCreateSchema, overrides: dict = {}
     ) -> Transaction:
+        if schema.invoice_id is not None:
+            self._invoice_service.validate_transaction_for_invoice(
+                invoice_id=schema.invoice_id,
+                tx_id=None,
+                from_entity_id=schema.from_entity_id,
+                to_entity_id=schema.to_entity_id,
+                amount=schema.amount,
+                currency=schema.currency,
+                status=schema.status or TransactionStatus.DRAFT,
+            )
         # invalidate caches for creation
         self._invalidate_related_caches(
             schema.from_entity_id,
@@ -126,12 +141,38 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         # prevent editing of a completed transaction
         if tx.status == TransactionStatus.COMPLETED:
             raise CompletedTransactionNotEditable
+        if schema.invoice_id is not None and tx.invoice_id is not None:
+            if schema.invoice_id != tx.invoice_id:
+                from app.errors.invoice import InvoiceTransactionReassignmentNotAllowed
+
+                raise InvoiceTransactionReassignmentNotAllowed
+        if (
+            tx.invoice_id is not None
+            and schema.invoice_id is None
+            and "invoice_id" in schema.model_fields_set
+        ):
+            from app.errors.invoice import InvoiceTransactionReassignmentNotAllowed
+
+            raise InvoiceTransactionReassignmentNotAllowed
         # prevent overdrafting treasury on confirmation
         if (
             schema.status == TransactionStatus.COMPLETED
             and self._treasury_service.transaction_will_overdraft_treasury(obj_id)
         ):
             raise TransactionWillOverdraftTreasury
+        resolved_invoice_id = schema.invoice_id or tx.invoice_id
+        if resolved_invoice_id is not None:
+            self._invoice_service.validate_transaction_for_invoice(
+                invoice_id=resolved_invoice_id,
+                tx_id=tx.id,
+                from_entity_id=tx.from_entity_id,
+                to_entity_id=tx.to_entity_id,
+                amount=schema.amount if schema.amount is not None else tx.amount,
+                currency=(
+                    schema.currency if schema.currency is not None else tx.currency
+                ),
+                status=schema.status if schema.status is not None else tx.status,
+            )
         # invalidate caches for update
         self._invalidate_related_caches(
             tx.from_entity_id,

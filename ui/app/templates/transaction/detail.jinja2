@@ -84,6 +84,14 @@
         <td>Status</td>
         <td>{{ transaction.status }}</td>
     </tr>
+    {% if transaction.invoice_id %}
+    <tr>
+        <td>Invoice</td>
+        <td>
+            <a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a>
+        </td>
+    </tr>
+    {% endif %}
     <tr>
         <td>Actor</td>
         <td>

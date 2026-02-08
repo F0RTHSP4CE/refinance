@@ -16,6 +16,7 @@
                 <td>Treasury</td>
                 <td>Tags</td>
                 <td>Comment</td>
+                <td>Invoice</td>
                 <td>Status</td>
                 <td>Actor</td>
             </tr>
@@ -50,6 +51,7 @@
             <td class="right-align">{{ transaction.amount }}</td>
             <td>{{ transaction.currency | upper }}</td>
 
+
             <td>
                 {% if transaction.from_treasury_id or transaction.to_treasury_id %}
 
@@ -75,7 +77,15 @@
                 {% endfor %}
             </td>
             <td>{{ transaction.comment or '' }}</td>
+
+
+            <td>
+                {% if transaction.invoice_id %}
+                <a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a>
+                {% endif %}
+            </td>
             <td>{{ transaction.status }}</td>
+
             <td>
                 <a href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}"
                     class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{transaction.actor_entity.name}}</a>

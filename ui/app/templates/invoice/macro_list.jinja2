@@ -1,0 +1,67 @@
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% macro invoice_list(invoices) %}
+{% if invoices %}
+<div class="wide-table-wrapper">
+    <table>
+        <thead>
+            <tr>
+                <td>ID</td>
+                <td>Date</td>
+                <td>From</td>
+                <td>To</td>
+                <td>Amounts</td>
+                <td>Comment</td>
+                <td>Status</td>
+                <td>Tags</td>
+                <td>Actor</td>
+            </tr>
+        </thead>
+        {% for invoice in invoices %}
+        <tr {% if invoice.status=="paid" %} class="secondary" {% endif %}>
+            <td><a href="{{ url_for('invoice.detail', id=invoice.id) }}">{{ invoice.id }}</a></td>
+            <td>{{ human_readable_date(invoice.created_at) | safe }}</td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                    class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.from_entity.name
+                    }}</a>
+                {% for tag in invoice.from_entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                    class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.to_entity.name
+                    }}</a>
+                {% for tag in invoice.to_entity.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
+            <td>
+                {% for item in invoice.amounts %}
+                {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} or {% endif %}
+                {% endfor %}
+            </td>
+            <td>{{ invoice.comment or '' }}</td>
+            <td>{{ invoice.status }}</td>
+            <td>
+                {% for tag in invoice.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+            </td>
+            <td>
+                <a href="{{ url_for('entity.detail', id=invoice.actor_entity_id) }}"
+                    class="{% if not invoice.actor_entity.active %}secondary inactive{% endif %}">{{
+                    invoice.actor_entity.name
+                    }}</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% else %}
+<p>No invoices.</p>
+{% endif %}
+{% endmacro %}
