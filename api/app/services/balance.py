@@ -1,16 +1,15 @@
 """Balance service"""
 
 from datetime import date, datetime, time
-from decimal import Decimal
 
 from app.dependencies.services import get_entity_service
-from app.models.transaction import Transaction, TransactionStatus
+from app.models.transaction import TransactionStatus
 from app.schemas.balance import BalanceSchema
+from app.services.balance_queries import sum_entity_balances, sum_treasury_balances
 from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import func, select
 
 
 class BalanceService:
@@ -61,53 +60,17 @@ class BalanceService:
         if treasury_id in self._treasury_cache:
             return self._treasury_cache[treasury_id]
 
-        # Function to sum transactions based on treasury fields and status
-        def sum_transactions(status: TransactionStatus) -> dict[str, Decimal]:
-            # Sum of incoming to treasury
-            credit_query = (
-                select(
-                    Transaction.currency,
-                    func.sum(Transaction.amount).label("total_credit"),
-                )
-                .where(
-                    Transaction.to_treasury_id == treasury_id,
-                    Transaction.status == status,
-                )
-                .group_by(Transaction.currency)
-            )
-            # Sum of outgoing from treasury
-            debit_query = (
-                select(
-                    Transaction.currency,
-                    func.sum(Transaction.amount).label("total_debit"),
-                )
-                .where(
-                    Transaction.from_treasury_id == treasury_id,
-                    Transaction.status == status,
-                )
-                .group_by(Transaction.currency)
-            )
-
-            credits = self.db.execute(credit_query).all()
-            debits = self.db.execute(debit_query).all()
-
-            credit_dict: dict[str, Decimal] = {
-                res.currency: res.total_credit for res in credits
-            }
-            debit_dict: dict[str, Decimal] = {
-                res.currency: res.total_debit for res in debits
-            }
-
-            total_by_currency: dict[str, Decimal] = {}
-            for currency in set(credit_dict.keys()) | set(debit_dict.keys()):
-                credit = credit_dict.get(currency, Decimal(0))
-                debit = debit_dict.get(currency, Decimal(0))
-                total_by_currency[currency] = credit - debit
-            return total_by_currency
-
         result = BalanceSchema(
-            completed=sum_transactions(status=TransactionStatus.COMPLETED),  # type: ignore
-            draft=sum_transactions(status=TransactionStatus.DRAFT),  # type: ignore
+            completed=sum_treasury_balances(
+                db=self.db,
+                treasury_id=treasury_id,
+                status=TransactionStatus.COMPLETED,
+            ),
+            draft=sum_treasury_balances(
+                db=self.db,
+                treasury_id=treasury_id,
+                status=TransactionStatus.DRAFT,
+            ),
         )
         self._treasury_cache[treasury_id] = result
         return result
@@ -122,62 +85,18 @@ class BalanceService:
         if end_date is not None:
             end_datetime = datetime.combine(end_date, time.max)
 
-        # Function to sum transactions based on confirmation status
-        def sum_transactions(status: TransactionStatus) -> dict[str, Decimal]:
-            # Query to get sum of all incoming transactions
-            credit_query = select(
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total_credit"),
-            ).where(
-                Transaction.to_entity_id == entity_id,
-                Transaction.status == status,
-            )
-
-            if end_datetime is not None:
-                credit_query = credit_query.where(
-                    Transaction.created_at <= end_datetime
-                )
-
-            # Query to get sum of all outgoing transactions
-            debit_query = select(
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total_debit"),
-            ).where(
-                Transaction.from_entity_id == entity_id,
-                Transaction.status == status,
-            )
-
-            if end_datetime is not None:
-                debit_query = debit_query.where(Transaction.created_at <= end_datetime)
-
-            # Group sums by currency
-            credit_query = credit_query.group_by(Transaction.currency)
-            debit_query = debit_query.group_by(Transaction.currency)
-
-            # Execute queries
-            credits = self.db.execute(credit_query).all()
-            debits = self.db.execute(debit_query).all()
-
-            # Convert query results to dictionary for easier processing
-            credit_dict: dict[str, Decimal] = {
-                result.currency: result.total_credit for result in credits
-            }
-            debit_dict: dict[str, Decimal] = {
-                result.currency: result.total_debit for result in debits
-            }
-
-            # Calculate the net balance for each currency
-            total_by_currency: dict[str, Decimal] = {}
-            all_currencies = set(credit_dict.keys()).union(set(debit_dict.keys()))
-            for currency in all_currencies:
-                credit = credit_dict.get(currency, Decimal(0))
-                debit = debit_dict.get(currency, Decimal(0))
-                total_by_currency[currency] = credit - debit
-
-            return total_by_currency
-
         result = BalanceSchema(
-            completed=sum_transactions(status=TransactionStatus.COMPLETED),  # type: ignore
-            draft=sum_transactions(status=TransactionStatus.DRAFT),  # type: ignore
+            completed=sum_entity_balances(
+                db=self.db,
+                entity_id=entity_id,
+                status=TransactionStatus.COMPLETED,
+                end_datetime=end_datetime,
+            ),
+            draft=sum_entity_balances(
+                db=self.db,
+                entity_id=entity_id,
+                status=TransactionStatus.DRAFT,
+                end_datetime=end_datetime,
+            ),
         )
         return result

@@ -6,12 +6,14 @@ from app.dependencies.services import get_tag_service
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
 from app.models.entity_card import EntityCard
-from app.schemas.base import BaseFilterSchema
+from app.models.transaction import TransactionStatus
+from app.schemas.base import PaginationSchema
 from app.schemas.entity import (
     EntityCreateSchema,
     EntityFiltersSchema,
     EntityUpdateSchema,
 )
+from app.services.balance_queries import build_entity_balance_subqueries
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
@@ -52,6 +54,39 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         if filters.tags_ids:
             query = self._apply_tag_filters(query, filters.tags_ids)
         return query
+
+    def get_all(
+        self, filters: EntityFiltersSchema | None = None, skip=0, limit=100
+    ) -> PaginationSchema[Entity]:
+        query = self.db.query(self.model)
+        if filters:
+            query = self._apply_base_filters(query, filters)
+            query = self._apply_filters(query, filters)
+
+            if filters.balance_currency:
+                status = filters.balance_status or TransactionStatus.COMPLETED
+                order = (filters.balance_order or "desc").lower()
+
+                credit_subq, debit_subq, balance_expr = build_entity_balance_subqueries(
+                    currency=filters.balance_currency,
+                    status=status,
+                )
+
+                query = query.outerjoin(
+                    credit_subq, credit_subq.c.entity_id == self.model.id
+                ).outerjoin(debit_subq, debit_subq.c.entity_id == self.model.id)
+
+                if order == "asc":
+                    query = query.order_by(balance_expr.asc(), self.model.id.desc())
+                else:
+                    query = query.order_by(balance_expr.desc(), self.model.id.desc())
+            else:
+                query = query.order_by(self.model.id.desc())
+        total = query.count()
+        items = query.offset(skip).limit(limit).all()
+        return PaginationSchema[Entity](
+            items=items, total=total, skip=skip, limit=limit
+        )
 
     def get_by_telegram_id(self, telegram_id: int) -> Entity:
         db_obj = (
