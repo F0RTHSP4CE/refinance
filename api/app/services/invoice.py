@@ -28,6 +28,7 @@ from app.schemas.invoice import (
     InvoiceUpdateSchema,
 )
 from app.schemas.transaction import TransactionCreateSchema
+from app.seeding import automatic_tag
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
@@ -213,7 +214,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             status=TransactionStatus.COMPLETED,
             invoice_id=invoice.id,
             comment=invoice.comment,
-            tag_ids=[],
+            tag_ids=[automatic_tag.id],
         )
 
         self._transaction_service.create(
@@ -264,7 +265,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                     status=TransactionStatus.COMPLETED,
                     invoice_id=invoice.id,
                     comment=invoice.comment,
-                    tag_ids=[],
+                    tag_ids=[automatic_tag.id],
                 )
 
                 self._transaction_service.create(
