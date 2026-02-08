@@ -363,8 +363,16 @@ class FeeService(BaseService):
 
             # Trim trailing empty months (which correspond to the earliest months in the window)
             # Keep at least the current month so UI has an anchor row.
-            while len(monthly_fees) > 1 and monthly_fees[-1].amounts in ({}, None):
-                monthly_fees.pop()
+            while len(monthly_fees) > 1:
+                last = monthly_fees[-1]
+                has_unpaid = last.unpaid_invoice_id is not None or bool(
+                    last.unpaid_invoice_amounts
+                )
+                has_paid = last.paid_invoice_id is not None
+                if last.amounts in ({}, None) and not has_unpaid and not has_paid:
+                    monthly_fees.pop()
+                    continue
+                break
             # Future months with payments (up to 12 months ahead)
             future_fees: list[MonthlyFee] = []
             for (y, m), currs in fees_by_resident_by_month[r.id].items():
