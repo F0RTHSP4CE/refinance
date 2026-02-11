@@ -94,9 +94,6 @@ class KeepzService:
         mobile_name: str,
         mobile_os: str,
     ) -> dict[str, Any]:
-        if not device_token:
-            # Keepz requires a non-blank FCM token value.
-            device_token = f"e-{uuid4().hex[:20]}:APA91b{uuid4().hex}{uuid4().hex[:12]}"
         client = self._client()
         user_sms_id = client.verify_sms(
             code=code, phone=phone, country_code=country_code
