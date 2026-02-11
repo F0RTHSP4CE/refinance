@@ -31,6 +31,18 @@ class Config:
     cryptapi_address_trc20_usdt: str | None = field(
         default=getenv("REFINANCE_CRYPTAPI_ADDRESS_TRC20_USDT", "")
     )
+    keepz_base_url: str | None = field(
+        default=getenv("REFINANCE_KEEPZ_BASE_URL", "https://gateway.keepz.me")
+    )
+    keepz_user_agent: str | None = field(
+        default=getenv(
+            "REFINANCE_KEEPZ_USER_AGENT",
+            "keepz/10 CFNetwork/3860.300.31 Darwin/25.2.0",
+        )
+    )
+    keepz_poll_interval_seconds: int = field(
+        default=int(getenv("REFINANCE_KEEPZ_POLL_INTERVAL_SECONDS", "60"))
+    )
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))

@@ -1,0 +1,24 @@
+{% extends "base.jinja2" %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Keepz Authentication{% endblock %}
+
+{% block content %}
+<p>Authenticate the Keepz provider account to enable payment polling.</p>
+
+{% if status %}
+<p>
+    Status: {{ 'authenticated' if status.authenticated else 'not authenticated' }}
+    {% if status.user_id %} | User ID: {{ status.user_id }}{% endif %}
+</p>
+{% endif %}
+
+<form method="post">
+    {{ form.hidden_tag() }}
+    <table>
+        {{ render_form(form, except=('csrf_token',), new_table=False) }}
+    </table>
+</form>
+
+<p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
+{% endblock %}

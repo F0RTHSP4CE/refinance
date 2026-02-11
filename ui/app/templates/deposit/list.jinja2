@@ -16,10 +16,14 @@
     <p>Deposit can be Pending (waiting for payment), Completed (payment received and processed),
         Failed (payment processing failed), or Cancelled (deposit was cancelled).</p>
     <h3>Providers</h3>
-    <p>Currently supported providers: CryptAPI for cryptocurrency deposits.</p>
+    <p>Currently supported providers: CryptAPI and Keepz.</p>
 </details>
 
-<p><a href="{{ url_for('deposit.add_cryptapi') }}">Add CryptAPI Deposit</a></p>
+<p>
+    <a href="{{ url_for('deposit.add_cryptapi') }}">Add CryptAPI Deposit</a> |
+    <a href="{{ url_for('deposit.add_keepz') }}">Add Keepz Deposit</a> |
+    <a href="{{ url_for('deposit.keepz_auth') }}">Keepz Auth</a>
+</p>
 
 <p>
 <details>

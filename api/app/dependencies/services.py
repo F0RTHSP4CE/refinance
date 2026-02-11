@@ -21,6 +21,8 @@ class ServiceContainer:
         self._split_service = None
         self._deposit_service = None
         self._cryptapi_deposit_provider_service = None
+        self._keepz_service = None
+        self._keepz_deposit_provider_service = None
         self._pos_service = None
         self._currency_exchange_service = None
         self._fee_service = None
@@ -137,6 +139,29 @@ class ServiceContainer:
         return self._cryptapi_deposit_provider_service
 
     @property
+    def keepz_service(self):
+        if self._keepz_service is None:
+            from app.services.keepz import KeepzService
+
+            self._keepz_service = KeepzService(db=self.db, config=self.config)
+        return self._keepz_service
+
+    @property
+    def keepz_deposit_provider_service(self):
+        if self._keepz_deposit_provider_service is None:
+            from app.services.deposit_providers.keepz import (
+                KeepzDepositProviderService,
+            )
+
+            self._keepz_deposit_provider_service = KeepzDepositProviderService(
+                db=self.db,
+                deposit_service=self.deposit_service,
+                keepz_service=self.keepz_service,
+                config=self.config,
+            )
+        return self._keepz_deposit_provider_service
+
+    @property
     def pos_service(self):
         if self._pos_service is None:
             from app.services.pos import POSService
@@ -244,6 +269,16 @@ def get_cryptapi_deposit_provider_service(
     container: ServiceContainer = Depends(get_container),
 ):
     return container.cryptapi_deposit_provider_service
+
+
+def get_keepz_service(container: ServiceContainer = Depends(get_container)):
+    return container.keepz_service
+
+
+def get_keepz_deposit_provider_service(
+    container: ServiceContainer = Depends(get_container),
+):
+    return container.keepz_deposit_provider_service
 
 
 def get_pos_service(container: ServiceContainer = Depends(get_container)):

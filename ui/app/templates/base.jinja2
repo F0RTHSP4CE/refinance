@@ -31,9 +31,9 @@
             <li {% if 'invoice' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('invoice.list') }}">Invoice</a>
             </li>
-            {# <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
+            <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
                 <a href="{{ url_for('deposit.list') }}">Deposit</a>
-            </li> #}
+            </li>
             <li {% if request.url_rule.endpoint.startswith('fee.') %} class="active" {% endif %}>
                 <a href="{{ url_for('fee.index') }}">Fee</a>
             </li>

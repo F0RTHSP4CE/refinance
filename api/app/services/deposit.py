@@ -90,7 +90,7 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
                     to_treasury_id=db_obj.to_treasury_id,
                     from_treasury_id=None,  # deposits are not from treasuries
                     tag_ids=[deposit_tag.id],
-                    comment=f"deposit #{db_obj.id}: cryptapi",
+                    comment=f"deposit #{db_obj.id}: {db_obj.provider}",
                 ),
                 overrides={"actor_entity_id": db_obj.actor_entity_id},
             )

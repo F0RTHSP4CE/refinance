@@ -53,6 +53,12 @@ cryptapi_deposit_provider = Entity(
     comment="crypatapi.io deposit provider",
     tags=[deposit_tag],
 )
+keepz_deposit_provider = Entity(
+    id=53,
+    name="keepz_in",
+    comment="keepz.me deposit provider",
+    tags=[deposit_tag],
+)
 
 SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
@@ -116,6 +122,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         ),
         # payment providers
         cryptapi_deposit_provider,
+        keepz_deposit_provider,
         # residents
         #
         # Entity(

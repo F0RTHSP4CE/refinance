@@ -1,0 +1,26 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'form.jinja2' import render_form %}
+
+{% block title %}Create Keepz Deposit{% endblock %}
+
+{% block content %}
+
+<form method="post">
+    {{ form.hidden_tag() }}
+
+    <table>
+        <tr>
+            <td>To Entity</td>
+            <td>
+                {{ entity_selector('to_entity', g.actor_entity.name, g.actor_entity.id) }}
+            </td>
+        </tr>
+        {{ render_form(form, except=('to_entity_name', 'to_entity_id', 'csrf_token'), new_table=False) }}
+    </table>
+</form>
+
+<p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
+
+<script src="/static/js/entitySelector.js"></script>
+{% endblock %}
