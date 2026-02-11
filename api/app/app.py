@@ -17,6 +17,7 @@ from app.routes.deposits import deposits_router
 from app.routes.entity import entity_router
 from app.routes.fee import router as fee_router
 from app.routes.invoice import invoice_router
+from app.routes.keepz import keepz_router
 from app.routes.pos import pos_router
 from app.routes.split import split_router
 from app.routes.stats import router as stats_router
@@ -26,6 +27,7 @@ from app.routes.transaction import transaction_router
 from app.routes.treasury import treasury_router
 from app.services.token import TokenService
 from app.tasks.invoice_auto_pay import schedule_invoice_auto_pay
+from app.tasks.keepz_payments_poll import schedule_keepz_poll
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,14 +44,16 @@ config: Config = get_config()
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.invoice_auto_pay_task = asyncio.create_task(schedule_invoice_auto_pay())
+    app.state.keepz_poll_task = asyncio.create_task(schedule_keepz_poll())
     try:
         yield
     finally:
-        task = getattr(app.state, "invoice_auto_pay_task", None)
-        if task is not None:
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+        for task_name in ("invoice_auto_pay_task", "keepz_poll_task"):
+            task = getattr(app.state, task_name, None)
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
 
 
 app = FastAPI(title=config.app_name, version=config.app_version, lifespan=lifespan)
@@ -115,9 +119,9 @@ app.include_router(invoice_router)
 app.include_router(split_router)
 app.include_router(currency_exchange_router)
 app.include_router(pos_router)
-# DISABLED DUE TO CRYPTAPI BUGS
-# app.include_router(deposits_router)
-# app.include_router(deposit_provider_callbacks_router)
+app.include_router(deposits_router)
+app.include_router(deposit_provider_callbacks_router)
+app.include_router(keepz_router)
 app.include_router(fee_router)
 app.include_router(stats_router)
 app.include_router(treasury_router)

@@ -99,6 +99,7 @@ class Invoice(Base):
 
 class DepositProvider(enum.Enum):
     CRYPTAPI = "cryptapi"
+    KEEPZ = "keepz"
 
 
 @dataclass

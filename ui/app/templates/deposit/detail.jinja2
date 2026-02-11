@@ -66,7 +66,17 @@
         <td>Modified</td>
         <td>{{ human_readable_date(deposit.modified_at) if deposit.modified_at else '' }}</td>
     </tr>
-    {% if deposit.details and deposit.details.get('address') and deposit.status == 'pending' %}
+    {% set keepz = deposit.details.get('keepz') if deposit.details else None %}
+    {% if keepz and keepz.get('payment_url') and deposit.status == 'pending' %}
+    <tr>
+        <td>Payment QR Code</td>
+        <td>
+            <p>Pay <strong>{{ deposit.amount }} {{ deposit.currency | upper }}</strong> via Keepz:</p>
+            <div id="qrcode" style="margin: 10px 0;"></div>
+            <p><a href="{{ keepz.payment_url }}" target="_blank">{{ keepz.payment_url }}</a></p>
+        </td>
+    </tr>
+    {% elif deposit.details and deposit.details.get('address') and deposit.status == 'pending' %}
     <tr>
         <td>Address QR Code</td>
         <td>
@@ -87,7 +97,15 @@
 
 <p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
 
-{% if deposit.details and deposit.details.get('address') %}
+{% if keepz and keepz.get('payment_url') %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+    const qr = qrcode(0, 'M');
+    qr.addData('{{ keepz.payment_url }}');
+    qr.make();
+    document.getElementById('qrcode').innerHTML = qr.createImgTag(8, 16);
+</script>
+{% elif deposit.details and deposit.details.get('address') %}
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
     const qr = qrcode(0, 'M');

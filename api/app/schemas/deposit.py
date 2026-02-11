@@ -69,6 +69,6 @@ class DepositFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
     amount_min: Decimal | None = None
     amount_max: Decimal | None = None
     currency: str | None = None
-    status: str | None = None
+    status: DepositStatus | None = None
     provider: str | None = None
     to_treasury_id: int | None = None
