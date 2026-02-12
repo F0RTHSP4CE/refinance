@@ -962,7 +962,9 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 .home-card-value, .home-card-note {
   margin: 0;
   font-size: 1.25rem;
-  /* font-weight: 700; */
+}
+.home-card-value {
+  font-weight: 700;
 }
 
 .home-card-value-total {
@@ -978,7 +980,6 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 }
 
 .home-card-note {
-  margin: 0;
   color: #333;
 }
 

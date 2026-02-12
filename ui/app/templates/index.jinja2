@@ -50,14 +50,14 @@
 			</div>
 						<p class="home-card-note"><strong>Top up your balance!</strong> Invoices will be paid automatically.</p>
 		{% else %}
-			<p class="home-card-note">Invoices are issued every month.<br>Top up your balance so they are paid automatically.</p>
+			<p class="home-card-note">Top up your balance so they are paid automatically.</p>
 		{% endif %}
 	</article>
 
 	<article class="home-card">
 		<h2>Fridge &amp; Coffee Machine</h2>
 		<div class="home-card-summary">
-			<p class="home-card-value">Pay for drinks, snacks and coffee.<br>Get paid when you refill them.</p>
+			<p class="home-card-note">Pay for drinks, snacks and coffee.<br>Get paid when you refill them.</p>
 		</div>
 		<div class="home-card-actions">
 			<a class="home-card-button" href="{{ url_for('transaction.shortcut_fridge') }}">🍾
@@ -73,7 +73,7 @@
 	<article class="home-card">
 		<h2>Transfer</h2>
 		<div class="home-card-summary">
-			<p class="home-card-value">Send money between residents/members. Hacker bank!.</p>
+			<p class="home-card-note">Send money between residents/members.</p>
 		</div>
 		<div class="home-card-actions">
 			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_pay') }}">💸
