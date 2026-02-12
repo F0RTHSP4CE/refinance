@@ -1,5 +1,6 @@
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from os import getenv
 from urllib.parse import urlencode
 
 from app.controllers.auth import auth_bp
@@ -32,7 +33,9 @@ from jinja2 import select_autoescape
 from markupsafe import Markup, escape
 
 app = Flask(__name__)
-app.secret_key = "supersecret"
+app.secret_key = getenv("REFINANCE_UI_SECRET_KEY", "supersecret")
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 CORS(app)
 app.jinja_env.autoescape = select_autoescape(["html", "htm", "xml", "xhtml", "jinja2"])
 

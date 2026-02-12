@@ -41,6 +41,7 @@ def login():
 @auth_bp.route("/token/<token>", methods=["GET"])
 def token_auth(token: str):
     if token:
+        session.permanent = True
         session["token"] = token
         return redirect(url_for("index.index"))
     return "Invalid Token", 400
