@@ -441,11 +441,11 @@ class KeepzClient:
     def login(
         self,
         user_sms_id: str,
-        device_token: str,
         mobile_name: str,
         mobile_os: str,
         mobile_number: str,
         user_type: str,
+        device_token: str = generate_device_token(),
     ) -> Any:
         payload = {
             "deviceToken": device_token,

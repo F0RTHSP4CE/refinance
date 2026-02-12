@@ -88,7 +88,6 @@ class KeepzAuthForm(FlaskForm):
         render_kw={"placeholder": "123456"},
     )
     user_type = HiddenField(default="INDIVIDUAL")
-    device_token = HiddenField(default="")
     mobile_name = HiddenField(default="iPhone 12 mini")
     mobile_os = HiddenField(default="IOS")
     send_sms = SubmitField("Send SMS")
@@ -250,7 +249,6 @@ def keepz_auth():
                         "country_code": form.country_code.data,
                         "code": form.code.data,
                         "user_type": form.user_type.data,
-                        "device_token": form.device_token.data,
                         "mobile_name": form.mobile_name.data,
                         "mobile_os": form.mobile_os.data,
                     },
