@@ -4,114 +4,172 @@
 
 {% block title %}Deposit {{ deposit.id }}{% endblock %}
 {% block content %}
-<table>
-    <tr>
-        <td>ID</td>
-        <td>{{ deposit.id }}</td>
-    </tr>
-    <tr>
-        <td>From</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}"
-                class="{% if not deposit.from_entity.active %}secondary inactive{% endif %}">{{deposit.from_entity.name}}</a>
-            {% for tag in deposit.from_entity.tags %}
-            {{ tag_inline(tag) }}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>To</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}"
-                class="{% if not deposit.to_entity.active %}secondary inactive{% endif %}">{{deposit.to_entity.name}}</a>
-            {% for tag in deposit.to_entity.tags %}
-            {{ tag_inline(tag) }}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Amount</td>
-        <td>{{ deposit.amount }}</td>
-    </tr>
-    <tr>
-        <td>Currency</td>
-        <td>{{ deposit.currency | upper }}</td>
-    </tr>
-    <tr>
-        <td>Status</td>
-        <td>{{ deposit.status }}</td>
-    </tr>
-    <tr>
-        <td>Provider</td>
-        <td>{{ deposit.provider }}</td>
-    </tr>
-    {% if deposit.to_treasury_id %}
-    <tr>
-        <td>Treasury</td>
-        <td>{{ treasury_inline(deposit.to_treasury) }}</td>
-    </tr>
-    {% endif %}
-    <tr>
-        <td>Actor</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}"
-                class="{% if not deposit.actor_entity.active %}secondary inactive{% endif %}">{{deposit.actor_entity.name}}</a>
-        </td>
-    </tr>
-    <tr>
-        <td>Created</td>
-        <td>{{ human_readable_date(deposit.created_at) }}</td>
-    </tr>
-    <tr>
-        <td>Modified</td>
-        <td>{{ human_readable_date(deposit.modified_at) if deposit.modified_at else '' }}</td>
-    </tr>
-    {% set keepz = deposit.details.get('keepz') if deposit.details else None %}
-    {% if keepz and keepz.get('payment_url') and deposit.status == 'pending' %}
-    <tr>
-        <td>Payment QR Code</td>
-        <td>
-            <p>Pay <strong>{{ deposit.amount }} {{ deposit.currency | upper }}</strong> via Keepz:</p>
-            <div id="qrcode" style="margin: 10px 0;"></div>
-            <p><a href="{{ keepz.payment_url }}" target="_blank">{{ keepz.payment_url }}</a></p>
-        </td>
-    </tr>
-    {% elif deposit.details and deposit.details.get('address') and deposit.status == 'pending' %}
-    <tr>
-        <td>Address QR Code</td>
-        <td>
-            <p>Send <strong>{{ deposit.amount }} {{ deposit.details.coin | upper }}</strong> to:</p>
-            <div id="qrcode" style="margin: 10px 0;"></div>
-            <p><code>{{ deposit.details.address }}</code></p>
-        </td>
-    </tr>
-    {% else %}
-    <tr>
-        <td>Details</td>
-        <td>
-            <pre>{{ deposit.details | tojson(indent=2) }}</pre>
-        </td>
-    </tr>
-    {% endif %}
-</table>
+{% set keepz = deposit.details.get('keepz') if deposit.details else None %}
+{% set payment_url = keepz.get('payment_url') if keepz else None %}
+{% set address = deposit.details.get('address') if deposit.details else None %}
 
-<p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
+<div class="deposit-detail-layout">
+    <section class="deposit-detail-card">
+        <div class="deposit-detail-header">
+            <div>
+                <div class="deposit-detail-amount">{{ deposit.amount }} {{ deposit.currency | upper }}</div>
+                <div class="deposit-detail-subtitle">
+                    <span class="secondary">Status:</span> {{ deposit.status }}
+                    <span class="secondary">· Provider:</span> {{ deposit.provider }}
+                </div>
+            </div>
+        </div>
 
-{% if keepz and keepz.get('payment_url') %}
+        <div class="deposit-detail-grid">
+            {% if deposit.status == 'pending' and (payment_url or address) %}
+            <div class="deposit-detail-payment">
+                {% if payment_url %}
+                <div class="deposit-payment-actions">
+                    <a class="big-button" href="{{ payment_url }}" target="_blank" rel="noopener noreferrer">Pay now</a>
+                </div>
+                <div class="secondary deposit-payment-helper">Scan the QR code to pay from mobile.</div>
+                {% endif %}
+
+                <div class="deposit-qrcode" id="deposit-qrcode"></div>
+
+                {% if payment_url %}
+                <div class="deposit-payment-link">
+                    <div class="secondary">Payment link</div>
+                    <div class="deposit-mono"><a href="{{ payment_url }}" target="_blank" rel="noopener noreferrer">{{ payment_url }}</a></div>
+                </div>
+                {% elif address %}
+                <div class="deposit-payment-link">
+                    <div class="secondary">Send {{ deposit.amount }} {{ deposit.currency | upper }} to address</div>
+                    <div class="deposit-mono"><code>{{ address }}</code></div>
+                </div>
+                <div class="secondary">Scan the QR code to copy the address.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="deposit-detail-main">
+                <h2>Parties</h2>
+                <table>
+                    <tr>
+                        <td>From</td>
+                        <td>
+                            <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}"
+                                class="{% if not deposit.from_entity.active %}secondary inactive{% endif %}">{{ deposit.from_entity.name }}</a>
+                            {% for tag in deposit.from_entity.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>To</td>
+                        <td>
+                            <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}"
+                                class="{% if not deposit.to_entity.active %}secondary inactive{% endif %}">{{ deposit.to_entity.name }}</a>
+                            {% for tag in deposit.to_entity.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% if deposit.to_treasury_id %}
+                    <tr>
+                        <td>Treasury</td>
+                        <td>{{ treasury_inline(deposit.to_treasury) }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                <div class="deposit-detail-secondary secondary">
+                    <h2>More</h2>
+                    <table>
+                        <tr>
+                            <td>ID</td>
+                            <td>{{ deposit.id }}</td>
+                        </tr>
+                        <tr>
+                            <td>Actor</td>
+                            <td>
+                                <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}"
+                                    class="{% if not deposit.actor_entity.active %}secondary inactive{% endif %}">{{ deposit.actor_entity.name }}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Created</td>
+                            <td>{{ human_readable_date(deposit.created_at) }}</td>
+                        </tr>
+                        <tr>
+                            <td>Modified</td>
+                            <td>{{ human_readable_date(deposit.modified_at) if deposit.modified_at else '' }}</td>
+                        </tr>
+                    </table>
+
+                    {% if deposit.details %}
+                    <details class="deposit-raw-details">
+                        <summary>Raw details</summary>
+                        <pre>{{ deposit.details | tojson(indent=2) }}</pre>
+                    </details>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="deposit-detail-secondary secondary">
+        <label>
+            <input type="checkbox" id="deposit-autoupdate-toggle" />
+            enable autoupdate every 10 seconds
+        </label>
+    </div>
+</div>
+
+{% if deposit.status == 'pending' and (payment_url or address) %}
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
-    const qr = qrcode(0, 'M');
-    qr.addData('{{ keepz.payment_url }}');
-    qr.make();
-    document.getElementById('qrcode').innerHTML = qr.createImgTag(8, 16);
-</script>
-{% elif deposit.details and deposit.details.get('address') %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-<script>
-    const qr = qrcode(0, 'M');
-    qr.addData('{{ deposit.details.address }}');
-    qr.make();
-    document.getElementById('qrcode').innerHTML = qr.createImgTag(8, 16);
+    const qrTarget = document.getElementById('deposit-qrcode');
+    if (qrTarget) {
+        const qr = qrcode(0, 'M');
+        const qrValue = {{ (payment_url or address) | tojson }};
+        qr.addData(qrValue);
+        qr.make();
+        // Smaller default so the page doesn't become dominated by the QR block.
+        qrTarget.innerHTML = qr.createImgTag(5, 8);
+    }
 </script>
 {% endif %}
+
+<script>
+    (function () {
+        const toggle = document.getElementById('deposit-autoupdate-toggle');
+        if (!toggle) return;
+
+        const storageKey = 'deposit.detail.autoupdate.10s.enabled';
+        const stored = window.localStorage.getItem(storageKey);
+        // Enabled by default unless explicitly disabled.
+        toggle.checked = stored !== 'false';
+        if (stored === null) {
+            window.localStorage.setItem(storageKey, 'true');
+        }
+
+        let intervalId = null;
+        const start = () => {
+            if (intervalId) return;
+            intervalId = window.setInterval(() => {
+                window.location.reload();
+            }, 10_000);
+        };
+        const stop = () => {
+            if (!intervalId) return;
+            window.clearInterval(intervalId);
+            intervalId = null;
+        };
+
+        const sync = () => {
+            window.localStorage.setItem(storageKey, toggle.checked ? 'true' : 'false');
+            if (toggle.checked) start();
+            else stop();
+        };
+
+        toggle.addEventListener('change', sync);
+        if (toggle.checked) start();
+    })();
+</script>
 {% endblock %}

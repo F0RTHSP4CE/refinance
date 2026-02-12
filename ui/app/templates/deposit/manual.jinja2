@@ -1,0 +1,27 @@
+{% extends "base.jinja2" %}
+
+{% block title %}Manual deposit{% endblock title %}
+
+{% block content %}
+<p class="manual-deposit-note">
+	This operation requires a <strong>financier</strong> to process and record your deposit.
+	Choose a treasury below and contact a financier.
+</p>
+
+{% if treasuries %}
+<div class="manual-treasury-list" aria-label="Active treasuries">
+	{% for t in treasuries %}
+	<div class="manual-treasury">
+		<div class="manual-treasury-name">{{ t.name | upper }}</div>
+		{% if t.comment %}
+		<div class="manual-treasury-comment">{{ t.comment }}</div>
+		{% else %}
+		<div class="manual-treasury-comment secondary">(No comment)</div>
+		{% endif %}
+	</div>
+	{% endfor %}
+</div>
+{% else %}
+<p>No active treasuries.</p>
+{% endif %}
+{% endblock content %}

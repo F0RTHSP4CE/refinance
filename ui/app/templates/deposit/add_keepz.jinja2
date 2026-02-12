@@ -1,26 +1,40 @@
 {% extends "base.jinja2" %}
-{% from 'widgets/entity_selector.jinja2' import entity_selector %}
-{% from 'form.jinja2' import render_form %}
 
-{% block title %}Create Keepz Deposit{% endblock %}
+{% block title %}Top up with Keepz{% endblock %}
 
 {% block content %}
 
-<form method="post">
-    {{ form.hidden_tag() }}
+<div class="deposit-topup-layout">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
 
-    <table>
-        <tr>
-            <td>To Entity</td>
-            <td>
-                {{ entity_selector('to_entity', g.actor_entity.name, g.actor_entity.id) }}
-            </td>
-        </tr>
-        {{ render_form(form, except=('to_entity_name', 'to_entity_id', 'csrf_token'), new_table=False) }}
-    </table>
-</form>
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    {{ form.amount(class_='form-input', step='0.01', min='0.01', inputmode='decimal', autocomplete='off', placeholder='100') }}
+                    {% if form.amount.errors %}
+                    <div class="form-error">{{ form.amount.errors[0] }}</div>
+                    {% endif %}
+                </div>
 
-<p><a href="{{ url_for('deposit.list') }}">← Back to deposits</a></p>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    {{ form.currency(class_='form-input') }}
+                    {% if form.currency.errors %}
+                    <div class="form-error">{{ form.currency.errors[0] }}</div>
+                    {% endif %}
+                </div>
+            </div>
 
-<script src="/static/js/entitySelector.js"></script>
+            {% if form.to_entity_id.errors %}
+            <div class="form-error">{{ form.to_entity_id.errors[0] }}</div>
+            {% endif %}
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Top up') }}
+            </div>
+        </form>
+    </section>
+</div>
 {% endblock %}
