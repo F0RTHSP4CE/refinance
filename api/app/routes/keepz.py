@@ -43,7 +43,6 @@ def keepz_login(
         country_code=request.country_code,
         code=request.code,
         user_type=request.user_type,
-        device_token=request.device_token,
         mobile_name=request.mobile_name,
         mobile_os=request.mobile_os,
     )

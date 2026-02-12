@@ -13,7 +13,6 @@ class KeepzLoginSchema(BaseModel):
     country_code: str
     code: str
     user_type: str = Field(default="INDIVIDUAL")
-    device_token: str = Field(default="")
     mobile_name: str = Field(default="iPhone 12 mini")
     mobile_os: str = Field(default="IOS")
 

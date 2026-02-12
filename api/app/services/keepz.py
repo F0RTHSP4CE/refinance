@@ -90,7 +90,6 @@ class KeepzService:
         country_code: str,
         code: str,
         user_type: str,
-        device_token: str,
         mobile_name: str,
         mobile_os: str,
     ) -> dict[str, Any]:
@@ -100,12 +99,13 @@ class KeepzService:
         )
         login_payload = client.login(
             user_sms_id=user_sms_id,
-            device_token=device_token,
             mobile_name=mobile_name,
             mobile_os=mobile_os,
             mobile_number=f"{country_code}{phone}",
             user_type=user_type,
         )
+        if hasattr(login_payload, "model_dump"):
+            login_payload = login_payload.model_dump()
         if not isinstance(login_payload, dict) or not login_payload.get("access_token"):
             raise KeepzAuthFailed
 
@@ -124,7 +124,6 @@ class KeepzService:
                 "phone": phone,
                 "country_code": country_code,
                 "user_type": user_type,
-                "device_token": device_token,
                 "mobile_name": mobile_name,
                 "mobile_os": mobile_os,
             },
