@@ -21,59 +21,71 @@
     {% endif %}
     {% endwith %}
 
-    <nav>
-        <ul>
+    <nav class="site-nav" aria-label="Primary">
+        <a
+            href="#"
+            class="mobile-menu-toggle"
+            role="button"
+            aria-haspopup="dialog"
+            aria-controls="mobile-menu"
+            aria-expanded="false"
+        >
+            <span class="mobile-menu-toggle-text">REFINANCE</span>
             {% if g.actor_entity %}
-            <li><a href="{{ url_for('index.index') }}">Refinance</a></li>
-            <li {% if 'transaction' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('transaction.list') }}">Transaction</a>
-            </li>
-            <li {% if 'invoice' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('invoice.list') }}">Invoice</a>
-            </li>
-            <li {% if 'deposit' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('deposit.list') }}">Deposit</a>
-            </li>
-            <li {% if request.url_rule.endpoint.startswith('fee.') %} class="active" {% endif %}>
-                <a href="{{ url_for('fee.index') }}">Fee</a>
-            </li>
-            <li {% if 'split' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('split.list') }}">Split</a>
-            </li>
-            <li {% if 'exchange' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('exchange.index') }}">Exchange</a>
-            </li>
-            <li {% if 'stats' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('stats.index') }}">Stats</a>
-            </li>
-            <li {% if 'treasury' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('treasury.list') }}">Treasury</a>
-            </li>
-            <li {% if 'entity' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('entity.list') }}">Entity</a>
-            </li>
-            <li {% if 'tag' in request.url_rule.endpoint %} class="active" {% endif %}>
-                <a href="{{ url_for('tag.list') }}">Tag</a>
-            </li>
-
-            <li class="user">
-
-                {% for currency,value in g.actor_entity_balance["completed"].items() %}
-                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" {% if value | float < 0 %}
-                    class="amount-negative" {% endif %}>{{ value }} {{ currency |
-                    upper}}</a>
-                {% endfor %}
-                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"><strong
-                        class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name
-                        }}</strong></a>
-                <a href="{{ url_for('auth.logout') }}">Log out</a>
-            </li>
-            {% else %}
-            <li><a href="/">Refinance</a></li>
-            <li class="user"><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            <span class="mobile-menu-toggle-user">{{ g.actor_entity.name }}</span>
             {% endif %}
-        </ul>
+            <span class="mobile-menu-toggle-icon" aria-hidden="true">≡</span>
+        </a>
     </nav>
+
+    <div id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" hidden>
+        <div class="mobile-menu-header">
+            <div class="mobile-menu-title">REFINANCE</div>
+            <a href="#" class="mobile-menu-close" role="button" aria-label="Close menu">×</a>
+        </div>
+
+        <div class="mobile-menu-content">
+            <ul class="mobile-menu-items">
+                {% if g.actor_entity %}
+                <li><a href="{{ url_for('index.index') }}">Home</a></li>
+                <li><a href="{{ url_for('transaction.list') }}">Transaction</a></li>
+                <li><a href="{{ url_for('invoice.list') }}">Invoice</a></li>
+                <li><a href="{{ url_for('deposit.list') }}">Deposit</a></li>
+                <li><a href="{{ url_for('fee.index') }}">Fee</a></li>
+                <li><a href="{{ url_for('split.list') }}">Split</a></li>
+                <li><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
+                <li><a href="{{ url_for('stats.index') }}">Stats</a></li>
+                <li><a href="{{ url_for('treasury.list') }}">Treasury</a></li>
+                <li><a href="{{ url_for('entity.list') }}">Entity</a></li>
+                <li><a href="{{ url_for('tag.list') }}">Tag</a></li>
+                {% else %}
+                <li><a href="/">Home</a></li>
+                {% endif %}
+            </ul>
+
+            {% if g.actor_entity %}
+            <div class="mobile-menu-user">
+                <div class="mobile-menu-balance">
+                    {% for currency,value in g.actor_entity_balance["completed"].items() %}
+                    <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" {% if value | float < 0 %} class="amount-negative" {% endif %}>
+                        {{ value }} {{ currency | upper}}
+                    </a>
+                    {% endfor %}
+                </div>
+                <div class="mobile-menu-user-actions">
+                    <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}">
+                        <strong class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}</strong>
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}">Log out</a>
+                </div>
+            </div>
+            {% else %}
+            <div class="mobile-menu-user">
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
     <main>
         <h1>{% block title %}{% endblock title %}</h1>
@@ -82,6 +94,7 @@
     </main>
 
     <script src="/static/js/dateToggle.js"></script>
+    <script src="/static/js/mobileMenu.js"></script>
 </body>
 
 </html>

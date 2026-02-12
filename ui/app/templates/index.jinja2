@@ -1,35 +1,86 @@
 {% extends "base.jinja2" %}
-{% block title %}Refinance{% endblock title %}
 {% block content %}
-<p>Welcome to refinance! Wanna <a href="{{ url_for('transaction.add') }}">make a transaction</a>?</p>
+<section class="home-cards" aria-label="Main actions">
+	<article class="home-card">
+		<h2>Balance</h2>
+		<div class="home-card-summary">
+			{% if g.actor_entity_balance and g.actor_entity_balance["completed"] %}
+			<div class="home-balance-grid" aria-label="Balances">
+				{% for currency, value in g.actor_entity_balance["completed"].items() %}
+				<div class="home-balance-mini">
+					<div class="home-balance-mini-currency">{{ currency | upper }}</div>
+					<div class="home-balance-mini-amount {% if value | float < 0 %}amount-negative{% endif %}">{{ value
+						}}</div>
+				</div>
+				{% endfor %}
+			</div>
+			{% else %}
+			<p class="home-card-note">No balance yet.</p>
+			{% endif %}
+		</div>
+		<a class="home-card-button" href="{{ url_for('deposit.add_keepz') }}">💰 Top up by card</a>
+		<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
+			crypto</a>
+	</article>
 
-<h2>Fee & Deposit</h2>
-<p>
-<div class="button-group">
-	<a class="button" href="{{ url_for('transaction.shortcut_deposit') }}">💰 Deposit money</a>
-	<a class="button" href="{{ url_for('invoice.list', status='pending', from_entity_id=g.actor_entity.id) }}">🧾 Pay
-		fee</a>
-	</p>
-</div>
-<h2>Fridge & Coffee</h2>
-<p>
-<div class="button-group">
-	<a class="button" href="{{ url_for('transaction.shortcut_fridge') }}">🍷 Pay to fridge</a>
-	<a class="button" href="{{ url_for('transaction.shortcut_coffee') }}">☕ Pay for coffee</a>
-	<a class="button" href="{{ url_for('transaction.shortcut_reimburse') }}">➕ Reimburse</a>
-	</p>
-</div>
-<h2>Between residents / members</h2>
-<p>
-<div class="button-group">
-	<a class="button" href="{{ url_for('transaction.shortcut_pay') }}">💸 Pay to another entity</a>
-	<a class="button" href="{{ url_for('transaction.shortcut_request') }}">🙏 Request money</a>
-	</p>
-</div>
-<h2>Get your money back</h2>
-<p>
-<div class="button-group">
-	<a class="button" href="{{ url_for('transaction.shortcut_withdraw') }}">🏧 Withdraw cash/crypto</a>
-	</p>
-</div>
+	<article class="home-card">
+		<h2>Fee / Invoices{% if unpaid_fee_count > 0 %} <span class="home-card-title-count">({{ unpaid_fee_count }})</span>{% endif %}</h2>
+		<div class="home-card-summary">
+			{% if unpaid_fee_count > 0 %}
+			{% if unpaid_invoice_cards %}
+			<p class="home-card-value home-card-value-total">Total: <span class="home-card-total">{% if
+					unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span
+						class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{
+					unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
+			{% endif %}
+			{% else %}
+			<p class="home-card-value">✔️ No unpaid invoices</p>
+			{% endif %}
+		</div>
+		{% if unpaid_invoice_cards %}
+					<div class="home-unpaid-grid" aria-label="Unpaid invoices">
+				{% for invoice in unpaid_invoice_cards %}
+				<a class="home-unpaid-invoice" href="{{ url_for('invoice.detail', id=invoice.id) }}">
+					<div class="home-unpaid-invoice-amount">
+						{% for amount in invoice.amounts %}{{ amount }}{% if not loop.last %} <span class="home-approx"
+							aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}
+					</div>
+				</a>
+				{% endfor %}
+			</div>
+						<p class="home-card-note"><strong>Top up your balance!</strong> Invoices will be paid automatically.</p>
+		{% else %}
+			<p class="home-card-note">Invoices are issued every month.<br>Top up your balance so they are paid automatically.</p>
+		{% endif %}
+	</article>
+
+	<article class="home-card">
+		<h2>Fridge &amp; Coffee Machine</h2>
+		<div class="home-card-summary">
+			<p class="home-card-value">Pay for drinks, snacks and coffee.<br>Get paid when you refill them.</p>
+		</div>
+		<div class="home-card-actions">
+			<a class="home-card-button" href="{{ url_for('transaction.shortcut_fridge') }}">🍾
+				Pay fridge</a>
+			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_coffee') }}">☕
+				Pay Coffee Machine</a>
+
+			<a class="home-card-button home-card-button-outline"
+				href="{{ url_for('transaction.shortcut_reimburse') }}">➕ Reimburse</a>
+		</div>
+	</article>
+
+	<article class="home-card">
+		<h2>Transfer</h2>
+		<div class="home-card-summary">
+			<p class="home-card-value">Send money between residents/members. Hacker bank!.</p>
+		</div>
+		<div class="home-card-actions">
+			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_pay') }}">💸
+				Transfer</a>
+			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_request') }}">🙏
+				Request money</a>
+		</div>
+	</article>
+</section>
 {% endblock content %}

@@ -20,7 +20,7 @@
             </tr>
         </thead>
         {% for deposit in deposits %}
-        <tr>
+        <tr {% if (deposit.status | lower) in ("pending", "cancelled", "canceled") %} class="secondary" {% endif %}>
             <td><a href="{{ url_for('deposit.detail', id=deposit.id) }}">{{ deposit.id }}</a></td>
             <td>{{ human_readable_date(deposit.created_at) }}</td>
 

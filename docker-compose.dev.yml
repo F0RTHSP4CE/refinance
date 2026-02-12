@@ -16,6 +16,8 @@ services:
     command: --reload
     env_file:
       - secrets.dev.env
+    depends_on:
+      - api
     ports:
       - "9000:9000"
 

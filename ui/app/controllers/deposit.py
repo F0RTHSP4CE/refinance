@@ -1,7 +1,16 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Deposit, DepositStatus
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from app.schemas import Deposit, DepositStatus, Treasury
+from flask import (
+    Blueprint,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_wtf import FlaskForm
 from wtforms import (
     FloatField,
@@ -41,8 +50,7 @@ class CryptAPIDepositForm(FlaskForm):
 
 
 class KeepzDepositForm(FlaskForm):
-    to_entity_name = StringField("To Entity")
-    to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    to_entity_id = HiddenField("", validators=[DataRequired()])
 
     currency = SelectField(
         "Currency",
@@ -192,11 +200,14 @@ def add_cryptapi():
 def add_keepz():
     form = KeepzDepositForm()
 
+    # Always top up the currently authorized entity balance
+    form.to_entity_id.data = str(g.actor_entity["id"])
+
     if form.validate_on_submit():
         api = get_refinance_api_client()
         try:
             params = {
-                "to_entity_id": form.to_entity_id.data,
+                "to_entity_id": int(form.to_entity_id.data),
                 "amount": form.amount.data,
                 "currency": form.currency.data,
             }
@@ -263,3 +274,16 @@ def detail(id):
     response = api.http("GET", f"deposits/{id}")
     deposit = Deposit(**response.json())
     return render_template("deposit/detail.jinja2", deposit=deposit)
+
+
+@deposit_bp.route("/manual")
+@token_required
+def manual():
+    api = get_refinance_api_client()
+    resp = api.http("GET", "treasuries", params={"skip": 0, "limit": 500}).json()
+    treasuries = [Treasury(**x) for x in resp.get("items", [])]
+    active_treasuries = [t for t in treasuries if getattr(t, "active", False)]
+    return render_template(
+        "deposit/manual.jinja2",
+        treasuries=active_treasuries,
+    )
