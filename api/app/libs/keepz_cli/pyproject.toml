@@ -1,0 +1,11 @@
+[project]
+name = "pen"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "mitmproxy>=12.2.1",
+    "pydantic>=2.7.4",
+    "requests>=2.32.3",
+]
