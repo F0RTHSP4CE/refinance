@@ -30,6 +30,7 @@ automatic_tag = Tag(id=17, name="automatic", comment="automatically generated / 
 cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
 usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
+keepz_treasury = Treasury(id=53, name="keepz")
 
 # commonly used entities
 f0_entity = Entity(
@@ -143,6 +144,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     # ],
     Treasury: [
         cash_treasury,
+        keepz_treasury,
         usdt_erc20_treasury,
         usdt_trc20_treasury,
     ],
