@@ -15,7 +15,7 @@ from app.schemas.deposit import (
     DepositUpdateSchema,
 )
 from app.schemas.deposit_providers.keepz import KeepzDepositCreateSchema
-from app.seeding import keepz_deposit_provider
+from app.seeding import keepz_deposit_provider, keepz_treasury
 from app.services.base import BaseService
 from app.services.deposit import DepositService
 from app.services.keepz import KeepzService
@@ -84,7 +84,7 @@ class KeepzDepositProviderService(BaseService[Entity]):
                 currency=schema.currency,
                 provider="keepz",
                 details=details,
-                to_treasury_id=None,
+                to_treasury_id=keepz_treasury.id,
             ),
             overrides={"actor_entity_id": actor_entity.id},
         )

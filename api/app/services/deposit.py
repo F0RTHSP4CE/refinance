@@ -10,7 +10,7 @@ from app.models.deposit import Deposit, DepositStatus
 from app.models.transaction import TransactionStatus
 from app.schemas.deposit import DepositFiltersSchema, DepositUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
-from app.seeding import deposit_tag
+from app.seeding import deposit_tag, keepz_treasury
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
