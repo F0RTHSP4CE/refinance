@@ -3,62 +3,61 @@
 {% block title %}Deposit Money{% endblock %}
 
 {% block content %}
-<form method="post">
-    <table>
-        <tr>
-            <td><b>From</b></td>
-            <td>
-                <select name="from_entity_id" required>
+<div class="deposit-topup-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            <input type="hidden" name="to_entity_id" value="{{ g.actor_entity.id }}">
+
+            <div class="form-group">
+                <label class="form-label" for="from_entity_id">From</label>
+                <select id="from_entity_id" name="from_entity_id" class="form-input" required>
                     <option value=""></option>
                     {% for entity in deposit_entities %}
                     <option value="{{ entity.id }}" class="{% if not entity.active %}secondary inactive{% endif %}">{{
                         entity.name }} (id: {{ entity.id }})</option>
                     {% endfor %}
                 </select>
-            </td>
-        </tr>
-        <tr>
-            <td><b>To</b></td>
-            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
-                    (id: {{ g.actor_entity.id }})</span></td>
-        </tr>
-        <input type="hidden" name="to_entity_id" value="{{ g.actor_entity.id }}">
-        <tr>
-            <td><b>To Treasury</b></td>
-            <td>
-                <select name="to_treasury_id">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="to_treasury_id">To Treasury</label>
+                <select id="to_treasury_id" name="to_treasury_id" class="form-input">
                     <option value=""></option>
                     {% for treasury in treasuries %}
                     <option value="{{ treasury.id }}" class="{% if not treasury.active %}secondary inactive{% endif %}">
                         {{ treasury.name }}</option>
                     {% endfor %}
                 </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Amount</td>
-            <td><input name="amount" type="number" step="0.01" placeholder="10.00" required></td>
-        </tr>
-        <tr>
-            <td>Currency</td>
-            <td>
-                <select name="currency" required>
-                    <option value="GEL" selected>GEL</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Comment</td>
-            <td><input name="comment" type="text" placeholder="optional"></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><button type="submit">Pre-create a deposit</button></td>
-        </tr>
-    </table>
-</form>
+            </div>
+
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    <input id="amount" name="amount" class="form-input" type="number" step="0.01"
+                        placeholder="10.00" required>
+                </div>
+
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    <select id="currency" name="currency" class="form-input" required>
+                        <option value="GEL" selected>GEL</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                <input id="comment" name="comment" class="form-input" type="text" placeholder="optional">
+            </div>
+
+            <div class="deposit-topup-actions">
+                <button type="submit" class="big-button">Create Deposit</button>
+            </div>
+        </form>
+    </section>
+</div>
 <p><strong>Note:</strong> This action MUST be confirmed by a financier.<br>You can create a draft with this form to
     speed
     up the process.</p>

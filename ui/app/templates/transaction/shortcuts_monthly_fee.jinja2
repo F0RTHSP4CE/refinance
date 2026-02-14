@@ -3,23 +3,15 @@
 {% block title %}Pay Member/Resident Fee{% endblock %}
 
 {% block content %}
-<form method="post">
-    <table>
-        <tr>
-            <td><b>From</b></td>
-            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
-                    (id: {{ g.actor_entity.id }})</span></td>
-        </tr>
-        <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
-        <tr>
-            <td><b>To</b></td>
-            <td>F0 (id: {{ f0_entity_id }})</td>
-        </tr>
-        <input type="hidden" name="to_entity_id" value="{{ f0_entity_id }}">
-        <tr>
-            <td>Preset</td>
-            <td>
-                <select name="fee_preset">
+<div class="deposit-topup-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
+            <input type="hidden" name="to_entity_id" value="{{ f0_entity_id }}">
+
+            <div class="form-group">
+                <label class="form-label" for="fee_preset">Preset</label>
+                <select id="fee_preset" name="fee_preset" class="form-input">
                     {% for preset in fee_presets %}
                     <option value="{{ preset.value }}" {% if preset.value==default_fee_preset %}selected{% endif %}>
                         {{ preset.label }}
@@ -27,40 +19,42 @@
                     {% endfor %}
                     <option value="custom" {% if default_fee_preset=="custom" %}selected{% endif %}>Custom</option>
                 </select>
-            </td>
-        </tr>
-        <tr id="custom_amount_row" style="display: none;">
-            <td>Custom Amount</td>
-            <td><input name="custom_amount" type="number" step="0.01" placeholder="10.00"></td>
-        </tr>
-        <tr id="custom_currency_row" style="display: none;">
-            <td>Custom Currency</td>
-            <td>
-                <select name="custom_currency">
-                    <option value="GEL" selected>GEL</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Comment</td>
-            <td>
-                <select name="comment">
+            </div>
+
+            <div class="deposit-row" id="custom_row" style="display: none;">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="custom_amount">Custom Amount</label>
+                    <input id="custom_amount" name="custom_amount" class="form-input" type="number" step="0.01"
+                        placeholder="10.00">
+                </div>
+
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="custom_currency">Custom Currency</label>
+                    <select id="custom_currency" name="custom_currency" class="form-input">
+                        <option value="GEL" selected>GEL</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                <select id="comment" name="comment" class="form-input">
                     {% for option in comment_options %}
                     <option value="{{ option }}" {% if option==default_comment %}selected{% endif %}>
                         {{ option }}
                     </option>
                     {% endfor %}
                 </select>
-            </td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><button type="submit">Pay the fee</button></td>
-        </tr>
-    </table>
-</form>
+            </div>
+
+            <div class="deposit-topup-actions">
+                <button type="submit" class="big-button">Pay</button>
+            </div>
+        </form>
+    </section>
+</div>
 
 {% if fee_row %}
 <h2>Your fee history</h2>
@@ -115,13 +109,11 @@
 
 <script>
     const feePreset = document.querySelector('select[name="fee_preset"]');
-    const customAmountRow = document.getElementById('custom_amount_row');
-    const customCurrencyRow = document.getElementById('custom_currency_row');
+    const customRow = document.getElementById('custom_row');
 
     const updateCustomAmountVisibility = () => {
         const isCustom = feePreset.value === 'custom';
-        customAmountRow.style.display = isCustom ? '' : 'none';
-        customCurrencyRow.style.display = isCustom ? '' : 'none';
+        customRow.style.display = isCustom ? '' : 'none';
     };
 
     feePreset.addEventListener('change', updateCustomAmountVisibility);

@@ -1,57 +1,89 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/tag_selector.jinja2' import tag_selector %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Edit invoice {{ invoice.id }}{% endblock %}
 
 {% block content %}
 {% if invoice.status != "paid" and invoice.status != "cancelled" %}
-<form method="post">
-    <table>
-        <tr>
-            <td>From</td>
-            <td>
-                <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
-                    class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
-                    invoice.from_entity.name
-                    }}</a>
-            </td>
-        </tr>
-        <tr>
-            <td>To</td>
-            <td>
-                <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
-                    class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
-                    invoice.to_entity.name
-                    }}</a>
-            </td>
-        </tr>
-        {{ render_form(form, except=(
-        'from_entity_name','from_entity_id','to_entity_name','to_entity_id',
-        'billing_period','amount_1','currency_1','amount_2','currency_2','amount_3','currency_3','tag_ids'
-        ), new_table=False) }}
-        <tr>
-            <td>Billing period</td>
-            <td>{{ form.billing_period() }}</td>
-        </tr>
-        <tr>
-            <td>Amount 1</td>
-            <td>{{ form.amount_1() }} {{ form.currency_1() }}</td>
-        </tr>
-        <tr>
-            <td>Amount 2</td>
-            <td>{{ form.amount_2() }} {{ form.currency_2() }}</td>
-        </tr>
-        <tr>
-            <td>Amount 3</td>
-            <td>{{ form.amount_3() }} {{ form.currency_3() }}</td>
-        </tr>
-        <tr>
-            <td>Tags</td>
-            <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
-        </tr>
-    </table>
-</form>
+<div class="invoice-form-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
+
+            <input type="hidden" name="from_entity_id" value="{{ invoice.from_entity_id }}">
+            <input type="hidden" name="to_entity_id" value="{{ invoice.to_entity_id }}">
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field">
+                    <label class="form-label">From</label>
+                    <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                        class="inline-link {% if not invoice.from_entity.active %}secondary inactive{% endif %}">
+                        {{ invoice.from_entity.name }}
+                    </a>
+                </div>
+                <div class="deposit-field">
+                    <label class="form-label">To</label>
+                    <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                        class="inline-link {% if not invoice.to_entity.active %}secondary inactive{% endif %}">
+                        {{ invoice.to_entity.name }}
+                    </a>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                {{ form.comment(class_='form-input') }}
+            </div>
+
+            <div class="form-group invoice-short-input">
+                <label class="form-label" for="billing_period">Billing period</label>
+                {{ form.billing_period(class_='form-input') }}
+            </div>
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount_1">Amount 1</label>
+                    {{ form.amount_1(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency_1">Currency 1</label>
+                    {{ form.currency_1(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount_2">Amount 2</label>
+                    {{ form.amount_2(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency_2">Currency 2</label>
+                    {{ form.currency_2(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount_3">Amount 3</label>
+                    {{ form.amount_3(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency_3">Currency 3</label>
+                    {{ form.currency_3(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                {{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}
+            </div>
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Save Changes') }}
+            </div>
+        </form>
+    </section>
+</div>
 {% else %}
 <p>This invoice can not be edited anymore.</p>
 {% endif %}

@@ -1,10 +1,10 @@
 {% extends 'base.jinja2' %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Delete invoice {{ invoice.id }}?{% endblock %}
 
 {% block content %}
 <form method="post">
-    {{ render_form(form) }}
+    {{ form.hidden_tag() }}
+    {{ form.delete(class_='big-button big-button-outline big-button-danger-outline big-button-inline') }}
 </form>
 {% endblock %}

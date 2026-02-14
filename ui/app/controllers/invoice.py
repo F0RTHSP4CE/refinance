@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Invoice, InvoiceStatus, Tag, Transaction, TransactionStatus
+from app.schemas import Balance, Invoice, InvoiceStatus, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -76,12 +76,6 @@ class InvoicePayForm(FlaskForm):
         render_kw={"placeholder": "10.00", "class": "small"},
     )
     currency = SelectField("Currency", choices=[], validators=[DataRequired()])
-    status = SelectField(
-        "Status",
-        choices=[(e.value, e.value) for e in TransactionStatus],
-        default=TransactionStatus.COMPLETED.value,
-    )
-    comment = StringField("Comment")
     submit = SubmitField("Pay")
 
 
@@ -273,6 +267,9 @@ def pay(id):
     invoice_data = api.http("GET", f"invoices/{id}").json()
     invoice = Invoice(**invoice_data)
     amounts = invoice_data.get("amounts", [])
+    from_entity_balance = Balance(
+        **api.http("GET", f"balances/{invoice.from_entity_id}").json()
+    ).completed
 
     form = InvoicePayForm()
     form.invoice_id.data = str(invoice.id)
@@ -293,8 +290,8 @@ def pay(id):
             "to_entity_id": int(form.to_entity_id.data),
             "amount": form.amount.data,
             "currency": form.currency.data.lower(),
-            "status": form.status.data,
-            "comment": form.comment.data,
+            "status": "draft",
+            "comment": "",
             "invoice_id": invoice.id,
         }
         tx = api.http("POST", "transactions", data=data).json()
@@ -305,4 +302,5 @@ def pay(id):
         invoice=invoice,
         form=form,
         amounts=amounts,
+        from_entity_balance=from_entity_balance,
     )

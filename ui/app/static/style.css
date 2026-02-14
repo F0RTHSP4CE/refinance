@@ -398,17 +398,29 @@ input.small {
   cursor: pointer;
   margin: 0;
   user-select: none;
+  position: relative;
 }
 
 .tag-option input[type="checkbox"] {
-  margin-right: 0.3rem;
-  transform: scale(1.2);
-  cursor: pointer;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
 .tag-option .tag-badge {
-  margin-left: 0.2rem;
-  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+  margin-left: 0;
+  font-size: 1rem;
+  padding: 0.32rem 0.55rem;
+  border-width: 2px;
+  border-radius: 0;
+  font-weight: 700;
+  opacity: 1;
+  background: white;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   pointer-events: none;
 }
 
@@ -421,11 +433,25 @@ input.small {
 }
 
 .tag-option:hover .tag-badge {
-  opacity: 0.8;
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.16);
 }
 
-.tag-option input[type="checkbox"]:checked:hover+.tag-badge {
-  opacity: 1;
+.tag-option input[type="checkbox"]:checked + .tag-badge {
+  background: currentColor;
+  border-color: currentColor;
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.tag-option input[type="checkbox"]:checked + .tag-badge a,
+.tag-option input[type="checkbox"]:checked + .tag-badge span {
+  color: white !important;
+}
+
+.tag-option input[type="checkbox"]:focus-visible + .tag-badge {
+  outline: 2px solid black;
+  outline-offset: 2px;
 }
 
 /* TAG BADGE */
@@ -723,6 +749,32 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   box-shadow: none;
 }
 
+.big-button.big-button-outline {
+  background: white;
+  color: black;
+}
+
+.big-button.big-button-outline:hover {
+  background: black;
+  color: white;
+}
+
+.big-button.big-button-danger-outline {
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.big-button.big-button-danger-outline:hover {
+  background: #ff0000;
+  border-color: #ff0000;
+  color: white;
+}
+
+.big-button.big-button-inline {
+  width: auto;
+  display: inline-block;
+}
+
 /* Authentication Status Styles */
 .auth-status {
   width: 100%;
@@ -887,6 +939,14 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   gap: 0.95rem;
 }
 
+.deposit-topup-form .form-group {
+  margin-bottom: 0;
+}
+
+.deposit-topup-form .form-input {
+  font-size: 1.125rem;
+}
+
 .deposit-row {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
@@ -902,20 +962,100 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   min-width: 0;
 }
 
-.deposit-field .entity-selector {
+.deposit-topup-form .entity-selector {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 90px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  align-items: end;
   gap: 0.45rem 0.55rem;
 }
 
-.deposit-field .entity-selector #to_entity_name {
-  min-width: 0;
-  width: 100%;
+.deposit-topup-form .entity-selector.entity-selector-no-id {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.deposit-field .entity-selector #to_entity_id {
-  width: 90px;
+.deposit-topup-form .entity-selector input[type="search"] {
+  min-width: 0;
+  width: 100%;
+  height: 54px;
+}
+
+.deposit-topup-form .entity-selector .entity-id-field {
+  width: 100%;
+  height: 54px;
+}
+
+.deposit-topup-form .entity-selector .entity-selector-id-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.deposit-topup-form .entity-selector .entity-selector-id-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.75;
+}
+
+.deposit-topup-form .entity-selector .entity-search-results {
+  grid-column: 1 / -1;
+  margin-top: 0.15rem;
+  border: 2px solid black;
+  background: white;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.deposit-topup-form .entity-selector .entity-search-results:empty {
+  display: none;
+}
+
+.deposit-topup-form .entity-selector .search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: black;
+  text-decoration: none;
+  border-bottom: 1px solid #ddd;
+}
+
+.deposit-topup-form .entity-selector .search-result-item:last-child {
+  border-bottom: none;
+}
+
+.deposit-topup-form .entity-selector .search-result-item:hover {
+  background: #f3f4f6;
+}
+
+.deposit-topup-form .entity-selector .entity-search-name {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.deposit-topup-form .entity-selector .entity-search-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.deposit-topup-form .entity-selector .search-result-item:focus,
+.deposit-topup-form .entity-selector .search-result-item:focus-visible {
+  outline: none;
+  background: black;
+  color: white;
+}
+
+.deposit-topup-form .entity-selector .search-result-item:focus .tag-badge,
+.deposit-topup-form .entity-selector .search-result-item:focus-visible .tag-badge {
+  border-color: #ddd;
 }
 
 .deposit-topup-form #currency,
@@ -930,6 +1070,61 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   flex-direction: column;
   gap: 0.75rem;
 }
+
+.shortcut-form-container {
+  margin-bottom: 1.25rem;
+}
+
+.transaction-form-layout {
+  max-width: 340px;
+}
+
+.invoice-form-layout {
+  max-width: 420px;
+}
+
+.invoice-form-layout .inline-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.invoice-form-layout .inline-link:hover,
+.invoice-form-layout .inline-link:focus-visible {
+  text-decoration: underline;
+}
+
+.transaction-form-layout .deposit-topup-form {
+  gap: 0.7rem;
+}
+
+.transaction-form-layout .deposit-topup-card {
+  padding: 0.9rem 1rem;
+}
+
+.transaction-form-layout .form-label {
+  margin-bottom: 0.35rem;
+}
+
+.transaction-form-layout .form-input {
+  min-height: 48px;
+}
+
+.transaction-form-layout .deposit-row {
+  gap: 0.7rem;
+}
+
+.transaction-form-layout .transaction-equal-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.transaction-form-layout .field-description {
+  margin-top: 0.2rem;
+}
+
 
 /* HOME PAGE */
 .home-cards {
@@ -1154,11 +1349,11 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
     grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
   }
 
-  .deposit-field .entity-selector {
+  .deposit-topup-form .entity-selector {
     grid-template-columns: 1fr;
   }
 
-  .deposit-field .entity-selector #to_entity_id {
+  .deposit-topup-form .entity-selector .entity-id-field {
     width: 100%;
   }
 
@@ -1265,6 +1460,165 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   gap: 0.25rem;
 }
 
+/* Transaction detail */
+.transaction-detail-layout {
+  max-width: 620px;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.transaction-detail-card {
+  border: 2px solid black;
+  background: white;
+  padding: 1.15rem;
+  box-shadow: 4px 4px 0px black;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.transaction-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.transaction-detail-amount {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.02;
+}
+
+.transaction-detail-subtitle {
+  margin-top: 0.35rem;
+  font-size: 1.05rem;
+  color: #555;
+}
+
+.transaction-status-badge {
+  border: 2px solid black;
+  padding: 0.4rem 0.7rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.transaction-status-badge.is-completed {
+  background: #f0f8f0;
+}
+
+.transaction-status-badge.is-draft {
+  background: #fff5f5;
+  border-color: transparent;
+  outline: 2px dashed black;
+  outline-offset: -2px;
+}
+
+.transaction-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.transaction-detail-grid h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.transaction-detail-grid table {
+  width: 100%;
+}
+
+.transaction-detail-grid td {
+  font-size: 1.12rem;
+  line-height: 1.25;
+  vertical-align: top;
+}
+
+.transaction-detail-grid td:first-child {
+  width: 135px;
+  font-weight: 700;
+}
+
+.transaction-detail-grid .tag-badge {
+  margin-right: 0.3rem;
+}
+
+.transaction-parties-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.transaction-party-card {
+  border: 2px solid black;
+  background: white;
+  padding: 0.6rem 0.7rem;
+}
+
+.transaction-party-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+}
+
+.transaction-party-value {
+  margin-top: 0.25rem;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.transaction-party-arrow {
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.transaction-detail-secondary {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+}
+
+.transaction-detail-actions {
+  margin-top: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.transaction-detail-actions .big-button {
+  text-decoration: none;
+}
+
+.transaction-detail-actions-row {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.transaction-detail-actions-row .big-button {
+  flex: 1;
+}
+
+.transaction-detail-note {
+  margin-top: 1rem;
+  font-size: 1rem;
+}
+
 .deposit-mono {
   word-break: break-word;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -1283,6 +1637,207 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
   background: white;
 }
 
+/* Invoice detail */
+.invoice-detail-layout {
+  max-width: 350px;
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.invoice-detail-card {
+  border: 2px solid black;
+  border-left-width: 6px;
+  background: white;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.invoice-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.invoice-detail-title {
+  font-size: 1.85rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.invoice-detail-subtitle {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  color: #555;
+}
+
+.invoice-status-badge {
+  border: 2px solid black;
+  padding: 0.42rem 0.72rem;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.invoice-status-badge.is-paid {
+  background: black;
+  color: white;
+}
+
+.invoice-status-badge.is-pending {
+  color: #ff0000;
+  border-color: #ff0000;
+  background: white;
+}
+
+.invoice-status-badge.is-cancelled {
+  background: #f8f8f8;
+}
+
+.invoice-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.invoice-detail-grid h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.15rem;
+}
+
+.invoice-detail-grid table {
+  width: 100%;
+}
+
+.invoice-detail-grid td {
+  font-size: 1.05rem;
+  line-height: 1.28;
+  vertical-align: top;
+}
+
+.invoice-detail-grid td:first-child {
+  width: 120px;
+  font-weight: 700;
+}
+
+.invoice-parties-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.invoice-party-block {
+  border: 1px solid black;
+  border-left-width: 4px;
+  background: #fafafa;
+  padding: 0.65rem 0.75rem;
+}
+
+.invoice-party-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  opacity: 0.75;
+}
+
+.invoice-party-value {
+  margin-top: 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.invoice-party-balance {
+  margin-top: 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.invoice-amount-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.invoice-amount-choice {
+  border: 2px solid black;
+  background: white;
+  color: black;
+  padding: 0.45rem 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.invoice-amount-choice.is-active {
+  background: black;
+  color: white;
+}
+
+.invoice-amount-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.invoice-amount-item {
+  border: 1px solid black;
+  padding: 0.5rem 0.65rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.invoice-amount-sep {
+  font-weight: 500;
+}
+
+.invoice-detail-secondary {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+}
+
+.invoice-detail-actions {
+  margin-top: 1rem;
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.invoice-detail-actions .big-button {
+  text-decoration: none;
+}
+
+.invoice-detail-actions-row {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.invoice-detail-actions-row .big-button {
+  flex: 1;
+}
+
+.invoice-detail-note {
+  margin-top: 1rem;
+  font-size: 1rem;
+}
+
 @media (max-width: 680px) {
   .deposit-detail-card {
     box-shadow: 3px 3px 0px black;
@@ -1291,5 +1846,57 @@ table tr:not(:has(input[type="submit"])):nth-child(even) {
 
   .deposit-detail-amount {
     font-size: 1.55rem;
+  }
+
+  .transaction-detail-card {
+    box-shadow: 3px 3px 0px black;
+    padding: 1rem;
+  }
+
+  .transaction-detail-amount {
+    font-size: 1.65rem;
+  }
+
+  .transaction-detail-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .transaction-parties-flow {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .transaction-party-arrow {
+    justify-self: start;
+    margin-left: 0.15rem;
+    transform: rotate(90deg);
+  }
+
+  .transaction-detail-actions {
+    max-width: 100%;
+  }
+
+  .invoice-detail-card {
+    padding: 1rem;
+  }
+
+  .invoice-detail-title {
+    font-size: 1.5rem;
+  }
+
+  .invoice-detail-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .invoice-parties-stack {
+    gap: 0.55rem;
+  }
+
+  .invoice-detail-actions {
+    max-width: 100%;
   }
 }

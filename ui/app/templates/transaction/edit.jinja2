@@ -1,22 +1,57 @@
 {% extends 'base.jinja2' %}
-{% from 'form.jinja2' import render_form %}
 {% from 'widgets/tag_selector.jinja2' import tag_selector %}
 
 {% block title %}Edit transaction {{ transaction.id }}{% endblock %}
 
 {% block content %}
 {% if transaction.status != "completed" %}
-<form method="post">
-    <table>
+<div class="transaction-form-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
+            <input type="hidden" name="from_entity_id" value="{{ transaction.from_entity_id }}">
+            <input type="hidden" name="to_entity_id" value="{{ transaction.to_entity_id }}">
+            <input type="hidden" name="status" value="{{ transaction.status }}">
 
-        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
-        new_table=False) }}
-        <tr>
-            <td>Tags</td>
-            <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
-        </tr>
-    </table>
-</form>
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    {{ form.amount(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    {{ form.currency(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                {{ form.comment(class_='form-input') }}
+            </div>
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="from_treasury_id">From Treasury</label>
+                    {{ form.from_treasury_id(class_='form-input') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="to_treasury_id">To Treasury</label>
+                    {{ form.to_treasury_id(class_='form-input') }}
+                </div>
+            </div>
+            {% if form.to_treasury_id.description %}<div class="field-description">{{ form.to_treasury_id.description }}</div>{% endif %}
+
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                {{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}
+            </div>
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Save Changes') }}
+            </div>
+        </form>
+    </section>
+</div>
 {% else %}
 <p>This transaction is confirmed and can not be edited anymore.</p>
 {% endif %}
