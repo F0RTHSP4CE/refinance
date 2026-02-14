@@ -2,7 +2,7 @@
 {%- set hue = (tag.id * 41.9) % 360 -%}
 {%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
 
-<small class="tag-badge" style="border-color: {{ color }}">
+<small class="tag-badge" style="--tag-color: {{ color }}; border-color: {{ color }}; color: {{ color }}">
     {% if href %}
     <a style="color: {{ color }}" href="{{ url_for('tag.detail', id=tag.id )}}">{{ tag.name }}</a>
     {% else %}

@@ -193,9 +193,11 @@ def list():
 @token_required
 def detail(id):
     api = get_refinance_api_client()
+    complete_form = ConfirmForm()
     return render_template(
         "transaction/detail.jinja2",
         transaction=Transaction(**api.http("GET", f"transactions/{id}").json()),
+        complete_form=complete_form,
     )
 
 
@@ -429,6 +431,19 @@ def shortcut_coffee():
 @token_required
 def shortcut_reimburse():
     api = get_refinance_api_client()
+    fridge_entity_id = Config.ENTITY_IDS["fridge"]
+    coffee_entity_id = Config.ENTITY_IDS["coffee"]
+
+    def _format_balance_label(entity_id: int) -> str:
+        balance = api.http("GET", f"balances/{entity_id}").json()
+        completed = balance.get("completed", {}) if isinstance(balance, dict) else {}
+        if not completed:
+            return "0"
+        parts = [
+            f"{float(value):.2f} {currency.upper()}"
+            for currency, value in completed.items()
+        ]
+        return " · ".join(parts)
 
     if request.method == "POST":
         data = {
@@ -445,8 +460,10 @@ def shortcut_reimburse():
 
     return render_template(
         "transaction/shortcuts_reimburse.jinja2",
-        fridge_entity_id=Config.ENTITY_IDS["fridge"],
-        coffee_entity_id=Config.ENTITY_IDS["coffee"],
+        fridge_entity_id=fridge_entity_id,
+        coffee_entity_id=coffee_entity_id,
+        fridge_balance_label=_format_balance_label(fridge_entity_id),
+        coffee_balance_label=_format_balance_label(coffee_entity_id),
     )
 
 
@@ -519,11 +536,8 @@ def delete(id):
 @token_required
 def complete(id):
     api = get_refinance_api_client()
-    transaction = Transaction(**api.http("GET", f"transactions/{id}").json())
     form = ConfirmForm()
-    if form.validate_on_submit():
+    if request.method == "POST" and form.validate_on_submit():
         api.http("PATCH", f"transactions/{id}", data={"status": "completed"})
         return redirect(url_for("transaction.detail", id=id))
-    return render_template(
-        "transaction/complete.jinja2", form=form, transaction=transaction
-    )
+    return redirect(url_for("transaction.detail", id=id))

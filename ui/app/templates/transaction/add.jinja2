@@ -1,35 +1,66 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
 {% from 'widgets/tag_selector.jinja2' import tag_selector %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}New Transaction{% endblock %}
 
 {% block content %}
-<form method="post">
-    <table>
+<div class="transaction-form-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
 
-        <tr>
-            <td><b>From</b></td>
-            <td>
-                {{ entity_selector('from_entity', g.actor_entity.name,
-                g.actor_entity.id) }}
-            </td>
-        </tr>
-        <tr>
-            <td><b>To</b></td>
-            <td>
-                {{ entity_selector('to_entity') }}
-            </td>
-        </tr>
-        {{ render_form(form, except=('from_entity_name', 'to_entity_name', 'from_entity_id', 'to_entity_id', 'tag_ids'),
-        new_table=False) }}
-        <tr>
-            <td>Tags</td>
-            <td>{{ tag_selector('tag_ids', all_tags, []) }}</td>
-        </tr>
-    </table>
-</form>
+            <div class="form-group">
+                <label class="form-label">From</label>
+                {{ entity_selector('from_entity', g.actor_entity.name, g.actor_entity.id, show_id_input=False) }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">To</label>
+                {{ entity_selector('to_entity', show_id_input=False) }}
+            </div>
+
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    {{ form.amount(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    {{ form.currency(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                {{ form.comment(class_='form-input') }}
+            </div>
+
+            <input type="hidden" name="status" value="draft">
+
+            <div class="deposit-row transaction-equal-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="from_treasury_id">From Treasury</label>
+                    {{ form.from_treasury_id(class_='form-input') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="to_treasury_id">To Treasury</label>
+                    {{ form.to_treasury_id(class_='form-input') }}
+                </div>
+            </div>
+            {% if form.to_treasury_id.description %}<div class="field-description">{{ form.to_treasury_id.description }}</div>{% endif %}
+
+            <div class="form-group">
+                <label class="form-label">Tags</label>
+                {{ tag_selector('tag_ids', all_tags, []) }}
+            </div>
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Create Transaction') }}
+            </div>
+        </form>
+    </section>
+</div>
 
 <script src="/static/js/entitySelector.js"></script>
 <script src="/static/js/multiSelect.js"></script>

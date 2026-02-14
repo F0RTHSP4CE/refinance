@@ -1,13 +1,20 @@
-{% macro entity_selector(prefix, initial_name='', initial_id='', show_id_label=True) %}
-<div class="entity-selector" id="{{ prefix }}_widget" data-fetch-url="/hx/entity-name">
+{% macro entity_selector(prefix, initial_name='', initial_id='', show_id_label=True, show_id_input=True) %}
+<div class="entity-selector{% if not show_id_input %} entity-selector-no-id{% endif %}" id="{{ prefix }}_widget" data-fetch-url="/hx/entity-name">
     <!-- Search input: uses a fixed name 'name' so that the query parameter is always 'name' -->
-    <input id="{{ prefix }}_name" type="search" name="name" placeholder="search..." autocomplete="off"
+    <input id="{{ prefix }}_name" class="form-input" type="search" name="name" placeholder="search..." autocomplete="off"
         hx-trigger="input changed delay:250ms, name" hx-get="/hx/search" hx-target="#{{ prefix }}_search_results"
         value="{{ initial_name or '' }}">
     <!-- ID input remains unique per widget -->
-    {% if show_id_label %}id:{% endif %} <input id="{{ prefix }}_id" class="entity-id-field small" type="number" name="{{ prefix }}_id" placeholder="id"
-        value="{{ initial_id or '' }}">
+    {% if show_id_input %}
+    <div class="entity-selector-id-block">
+        {% if show_id_label %}<label class="entity-selector-id-label" for="{{ prefix }}_id">id</label>{% endif %}
+        <input id="{{ prefix }}_id" class="entity-id-field form-input" type="number" name="{{ prefix }}_id" placeholder="id"
+            value="{{ initial_id or '' }}">
+    </div>
+    {% else %}
+    <input id="{{ prefix }}_id" class="entity-id-field-hidden" type="hidden" name="{{ prefix }}_id" value="{{ initial_id or '' }}">
+    {% endif %}
     <!-- Container for search results -->
-    <div id="{{ prefix }}_search_results"></div>
+    <div id="{{ prefix }}_search_results" class="entity-search-results"></div>
 </div>
 {% endmacro %}

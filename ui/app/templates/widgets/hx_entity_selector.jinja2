@@ -1,4 +1,15 @@
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
 {% for entity in entities %}
 <a href="#" class="search-result-item{% if not entity.active %} secondary inactive{% endif %}" x-id="{{ entity.id }}"
-    x-name="{{ entity.name }}">{{ entity.name }}</a>
+    x-name="{{ entity.name }}">
+    <span class="entity-search-name">{{ entity.name }}</span>
+    {% if entity.tags %}
+    <span class="entity-search-tags">
+        {% for tag in entity.tags %}
+        {{ tag_inline(tag, href=false) }}
+        {% endfor %}
+    </span>
+    {% endif %}
+</a>
 {% endfor %}

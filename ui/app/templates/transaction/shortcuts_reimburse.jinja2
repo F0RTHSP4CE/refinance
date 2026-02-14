@@ -3,47 +3,47 @@
 {% block title %}Reimburse for Drinks/Coffee{% endblock %}
 
 {% block content %}
-<form method="post">
-    <table>
-        <tr>
-            <td><b>From</b></td>
-            <td>
-                <select name="from_entity_id" required>
-                    <option value="{{ fridge_entity_id }}">Fridge (id: {{ fridge_entity_id }})</option>
-                    <option value="{{ coffee_entity_id }}">Coffee machine (id: {{ coffee_entity_id }})</option>
+<div class="deposit-topup-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            <input type="hidden" name="to_entity_id" value="{{ g.actor_entity.id }}">
+
+            <div class="form-group">
+                <label class="form-label" for="from_entity_id">From</label>
+                <select id="from_entity_id" name="from_entity_id" class="form-input" required>
+                    <option value="{{ fridge_entity_id }}">Fridge ({{ fridge_balance_label }})</option>
+                    <option value="{{ coffee_entity_id }}">Coffee machine ({{ coffee_balance_label }})</option>
                 </select>
-            </td>
-        </tr>
-        <tr>
-            <td><b>To</b></td>
-            <td><span class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}
-                    (id: {{ g.actor_entity.id }})</span></td>
-        </tr>
-        <input type="hidden" name="to_entity_id" value="{{ g.actor_entity.id }}">
-        <tr>
-            <td>Amount</td>
-            <td><input name="amount" type="number" step="0.01" placeholder="100" required></td>
-        </tr>
-        <tr>
-            <td>Currency</td>
-            <td>
-                <select name="currency" required>
-                    <option value="GEL" selected>GEL</option>
-                    <option value="USD">USD</option>
-                    <option value="EUR">EUR</option>
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Comment</td>
-            <td><input name="comment" type="text" placeholder="optional"></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td><button type="submit">Get Reimbursement</button></td>
-        </tr>
-    </table>
-</form>
+            </div>
+
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    <input id="amount" name="amount" class="form-input" type="number" step="0.01"
+                        placeholder="100" required>
+                </div>
+
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    <select id="currency" name="currency" class="form-input" required>
+                        <option value="GEL" selected>GEL</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                <input id="comment" name="comment" class="form-input" type="text" placeholder="optional">
+            </div>
+
+            <div class="deposit-topup-actions">
+                <button type="submit" class="big-button">Reimburse</button>
+            </div>
+        </form>
+    </section>
+</div>
 
 <img src="{{ url_for('static', filename='/images/transaction/shortcuts/reimburse.jpg') }}" alt="Reimbursement Diagram"
     style="max-width: 50rem">

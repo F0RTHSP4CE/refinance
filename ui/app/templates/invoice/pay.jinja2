@@ -1,71 +1,97 @@
 {% extends 'base.jinja2' %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Pay invoice {{ invoice.id }}{% endblock %}
 
 {% block content %}
-<form method="post">
-    {{ form.csrf_token }}
-    {{ form.invoice_id() }}
-    {{ form.from_entity_id() }}
-    {{ form.to_entity_id() }}
-    <table>
-        <tr>
-            <td>From</td>
-            <td>
-                <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
-                    class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
-                    invoice.from_entity.name
-                    }}</a>
-            </td>
-        </tr>
-        <tr>
-            <td>To</td>
-            <td>
-                <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
-                    class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
-                    invoice.to_entity.name
-                    }}</a>
-            </td>
-        </tr>
-        <tr>
-            <td>Currency</td>
-            <td>
-                <select name="currency" id="invoice-currency">
+<div class="invoice-form-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
+            {{ form.invoice_id() }}
+            {{ form.from_entity_id() }}
+            {{ form.to_entity_id() }}
+
+            <div class="form-group">
+                <label class="form-label">Parties</label>
+                <div class="invoice-parties-stack">
+                    <div class="invoice-party-block">
+                        <div class="invoice-party-label">From</div>
+                        <div class="invoice-party-value">
+                            <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                                class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{ invoice.from_entity.name }}</a>
+                        </div>
+                        {% if from_entity_balance %}
+                        <div class="invoice-party-balance">
+                            {% for currency, value in from_entity_balance.items() %}
+                            <span{% if value | float < 0 %} class="amount-negative"{% endif %}>{{ "%.2f"|format(value|float) }} {{ currency | upper }}</span>{% if not loop.last %}<span class="invoice-amount-sep"> · </span>{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="invoice-party-block">
+                        <div class="invoice-party-label">To</div>
+                        <div class="invoice-party-value">
+                            <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                                class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{ invoice.to_entity.name }}</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="currency" id="invoice-currency" value="{{ form.currency.data }}">
+            <input type="hidden" name="amount" id="{{ form.amount.id }}" value="{{ form.amount.data }}">
+
+            <div class="form-group">
+                <label class="form-label">Select amount and currency</label>
+                <div class="invoice-amount-choices" id="invoice-amount-choices">
                     {% for item in amounts %}
-                    <option value="{{ item.currency | upper }}" data-amount="{{ item.amount }}">
-                        {{ item.currency | upper }}
-                    </option>
+                    <button
+                        type="button"
+                        class="invoice-amount-choice{% if form.currency.data == (item.currency | upper) %} is-active{% endif %}"
+                        data-currency="{{ item.currency | upper }}"
+                        data-amount="{{ item.amount }}"
+                    >
+                        {{ item.amount }} {{ item.currency | upper }}
+                    </button>
                     {% endfor %}
-                </select>
-            </td>
-        </tr>
-        <tr>
-            <td>Amount</td>
-            <td>{{ form.amount() }}</td>
-        </tr>
-        {{ render_form(form, except=(
-        'invoice_id','from_entity_id','to_entity_id','amount','currency','csrf_token'
-        ), new_table=False) }}
-    </table>
-</form>
+                </div>
+            </div>
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Create transaction') }}
+            </div>
+        </form>
+    </section>
+</div>
 
 <script>
     (function () {
-        const currencySelect = document.getElementById('invoice-currency');
+        const currencyInput = document.getElementById('invoice-currency');
         const amountInput = document.getElementById('{{ form.amount.id }}');
-        if (!currencySelect || !amountInput) {
+        const choiceButtons = Array.from(document.querySelectorAll('.invoice-amount-choice'));
+        if (!currencyInput || !amountInput || choiceButtons.length === 0) {
             return;
         }
-        const applyAmount = () => {
-            const option = currencySelect.options[currencySelect.selectedIndex];
-            const amount = option ? option.getAttribute('data-amount') : null;
+
+        const setActive = (button) => {
+            choiceButtons.forEach((item) => item.classList.remove('is-active'));
+            button.classList.add('is-active');
+            const currency = button.getAttribute('data-currency');
+            const amount = button.getAttribute('data-amount');
+            if (currency) {
+                currencyInput.value = currency;
+            }
             if (amount) {
                 amountInput.value = amount;
             }
         };
-        currencySelect.addEventListener('change', applyAmount);
-        applyAmount();
+
+        choiceButtons.forEach((button) => {
+            button.addEventListener('click', () => setActive(button));
+        });
+
+        const preset = choiceButtons.find((button) => button.classList.contains('is-active')) || choiceButtons[0];
+        setActive(preset);
     }());
 </script>
 {% endblock %}
