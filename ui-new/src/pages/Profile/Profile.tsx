@@ -1,7 +1,7 @@
-import { Anchor, Badge, Flex, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { Anchor, Badge, Flex, Group, Stack, Tabs, Text, Tooltip } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getBalances } from '@/api/balance';
 import { getEntity, getMe } from '@/api/entities';
 import { getInvoices } from '@/api/invoices';
@@ -23,7 +23,10 @@ const LIMIT = 20;
 export const Profile = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const actorEntity = useAuthStore((state) => state.actorEntity);
+
+  const tab = searchParams.get('tab') ?? 'profile';
 
   const parsedId = id ? parseInt(id, 10) : undefined;
   const profileId =
@@ -268,6 +271,17 @@ export const Profile = () => {
 
   return (
     <Stack gap="lg">
+      <Tabs
+        value={tab}
+        onChange={(v) => setSearchParams({ tab: v ?? 'profile' })}
+      >
+        <Tabs.List>
+          <Tabs.Tab value="profile">Profile</Tabs.Tab>
+          <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="profile">
+          <Stack gap="lg" mt="md">
       <AppCard>
         <Stack gap="md">
           <Flex gap="sm" align="center" wrap="nowrap">
@@ -391,6 +405,15 @@ export const Profile = () => {
         </Text>
         <DataTable columns={invoiceColumns} data={invoices} emptyMessage="No invoices." />
       </AppCard>
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="statistics">
+          <Text size="xl" fw={900} mt="md">
+            Statistics
+          </Text>
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   );
 };

@@ -5,10 +5,20 @@ import {
   AuthCallback,
   CardTopUp,
   DepositDetail,
+  Deposits,
+  Exchange,
+  Fee,
   Home,
+  Invoices,
   ManualTopUp,
   Profile,
   SignIn,
+  Splits,
+  Stats,
+  Tags,
+  Transactions,
+  Treasuries,
+  Users,
 } from '@/pages';
 import { useAuthStore } from '@/stores/auth';
 
@@ -62,9 +72,19 @@ export const App = () => {
         }
       >
         <Route index element={<Home />} />
+        <Route path="transactions" element={<Transactions />} />
+        <Route path="invoices" element={<Invoices />} />
+        <Route path="deposits" element={<Deposits />} />
+        <Route path="deposits/:id" element={<DepositDetail />} />
+        <Route path="fee" element={<Fee />} />
+        <Route path="splits" element={<Splits />} />
+        <Route path="exchange" element={<Exchange />} />
+        <Route path="stats" element={<Stats />} />
+        <Route path="users" element={<Users />} />
+        <Route path="treasuries" element={<Treasuries />} />
+        <Route path="tags" element={<Tags />} />
         <Route path="top-up/card" element={<CardTopUp />} />
         <Route path="top-up/manual" element={<ManualTopUp />} />
-        <Route path="deposits/:id" element={<DepositDetail />} />
         <Route path="profile/:id?" element={<Profile />} />
       </Route>
     </Routes>
