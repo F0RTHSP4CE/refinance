@@ -1,6 +1,50 @@
 # ui-new Changelog
 
 ## 2026-02-15
+- Prompt: Charts look small when switching accounts until refresh.
+- Changes:
+  - ProfileStatistics: ResizeObserver on chart container to call chart.resize(); also resize() when option updates.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Hide pie chart labels entirely (still looked bad).
+- Changes:
+  - ProfileStatistics: PIE_LABEL show: false, labelLine show: false. Rely on tooltip + legend.
+- Notes: none
+
+## 2026-02-15
+- Prompt: ECharts more contrast, remove text border on pie labels.
+- Changes:
+  - ProfileStatistics: AXIS_LINE, SPLIT_LINE, AXIS_LABEL for grid/axis contrast; PIE_LABEL with textBorderWidth: 0, labelLine color.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Profile Statistics dashboard (filters, charts like old UI).
+- Changes:
+  - api/stats.ts: getEntityStatsBundle, types for EntityStatsBundle.
+  - ProfileStatistics.tsx: Filters (Timeframe 3m/6m/12m, Top entries 5/8/12), active=green; Balance Change line chart; Income/Spending bar chart; Incoming Activity (bar + doughnut); Outgoing Activity (bar + doughnut). Uses echarts, TanStack Query, URL search params.
+  - Profile.tsx: Statistics tab renders ProfileStatistics when profileId present.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Profile tabs font size just xl.
+- Changes:
+  - Profile.tsx: Tab labels text-3xl → text-xl.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Profile tabs font size drastically bigger.
+- Changes:
+  - Profile.tsx: Tab labels wrapped in Text with className="text-3xl".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Active nav link green like logo.
+- Changes:
+  - Navbar: useLocation for active route, active link c="green.5" (matches logo green).
+- Notes: none
+
+## 2026-02-15
 - Prompt: Nav links font size still not visible.
 - Changes:
   - Navbar: Use Tailwind text-xl instead of Mantine size prop.

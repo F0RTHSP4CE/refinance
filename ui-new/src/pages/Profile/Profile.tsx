@@ -15,6 +15,7 @@ import {
   TagList,
   type DataTableColumn,
 } from '@/components/ui';
+import { ProfileStatistics } from './ProfileStatistics';
 import { useAuthStore } from '@/stores/auth';
 import type { Entity, Invoice, Transaction } from '@/types/api';
 
@@ -276,8 +277,12 @@ export const Profile = () => {
         onChange={(v) => setSearchParams({ tab: v ?? 'profile' })}
       >
         <Tabs.List>
-          <Tabs.Tab value="profile">Profile</Tabs.Tab>
-          <Tabs.Tab value="statistics">Statistics</Tabs.Tab>
+          <Tabs.Tab value="profile">
+            <Text component="span" className="text-xl">Profile</Text>
+          </Tabs.Tab>
+          <Tabs.Tab value="statistics">
+            <Text component="span" className="text-xl">Statistics</Text>
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="profile">
@@ -409,9 +414,7 @@ export const Profile = () => {
         </Tabs.Panel>
 
         <Tabs.Panel value="statistics">
-          <Text size="xl" fw={900} mt="md">
-            Statistics
-          </Text>
+          {profileId != null && <ProfileStatistics profileId={profileId} />}
         </Tabs.Panel>
       </Tabs>
     </Stack>
