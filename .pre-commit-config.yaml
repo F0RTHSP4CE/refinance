@@ -9,3 +9,15 @@ repos:
     hooks:
       - id: black
         language_version: python3.12
+  - repo: local
+    hooks:
+      - id: ui-new-lint
+        name: ui-new eslint
+        entry: bash -c 'cd ui-new && npm run lint'
+        language: system
+        pass_filenames: false
+      - id: ui-new-format
+        name: ui-new prettier
+        entry: bash -c 'cd ui-new && npm run format:check'
+        language: system
+        pass_filenames: false
