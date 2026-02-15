@@ -2,7 +2,7 @@ import { Anchor, Burger, Button, Group, Menu, Modal, Stack, Text } from '@mantin
 import { useDisclosure } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { CardTopUpModal } from '@/pages/TopUp/Card';
@@ -39,6 +39,8 @@ export const Navbar = () => {
     refetchInterval: 30000, // Refresh every 30s
   });
 
+  const { pathname } = useLocation();
+
   const currencies = useMemo(() => {
     if (!balances) return [];
     const allCurrencies = new Set([
@@ -55,18 +57,22 @@ export const Navbar = () => {
           <img src={logo} alt="Refinance" className="max-w-[155px]" />
         </Link>
         <Group gap="xl" className="overflow-x-auto">
-          {NAV_LINKS.map(({ to, label }) => (
-            <Anchor
-              key={to}
-              component={Link}
-              to={to}
-              underline="never"
-              inherit
-              className="shrink-0 whitespace-nowrap text-xl no-underline hover:text-white hover:no-underline transition-colors"
-            >
-              {label}
-            </Anchor>
-          ))}
+          {NAV_LINKS.map(({ to, label }) => {
+            const isActive = pathname === to;
+            return (
+              <Anchor
+                key={to}
+                component={Link}
+                to={to}
+                underline="never"
+                inherit={!isActive}
+                c={isActive ? 'green.5' : undefined}
+                className="shrink-0 whitespace-nowrap text-xl no-underline hover:text-white hover:no-underline transition-colors"
+              >
+                {label}
+              </Anchor>
+            );
+          })}
         </Group>
         <Menu
           shadow="md"
