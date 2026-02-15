@@ -20,10 +20,12 @@ COMPOSE = docker compose -f $(COMPOSE_BASE) -f $(or $(COMPOSE_SUFFIX_$(ENV)),$(e
 
 .ONESHELL:
 
-.PHONY: dev prod up up-detached down test ci db-backup db-restore add-entity
+.PHONY: dev prod up up-detached down test ci db-backup db-restore add-entity dev-ui-new
 
 dev: ENV = dev
-dev: up
+dev:
+	(cd ui-new && npm run dev) &
+	$(COMPOSE) up --build
 
 prod: ENV = prod
 prod: up-detached
@@ -72,3 +74,6 @@ add-entity:
 	# Example: make add-entity NAME=skywinder TELEGRAM_ID=123456789 ID=201
 	@if [ -z "$(NAME)" ]; then echo "Usage: make add-entity NAME=<name> [TELEGRAM_ID=<id>] [ID=<id>]"; exit 1; fi
 	$(COMPOSE) exec api python -m app.scripts.add_entity --name "$(NAME)" $(if $(ID),--id $(ID),) $(if $(TELEGRAM_ID),--telegram-id $(TELEGRAM_ID),)
+
+dev-ui-new:
+	cd ui-new && npm run dev

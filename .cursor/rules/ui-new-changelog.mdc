@@ -1,0 +1,29 @@
+---
+description: Require changelog updates for every ui-new task
+alwaysApply: true
+---
+
+# ui-new Changelog Discipline
+
+- For every user prompt in this repo, append an entry to `ui-new/changelog.md`.
+- Add the changelog entry in the same response where changes are made.
+- If no code files changed, still add a short "Docs/Guidance" entry.
+
+## Entry format
+
+Use this template:
+
+```md
+## YYYY-MM-DD HH:MM
+- Prompt: <short request summary>
+- Changes:
+  - <file or behavior 1>
+  - <file or behavior 2>
+- Notes: <follow-ups, caveats, or "none">
+```
+
+## Quality rules
+
+- Keep entries concise and factual.
+- Mention key files touched under `ui-new/` and integration points.
+- Never rewrite previous entries; only append new ones.
