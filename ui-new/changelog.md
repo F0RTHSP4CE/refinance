@@ -1,6 +1,105 @@
 # ui-new Changelog
 
 ## 2026-02-15
+- Prompt: Nav links font size still not visible.
+- Changes:
+  - Navbar: Use Tailwind text-xl instead of Mantine size prop.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Nav links font size increase not visible.
+- Changes:
+  - Navbar: Nav links size="lg" → size="xl" for more noticeable increase.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Nav links font size +1 point.
+- Changes:
+  - Navbar: Nav links size="md" → size="lg".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Remove underline from nav links (still showing).
+- Changes:
+  - Navbar: Anchor underline="never" to disable default underline.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Hover effect not underline but color white.
+- Changes:
+  - Navbar: Nav links remove underline, add hover:text-white.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Space from logo.
+- Changes:
+  - Navbar: Left group gap="lg" → gap="xl" (more space between logo, links, burger).
+- Notes: none
+
+## 2026-02-15
+- Prompt: Hover effect on nav links.
+- Changes:
+  - Navbar: Nav links use Anchor with underline="hover" inherit.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Nav links space 2 more points.
+- Changes:
+  - Navbar: Nav links Group gap="md" → gap="xl".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Nav links space 2 more points.
+- Changes:
+  - Navbar: Nav links Group gap="sm" → gap="md".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Make space between nav links bigger by 1 point.
+- Changes:
+  - Navbar: Nav links Group gap="xs" → gap="sm".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Make nav links font size bigger by 1 point.
+- Changes:
+  - Navbar: Nav links Text size="sm" → size="md".
+- Notes: none
+
+## 2026-02-15
+- Prompt: Burger should match other dropdown buttons.
+- Changes:
+  - Navbar: Burger button reverted to variant="light", removed scale (matches Top Up, User).
+- Notes: none
+
+## 2026-02-15
+- Prompt: Remove bg for burger button, make it 25% bigger.
+- Changes:
+  - Navbar: Burger button variant="subtle" (no background), scale-[1.25].
+- Notes: none
+
+## 2026-02-15
+- Prompt: Make burger button smaller by 50%.
+- Changes:
+  - Navbar: Burger button uses scale-50 for 50% visual reduction.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Burger icon same as other dropdown buttons (black background), right of links.
+- Changes:
+  - Navbar: Burger menu now uses Button variant="light" (matches Top Up, User), moved to left group right after nav links.
+- Notes: none
+
+## 2026-02-15
+- Prompt: Navbar links, burger menu, profile tabs, empty placeholder pages.
+- Changes:
+  - Navbar: Added nav links (Home, Transactions, Invoices, Deposits, Fee, Split, Exchange, Stats, Users), Burger menu with Treasuries/Tags dropdown, replaced inline styles with Mantine/Tailwind.
+  - Profile: Added Tabs (Profile / Statistics) with URL search param ?tab=profile|statistics.
+  - App.tsx: Added routes for transactions, invoices, deposits, fee, splits, exchange, stats, users, treasuries, tags.
+  - pages/: Created empty placeholder pages (Transactions, Invoices, Deposits, Fee, Splits, Exchange, Stats, Users, Treasuries, Tags) with page name text only.
+- Notes: none
+
+## 2026-02-15
 - Prompt: Update gitignore to really ignore all kinds of shit files.
 - Changes:
   - Root .gitignore: Expanded with OS junk (.DS_Store, Thumbs.db, etc.), IDEs (.idea, .vscode, swap files), Python cache/coverage, Node build artifacts, logs, secrets, backups.
