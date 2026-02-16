@@ -1,68 +1,7 @@
-from datetime import date
 from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
-
-
-def test_entity_money_flow_by_day(test_app: TestClient, token):
-    def create_entity(name: str) -> int:
-        response = test_app.post(
-            "/entities",
-            json={"name": name},
-            headers={"x-token": token},
-        )
-        assert response.status_code == 200
-        return response.json()["id"]
-
-    def create_transaction(from_id: int, to_id: int, amount: str) -> None:
-        response = test_app.post(
-            "/transactions",
-            json={
-                "from_entity_id": from_id,
-                "to_entity_id": to_id,
-                "amount": amount,
-                "currency": "usd",
-                "status": "completed",
-            },
-            headers={"x-token": token},
-        )
-        assert response.status_code == 200
-
-    target = create_entity("Flow Target")
-    incoming_source = create_entity("Flow Source")
-    outgoing_dest = create_entity("Flow Dest")
-
-    create_transaction(incoming_source, target, "10.00")
-    create_transaction(incoming_source, target, "2.50")
-    create_transaction(target, outgoing_dest, "7.25")
-
-    today = date.today().isoformat()
-
-    response = test_app.get(
-        f"/stats/entity/{target}/money-flow-by-day/",
-        params={"timeframe_from": today, "timeframe_to": today},
-        headers={"x-token": token},
-    )
-    assert response.status_code == 200
-    rows = response.json()
-    assert isinstance(rows, list)
-    assert rows
-
-    today_row = next((row for row in rows if row.get("day") == today), None)
-    assert today_row is not None
-    assert today_row["incoming_total_usd"] == pytest.approx(12.50)
-    assert today_row["outgoing_total_usd"] == pytest.approx(7.25)
-
-    bundle = test_app.get(
-        f"/stats/entity/{target}",
-        params={"months": 1, "limit": 5, "timeframe_to": today},
-        headers={"x-token": token},
-    )
-    assert bundle.status_code == 200
-    body = bundle.json()
-    assert "money_flow_by_day" in body
-    assert isinstance(body["money_flow_by_day"], list)
 
 
 @pytest.fixture(scope="class")

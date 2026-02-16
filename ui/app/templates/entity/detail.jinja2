@@ -31,14 +31,13 @@ endblock %}
     }
 
     .charts-grid {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px;
     }
 
     .chart-cell {
-        flex: 1 1 calc(50% - 20px);
-        min-width: 280px;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -47,6 +46,25 @@ endblock %}
         background: linear-gradient(135deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.9));
         border: 1px solid rgba(226, 232, 240, 0.8);
         box-sizing: border-box;
+    }
+
+    .charts-grid>.chart-cell:first-child {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .charts-grid.balance-width-one>.chart-cell:first-child {
+        width: calc((100% - 20px) / 2);
+    }
+
+    .charts-grid.balance-width-full>.chart-cell:first-child {
+        width: 100%;
+    }
+
+    @media (max-width: 900px) {
+        .charts-grid>.chart-cell:first-child {
+            width: 100%;
+        }
     }
 
     .chart-cell h2 {
@@ -59,6 +77,27 @@ endblock %}
     .chart-cell canvas {
         width: 100% !important;
         height: auto !important;
+    }
+
+    .balance-chart-container {
+        width: 100%;
+        max-width: 100%;
+        min-height: 380px;
+        height: 460px;
+        max-height: 70vh;
+        overflow: hidden;
+        box-sizing: border-box;
+    }
+
+    .charts-grid.balance-width-full .balance-chart-container {
+        min-height: 760px;
+        height: 920px;
+        max-height: none;
+    }
+
+    #balance-change-chart {
+        width: 100%;
+        height: 100%;
     }
 
     .activity-charts {
@@ -118,8 +157,11 @@ endblock %}
     }
 
     @media (max-width: 900px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+
         .chart-cell {
-            flex: 1 1 100%;
             min-width: 0;
         }
 
@@ -172,6 +214,26 @@ endblock %}
     }
 
     .stats-controls a.active {
+        background: #2563eb;
+        color: #fff;
+    }
+
+    .stats-controls button {
+        padding: 4px 10px;
+        border-radius: 6px;
+        background: #e2e8f0;
+        color: inherit;
+        border: 0;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        font: inherit;
+    }
+
+    .stats-controls button:hover {
+        background: #cbd5f5;
+    }
+
+    .stats-controls button.active {
         background: #2563eb;
         color: #fff;
     }
@@ -338,6 +400,7 @@ endblock %}
         <!-- Entity stats charts -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+        <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
         <div class="stats-controls">
             <span>Timeframe:</span>
             {% for months_option in [3, 6, 12] %}
@@ -350,15 +413,21 @@ endblock %}
             <a href="{{ update_query_params(stats_limit=limit_option) }}"
                 class="{% if stats_limit == limit_option %}active{% endif %}">{{ limit_option }}</a>
             {% endfor %}
+            <span class="divider">|</span>
+            <span>Scale:</span>
+            <button id="balance-scale-linear" type="button" class="active">Linear</button>
+            <button id="balance-scale-log" type="button">Log</button>
+            <span class="divider">|</span>
+            <span>Width:</span>
+            <button id="balance-width-one" type="button" class="active">1 Column</button>
+            <button id="balance-width-full" type="button">Full Width</button>
         </div>
-        <div class="charts-grid">
+        <div id="entity-stats-charts-grid" class="charts-grid balance-width-one">
             <div class="chart-cell">
                 <h2>Balance Change by Day</h2>
-                <canvas id="balance-change-chart"></canvas>
-            </div>
-            <div class="chart-cell">
-                <h2>Income / Spending (USD) by Day / Month</h2>
-                <canvas id="money-flow-day-chart"></canvas>
+                <div id="balance-chart-container" class="balance-chart-container">
+                    <div id="balance-change-chart"></div>
+                </div>
             </div>
             <div class="chart-cell">
                 <h2>Incoming Activity (last {{ stats_months }} months)</h2>
@@ -406,7 +475,6 @@ endblock %}
         <script>
             const balanceData = {{ balance_changes | tojson }};
             const txDayData = {{ transactions_by_day | tojson }};
-            const moneyFlowDayData = {{ money_flow_by_day | tojson }};
             const topIncoming = {{ top_incoming | tojson }};
             const topOutgoing = {{ top_outgoing | tojson }};
             const topIncomingTags = {{ top_incoming_tags | tojson }};
@@ -562,68 +630,174 @@ endblock %}
                     options: buildVerticalBarOptions(),
                 });
             };
-            const balanceDatasets = {};
-            balanceData.forEach(item => {
-                for (const curr in item.balance_changes) {
-                    if (!balanceDatasets[curr]) {
-                        const color = colorFromIdentifier(curr, 0);
-                        balanceDatasets[curr] = {
-                            label: curr.toUpperCase(),
-                            data: [],
-                            borderWidth: 2,
-                            tension: 0.1,
-                            borderColor: color.base,
-                            backgroundColor: color.hover,
-                            pointRadius: 2,
-                            pointHoverRadius: 3,
-                        };
-                    }
-                }
-            });
+            const buildBalancePlotlyChart = () => {
+                const chartContainer = document.getElementById('balance-change-chart');
+                const chartsGrid = document.getElementById('entity-stats-charts-grid');
+                const oneColumnButton = document.getElementById('balance-width-one');
+                const fullWidthButton = document.getElementById('balance-width-full');
+                if (!chartContainer || typeof Plotly === 'undefined') return;
 
-            balanceData.forEach(item => {
-                const day = item.day;
-                for (const curr in item.balance_changes) {
-                    const value = item.balance_changes[curr];
-                    balanceDatasets[curr].data.push({ x: day, y: value });
-                }
-            });
+                const currencies = new Set();
+                balanceData.forEach((item) => {
+                    Object.keys(item.balance_changes || {}).forEach((currency) => currencies.add(currency));
+                });
 
-            const totalUsdDataset = {
-                label: 'Total (USD)',
-                data: balanceData.map(item => ({ x: item.day, y: item.total_usd })),
-                borderWidth: 2,
-                tension: 0.1,
-                borderColor: 'rgba(37, 99, 235, 0.95)',
-                backgroundColor: 'rgba(37, 99, 235, 0.15)',
-                pointRadius: 3,
-                pointHoverRadius: 4,
-            };
+                const traces = [];
+                Array.from(currencies).sort().forEach((currency) => {
+                    const color = colorFromIdentifier(currency, 0).base;
+                    traces.push({
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: currency.toUpperCase(),
+                        visible: 'legendonly',
+                        x: balanceData.map((item) => item.day),
+                        y: balanceData.map((item) => Number((item.balance_changes || {})[currency] || 0)),
+                        line: { width: 2, color },
+                        marker: { size: 4, color },
+                        hovertemplate: `%{x}<br>${currency.toUpperCase()}: %{y:.2f}<extra></extra>`,
+                    });
+                });
 
-            const balanceChartConfig = {
-                type: 'line',
-                data: {
-                    datasets: [
-                        ...Object.values(balanceDatasets),
-                        totalUsdDataset,
-                    ],
-                },
-                options: {
-                    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
-                    interaction: { intersect: false, mode: 'nearest' },
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' },
-                        },
-                        y: {
-                            beginAtZero: true,
-                        },
+                traces.push({
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Total (USD)',
+                    x: balanceData.map((item) => item.day),
+                    y: balanceData.map((item) => Number(item.total_usd || 0)),
+                    line: { width: 2.5, color: 'rgba(37, 99, 235, 0.95)' },
+                    marker: { size: 5, color: 'rgba(37, 99, 235, 0.95)' },
+                    hovertemplate: '%{x}<br>Total (USD): %{y:.2f}<extra></extra>',
+                });
+
+                const layout = {
+                    margin: { l: 52, r: 16, t: 8, b: 42 },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(248, 250, 252, 0.6)',
+                    hovermode: 'x unified',
+                    dragmode: 'pan',
+                    legend: {
+                        orientation: 'h',
+                        yanchor: 'bottom',
+                        y: 1.02,
+                        xanchor: 'left',
+                        x: 0,
                     },
-                },
+                    xaxis: {
+                        type: 'date',
+                        rangeslider: { visible: true },
+                        showspikes: true,
+                        spikemode: 'across',
+                        spikecolor: '#94a3b8',
+                        spikethickness: 1,
+                        gridcolor: 'rgba(203, 213, 225, 0.5)',
+                    },
+                    yaxis: {
+                        type: 'linear',
+                        rangemode: 'tozero',
+                        autorange: true,
+                        zeroline: true,
+                        showspikes: true,
+                        spikemode: 'across',
+                        spikecolor: '#94a3b8',
+                        spikethickness: 1,
+                        gridcolor: 'rgba(203, 213, 225, 0.5)',
+                    },
+                };
+
+                const config = {
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToAdd: [
+                        'drawline',
+                        'drawopenpath',
+                        'drawclosedpath',
+                        'drawcircle',
+                        'drawrect',
+                        'eraseshape',
+                    ],
+                };
+
+                Plotly.newPlot(chartContainer, traces, layout, config);
+
+                const linearButton = document.getElementById('balance-scale-linear');
+                const logButton = document.getElementById('balance-scale-log');
+
+                const setActiveScaleButton = (scaleType) => {
+                    if (linearButton) {
+                        linearButton.classList.toggle('active', scaleType === 'linear');
+                    }
+                    if (logButton) {
+                        logButton.classList.toggle('active', scaleType === 'log');
+                    }
+                };
+
+                const setBalanceScale = (scaleType) => {
+                    if (scaleType === 'log') {
+                        Plotly.relayout(chartContainer, {
+                            'yaxis.type': 'log',
+                            'yaxis.autorange': true,
+                            'yaxis.rangemode': undefined,
+                        });
+                        setActiveScaleButton('log');
+                        return;
+                    }
+
+                    Plotly.relayout(chartContainer, {
+                        'yaxis.type': 'linear',
+                        'yaxis.autorange': true,
+                        'yaxis.rangemode': 'tozero',
+                    });
+                    setActiveScaleButton('linear');
+                };
+
+                if (linearButton) {
+                    linearButton.addEventListener('click', () => setBalanceScale('linear'));
+                }
+                if (logButton) {
+                    logButton.addEventListener('click', () => setBalanceScale('log'));
+                }
+
+                const setActiveWidthButton = (mode) => {
+                    if (oneColumnButton) {
+                        oneColumnButton.classList.toggle('active', mode === 'one');
+                    }
+                    if (fullWidthButton) {
+                        fullWidthButton.classList.toggle('active', mode === 'full');
+                    }
+                };
+
+                const setBalanceWidth = (mode) => {
+                    if (!chartsGrid) return;
+
+                    chartsGrid.classList.remove('balance-width-one', 'balance-width-full');
+                    if (mode === 'full') {
+                        chartsGrid.classList.add('balance-width-full');
+                        setActiveWidthButton('full');
+                    } else {
+                        chartsGrid.classList.add('balance-width-one');
+                        setActiveWidthButton('one');
+                    }
+
+                    requestAnimationFrame(() => {
+                        Plotly.Plots.resize(chartContainer);
+                    });
+                };
+
+                if (oneColumnButton) {
+                    oneColumnButton.addEventListener('click', () => setBalanceWidth('one'));
+                }
+                if (fullWidthButton) {
+                    fullWidthButton.addEventListener('click', () => setBalanceWidth('full'));
+                }
+
+                const handleResize = () => {
+                    Plotly.Plots.resize(chartContainer);
+                };
+
+                window.addEventListener('resize', handleResize);
             };
 
-            new Chart(document.getElementById('balance-change-chart'), balanceChartConfig);
+            buildBalancePlotlyChart();
 
             const txPoints = txDayData.map(item => ({ x: item.day, y: item.transaction_count }));
             const txChartConfig = {
@@ -656,139 +830,6 @@ endblock %}
             if (txCanvas) {
                 new Chart(txCanvas, txChartConfig);
             }
-
-            const incomePoints = moneyFlowDayData.map(item => ({ x: item.day, y: Number(item.incoming_total_usd || 0) }));
-            const spendingPoints = moneyFlowDayData.map(item => ({ x: item.day, y: Number(item.outgoing_total_usd || 0) }));
-
-            const aggregateMonthlyTotals = (dailyRows) => {
-                const monthly = new Map();
-                let firstVisibleDay = null;
-                dailyRows.forEach((row) => {
-                    const day = String(row.day || "");
-                    if (!day) return;
-                    if (!firstVisibleDay || day < firstVisibleDay) firstVisibleDay = day;
-                    const monthKey = day.slice(0, 7); // YYYY-MM
-                    const incoming = Number(row.incoming_total_usd || 0);
-                    const outgoing = Number(row.outgoing_total_usd || 0);
-                    const current = monthly.get(monthKey) || {
-                        incoming: 0,
-                        outgoing: 0,
-                        firstDay: day,
-                        lastDay: day,
-                    };
-                    current.incoming += incoming;
-                    current.outgoing += outgoing;
-                    if (!current.firstDay || day < current.firstDay) current.firstDay = day;
-                    if (!current.lastDay || day > current.lastDay) current.lastDay = day;
-                    monthly.set(monthKey, current);
-                });
-                const keys = Array.from(monthly.keys()).sort();
-
-                const buildSeries = (selector) => {
-                    if (!keys.length) return [];
-
-                    const points = keys.map((k) => {
-                        const bucket = monthly.get(k);
-                        return { x: bucket.lastDay, y: bucket[selector], marker: true };
-                    });
-
-                    // Add a single hidden point at the start of the visible range so
-                    // the monthly line doesn't start "late" (looks empty at the left).
-                    // Keep markers only on month-end points.
-                    if (firstVisibleDay) {
-                        const firstMonthBucket = monthly.get(keys[0]);
-                        points.unshift({
-                            x: firstVisibleDay,
-                            y: firstMonthBucket[selector],
-                            marker: false,
-                        });
-                    }
-
-                    return points;
-                };
-
-                return {
-                    months: keys,
-                    incoming: buildSeries('incoming'),
-                    outgoing: buildSeries('outgoing'),
-                };
-            };
-
-            const monthlyFlow = aggregateMonthlyTotals(moneyFlowDayData);
-            const flowChartConfig = {
-                type: 'bar',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Income (USD)',
-                            data: incomePoints,
-                            backgroundColor: 'rgba(34, 197, 94, 0.75)',
-                            borderColor: 'rgba(22, 163, 74, 0.9)',
-                            borderWidth: 1,
-                        },
-                        {
-                            label: 'Spending (USD)',
-                            data: spendingPoints,
-                            backgroundColor: 'rgba(239, 68, 68, 0.70)',
-                            borderColor: 'rgba(220, 38, 38, 0.9)',
-                            borderWidth: 1,
-                        },
-                        {
-                            type: 'line',
-                            label: 'Monthly Income (USD)',
-                            data: monthlyFlow.incoming,
-                            borderColor: 'rgba(22, 163, 74, 0.95)',
-                            backgroundColor: 'rgba(22, 163, 74, 0.12)',
-                            borderWidth: 2,
-                            tension: 0.15,
-                            pointRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 3 : 0),
-                            pointHoverRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 4 : 0),
-                        },
-                        {
-                            type: 'line',
-                            label: 'Monthly Spending (USD)',
-                            data: monthlyFlow.outgoing,
-                            borderColor: 'rgba(220, 38, 38, 0.95)',
-                            backgroundColor: 'rgba(220, 38, 38, 0.10)',
-                            borderWidth: 2,
-                            tension: 0.15,
-                            pointRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 3 : 0),
-                            pointHoverRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 4 : 0),
-                        }
-                    ]
-                },
-                options: {
-                    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
-                    responsive: true,
-                    scales: {
-                        x: {
-                            type: 'time',
-                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' },
-                        },
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: (value) => formatUSD(Number(value)),
-                            },
-                        },
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    const value = context.parsed.y ?? context.parsed;
-                                    return `${context.dataset.label}: ${formatUSD(Number(value))}`;
-                                },
-                            },
-                        },
-                    },
-                },
-            };
-
-            new Chart(document.getElementById('money-flow-day-chart'), flowChartConfig);
 
             if (topIncoming.length) {
                 const incomeLabels = topIncoming.map(item => item.entity_name || `Entity #${item.entity_id}`);

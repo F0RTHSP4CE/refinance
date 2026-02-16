@@ -259,12 +259,11 @@ def detail(id):
 
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:
-            return False, [], [], [], [], [], [], []
+            return False, [], [], [], [], [], []
         return (
             True,
             bundle.get("balance_changes", []),
             bundle.get("transactions_by_day", []),
-            bundle.get("money_flow_by_day", []),
             bundle.get("top_incoming", []),
             bundle.get("top_outgoing", []),
             bundle.get("top_incoming_tags", []),
@@ -274,7 +273,6 @@ def detail(id):
     stats_loaded = False
     balance_changes = []
     transactions_by_day = []
-    money_flow_by_day = []
     top_incoming = []
     top_outgoing = []
     top_incoming_tags = []
@@ -296,7 +294,6 @@ def detail(id):
         stats_loaded,
         balance_changes,
         transactions_by_day,
-        money_flow_by_day,
         top_incoming,
         top_outgoing,
         top_incoming_tags,
@@ -319,7 +316,6 @@ def detail(id):
             stats_loaded,
             balance_changes,
             transactions_by_day,
-            money_flow_by_day,
             top_incoming,
             top_outgoing,
             top_incoming_tags,
@@ -340,7 +336,6 @@ def detail(id):
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
-        money_flow_by_day=money_flow_by_day,
         cards=cards_data,
         top_incoming=top_incoming,
         top_outgoing=top_outgoing,
