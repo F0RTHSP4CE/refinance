@@ -1,11 +1,13 @@
 import { Anchor, Burger, Button, Group, Menu, Modal, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { CardTopUpModal } from '@/pages/TopUp/Card';
+import { RequestMoneyModal, ExchangeModal } from '@/components/PaymentModals';
+import { POLLING_INTERVALS } from '@/constants/polling';
 import logo from '@/assets/logo.png';
 
 const NAV_LINKS = [
@@ -15,7 +17,6 @@ const NAV_LINKS = [
   { to: '/deposits', label: 'Deposits' },
   { to: '/fee', label: 'Fee' },
   { to: '/splits', label: 'Split' },
-  { to: '/exchange', label: 'Exchange' },
   { to: '/stats', label: 'Stats' },
   { to: '/users', label: 'Users' },
 ] as const;
@@ -24,6 +25,8 @@ export const Navbar = () => {
   const [opened, { open, close }] = useDisclosure(false);
   const [cardModalOpened, { open: openCardModal, close: closeCardModal }] = useDisclosure(false);
   const [burgerOpened, { open: openBurger, close: closeBurger }] = useDisclosure(false);
+  const [requestMoneyOpened, setRequestMoneyOpened] = useState(false);
+  const [exchangeModalOpened, { open: openExchangeModal, close: closeExchangeModal }] = useDisclosure(false);
   const clearSession = useAuthStore((state) => state.clearSession);
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
@@ -34,9 +37,9 @@ export const Navbar = () => {
 
   const { data: balances } = useQuery({
     queryKey: ['balances', actorEntity?.id],
-    queryFn: () => (actorEntity ? getBalances(actorEntity.id) : null),
+    queryFn: ({ signal }) => (actorEntity ? getBalances(actorEntity.id, signal) : null),
     enabled: !!actorEntity,
-    refetchInterval: 30000, // Refresh every 30s
+    refetchInterval: POLLING_INTERVALS.BALANCES,
   });
 
   const { pathname } = useLocation();
@@ -82,9 +85,7 @@ export const Navbar = () => {
           closeOnItemClick
         >
           <Menu.Target>
-            <Button variant="light" aria-label="More menu">
-              <Burger opened={burgerOpened} aria-hidden />
-            </Button>
+            <Burger opened={burgerOpened} />
           </Menu.Target>
 
           <Menu.Dropdown>
@@ -130,12 +131,13 @@ export const Navbar = () => {
               </Menu.Target>
 
               <Menu.Dropdown>
-                <Menu.Item onClick={openCardModal}>
-                  By card
-                </Menu.Item>
+                <Menu.Item onClick={openCardModal}>By card</Menu.Item>
                 <Menu.Item component={Link} to="/top-up/manual">
                   Cash / Bank / Crypto
                 </Menu.Item>
+                <Menu.Item onClick={() => setRequestMoneyOpened(true)}>Request Money</Menu.Item>
+                <Menu.Divider />
+                <Menu.Item onClick={openExchangeModal}>Exchange</Menu.Item>
               </Menu.Dropdown>
             </Menu>
 
@@ -165,6 +167,14 @@ export const Navbar = () => {
       </Group>
 
       <CardTopUpModal opened={cardModalOpened} onClose={closeCardModal} />
+      <RequestMoneyModal
+        opened={requestMoneyOpened}
+        onClose={() => setRequestMoneyOpened(false)}
+      />
+      <ExchangeModal
+        opened={exchangeModalOpened}
+        onClose={closeExchangeModal}
+      />
 
       <Modal opened={opened} onClose={close} title="Logout" centered>
         <Text size="sm" c="dimmed" mb="md">

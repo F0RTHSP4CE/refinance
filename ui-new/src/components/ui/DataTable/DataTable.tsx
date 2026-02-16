@@ -30,7 +30,10 @@ export function DataTable<T extends Record<string, unknown>>({
         </Table.Thead>
         <Table.Tbody>
           <Table.Tr>
-            <Table.Td colSpan={columns.length} style={{ textAlign: 'center', color: 'var(--mantine-color-dimmed)' }}>
+            <Table.Td
+              colSpan={columns.length}
+              style={{ textAlign: 'center', color: 'var(--mantine-color-dimmed)' }}
+            >
               {emptyMessage}
             </Table.Td>
           </Table.Tr>

@@ -22,7 +22,9 @@ export const SessionStatusCard = ({
       <Stack gap="xs">
         <Text fw={600}>Session status</Text>
         <Text size="sm" c="dimmed">
-          {token ? 'Token is set in localStorage and X-Token header will be sent.' : 'No token set yet.'}
+          {token
+            ? 'Token is set in localStorage and X-Token header will be sent.'
+            : 'No token set yet.'}
         </Text>
         <Text size="sm">
           Actor:{' '}

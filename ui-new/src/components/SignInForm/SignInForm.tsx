@@ -90,13 +90,7 @@ export const SignInForm = () => {
           {successMessage}
           {loginLink && (
             <div className="mt-2">
-              <Button
-                component="a"
-                href={loginLink}
-                variant="outline"
-                color="gray"
-                size="xs"
-              >
+              <Button component="a" href={loginLink} variant="outline" color="gray" size="xs">
                 Log in directly (Dev)
               </Button>
             </div>

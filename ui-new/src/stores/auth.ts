@@ -4,6 +4,11 @@ import type { ActorEntity } from '@/types/api';
 
 const TOKEN_KEY = 'refinance_v2_token';
 
+const getInitialToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+};
+
 type AuthState = {
   token: string | null;
   actorEntity: ActorEntity | null;
@@ -12,13 +17,6 @@ type AuthState = {
   setToken: (token: string) => void;
   clearSession: () => void;
   loadActor: () => Promise<void>;
-};
-
-const getInitialToken = (): string | null => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return window.localStorage.getItem(TOKEN_KEY);
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({

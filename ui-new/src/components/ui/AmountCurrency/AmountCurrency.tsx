@@ -13,11 +13,7 @@ type AmountsCurrencyProps = {
   size?: 'xs' | 'sm' | 'md' | 'lg';
 };
 
-export const AmountCurrency = ({
-  amount,
-  currency,
-  size = 'sm',
-}: AmountCurrencyProps) => (
+export const AmountCurrency = ({ amount, currency, size = 'sm' }: AmountCurrencyProps) => (
   <Text size={size}>
     {amount} {currency.toUpperCase()}
   </Text>

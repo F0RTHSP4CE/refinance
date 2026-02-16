@@ -21,6 +21,16 @@ import type { Entity, Invoice, Transaction } from '@/types/api';
 
 const LIMIT = 20;
 
+// Safely validate and parse entity ID from URL
+const validateEntityId = (id: string | undefined): number | null => {
+  if (!id) return null;
+  const parsed = parseInt(id, 10);
+  if (Number.isNaN(parsed) || parsed <= 0 || parsed > Number.MAX_SAFE_INTEGER) {
+    return null;
+  }
+  return parsed;
+};
+
 export const Profile = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
@@ -29,13 +39,8 @@ export const Profile = () => {
 
   const tab = searchParams.get('tab') ?? 'profile';
 
-  const parsedId = id ? parseInt(id, 10) : undefined;
-  const profileId =
-    id === undefined
-      ? actorEntity?.id
-      : Number.isNaN(parsedId!)
-        ? undefined
-        : parsedId;
+  const validatedId = useMemo(() => validateEntityId(id), [id]);
+  const profileId = id === undefined ? actorEntity?.id : validatedId;
   const isOwnProfile = profileId != null && profileId === actorEntity?.id;
 
   useEffect(() => {
@@ -46,26 +51,34 @@ export const Profile = () => {
 
   const { data: entity, isError: entityError, isLoading: entityLoading } = useQuery({
     queryKey: ['entities', profileId],
-    queryFn: () => (isOwnProfile ? getMe() : getEntity(profileId!)),
+    queryFn: ({ signal }) => {
+      if (isOwnProfile) {
+        return getMe(signal);
+      }
+      if (profileId) {
+        return getEntity(profileId, signal);
+      }
+      return Promise.reject(new Error('Invalid profile ID'));
+    },
     enabled: !!profileId,
   });
 
   const { data: balances } = useQuery({
     queryKey: ['balances', profileId],
-    queryFn: () => (profileId ? getBalances(profileId) : null),
+    queryFn: ({ signal }) => (profileId ? getBalances(profileId, signal) : null),
     enabled: !!profileId,
   });
 
   const { data: transactionsData } = useQuery({
     queryKey: ['transactions', profileId],
-    queryFn: () =>
-      profileId ? getTransactions({ entity_id: profileId, limit: LIMIT }) : null,
+    queryFn: ({ signal }) =>
+      profileId ? getTransactions({ entity_id: profileId, limit: LIMIT, signal }) : null,
     enabled: !!profileId,
   });
 
   const { data: invoicesData } = useQuery({
     queryKey: ['invoices', profileId],
-    queryFn: () => (profileId ? getInvoices({ entity_id: profileId, limit: LIMIT }) : null),
+    queryFn: ({ signal }) => (profileId ? getInvoices({ entity_id: profileId, limit: LIMIT, signal }) : null),
     enabled: !!profileId,
   });
 
@@ -81,12 +94,27 @@ export const Profile = () => {
   const transactions = transactionsData?.items ?? [];
   const invoices = invoicesData?.items ?? [];
   const [copied, setCopied] = useState(false);
-  const copyToClipboard = useCallback((text: string) => {
-    void navigator.clipboard.writeText(text).then(() => {
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const copyToClipboard = useCallback(async (text: string) => {
+    setCopyError(null);
+    try {
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to copy to clipboard';
+      setCopyError(message);
+      setTimeout(() => setCopyError(null), 3000);
+    }
   }, []);
+
+  // Copy error display component
+  const CopyErrorAlert = () =>
+    copyError ? (
+      <Text size="xs" c="red" mt={4}>
+        {copyError}
+      </Text>
+    ) : null;
 
   if (!actorEntity) {
     return (
@@ -287,129 +315,132 @@ export const Profile = () => {
 
         <Tabs.Panel value="profile">
           <Stack gap="lg" mt="md">
-      <AppCard>
-        <Stack gap="md">
-          <Flex gap="sm" align="center" wrap="nowrap">
-            <Text size="xl" fw={700} lh={1}>
-              {e.name}
-            </Text>
-            {isOwnProfile && (
-              <Badge
-                size="sm"
-                variant="light"
-                color="blue"
-                className="shrink-0 leading-none mt-px"
-              >
-                This is you
-              </Badge>
-            )}
-          </Flex>
-          <Group gap="md">
-            <Text size="sm" c="dimmed">
-              ID: {e.id}
-            </Text>
-            <Text size="sm" c="dimmed">
-              Name: {e.name}
-            </Text>
-            <Badge size="sm" color={e.active ? 'green' : 'gray'}>
-              {e.active ? 'Active' : 'Inactive'}
-            </Badge>
-          </Group>
-          {e?.tags?.length ? <TagList tags={e.tags} showAll /> : null}
-          {e?.created_at && (
-            <Text size="sm" c="dimmed" component="span">
-              Created: <RelativeDate isoString={e.created_at} />
-            </Text>
-          )}
-
-          {isOwnProfile && (e?.auth?.telegram_id || e?.auth?.signal_id) && (
-            <Group gap="md" mt="xs">
-              {e.auth.telegram_id != null && String(e.auth.telegram_id).trim() && (
-                <Tooltip label={copied ? 'Copied!' : 'Click to copy'}>
-                  <Text size="sm" c="dimmed">
-                    Telegram:{' '}
-                    <Text
-                      component="span"
+            <AppCard>
+              <Stack gap="md">
+                <Flex gap="sm" align="center" wrap="nowrap">
+                  <Text size="xl" fw={700} lh={1}>
+                    {e.name}
+                  </Text>
+                  {isOwnProfile && (
+                    <Badge
                       size="sm"
-                      c="dimmed"
-                      className="cursor-pointer border-b border-dashed border-[var(--mantine-color-dimmed)]"
-                      onClick={() => copyToClipboard(String(e.auth!.telegram_id))}
+                      variant="light"
+                      color="blue"
+                      className="shrink-0 leading-none mt-px"
                     >
-                      {String(e.auth.telegram_id)}
-                    </Text>
-                  </Text>
-                </Tooltip>
-              )}
-              {e.auth.signal_id != null && String(e.auth.signal_id).trim() && (
-                <Tooltip label={copied ? 'Copied!' : 'Click to copy'}>
-                  <Text size="sm" c="dimmed">
-                    Signal:{' '}
-                    <Text
-                      component="span"
-                      size="sm"
-                      c="dimmed"
-                      className="cursor-pointer border-b border-dashed border-[var(--mantine-color-dimmed)]"
-                      onClick={() => copyToClipboard(String(e.auth!.signal_id))}
-                    >
-                      {String(e.auth.signal_id)}
-                    </Text>
-                  </Text>
-                </Tooltip>
-              )}
-            </Group>
-          )}
-        </Stack>
-      </AppCard>
-
-      <AppCard>
-        <Text size="lg" fw={600} mb="md">
-          Balance
-        </Text>
-        {balances && currencies.length > 0 ? (
-          <Stack gap="xs">
-            {currencies.map((currency: string) => {
-              const completed = balances.completed?.[currency] ?? '0';
-              const draft = balances.draft?.[currency];
-              const hasDraft = draft && parseFloat(draft) !== 0;
-              return (
-                <Group key={currency} gap="xs">
-                  <Text size="sm" fw={500}>
-                    {completed} {currency.toUpperCase()}
-                  </Text>
-                  {hasDraft && (
-                    <Text size="xs" c="dimmed">
-                      ({parseFloat(draft) > 0 ? '+' : ''}
-                      {draft} draft)
-                    </Text>
+                      This is you
+                    </Badge>
                   )}
+                </Flex>
+                <Group gap="md">
+                  <Text size="sm" c="dimmed">
+                    ID: {e.id}
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    Name: {e.name}
+                  </Text>
+                  <Badge size="sm" color={e.active ? 'green' : 'gray'}>
+                    {e.active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </Group>
-              );
-            })}
-          </Stack>
-        ) : (
-          <Text size="sm" c="dimmed">
-            No transactions.
-          </Text>
-        )}
-      </AppCard>
+                {e?.tags?.length ? <TagList tags={e.tags} showAll /> : null}
+                {e?.created_at && (
+                  <Text size="sm" c="dimmed" component="span">
+                    Created: <RelativeDate isoString={e.created_at} />
+                  </Text>
+                )}
 
-      <AppCard>
-        <Text size="lg" fw={600} mb="md">
-          Latest Transactions
-        </Text>
-        <DataTable
-          columns={transactionColumns}
-          data={transactions}
-          emptyMessage="No transactions."
-        />
-      </AppCard>
+                {isOwnProfile && (e?.auth?.telegram_id || e?.auth?.signal_id) && (
+                  <>
+                    <Group gap="md" mt="xs">
+                      {e.auth.telegram_id != null && String(e.auth.telegram_id).trim() && (
+                        <Tooltip label={copied ? 'Copied!' : 'Click to copy'}>
+                          <Text size="sm" c="dimmed">
+                            Telegram:{' '}
+                            <Text
+                              component="span"
+                              size="sm"
+                              c="dimmed"
+                              className="cursor-pointer border-b border-dashed border-[var(--mantine-color-dimmed)]"
+                              onClick={() => copyToClipboard(String(e.auth!.telegram_id))}
+                            >
+                              {String(e.auth.telegram_id)}
+                            </Text>
+                          </Text>
+                        </Tooltip>
+                      )}
+                      {e.auth.signal_id != null && String(e.auth.signal_id).trim() && (
+                        <Tooltip label={copied ? 'Copied!' : 'Click to copy'}>
+                          <Text size="sm" c="dimmed">
+                            Signal:{' '}
+                            <Text
+                              component="span"
+                              size="sm"
+                              c="dimmed"
+                              className="cursor-pointer border-b border-dashed border-[var(--mantine-color-dimmed)]"
+                              onClick={() => copyToClipboard(String(e.auth!.signal_id))}
+                            >
+                              {String(e.auth.signal_id)}
+                            </Text>
+                          </Text>
+                        </Tooltip>
+                      )}
+                    </Group>
+                    <CopyErrorAlert />
+                  </>
+                )}
+              </Stack>
+            </AppCard>
 
-      <AppCard>
-        <Text size="lg" fw={600} mb="md">
-          Invoices
-        </Text>
-        <DataTable columns={invoiceColumns} data={invoices} emptyMessage="No invoices." />
-      </AppCard>
+            <AppCard>
+              <Text size="lg" fw={600} mb="md">
+                Balance
+              </Text>
+              {balances && currencies.length > 0 ? (
+                <Stack gap="xs">
+                  {currencies.map((currency: string) => {
+                    const completed = balances.completed?.[currency] ?? '0';
+                    const draft = balances.draft?.[currency];
+                    const hasDraft = draft && parseFloat(draft) !== 0;
+                    return (
+                      <Group key={currency} gap="xs">
+                        <Text size="sm" fw={500}>
+                          {completed} {currency.toUpperCase()}
+                        </Text>
+                        {hasDraft && (
+                          <Text size="xs" c="dimmed">
+                            ({parseFloat(draft) > 0 ? '+' : ''}
+                            {draft} draft)
+                          </Text>
+                        )}
+                      </Group>
+                    );
+                  })}
+                </Stack>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  No transactions.
+                </Text>
+              )}
+            </AppCard>
+
+            <AppCard>
+              <Text size="lg" fw={600} mb="md">
+                Latest Transactions
+              </Text>
+              <DataTable
+                columns={transactionColumns}
+                data={transactions}
+                emptyMessage="No transactions."
+              />
+            </AppCard>
+
+            <AppCard>
+              <Text size="lg" fw={600} mb="md">
+                Invoices
+              </Text>
+              <DataTable columns={invoiceColumns} data={invoices} emptyMessage="No invoices." />
+            </AppCard>
           </Stack>
         </Tabs.Panel>
 

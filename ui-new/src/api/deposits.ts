@@ -1,4 +1,3 @@
-import { useAuthStore } from '@/stores/auth';
 import { apiRequest } from './client';
 
 export type EntityRef = {
@@ -37,10 +36,7 @@ export type KeepzDepositCreate = {
   currency: string;
 };
 
-export const createKeepzDeposit = async (
-  params: KeepzDepositCreate
-): Promise<Deposit> => {
-  const token = useAuthStore.getState().token;
+export const createKeepzDeposit = async (params: KeepzDepositCreate): Promise<Deposit> => {
   const query = new URLSearchParams({
     to_entity_id: String(params.to_entity_id),
     amount: String(params.amount),
@@ -48,13 +44,11 @@ export const createKeepzDeposit = async (
   });
   return apiRequest<Deposit>(`deposits/providers/keepz?${query}`, {
     method: 'POST',
-    token,
   });
 };
 
-export const getDeposit = async (id: number): Promise<Deposit> => {
-  const token = useAuthStore.getState().token;
-  return apiRequest<Deposit>(`deposits/${id}`, { token });
+export const getDeposit = async (id: number, signal?: AbortSignal): Promise<Deposit> => {
+  return apiRequest<Deposit>(`deposits/${id}`, { signal });
 };
 
 export const getPaymentUrl = (deposit: Deposit): string | null => {
@@ -70,9 +64,7 @@ export const isDevModeDeposit = (deposit: Deposit): boolean => {
 };
 
 export const completeDepositDev = async (depositId: number): Promise<Deposit> => {
-  const token = useAuthStore.getState().token;
   return apiRequest<Deposit>(`deposits/${depositId}/complete-dev`, {
     method: 'POST',
-    token,
   });
 };
