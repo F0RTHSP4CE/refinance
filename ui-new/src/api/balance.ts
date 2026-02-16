@@ -1,4 +1,3 @@
-import { useAuthStore } from '@/stores/auth';
 import { apiRequest } from './client';
 
 export type Balances = {
@@ -6,9 +5,6 @@ export type Balances = {
   completed: Record<string, string>;
 };
 
-export const getBalances = async (entityId: number): Promise<Balances> => {
-  const token = useAuthStore.getState().token;
-  return apiRequest<Balances>(`balances/${entityId}`, {
-    token,
-  });
+export const getBalances = async (entityId: number, signal?: AbortSignal): Promise<Balances> => {
+  return apiRequest<Balances>(`balances/${entityId}`, { signal });
 };

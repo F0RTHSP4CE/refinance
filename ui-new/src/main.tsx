@@ -6,6 +6,13 @@ import {
   MantineProvider,
   type VariantColorsResolver,
 } from '@mantine/core'
+import { QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter } from 'react-router-dom'
+import '@mantine/core/styles.css'
+import './index.css'
+import { ApiError } from '@/api/client'
+import { App } from '@/App'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const variantColorResolver: VariantColorsResolver = (input) => {
   if (input.variant === 'filled') {
@@ -45,22 +52,43 @@ const theme = createTheme({
   primaryShade: { light: 6, dark: 4 },
   variantColorResolver,
 })
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
-import '@mantine/core/styles.css'
-import './index.css'
-import { App } from '@/App'
 
-const queryClient = new QueryClient()
+// Global error handler for TanStack Query
+const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      console.error('Query error:', error);
+      // Log to error tracking service in production
+      // import.meta.env is Vite's way of accessing env variables
+      if (import.meta.env.PROD) {
+        // Example: Sentry.captureException(error);
+      }
+    },
+  }),
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    },
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} defaultColorScheme="dark">
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </MantineProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <MantineProvider theme={theme} defaultColorScheme="dark">
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </MantineProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

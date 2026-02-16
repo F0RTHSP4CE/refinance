@@ -14,7 +14,7 @@ import { IconCopy } from '@tabler/icons-react';
 import confetti from 'canvas-confetti';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   completeDepositDev,
@@ -25,6 +25,7 @@ import {
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
+import { POLLING_INTERVALS } from '@/constants/polling';
 
 const CONFETTI_COLORS = ['#FFD700', '#FFA500', '#FF6347', '#00C851', '#2BBBAD', '#fff', '#AA66CC'];
 
@@ -84,33 +85,48 @@ const fireConfetti = () => {
   }, 50);
 };
 
+// Validate deposit ID safely
+const validateDepositId = (id: string | undefined): number | null => {
+  if (!id) return null;
+  const parsed = parseInt(id, 10);
+  if (Number.isNaN(parsed) || parsed <= 0 || parsed > Number.MAX_SAFE_INTEGER) {
+    return null;
+  }
+  return parsed;
+};
+
 export const DepositDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const depositId = id ? parseInt(id, 10) : NaN;
+  const depositId = useMemo(() => validateDepositId(id), [id]);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [successOpen, setSuccessOpen] = useState(false);
   const [oldBalance, setOldBalance] = useState<string | null>(null);
   const [devCompleteError, setDevCompleteError] = useState<string | null>(null);
   const [devCompleteLoading, setDevCompleteLoading] = useState(false);
-  const devCompleteTriggered = useRef(false);
-  const devCompleteInFlight = useRef(false);
-  const successFired = useRef(false);
+  
+  // Use reducer pattern for complex state management instead of multiple refs
+  const devCompleteState = useRef<{
+    triggered: boolean;
+    inFlight: boolean;
+    successShown: boolean;
+  }>({ triggered: false, inFlight: false, successShown: false });
 
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
   const { data: deposit, isLoading, isError, error } = useQuery({
     queryKey: ['deposit', depositId],
-    queryFn: () => getDeposit(depositId),
-    enabled: !Number.isNaN(depositId),
-    refetchInterval: 10_000,
+    queryFn: ({ signal }) => depositId ? getDeposit(depositId, signal) : Promise.reject(new Error('Invalid deposit ID')),
+    enabled: depositId !== null,
+    refetchInterval: POLLING_INTERVALS.DEPOSIT_STATUS,
   });
 
   const { data: balances } = useQuery({
     queryKey: ['balances', actorEntity?.id],
-    queryFn: () =>
-      actorEntity ? getBalances(actorEntity.id) : Promise.resolve(null),
+    queryFn: ({ signal }) =>
+      actorEntity ? getBalances(actorEntity.id, signal) : Promise.resolve(null),
     enabled: !!actorEntity && successOpen,
   });
 
@@ -118,44 +134,52 @@ export const DepositDetail = () => {
   const isDevDeposit = deposit ? isDevModeDeposit(deposit) : false;
 
   const handleCompleteDev = useCallback(async () => {
-    if (!deposit || devCompleteInFlight.current) return;
-    devCompleteInFlight.current = true;
+    if (!deposit || devCompleteState.current.inFlight) return;
+    devCompleteState.current.inFlight = true;
     setDevCompleteError(null);
     setDevCompleteLoading(true);
     try {
       await completeDepositDev(deposit.id);
-      void queryClient.invalidateQueries({ queryKey: ['deposit', depositId] });
+      await queryClient.invalidateQueries({ queryKey: ['deposit', depositId] });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to complete deposit';
       setDevCompleteError(message);
-      devCompleteTriggered.current = false;
-      devCompleteInFlight.current = false;
+      // Reset state to allow retry
+      devCompleteState.current.triggered = false;
     } finally {
       setDevCompleteLoading(false);
-      devCompleteInFlight.current = false;
+      devCompleteState.current.inFlight = false;
     }
   }, [deposit, depositId, queryClient]);
 
+  // Auto-complete dev deposits after delay
   useEffect(() => {
     if (
       !isDevDeposit ||
       !deposit ||
       deposit.status !== 'pending' ||
-      devCompleteTriggered.current
-    )
+      devCompleteState.current.triggered ||
+      devCompleteState.current.inFlight
+    ) {
       return;
-    devCompleteTriggered.current = true;
+    }
+    
+    devCompleteState.current.triggered = true;
     const timer = setTimeout(() => {
       void handleCompleteDev();
     }, 10_000);
+    
     return () => clearTimeout(timer);
   }, [isDevDeposit, deposit, handleCompleteDev]);
 
+  // Handle successful deposit completion
   useEffect(() => {
-    if (deposit?.status !== 'completed' || successFired.current) return;
-    successFired.current = true;
+    if (deposit?.status !== 'completed' || devCompleteState.current.successShown) return;
+    
+    devCompleteState.current.successShown = true;
     fireConfetti();
     setSuccessOpen(true);
+    
     if (actorEntity) {
       void queryClient.invalidateQueries({
         queryKey: ['balances', actorEntity.id],
@@ -178,12 +202,15 @@ export const DepositDetail = () => {
 
   const handleCopy = useCallback(async () => {
     if (!paymentUrl) return;
+    setCopyError(null);
     try {
       await navigator.clipboard.writeText(paymentUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to copy to clipboard';
+      setCopyError(message);
+      setTimeout(() => setCopyError(null), 3000);
     }
   }, [paymentUrl]);
 
@@ -192,7 +219,7 @@ export const DepositDetail = () => {
     navigate('/');
   }, [navigate]);
 
-  if (Number.isNaN(depositId) || isError) {
+  if (depositId === null || isError) {
     return (
       <Center h="100%">
         <Text c="dimmed">{error?.message ?? 'Invalid deposit ID'}</Text>
@@ -262,6 +289,12 @@ export const DepositDetail = () => {
                   </Tooltip>
                 </Group>
 
+                {copyError && (
+                  <Alert color="red" variant="light" p="xs">
+                    <Text size="xs">{copyError}</Text>
+                  </Alert>
+                )}
+
                 {isDevDeposit && (
                   <>
                     <Text size="xs" c="dimmed">
@@ -271,7 +304,7 @@ export const DepositDetail = () => {
                       variant="subtle"
                       size="xs"
                       onClick={() => {
-                        devCompleteTriggered.current = true;
+                        devCompleteState.current.triggered = true;
                         void handleCompleteDev();
                       }}
                       loading={devCompleteLoading}

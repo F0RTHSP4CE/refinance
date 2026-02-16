@@ -62,25 +62,42 @@ type EChartsWrapperProps = {
 const EChartsWrapper = ({ option, height = 'md' }: EChartsWrapperProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
+  // Initialize chart only once
   useEffect(() => {
     if (!ref.current) return;
+
+    // Dispose existing chart if any
+    if (chartRef.current) {
+      chartRef.current.dispose();
+      chartRef.current = null;
+    }
+
     const chart = echarts.init(ref.current);
     chartRef.current = chart;
     chart.setOption(option);
 
-    const resizeObserver = new ResizeObserver(() => {
+    // Create resize observer
+    resizeObserverRef.current = new ResizeObserver(() => {
       chart.resize();
     });
-    resizeObserver.observe(ref.current);
+    resizeObserverRef.current.observe(ref.current);
 
+    // Cleanup function
     return () => {
-      resizeObserver.disconnect();
-      chart.dispose();
-      chartRef.current = null;
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (chartRef.current) {
+        chartRef.current.dispose();
+        chartRef.current = null;
+      }
     };
-  }, []);
+  }, []); // Empty deps - only initialize once
 
+  // Update chart when option changes
   useEffect(() => {
     if (chartRef.current) {
       chartRef.current.setOption(option, { replaceMerge: ['series'] });
@@ -119,7 +136,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
 
   const { data: stats, isLoading, isError } = useQuery({
     queryKey: ['stats', profileId, months, limit],
-    queryFn: () => getEntityStatsBundle(profileId, { months, limit }),
+    queryFn: ({ signal }) => getEntityStatsBundle(profileId, { months, limit, signal }),
     enabled: !!profileId,
   });
 
@@ -180,108 +197,116 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
 
   const topIncomingOption: echarts.EChartsOption | null = stats.top_incoming.length
     ? {
-        grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
-        tooltip: {
-          formatter: (p: unknown) => {
-            const x = p as { name: string; value: number };
-            return `${x.name}: ${formatUSD(x.value)}`;
-          },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (p: unknown) => {
+          const params = p as Array<{ name: string; value: number }>;
+          const x = params[0];
+          return `${x.name}: ${formatUSD(x.value)}`;
         },
-        xAxis: {
-          type: 'category',
-          data: stats.top_incoming.map((d) => d.entity_name),
-          axisLabel: { rotate: 30, ...AXIS_LABEL },
-          axisLine: AXIS_LINE,
+      },
+      xAxis: {
+        type: 'category',
+        data: stats.top_incoming.map((d) => d.entity_name),
+        axisLabel: { rotate: 30, ...AXIS_LABEL },
+        axisLine: AXIS_LINE,
+      },
+      yAxis: { type: 'value', axisLabel: { formatter: '${value}', ...AXIS_LABEL }, splitLine: SPLIT_LINE },
+      series: [
+        {
+          type: 'bar',
+          data: stats.top_incoming.map((d, i) => ({
+            value: d.total_usd,
+            itemStyle: { color: colorFromId(d.entity_id, i) },
+          })),
         },
-        yAxis: { type: 'value', axisLabel: { formatter: '${value}', ...AXIS_LABEL }, splitLine: SPLIT_LINE },
-        series: [
-          {
-            type: 'bar',
-            data: stats.top_incoming.map((d, i) => ({
-              value: d.total_usd,
-              itemStyle: { color: colorFromId(d.entity_id, i) },
-            })),
-          },
-        ],
-      }
+      ],
+    }
     : null;
 
   const topIncomingTagsOption: echarts.EChartsOption | null = stats.top_incoming_tags.length
     ? {
-        tooltip: {
-          formatter: (p: unknown) => {
-            const x = p as { name: string; value: number; percent: number };
-            return `${x.name}: ${formatUSD(x.value)} (${x.percent?.toFixed(1)}%)`;
-          },
+      tooltip: {
+        formatter: (p: unknown) => {
+          const x = p as { name: string; value: number; percent: number };
+          return `${x.name}: ${formatUSD(x.value)} (${x.percent?.toFixed(1)}%)`;
         },
-        legend: { bottom: 0, textStyle: { color: '#e2e8f0' } },
-        series: [
-          {
-            type: 'pie',
-            radius: ['40%', '70%'],
-            label: PIE_LABEL,
-            labelLine: PIE_LABEL_LINE,
-            data: stats.top_incoming_tags.map((d, i) => ({
-              name: d.tag_name,
-              value: d.total_usd,
-              itemStyle: { color: colorFromId(d.tag_id, i) },
-            })),
-          },
-        ],
-      }
+      },
+      legend: { bottom: '5%', textStyle: { color: '#e2e8f0' } },
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['50%', '45%'],
+          label: PIE_LABEL,
+          labelLine: PIE_LABEL_LINE,
+          data: stats.top_incoming_tags.map((d, i) => ({
+            name: d.tag_name,
+            value: d.total_usd,
+            itemStyle: { color: colorFromId(d.tag_id, i) },
+          })),
+        },
+      ],
+    }
     : null;
 
   const topOutgoingOption: echarts.EChartsOption | null = stats.top_outgoing.length
     ? {
-        grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
-        tooltip: {
-          formatter: (p: unknown) => {
-            const x = p as { name: string; value: number };
-            return `${x.name}: ${formatUSD(x.value)}`;
-          },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (p: unknown) => {
+          const params = p as Array<{ name: string; value: number }>;
+          const x = params[0];
+          return `${x.name}: ${formatUSD(x.value)}`;
         },
-        xAxis: {
-          type: 'category',
-          data: stats.top_outgoing.map((d) => d.entity_name),
-          axisLabel: { rotate: 30, ...AXIS_LABEL },
-          axisLine: AXIS_LINE,
+      },
+      xAxis: {
+        type: 'category',
+        data: stats.top_outgoing.map((d) => d.entity_name),
+        axisLabel: { rotate: 30, ...AXIS_LABEL },
+        axisLine: AXIS_LINE,
+      },
+      yAxis: { type: 'value', axisLabel: { formatter: '${value}', ...AXIS_LABEL }, splitLine: SPLIT_LINE },
+      series: [
+        {
+          type: 'bar',
+          data: stats.top_outgoing.map((d, i) => ({
+            value: d.total_usd,
+            itemStyle: { color: colorFromId(d.entity_id, i) },
+          })),
         },
-        yAxis: { type: 'value', axisLabel: { formatter: '${value}', ...AXIS_LABEL }, splitLine: SPLIT_LINE },
-        series: [
-          {
-            type: 'bar',
-            data: stats.top_outgoing.map((d, i) => ({
-              value: d.total_usd,
-              itemStyle: { color: colorFromId(d.entity_id, i) },
-            })),
-          },
-        ],
-      }
+      ],
+    }
     : null;
 
   const topOutgoingTagsOption: echarts.EChartsOption | null = stats.top_outgoing_tags.length
     ? {
-        tooltip: {
-          formatter: (p: unknown) => {
-            const x = p as { name: string; value: number; percent: number };
-            return `${x.name}: ${formatUSD(x.value)} (${x.percent?.toFixed(1)}%)`;
-          },
+      tooltip: {
+        formatter: (p: unknown) => {
+          const x = p as { name: string; value: number; percent: number };
+          return `${x.name}: ${formatUSD(x.value)} (${x.percent?.toFixed(1)}%)`;
         },
-        legend: { bottom: 0, textStyle: { color: '#e2e8f0' } },
-        series: [
-          {
-            type: 'pie',
-            radius: ['40%', '70%'],
-            label: PIE_LABEL,
-            labelLine: PIE_LABEL_LINE,
-            data: stats.top_outgoing_tags.map((d, i) => ({
-              name: d.tag_name,
-              value: d.total_usd,
-              itemStyle: { color: colorFromId(d.tag_id, i) },
-            })),
-          },
-        ],
-      }
+      },
+      legend: { bottom: '5%', textStyle: { color: '#e2e8f0' } },
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['50%', '45%'],
+          label: PIE_LABEL,
+          labelLine: PIE_LABEL_LINE,
+          data: stats.top_outgoing_tags.map((d, i) => ({
+            name: d.tag_name,
+            value: d.total_usd,
+            itemStyle: { color: colorFromId(d.tag_id, i) },
+          })),
+        },
+      ],
+    }
     : null;
 
   return (
@@ -352,7 +377,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
             </Text>
           )}
           {topIncomingTagsOption ? (
-            <div className="w-full h-[280px]">
+            <div className="w-full h-[320px]">
               <Text size="sm" fw={500} mb="xs">
                 Top Incoming Tags
               </Text>
@@ -384,7 +409,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
             </Text>
           )}
           {topOutgoingTagsOption ? (
-            <div className="w-full h-[280px]">
+            <div className="w-full h-[320px]">
               <Text size="sm" fw={500} mb="xs">
                 Top Outgoing Tags
               </Text>

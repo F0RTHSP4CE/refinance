@@ -1,11 +1,11 @@
-import js from '@eslint/js'
-import globals from 'globals'
-import importPlugin from 'eslint-plugin-import'
-import reactPlugin from 'eslint-plugin-react'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
-import tseslint from 'typescript-eslint'
-import { defineConfig, globalIgnores } from 'eslint/config'
+import js from '@eslint/js';
+import globals from 'globals';
+import importPlugin from 'eslint-plugin-import';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import tseslint from 'typescript-eslint';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
   globalIgnores(['dist', 'node_modules', '*.config.*', 'vite.config.ts']),
@@ -48,32 +48,27 @@ export default defineConfig([
         {
           selector:
             "AssignmentExpression[left.type='MemberExpression'][left.property.name='displayName']",
-          message:
-            'Do not use component.displayName; prefer named function components.',
+          message: 'Do not use component.displayName; prefer named function components.',
         },
         {
           selector:
             "ClassDeclaration[superClass.object.name='React'][superClass.property.name='Component']",
-          message:
-            'Class components are not allowed. Use function components and hooks.',
+          message: 'Class components are not allowed. Use function components and hooks.',
         },
         {
           selector:
             "ClassDeclaration[superClass.object.name='React'][superClass.property.name='PureComponent']",
-          message:
-            'Class components are not allowed. Use function components and hooks.',
+          message: 'Class components are not allowed. Use function components and hooks.',
         },
         {
           selector: "ClassDeclaration[superClass.name='Component']",
-          message:
-            'Class components are not allowed. Use function components and hooks.',
+          message: 'Class components are not allowed. Use function components and hooks.',
         },
         {
           selector: "ClassDeclaration[superClass.name='PureComponent']",
-          message:
-            'Class components are not allowed. Use function components and hooks.',
+          message: 'Class components are not allowed. Use function components and hooks.',
         },
       ],
     },
   },
-])
+]);
