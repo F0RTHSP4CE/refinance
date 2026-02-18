@@ -85,6 +85,7 @@ def test_app():
         test_config = Config(
             app_name="refinance-test",
             database_url_env=database_url,
+            pos_secret="test-pos-secret",
         )
         app.dependency_overrides = {get_config: lambda: test_config}
 

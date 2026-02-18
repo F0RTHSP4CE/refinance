@@ -317,33 +317,6 @@ endblock %}
                     {% endif %}
                 </td>
             </tr>
-            <tr>
-                <td>Cards</td>
-                <td>
-                    {% if cards and cards|length > 0 %}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Comment</th>
-                                <th>Created at</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for c in cards %}
-                            <tr>
-                                <td>#{{ c.id }}</td>
-                                <td>{{ c.comment or '—' }}</td>
-                                <td>{{ human_readable_date(c.created_at) }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    -
-                    {% endif %}
-                </td>
-            </tr>
         </table>
         </p>
 
