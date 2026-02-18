@@ -154,16 +154,21 @@ class StatsService(BaseService):
             return Decimal("0")
         if currency.lower() == "usd":
             return amount
+        if amount == 0:
+            return Decimal("0")
+
+        amount_sign = Decimal("1") if amount > 0 else Decimal("-1")
+        absolute_amount = abs(amount)
         # Use calculate_conversion to convert source currency -> usd.
         # (source_amount, target_amount, rate) returned; target_amount is the USD value.
         try:
             _, usd_amount, _ = self._currency_exchange_service.calculate_conversion(
-                source_amount=amount,
+                source_amount=absolute_amount,
                 target_amount=None,
                 source_currency=currency,
                 target_currency="usd",
             )
-            return usd_amount
+            return usd_amount * amount_sign
         except Exception:
             # Fail safe: ignore unknown currency.
             return Decimal("0")
