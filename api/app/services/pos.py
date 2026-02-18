@@ -1,7 +1,7 @@
-"""POS Service for processing point-of-sale (card) payments.
+"""POS Service for processing point-of-sale payments.
 
-Creates a completed transaction from a card-holding entity (resolved by card_hash)
-TO a target entity, tagging the transaction with the `pos` tag. Returns the payer
+Creates a completed transaction from a payer entity (resolved by exact name)
+to a target entity, tagging the transaction with the `pos` tag. Returns the payer
 entity and its updated balance after the transaction.
 """
 
@@ -38,7 +38,7 @@ class POSService:
     def pos(
         self,
         *,
-        card_hash: str,
+        entity_name: str,
         amount: Decimal,
         currency: str,
         to_entity_id: int,
@@ -47,14 +47,13 @@ class POSService:
         """Process a POS payment.
 
         Steps:
-        1. Resolve paying entity by card hash.
+        1. Resolve paying entity by exact name.
         2. Create a COMPLETED transaction from that entity to the target entity,
            tagged with the `pos` tag.
         3. Return (payer entity, payer balance schema) after cache invalidation done by TransactionService.
         """
-        payer = self._entity_service.get_by_card_hash(card_hash)
+        payer = self._entity_service.get_by_name(entity_name)
 
-        # Build and create the transaction. actor_entity_id is the same as from_entity.
         self._transaction_service.create(
             TransactionCreateSchema(
                 amount=amount,
@@ -68,6 +67,5 @@ class POSService:
             overrides={"actor_entity_id": payer.id},
         )
 
-        # Fetch updated balances for the payer entity.
         balances = self._balance_service.get_balances(payer.id)
         return payer, balances

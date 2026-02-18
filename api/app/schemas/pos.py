@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 
 class POSChargeRequest(BaseModel):
-    card_hash: str
+    entity_name: str
     amount: Decimal
     currency: str
     to_entity_id: int

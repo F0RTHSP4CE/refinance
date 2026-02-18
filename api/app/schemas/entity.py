@@ -15,7 +15,7 @@ class EntityAuthSchema(BaseModel):
 
 
 class EntityAuthReadSchema(BaseModel):
-    """Auth schema for API responses - card management moved to entity_cards"""
+    """Auth schema for API responses."""
 
     telegram_id: int | str | None = None
     signal_id: int | str | None = None

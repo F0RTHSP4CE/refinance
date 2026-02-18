@@ -47,25 +47,6 @@ class AuthForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-class AddCardForm(FlaskForm):
-    comment = StringField(
-        "Comment",
-        description="Optional card label",
-        render_kw={"placeholder": "main card"},
-    )
-    card_hash = StringField(
-        "Card Hash",
-        validators=[DataRequired()],
-        description="Unique card hash",
-        render_kw={"placeholder": "a1bc23d45e678f90g123h456i789j0kl"},
-    )
-    submit = SubmitField("Add Card")
-
-
-class DeleteForm(FlaskForm):
-    delete = SubmitField("Delete")
-
-
 class EntityFilterForm(FlaskForm):
     name = StringField("Name")
     comment = StringField("Comment")
@@ -182,9 +163,6 @@ def edit(id):
     auth_data = entity_data.get("auth", {})
     auth_form = AuthForm(prefix="auth", data=auth_data)
 
-    # Fetch cards for this entity
-    cards_data = api.http("GET", f"entities/{id}/cards").json()
-
     # Populate tag choices
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     entity_form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
@@ -208,8 +186,6 @@ def edit(id):
         entity_form=entity_form,
         auth_form=auth_form,
         all_tags=all_tags,
-        cards=cards_data,
-        add_card_form=AddCardForm(prefix="card"),
     )
 
 
@@ -238,7 +214,6 @@ def detail(id):
 
     api = get_refinance_api_client()
     entity_data = api.http("GET", f"entities/{id}").json()
-    cards_data = api.http("GET", f"entities/{id}/cards").json()
     balance_data = api.http("GET", f"balances/{id}").json()
     transactions_page = api.http(
         "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
@@ -336,7 +311,6 @@ def detail(id):
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
-        cards=cards_data,
         top_incoming=top_incoming,
         top_outgoing=top_outgoing,
         top_incoming_tags=top_incoming_tags,
@@ -369,34 +343,4 @@ def stats(id):
             stats_months=stats_months,
             stats_limit=stats_limit,
         )
-    )
-
-
-@entity_bp.route("/<int:id>/cards", methods=["POST"])
-@token_required
-def add_card(id):
-    api = get_refinance_api_client()
-    form = AddCardForm(prefix="card")
-    if form.validate_on_submit():
-        payload = {
-            "comment": form.comment.data or None,
-            "card_hash": form.card_hash.data,
-        }
-        api.http("POST", f"entities/{id}/cards", data=payload)
-    return redirect(url_for("entity.edit", id=id))
-
-
-@entity_bp.route("/<int:id>/cards/<int:card_id>/delete", methods=["GET", "POST"])
-@token_required
-def delete_card(id, card_id):
-    api = get_refinance_api_client()
-    form = DeleteForm()
-    if form.validate_on_submit():
-        api.http("DELETE", f"entities/{id}/cards/{card_id}")
-        return redirect(url_for("entity.edit", id=id))
-    # Fetch card info for confirmation page
-    cards = api.http("GET", f"entities/{id}/cards").json()
-    card = next((c for c in cards if c.get("id") == card_id), None)
-    return render_template(
-        "entity/card_delete.jinja2", form=form, card=card, entity_id=id
     )
