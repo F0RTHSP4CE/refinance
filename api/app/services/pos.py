@@ -64,7 +64,7 @@ class POSService:
                 tag_ids=[pos_tag.id],
                 comment=comment,
             ),
-            overrides={"actor_entity_id": payer.id},
+            overrides={"actor_entity_id": to_entity_id},
         )
 
         balances = self._balance_service.get_balances(payer.id)
