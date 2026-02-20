@@ -1,6 +1,8 @@
 """Currency exchange service"""
 
+import logging
 import math
+import threading
 import time
 from datetime import timedelta
 from decimal import ROUND_DOWN, Decimal
@@ -24,17 +26,19 @@ from app.services.entity import EntityService
 from app.services.tag import TagService
 from app.services.transaction import TransactionService
 from app.uow import get_uow
-from cachetools import TTLCache, cached
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
 D = TypeVar("D", bound=CurrencyDecimal)
+logger = logging.getLogger(__name__)
 
 
 class CurrencyExchangeService:
-    ttl_cache = TTLCache(
-        maxsize=1, ttl=timedelta(hours=1).total_seconds(), timer=time.time
-    )
+    rates_ttl_seconds = timedelta(hours=1).total_seconds()
+    rates_request_timeout_seconds: tuple[float, float] = (2.0, 3.0)
+    _rates_cache: dict | None = None
+    _rates_cached_at: float = 0.0
+    _rates_lock = threading.Lock()
 
     def __init__(
         self,
@@ -47,13 +51,38 @@ class CurrencyExchangeService:
         self.entity_service = entity_service
 
     @property
-    @cached(ttl_cache)
     def _raw_rates(self) -> dict:
-        r = requests.get(
-            "https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json"
-        )
-        assert r.status_code == 200
-        return r.json()
+        now = time.time()
+        cached_rates = self.__class__._rates_cache
+        cached_at = self.__class__._rates_cached_at
+        if cached_rates is not None and now - cached_at < self.rates_ttl_seconds:
+            return cached_rates
+
+        with self.__class__._rates_lock:
+            now = time.time()
+            cached_rates = self.__class__._rates_cache
+            cached_at = self.__class__._rates_cached_at
+            if cached_rates is not None and now - cached_at < self.rates_ttl_seconds:
+                return cached_rates
+
+            try:
+                response = requests.get(
+                    "https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json",
+                    timeout=self.rates_request_timeout_seconds,
+                )
+                response.raise_for_status()
+                rates = response.json()
+                self.__class__._rates_cache = rates
+                self.__class__._rates_cached_at = time.time()
+                return rates
+            except requests.RequestException:
+                if cached_rates is not None:
+                    logger.warning(
+                        "Currency rates fetch failed, using stale cached rates",
+                        exc_info=True,
+                    )
+                    return cached_rates
+                raise
 
     def calculate_conversion(
         self,
