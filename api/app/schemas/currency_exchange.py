@@ -72,3 +72,31 @@ class CurrencyExchangeReceiptSchema(BaseSchema):
     target_amount: CurrencyDecimal
     rate: CurrencyDecimal
     transactions: list[TransactionSchema]
+
+
+class AutoBalanceExchangeItemSchema(BaseSchema):
+    source_currency: str
+    source_amount: CurrencyDecimal
+    target_currency: str
+    target_amount: CurrencyDecimal
+    rate: CurrencyDecimal
+
+
+class AutoBalanceEntityPlanSchema(BaseSchema):
+    entity_id: int
+    entity_name: str
+    exchanges: list[AutoBalanceExchangeItemSchema]
+
+
+class AutoBalancePreviewSchema(BaseSchema):
+    plans: list[AutoBalanceEntityPlanSchema]
+
+
+class AutoBalanceEntityReceiptSchema(BaseSchema):
+    entity_id: int
+    entity_name: str
+    receipts: list[CurrencyExchangeReceiptSchema]
+
+
+class AutoBalanceRunResultSchema(BaseSchema):
+    results: list[AutoBalanceEntityReceiptSchema]

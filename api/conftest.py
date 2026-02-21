@@ -108,6 +108,12 @@ def test_app():
             client.close()
             app.dependency_overrides.clear()
             db_conn.engine.dispose()
+            # Clear in-memory caches so stale data from one test class
+            # does not bleed into the next (each class uses its own DB).
+            from app.services.balance import BalanceService
+
+            BalanceService._cache.clear()
+            BalanceService._treasury_cache.clear()
 
 
 # general fixture to get the token of any entity
