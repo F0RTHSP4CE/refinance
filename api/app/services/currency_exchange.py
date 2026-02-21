@@ -1,36 +1,65 @@
 """Currency exchange service"""
 
 import logging
-import math
 import threading
 import time
 from datetime import timedelta
 from decimal import ROUND_DOWN, Decimal
-from typing import Optional, TypeVar
+from typing import NamedTuple, Optional, TypeVar
 
 import requests
-from app.dependencies.services import get_entity_service, get_transaction_service
+from app.dependencies.services import (
+    get_balance_service,
+    get_entity_service,
+    get_transaction_service,
+)
 from app.errors.currency_exchange import CurrencyExchangeSourceOrTargetAmountZero
 from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
 from app.schemas.currency_exchange import (
+    AutoBalanceEntityPlanSchema,
+    AutoBalanceEntityReceiptSchema,
+    AutoBalanceExchangeItemSchema,
+    AutoBalancePreviewSchema,
+    AutoBalanceRunResultSchema,
     CurrencyExchangePreviewRequestSchema,
     CurrencyExchangePreviewResponseSchema,
     CurrencyExchangeReceiptSchema,
     CurrencyExchangeRequestSchema,
 )
 from app.schemas.transaction import TransactionCreateSchema, TransactionSchema
-from app.seeding import currency_exchange_entity, currency_exchange_tag
+from app.seeding import (
+    automatic_tag,
+    currency_exchange_entity,
+    currency_exchange_tag,
+    ex_resident_tag,
+    member_tag,
+    resident_tag,
+)
+from app.services.balance import BalanceService
 from app.services.entity import EntityService
-from app.services.tag import TagService
 from app.services.transaction import TransactionService
 from app.uow import get_uow
 from fastapi import Depends
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 D = TypeVar("D", bound=CurrencyDecimal)
 logger = logging.getLogger(__name__)
+
+
+class _ExchangePlanItem(NamedTuple):
+    """Internal representation of a single planned exchange."""
+
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+    # When True the executor must pass target_amount to `exchange()` so the
+    # exact debt amount is received without double-rounding loss.
+    use_target_amount: bool = False
 
 
 class CurrencyExchangeService:
@@ -45,10 +74,12 @@ class CurrencyExchangeService:
         db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(get_transaction_service),
         entity_service: EntityService = Depends(get_entity_service),
+        balance_service: BalanceService = Depends(get_balance_service),
     ):
         self.db = db
         self.transaction_service = transaction_service
         self.entity_service = entity_service
+        self.balance_service = balance_service
 
     @property
     def _raw_rates(self) -> dict:
@@ -221,3 +252,244 @@ class CurrencyExchangeService:
                 TransactionSchema.model_validate(source_transaction),
             ],
         )
+
+    # ------------------------------------------------------------------ #
+    # Auto-balance helpers                                                 #
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _cd_to_decimal(value) -> Decimal:
+        """Convert a CurrencyDecimal (or any numeric) to plain Decimal."""
+        if isinstance(value, CurrencyDecimal):
+            return value.to_decimal()
+        return Decimal(str(value))
+
+    def _to_usd(self, currency: str, amount: Decimal) -> Decimal:
+        """Return the USD-equivalent value of *amount* in *currency*."""
+        if currency.lower() == "usd":
+            return amount
+        try:
+            _, usd_amount, _ = self.calculate_conversion(
+                source_amount=amount,
+                target_amount=None,
+                source_currency=currency,
+                target_currency="usd",
+            )
+            return usd_amount
+        except Exception:
+            return amount  # fallback: treat as USD to stay safe
+
+    def _plan_exchanges(self, balances: dict[str, Decimal]) -> list[_ExchangePlanItem]:
+        """Compute the minimal sequence of exchanges needed to eliminate all negative
+        balances using the available positive ones.
+
+        Positive currencies are consumed starting from the one with the lowest
+        USD-equivalent value (smallest first).  The largest debt (by USD value)
+        is targeted first in each round.
+        """
+        ZERO = Decimal("0")
+        remaining = {c: Decimal(str(a)) for c, a in balances.items()}
+        result: list[_ExchangePlanItem] = []
+
+        for _ in range(500):  # safety cap
+            debts = {c: abs(a) for c, a in remaining.items() if a < ZERO}
+            positives = {c: a for c, a in remaining.items() if a > ZERO}
+
+            if not debts or not positives:
+                break
+
+            # Smallest positive currency first (by USD value)
+            sorted_positives = sorted(
+                positives.items(),
+                key=lambda item: self._to_usd(item[0], item[1]),
+            )
+            source_currency, source_avail = sorted_positives[0]
+
+            # Largest debt first (by USD value)
+            sorted_debts = sorted(
+                debts.items(),
+                key=lambda item: self._to_usd(item[0], item[1]),
+                reverse=True,
+            )
+
+            exchange_happened = False
+            for debt_currency, debt_needed in sorted_debts:
+                if debt_currency == source_currency:
+                    continue
+
+                # How much source do we need to cover the full debt?
+                try:
+                    needed_src, _, rate = self.calculate_conversion(
+                        source_amount=None,
+                        target_amount=debt_needed,
+                        source_currency=source_currency,
+                        target_currency=debt_currency,
+                    )
+                except Exception:
+                    continue
+
+                if source_avail >= needed_src:
+                    # Full coverage: use target_amount in the actual exchange so
+                    # the debt is covered exactly (avoids double ROUND_DOWN).
+                    plan_src = needed_src
+                    plan_tgt = debt_needed
+                    use_target = True
+                else:
+                    # Partial coverage: spend all available source.
+                    plan_src = source_avail
+                    try:
+                        _, plan_tgt, rate = self.calculate_conversion(
+                            source_amount=plan_src,
+                            target_amount=None,
+                            source_currency=source_currency,
+                            target_currency=debt_currency,
+                        )
+                    except Exception:
+                        continue
+                    use_target = False
+
+                if plan_src <= ZERO or plan_tgt <= ZERO:
+                    continue
+
+                result.append(
+                    _ExchangePlanItem(
+                        source_currency=source_currency,
+                        source_amount=plan_src,
+                        target_currency=debt_currency,
+                        target_amount=plan_tgt,
+                        rate=rate,
+                        use_target_amount=use_target,
+                    )
+                )
+
+                remaining[source_currency] = (
+                    remaining.get(source_currency, ZERO) - plan_src
+                )
+                remaining[debt_currency] = remaining.get(debt_currency, ZERO) + plan_tgt
+                exchange_happened = True
+                break  # re-evaluate sort order after each exchange
+
+            if not exchange_happened:
+                break
+
+        return result
+
+    def _get_eligible_entities(self) -> list[Entity]:
+        """Return active entities tagged as resident, member, or ex-resident."""
+        target_tag_ids = [resident_tag.id, member_tag.id, ex_resident_tag.id]
+        return (
+            self.db.query(Entity)
+            .filter(Entity.active == True)  # noqa: E712
+            .filter(or_(*[Entity.tags.any(id=tid) for tid in target_tag_ids]))
+            .all()
+        )
+
+    def compute_auto_balance_plan_for_entity(
+        self, entity_id: int
+    ) -> AutoBalanceEntityPlanSchema:
+        """Compute what exchanges would be needed to cover all debts for *entity_id*."""
+        entity = self.entity_service.get(entity_id)
+        balances_schema = self.balance_service.get_balances(entity_id)
+        completed = {
+            c.lower(): self._cd_to_decimal(a)
+            for c, a in (balances_schema.completed or {}).items()
+        }
+        plan = self._plan_exchanges(completed)
+        return AutoBalanceEntityPlanSchema(
+            entity_id=entity_id,
+            entity_name=entity.name,
+            exchanges=[
+                AutoBalanceExchangeItemSchema(
+                    source_currency=p.source_currency,
+                    source_amount=p.source_amount,
+                    target_currency=p.target_currency,
+                    target_amount=p.target_amount,
+                    rate=p.rate,
+                )
+                for p in plan
+            ],
+        )
+
+    def compute_auto_balance_plan_for_all(self) -> AutoBalancePreviewSchema:
+        """Compute auto-balance plans for all eligible entities."""
+        entities = self._get_eligible_entities()
+        plans = []
+        for entity in entities:
+            plan = self.compute_auto_balance_plan_for_entity(entity.id)
+            if plan.exchanges:
+                plans.append(plan)
+        return AutoBalancePreviewSchema(plans=plans)
+
+    def run_auto_balance_for_entity(
+        self, entity_id: int, actor_entity: Entity
+    ) -> AutoBalanceEntityReceiptSchema:
+        """Execute auto-balance exchanges for *entity_id*."""
+        entity = self.entity_service.get(entity_id)
+        balances_schema = self.balance_service.get_balances(entity_id)
+        completed = {
+            c.lower(): self._cd_to_decimal(a)
+            for c, a in (balances_schema.completed or {}).items()
+        }
+        plan = self._plan_exchanges(completed)
+        receipts = []
+        for item in plan:
+            if item.use_target_amount:
+                exchange_req = CurrencyExchangeRequestSchema(
+                    entity_id=entity_id,
+                    source_currency=item.source_currency,
+                    target_currency=item.target_currency,
+                    target_amount=item.target_amount,
+                )
+            else:
+                exchange_req = CurrencyExchangeRequestSchema(
+                    entity_id=entity_id,
+                    source_currency=item.source_currency,
+                    source_amount=item.source_amount,
+                    target_currency=item.target_currency,
+                )
+            receipt = self.exchange(exchange_req, actor_entity)
+            # Mark both transactions as automatic and refresh for the response
+            refreshed_txs = []
+            for tx in receipt.transactions:
+                try:
+                    self.transaction_service.add_tag(tx.id, automatic_tag.id)
+                except Exception:
+                    pass
+                refreshed_txs.append(
+                    TransactionSchema.model_validate(
+                        self.transaction_service.get(tx.id)
+                    )
+                )
+            receipt = CurrencyExchangeReceiptSchema(
+                source_currency=receipt.source_currency,
+                source_amount=receipt.source_amount,
+                target_currency=receipt.target_currency,
+                target_amount=receipt.target_amount,
+                rate=receipt.rate,
+                transactions=refreshed_txs,
+            )
+            receipts.append(receipt)
+            # Invalidate balance cache so next iteration sees fresh data
+            self.balance_service.invalidate_cache_entry(entity_id)
+        return AutoBalanceEntityReceiptSchema(
+            entity_id=entity_id,
+            entity_name=entity.name,
+            receipts=receipts,
+        )
+
+    def run_auto_balance_for_all(
+        self, actor_entity: Entity
+    ) -> AutoBalanceRunResultSchema:
+        """Execute auto-balance exchanges for all eligible entities."""
+        entities = self._get_eligible_entities()
+        results = []
+        for entity in entities:
+            try:
+                receipt = self.run_auto_balance_for_entity(entity.id, actor_entity)
+                if receipt.receipts:
+                    results.append(receipt)
+            except Exception:
+                logger.exception(
+                    "Auto-balance failed for entity id=%s", entity.id, exc_info=True
+                )
+        return AutoBalanceRunResultSchema(results=results)

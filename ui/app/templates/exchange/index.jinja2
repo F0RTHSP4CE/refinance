@@ -24,5 +24,14 @@
     </table>
 </form>
 
+<hr>
+<p>
+    <a href="{{ url_for('exchange.auto_balance_preview') }}">
+        <button type="button">⚖️ Auto-balance debts</button>
+    </a>
+    — automatically exchange available currencies to cover any negative balances
+    for residents, members and ex-residents.
+</p>
+
 <script src="/static/js/entitySelector.js"></script>
 {% endblock %}

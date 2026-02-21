@@ -1,0 +1,31 @@
+{% extends 'base.jinja2' %}
+{% from "transaction/macro_list.jinja2" import transaction_list with context %}
+
+{% block title %}Auto-balance completed{% endblock %}
+
+{% block content %}
+<h2>Auto-balance result</h2>
+
+{% if run_result.results %}
+<p>The following exchanges were executed:</p>
+
+{% for entity_result in run_result.results %}
+<h3><a href="/entities/{{ entity_result.entity_id }}">{{ entity_result.entity_name }}</a></h3>
+{% for receipt in entity_result.receipts %}
+<p>
+    Exchanged <strong>{{ receipt.source_amount }} {{ receipt.source_currency | upper }}</strong>
+    → <strong>{{ receipt.target_amount }} {{ receipt.target_currency | upper }}</strong>
+    (rate {{ receipt.rate }})
+</p>
+{% endfor %}
+{% endfor %}
+
+<p><strong>⚠️ DO NOT REFRESH THIS PAGE!</strong></p>
+{% else %}
+<p>✅ Nothing to exchange — all eligible entities already have non-negative balances.</p>
+{% endif %}
+
+<p><a href="{{ url_for('exchange.auto_balance_preview') }}">← Back to preview</a>
+&nbsp;|&nbsp;
+<a href="{{ url_for('exchange.index') }}">← Exchange</a></p>
+{% endblock %}

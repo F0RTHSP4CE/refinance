@@ -26,6 +26,7 @@ from app.routes.token import token_router
 from app.routes.transaction import transaction_router
 from app.routes.treasury import treasury_router
 from app.services.token import TokenService
+from app.tasks.auto_exchange import schedule_auto_exchange
 from app.tasks.invoice_auto_pay import schedule_invoice_auto_pay
 from app.tasks.keepz_payments_poll import schedule_keepz_poll
 from fastapi import FastAPI, Request
@@ -45,10 +46,15 @@ config: Config = get_config()
 async def lifespan(app: FastAPI):
     app.state.invoice_auto_pay_task = asyncio.create_task(schedule_invoice_auto_pay())
     app.state.keepz_poll_task = asyncio.create_task(schedule_keepz_poll())
+    app.state.auto_exchange_task = asyncio.create_task(schedule_auto_exchange())
     try:
         yield
     finally:
-        for task_name in ("invoice_auto_pay_task", "keepz_poll_task"):
+        for task_name in (
+            "invoice_auto_pay_task",
+            "keepz_poll_task",
+            "auto_exchange_task",
+        ):
             task = getattr(app.state, task_name, None)
             if task is not None:
                 task.cancel()

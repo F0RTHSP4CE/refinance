@@ -1,7 +1,15 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import CurrencyExchangePreviewResponse, CurrencyExchangeReceipt
-from flask import Blueprint, jsonify, redirect, render_template, request, url_for
+from app.schemas import (
+    AutoBalanceEntityPlan,
+    AutoBalanceEntityReceipt,
+    AutoBalanceExchangeItem,
+    AutoBalancePreview,
+    AutoBalanceRunResult,
+    CurrencyExchangePreviewResponse,
+    CurrencyExchangeReceipt,
+)
+from flask import Blueprint, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import FloatField, IntegerField, SelectField, StringField, SubmitField
 from wtforms.validators import DataRequired, NumberRange, Optional
@@ -68,5 +76,50 @@ def exchange():
     r = api.http("POST", "currency_exchange/exchange", data=form.data)
     receipt = CurrencyExchangeReceipt(**r.json())
     return render_template("exchange/receipt.jinja2", receipt=receipt)
-    # else:
-    #     return redirect(url_for("exchange.index"))
+
+
+@exchange_bp.route("/auto_balance", methods=["GET"])
+@token_required
+def auto_balance_preview():
+    """Show preview of auto-balance exchanges for all eligible entities."""
+    api = get_refinance_api_client()
+    r = api.http("GET", "currency_exchange/auto_balance/preview")
+    data = r.json()
+    plans = [
+        AutoBalanceEntityPlan(
+            entity_id=p["entity_id"],
+            entity_name=p["entity_name"],
+            exchanges=[
+                AutoBalanceExchangeItem(
+                    source_currency=e["source_currency"],
+                    source_amount=e["source_amount"],
+                    target_currency=e["target_currency"],
+                    target_amount=e["target_amount"],
+                    rate=e["rate"],
+                )
+                for e in p["exchanges"]
+            ],
+        )
+        for p in data["plans"]
+    ]
+    preview = AutoBalancePreview(plans=plans)
+    return render_template("exchange/auto_balance.jinja2", preview=preview)
+
+
+@exchange_bp.route("/auto_balance/run", methods=["POST"])
+@token_required
+def auto_balance_run():
+    """Execute auto-balance exchanges for all eligible entities."""
+    api = get_refinance_api_client()
+    r = api.http("POST", "currency_exchange/auto_balance/run")
+    data = r.json()
+    results = [
+        AutoBalanceEntityReceipt(
+            entity_id=res["entity_id"],
+            entity_name=res["entity_name"],
+            receipts=res["receipts"],
+        )
+        for res in data["results"]
+    ]
+    run_result = AutoBalanceRunResult(results=results)
+    return render_template("exchange/auto_balance_result.jinja2", run_result=run_result)

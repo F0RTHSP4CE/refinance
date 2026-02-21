@@ -1,0 +1,52 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Auto-balance preview{% endblock %}
+
+{% block content %}
+<h2>Auto-balance preview</h2>
+<p>The following exchanges would be made to cover negative balances for residents, members and ex-residents. <strong>Draft balances are not counted.</strong></p>
+
+{% if preview.plans %}
+<table>
+    <thead>
+        <tr>
+            <th>Entity</th>
+            <th>From</th>
+            <th>Amount</th>
+            <th>To</th>
+            <th>Amount</th>
+            <th>Rate</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for plan in preview.plans %}
+        {% for exc in plan.exchanges %}
+        <tr>
+            {% if loop.first %}
+            <td rowspan="{{ plan.exchanges | length }}">
+                <a href="/entities/{{ plan.entity_id }}">{{ plan.entity_name }}</a>
+            </td>
+            {% endif %}
+            <td>{{ exc.source_currency | upper }}</td>
+            <td>{{ exc.source_amount }}</td>
+            <td>{{ exc.target_currency | upper }}</td>
+            <td>{{ exc.target_amount }}</td>
+            <td>{{ exc.rate }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+    </tbody>
+</table>
+
+<form method="post" action="{{ url_for('exchange.auto_balance_run') }}" onsubmit="this.querySelector('button').disabled=true">
+    <p>
+        <button type="submit">⚡ Execute auto-balance</button>
+        &nbsp;<strong>⚠️ This will create real transactions!</strong>
+    </p>
+</form>
+{% else %}
+<p>✅ No exchanges needed — all eligible entities have non-negative balances in every currency.</p>
+{% endif %}
+
+<p><a href="{{ url_for('exchange.index') }}">← Back to exchange</a></p>
+{% endblock %}
