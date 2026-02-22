@@ -1,10 +1,82 @@
+# Python
 *.pyc
 __pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv/
+env/
+.env.local
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+*.egg
+
+# Databases
 *.db
 *.db-journal
-.pytest_cache
-.venv
+*.sqlite
+*.sqlite3
+
+# Secrets & env
 secrets.prod.env
 secrets.dev.env
 secrets.env
+*.pem
+.env
+
+# Backups
 backups/
+*.bak
+*.backup
+*~
+
+# OS junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs & editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.project
+.classpath
+.settings/
+*.sublime-*
+
+# Node (when present at root)
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.yarn-integrity
+.pnpm-store/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build & cache
+.cache/
+*.tsbuildinfo
+.turbo/

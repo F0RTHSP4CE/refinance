@@ -1,0 +1,35 @@
+---
+description: ui-new architecture and implementation guardrails
+globs: ui-new/**/*
+alwaysApply: false
+---
+
+# ui-new Architecture Rules
+
+## Structure
+
+- Keep React v2 isolated under `ui-new/`; do not couple it to Flask templates.
+- Use folder-per-component:
+  - `src/components/FeatureName/FeatureName.tsx`
+  - `src/components/FeatureName/index.ts`
+- Put shared UI wrappers/primitives in `src/components/ui/**`.
+
+## Data and state
+
+- Use TanStack Query for server state and request lifecycle.
+- Use Zustand only for client/session state (auth token, UI flags).
+- Keep API calls in `src/api/**`; avoid raw `fetch` inside components.
+- Validate form inputs with Zod + React Hook Form.
+
+## Composition and style
+
+- Function components only; no class components.
+- Prefer named exports; avoid default exports for app modules.
+- Keep presentational components dumb; move logic to hooks/stores/query modules.
+- Reuse Mantine components first, then Tailwind utility classes for layout tweaks.
+- **Never use inline `style={{}}`.** Use Mantine style props (e.g. `lh`, `mt`, `gap`), `className` with Tailwind, or CSS modules.
+
+## Boundaries
+
+- New v2 work should not regress or modify legacy `ui/` behavior unless requested.
+- Keep types centralized in `src/types/**` and avoid ad-hoc `any`.
