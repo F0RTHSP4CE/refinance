@@ -74,7 +74,6 @@ function calculateConversion(
   targetCurrency: string,
   rates: RatesData
 ): { sourceAmount: number; targetAmount: number; rate: number } | null {
-  if (!sourceAmount && !targetAmount) return null;
   if (sourceCurrency === targetCurrency) return null;
 
   const getCurrencyInfo = (code: string) => {
@@ -93,19 +92,18 @@ function calculateConversion(
   const gelPerSource = sourceInfo.rate / sourceInfo.quantity;
   const gelPerTarget = targetInfo.rate / targetInfo.quantity;
   const conversionRate = gelPerSource / gelPerTarget;
-  const displayRate = conversionRate;
 
   if (sourceAmount && !targetAmount) {
     return {
       sourceAmount,
       targetAmount: Math.floor(sourceAmount * conversionRate * 100) / 100,
-      rate: Math.floor(displayRate * 100) / 100,
+      rate: Math.floor(conversionRate * 100) / 100,
     };
   } else if (targetAmount && !sourceAmount) {
     return {
       sourceAmount: Math.floor((targetAmount / conversionRate) * 100) / 100,
       targetAmount,
-      rate: Math.floor(displayRate * 100) / 100,
+      rate: Math.floor(conversionRate * 100) / 100,
     };
   }
   return null;
@@ -113,7 +111,7 @@ function calculateConversion(
 
 export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   const actorEntity = useAuthStore((state) => state.actorEntity);
-  const { state, setPreviewData, executeExchange, cancelPreview, closeSuccess, isExecuting, executeError } = useExchangeFlow({
+  const { state, setPreviewData, executeExchange, cancelPreview, goToPreview, closeSuccess, isExecuting, executeError } = useExchangeFlow({
     onSuccess: onClose,
   });
 
@@ -156,15 +154,14 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   };
 
   const conversion = useMemo(() => {
-    if (!inputMode) return null;
     return calculateConversion(
-      inputMode === 'source' ? sourceAmount : undefined,
-      inputMode === 'target' ? targetAmount : undefined,
+      sourceAmount,
+      targetAmount,
       sourceCurrency,
       targetCurrency,
       rates
     );
-  }, [sourceAmount, targetAmount, sourceCurrency, targetCurrency, inputMode, rates]);
+  }, [sourceAmount, targetAmount, sourceCurrency, targetCurrency, rates]);
 
   const exchangeRate = useMemo(() => {
     return getExchangeRate(sourceCurrency, targetCurrency, rates);
@@ -183,6 +180,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
       target_amount: conversion.targetAmount.toString(),
       rate: conversion.rate.toString(),
     });
+    goToPreview();
   };
 
   const handleSourceAmountChange = (value: number | string) => {
@@ -218,19 +216,18 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   };
 
   const swapCurrencies = () => {
-    const currentAmount = inputMode === 'source' ? sourceAmount : targetAmount;
+    const currentSourceAmount = sourceAmount;
+    const currentTargetAmount = targetAmount;
 
     setValue('sourceCurrency', targetCurrency);
     setValue('targetCurrency', sourceCurrency);
 
-    if (currentAmount) {
-      if (inputMode === 'source') {
-        setValue('sourceAmount', currentAmount);
-        setValue('targetAmount', undefined);
-      } else {
-        setValue('targetAmount', currentAmount);
-        setValue('sourceAmount', undefined);
-      }
+    if (currentSourceAmount && !currentTargetAmount) {
+      setValue('sourceAmount', currentSourceAmount);
+      setValue('targetAmount', undefined);
+    } else if (currentTargetAmount && !currentSourceAmount) {
+      setValue('targetAmount', currentTargetAmount);
+      setValue('sourceAmount', undefined);
     } else {
       setValue('sourceAmount', undefined);
       setValue('targetAmount', undefined);
@@ -265,7 +262,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                         step={0.01}
                         decimalScale={2}
                         error={errors.sourceAmount?.message}
-                        value={inputMode === 'target' && conversion ? conversion.sourceAmount : field.value}
+                        value={targetAmount && conversion ? conversion.sourceAmount : field.value}
                         onChange={handleSourceAmountChange}
                         flex={1}
                         size="lg"
@@ -309,7 +306,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                         step={0.01}
                         decimalScale={2}
                         error={errors.targetAmount?.message}
-                        value={inputMode === 'source' && conversion ? conversion.targetAmount : field.value}
+                        value={sourceAmount && conversion ? conversion.targetAmount : field.value}
                         onChange={handleTargetAmountChange}
                         flex={1}
                         size="lg"

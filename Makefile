@@ -20,11 +20,10 @@ COMPOSE = docker compose -f $(COMPOSE_BASE) -f $(or $(COMPOSE_SUFFIX_$(ENV)),$(e
 
 .ONESHELL:
 
-.PHONY: dev prod up up-detached down test ci db-backup db-restore add-entity dev-ui-new
+.PHONY: dev prod up up-detached down test ci db-backup db-restore db-migrate add-entity dev-ui-new
 
 dev: ENV = dev
 dev:
-	(cd ui-new && npm run dev) &
 	$(COMPOSE) up --build
 
 prod: ENV = prod
@@ -67,6 +66,11 @@ db-restore:
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "CREATE DATABASE \"$(DB_NAME)\";"
 	@echo "Restoring $(ENV) database from $(BACKUP_FILE)"
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d $(DB_NAME) < $(BACKUP_FILE)
+
+.PHONY: db-migrate
+db-migrate: ENV = dev
+db-migrate:
+	$(COMPOSE) exec api python -m app.scripts.migrate_add_treasury_author
 
 .PHONY: add-entity
 add-entity: ENV = dev

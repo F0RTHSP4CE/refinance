@@ -37,6 +37,8 @@ class Treasury(Base):
     name: str
     active: bool
     balances: Balance
+    author_entity_id: int | None = None
+    author_entity: Entity | None = None
 
 
 class TransactionStatus(enum.Enum):

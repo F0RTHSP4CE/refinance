@@ -94,7 +94,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
                 or_(
                     self.model.from_entity_id == filters.entity_id,
                     self.model.to_entity_id == filters.entity_id,
-                    self.model.actor_entity_id == filters.actor_entity_id,
+                    self.model.actor_entity_id == filters.entity_id,
                 )
             )
         if filters.actor_entity_id is not None:

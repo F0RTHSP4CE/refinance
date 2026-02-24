@@ -1,3 +1,16 @@
+export type Tag = {
+  id: number;
+  name: string;
+  comment?: string | null;
+  created_at?: string;
+  modified_at?: string | null;
+};
+
+export type BalanceSnapshot = {
+  draft: Record<string, string>;
+  completed: Record<string, string>;
+};
+
 export type ActorEntity = {
   id: number;
   name: string;
@@ -11,7 +24,7 @@ export type EntityAuth = {
 };
 
 export type Entity = ActorEntity & {
-  tags: { id: number; name: string }[];
+  tags: Tag[];
   auth?: EntityAuth | null;
   created_at: string;
   modified_at?: string | null;
@@ -22,13 +35,19 @@ export type EntityRef = {
   name: string;
   active: boolean;
   comment?: string | null;
-  tags?: { id: number; name: string }[];
+  tags?: Tag[];
 };
 
 export type TreasuryRef = {
   id: number;
   name: string;
+  active?: boolean;
   comment?: string | null;
+  author_entity_id?: number | null;
+  author_entity?: EntityRef | null;
+  balances?: BalanceSnapshot | null;
+  created_at?: string;
+  modified_at?: string | null;
 };
 
 export type Transaction = {
@@ -41,7 +60,7 @@ export type Transaction = {
   amount: string;
   currency: string;
   status: 'draft' | 'completed';
-  tags: { id: number; name: string }[];
+  tags: Tag[];
   comment?: string | null;
   invoice_id?: number | null;
   actor_entity_id: number;
@@ -68,7 +87,7 @@ export type Invoice = {
   amounts: InvoiceAmount[];
   comment?: string | null;
   status: string;
-  tags: { id: number; name: string }[];
+  tags: Tag[];
   actor_entity_id: number;
   actor_entity: EntityRef;
 };

@@ -1,12 +1,30 @@
-import { SimpleGrid } from '@mantine/core';
-import { BalanceCard, InvoicesCard, FridgeCoffeeCard } from '@/components/HomeCards';
+import { Box, SimpleGrid, Stack } from '@mantine/core';
+import {
+  BalanceCard,
+  DraftsCard,
+  FeeInvoicesStatusCard,
+  FridgeCoffeeCard,
+  HomeTransactionsTableSection,
+} from '@/components/HomeCards';
 
 export const Home = () => {
   return (
-    <SimpleGrid cols={{ base: 1, sm: 3, lg: 3 }} spacing="md">
-      <BalanceCard />
-      <InvoicesCard />
-      <FridgeCoffeeCard />
-    </SimpleGrid>
+    <Stack
+      gap="md"
+      style={{
+        minHeight:
+          'calc(100dvh - var(--app-shell-header-height, 60px) - 2rem)',
+      }}
+    >
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 2 }} spacing="md">
+        <BalanceCard />
+        <FeeInvoicesStatusCard />
+        <FridgeCoffeeCard />
+        <DraftsCard />
+      </SimpleGrid>
+      <Box mt="auto">
+        <HomeTransactionsTableSection />
+      </Box>
+    </Stack>
   );
 };

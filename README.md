@@ -23,6 +23,7 @@ make prod
 
 API: http://0.0.0.0:8000/docs
 UI: http://0.0.0.0:9000
+UI (new): http://0.0.0.0:5173
 
 ## dev
 
@@ -56,11 +57,16 @@ pre-commit install
 ```console
 make dev
 ```
-open http://localhost:8000/docs and http://localhost:9000
+open http://localhost:8000/docs, http://localhost:9000 and http://localhost:5173
 
 ### tests
 ```console
 make test
+```
+
+### database schema patch (for existing DBs after additive column changes)
+```console
+make db-migrate ENV=dev
 ```
 
 ## todo release

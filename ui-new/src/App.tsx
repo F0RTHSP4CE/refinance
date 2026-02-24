@@ -21,6 +21,7 @@ const Fee = lazy(() => import('@/pages/Fee').then((m) => ({ default: m.Fee })));
 const Splits = lazy(() => import('@/pages/Splits').then((m) => ({ default: m.Splits })));
 const Stats = lazy(() => import('@/pages/Stats').then((m) => ({ default: m.Stats })));
 const Users = lazy(() => import('@/pages/Users').then((m) => ({ default: m.Users })));
+const Entities = lazy(() => import('@/pages/Entities').then((m) => ({ default: m.Entities })));
 const Treasuries = lazy(() =>
   import('@/pages/Treasuries').then((m) => ({ default: m.Treasuries }))
 );
@@ -108,6 +109,7 @@ export const App = () => {
           <Route path="splits" element={<Splits />} />
           <Route path="stats" element={<Stats />} />
           <Route path="users" element={<Users />} />
+          <Route path="entities" element={<Entities />} />
           <Route path="treasuries" element={<Treasuries />} />
           <Route path="tags" element={<Tags />} />
 

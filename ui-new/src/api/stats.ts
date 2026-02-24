@@ -1,5 +1,15 @@
 import { apiRequest } from './client';
 
+export type StatsGrain = 'week' | 'month';
+
+export type StatsBucketSum = {
+  bucket_start: string;
+  bucket_end: string;
+  grain: StatsGrain;
+  amounts: Record<string, number>;
+  total_usd: number;
+};
+
 export type EntityBalanceChangeByDay = {
   day: string;
   balance_changes: Record<string, number>;
@@ -40,7 +50,25 @@ export type EntityStatsBundle = {
 export type EntityStatsParams = {
   months?: number;
   limit?: number;
+  timeframe_from?: string;
+  timeframe_to?: string;
   signal?: AbortSignal;
+};
+
+export type StatsBucketParams = {
+  timeframe_from?: string;
+  timeframe_to?: string;
+  grain?: StatsGrain;
+  signal?: AbortSignal;
+};
+
+const buildStatsBucketQuery = (params: StatsBucketParams) => {
+  const search = new URLSearchParams();
+  if (params.timeframe_from) search.set('timeframe_from', params.timeframe_from);
+  if (params.timeframe_to) search.set('timeframe_to', params.timeframe_to);
+  if (params.grain) search.set('grain', params.grain);
+  const query = search.toString();
+  return query ? `?${query}` : '';
 };
 
 export const getEntityStatsBundle = async (
@@ -50,7 +78,27 @@ export const getEntityStatsBundle = async (
   const search = new URLSearchParams();
   if (params.months != null) search.set('months', String(params.months));
   if (params.limit != null) search.set('limit', String(params.limit));
+  if (params.timeframe_from) search.set('timeframe_from', params.timeframe_from);
+  if (params.timeframe_to) search.set('timeframe_to', params.timeframe_to);
   const query = search.toString();
   const url = `stats/entity/${entityId}${query ? `?${query}` : ''}`;
   return apiRequest<EntityStatsBundle>(url, { signal: params.signal });
+};
+
+export const getResidentFeeSum = async (
+  params: StatsBucketParams = {}
+): Promise<StatsBucketSum[]> => {
+  const query = buildStatsBucketQuery(params);
+  return apiRequest<StatsBucketSum[]>(`stats/resident-fee-sum${query}`, {
+    signal: params.signal,
+  });
+};
+
+export const getTransactionsSum = async (
+  params: StatsBucketParams = {}
+): Promise<StatsBucketSum[]> => {
+  const query = buildStatsBucketQuery(params);
+  return apiRequest<StatsBucketSum[]>(`stats/transactions-sum${query}`, {
+    signal: params.signal,
+  });
 };

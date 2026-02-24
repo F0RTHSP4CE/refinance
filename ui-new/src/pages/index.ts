@@ -13,5 +13,6 @@ export { Splits } from './Splits';
 export { Exchange } from './Exchange';
 export { Stats } from './Stats';
 export { Users } from './Users';
+export { Entities } from './Entities';
 export { Treasuries } from './Treasuries';
 export { Tags } from './Tags';

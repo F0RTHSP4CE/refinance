@@ -356,6 +356,127 @@ class TestTransactionTreasuryFiltering:
             )
 
 
+class TestTransactionEntityFiltering:
+    @staticmethod
+    def _create_entity(test_app: TestClient, token: str, name: str) -> int:
+        response = test_app.post(
+            "/entities", json={"name": name}, headers={"x-token": token}
+        )
+        assert response.status_code == 200
+        return int(response.json()["id"])
+
+    def test_filter_by_entity_id_includes_actor_only_transactions(
+        self, test_app: TestClient, token: str, token_factory
+    ):
+        actor_id = self._create_entity(test_app, token, "Entity Filter Actor")
+        source_id = self._create_entity(test_app, token, "Entity Filter Source")
+        target_id = self._create_entity(test_app, token, "Entity Filter Target")
+
+        actor_token = token_factory(actor_id)
+        create_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": source_id,
+                "to_entity_id": target_id,
+                "amount": "11.00",
+                "currency": "usd",
+                "status": "draft",
+            },
+            headers={"x-token": actor_token},
+        )
+        assert create_response.status_code == 200
+        actor_only_tx_id = int(create_response.json()["id"])
+
+        list_response = test_app.get(
+            "/transactions",
+            params={"entity_id": actor_id, "status": "draft"},
+            headers={"x-token": actor_token},
+        )
+        assert list_response.status_code == 200
+        tx_ids = {int(tx["id"]) for tx in list_response.json()["items"]}
+
+        assert actor_only_tx_id in tx_ids
+
+    def test_filter_by_entity_id_includes_actor_sender_and_recipient(
+        self, test_app: TestClient, token: str, token_factory
+    ):
+        actor_id = self._create_entity(test_app, token, "Entity Filter Actor 2")
+        source_id = self._create_entity(test_app, token, "Entity Filter Source 2")
+        target_id = self._create_entity(test_app, token, "Entity Filter Target 2")
+
+        actor_token = token_factory(actor_id)
+        source_token = token_factory(source_id)
+
+        outgoing_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": actor_id,
+                "to_entity_id": source_id,
+                "amount": "7.00",
+                "currency": "usd",
+                "status": "draft",
+            },
+            headers={"x-token": actor_token},
+        )
+        assert outgoing_response.status_code == 200
+        outgoing_id = int(outgoing_response.json()["id"])
+
+        incoming_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": source_id,
+                "to_entity_id": actor_id,
+                "amount": "8.00",
+                "currency": "usd",
+                "status": "draft",
+            },
+            headers={"x-token": source_token},
+        )
+        assert incoming_response.status_code == 200
+        incoming_id = int(incoming_response.json()["id"])
+
+        actor_only_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": source_id,
+                "to_entity_id": target_id,
+                "amount": "9.00",
+                "currency": "usd",
+                "status": "draft",
+            },
+            headers={"x-token": actor_token},
+        )
+        assert actor_only_response.status_code == 200
+        actor_only_id = int(actor_only_response.json()["id"])
+
+        unrelated_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": source_id,
+                "to_entity_id": target_id,
+                "amount": "10.00",
+                "currency": "usd",
+                "status": "draft",
+            },
+            headers={"x-token": source_token},
+        )
+        assert unrelated_response.status_code == 200
+        unrelated_id = int(unrelated_response.json()["id"])
+
+        list_response = test_app.get(
+            "/transactions",
+            params={"entity_id": actor_id, "status": "draft"},
+            headers={"x-token": actor_token},
+        )
+        assert list_response.status_code == 200
+        tx_ids = {int(tx["id"]) for tx in list_response.json()["items"]}
+
+        assert outgoing_id in tx_ids
+        assert incoming_id in tx_ids
+        assert actor_only_id in tx_ids
+        assert unrelated_id not in tx_ids
+
+
 # @pytest.fixture
 # def multiple_transactions(test_app: TestClient, entity_one, entity_two, token):
 #     """Create multiple transactions to test filtering."""

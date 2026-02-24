@@ -21,10 +21,23 @@ services:
     ports:
       - "9000:9000"
 
+  ui-new:
+    build:
+      target: dev
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+    depends_on:
+      - api
+    volumes:
+      - ./ui-new:/opt/ui-new
+      - /opt/ui-new/node_modules
+    ports:
+      - "5173:5173"
+
   db:
     volumes:
       - db-dev-data:/var/lib/postgresql/data
 
 volumes:
   db-dev-data:
-

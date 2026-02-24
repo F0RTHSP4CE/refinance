@@ -7,7 +7,11 @@ import { getEntity, getMe } from '@/api/entities';
 import { getInvoices } from '@/api/invoices';
 import { getTransactions } from '@/api/transactions';
 import {
-  AmountCurrency,
+  transactionTableColumns,
+  TransactionDetailsModal,
+  useTransactionDetailsModal,
+} from '@/components/Transactions';
+import {
   AmountsCurrency,
   AppCard,
   DataTable,
@@ -17,7 +21,7 @@ import {
 } from '@/components/ui';
 import { ProfileStatistics } from './ProfileStatistics';
 import { useAuthStore } from '@/stores/auth';
-import type { Entity, Invoice, Transaction } from '@/types/api';
+import type { Entity, Invoice } from '@/types/api';
 
 const LIMIT = 20;
 
@@ -38,6 +42,8 @@ export const Profile = () => {
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
   const tab = searchParams.get('tab') ?? 'profile';
+  const { opened, selectedTransaction, openTransaction, closeTransaction } =
+    useTransactionDetailsModal();
 
   const validatedId = useMemo(() => validateEntityId(id), [id]);
   const profileId = id === undefined ? actorEntity?.id : validatedId;
@@ -108,14 +114,6 @@ export const Profile = () => {
     }
   }, []);
 
-  // Copy error display component
-  const CopyErrorAlert = () =>
-    copyError ? (
-      <Text size="xs" c="red" mt={4}>
-        {copyError}
-      </Text>
-    ) : null;
-
   if (!actorEntity) {
     return (
       <Stack gap="md">
@@ -155,78 +153,6 @@ export const Profile = () => {
       {entityRef.name}
     </Anchor>
   );
-
-  const transactionColumns: DataTableColumn<Transaction>[] = [
-    { key: 'id', label: 'ID', render: (r) => <Text size="sm">{r.id}</Text> },
-    {
-      key: 'created_at',
-      label: 'Date',
-      render: (r) => <RelativeDate isoString={r.created_at} />,
-    },
-    {
-      key: 'from_entity',
-      label: 'From',
-      render: (r) => (
-        <Group gap={6} wrap="wrap">
-          <EntityLink entityRef={r.from_entity} />
-          {r.from_entity.tags?.length ? <TagList tags={r.from_entity.tags} /> : null}
-        </Group>
-      ),
-    },
-    {
-      key: 'to_entity',
-      label: 'To',
-      render: (r) => (
-        <Group gap={6} wrap="wrap">
-          <EntityLink entityRef={r.to_entity} />
-          {r.to_entity.tags?.length ? <TagList tags={r.to_entity.tags} /> : null}
-        </Group>
-      ),
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
-      render: (r) => <AmountCurrency amount={r.amount} currency={r.currency} />,
-    },
-    {
-      key: 'treasury',
-      label: 'Treasury',
-      render: (r) => {
-        const hasTreasury = r.from_treasury_id ?? r.to_treasury_id;
-        if (!hasTreasury) return <Text size="sm">—</Text>;
-        return (
-          <Text size="sm">
-            {r.from_treasury?.name ?? 'x'} → {r.to_treasury?.name ?? 'x'}
-          </Text>
-        );
-      },
-    },
-    {
-      key: 'tags',
-      label: 'Tags',
-      render: (r) => (r.tags.length ? <TagList tags={r.tags} /> : <Text size="sm">—</Text>),
-    },
-    { key: 'comment', label: 'Comment', render: (r) => <Text size="sm">{r.comment || '—'}</Text> },
-    {
-      key: 'invoice_id',
-      label: 'Invoice',
-      render: (r) => (r.invoice_id ? <Text size="sm">{r.invoice_id}</Text> : <Text size="sm">—</Text>),
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (r) => (
-        <Text size="sm" c={r.status === 'completed' ? 'green' : 'gray'}>
-          {r.status}
-        </Text>
-      ),
-    },
-    {
-      key: 'actor_entity',
-      label: 'Actor',
-      render: (r) => <EntityLink entityRef={r.actor_entity} />,
-    },
-  ];
 
   const invoiceColumns: DataTableColumn<Invoice>[] = [
     { key: 'id', label: 'ID', render: (r) => <Text size="sm">{r.id}</Text> },
@@ -339,7 +265,23 @@ export const Profile = () => {
                   <Text size="sm" c="dimmed">
                     Name: {e.name}
                   </Text>
-                  <Badge size="sm" color={e.active ? 'green' : 'gray'}>
+                  <Badge
+                    size="sm"
+                    variant="filled"
+                    style={
+                      e.active
+                        ? {
+                            backgroundColor: 'var(--mantine-color-black)',
+                            color: 'var(--mantine-color-white)',
+                            border: '1px solid var(--mantine-color-black)',
+                          }
+                        : {
+                            backgroundColor: 'var(--mantine-color-white)',
+                            color: 'var(--mantine-color-black)',
+                            border: '1px solid var(--mantine-color-black)',
+                          }
+                    }
+                  >
                     {e.active ? 'Active' : 'Inactive'}
                   </Badge>
                 </Group>
@@ -386,7 +328,11 @@ export const Profile = () => {
                         </Tooltip>
                       )}
                     </Group>
-                    <CopyErrorAlert />
+                    {copyError ? (
+                      <Text size="xs" c="red" mt={4}>
+                        {copyError}
+                      </Text>
+                    ) : null}
                   </>
                 )}
               </Stack>
@@ -429,9 +375,16 @@ export const Profile = () => {
                 Latest Transactions
               </Text>
               <DataTable
-                columns={transactionColumns}
+                columns={transactionTableColumns}
                 data={transactions}
                 emptyMessage="No transactions."
+                onRowClick={openTransaction}
+                getRowAriaLabel={(transaction) => `Open transaction #${transaction.id}`}
+              />
+              <TransactionDetailsModal
+                opened={opened}
+                transaction={selectedTransaction}
+                onClose={closeTransaction}
               />
             </AppCard>
 

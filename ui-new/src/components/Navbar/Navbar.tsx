@@ -9,6 +9,7 @@ import { CardTopUpModal } from '@/pages/TopUp/Card';
 import { RequestMoneyModal, ExchangeModal } from '@/components/PaymentModals';
 import { POLLING_INTERVALS } from '@/constants/polling';
 import logo from '@/assets/logo.png';
+import { getActiveLinkTextProps, isLinkActive } from './utils';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
@@ -21,12 +22,19 @@ const NAV_LINKS = [
   { to: '/users', label: 'Users' },
 ] as const;
 
+const BURGER_LINKS = [
+  { to: '/entities', label: 'Entities' },
+  { to: '/treasuries', label: 'Treasuries' },
+  { to: '/tags', label: 'Tags' },
+] as const;
+
 export const Navbar = () => {
   const [opened, { open, close }] = useDisclosure(false);
   const [cardModalOpened, { open: openCardModal, close: closeCardModal }] = useDisclosure(false);
   const [burgerOpened, { open: openBurger, close: closeBurger }] = useDisclosure(false);
   const [requestMoneyOpened, setRequestMoneyOpened] = useState(false);
-  const [exchangeModalOpened, { open: openExchangeModal, close: closeExchangeModal }] = useDisclosure(false);
+  const [exchangeModalOpened, { open: openExchangeModal, close: closeExchangeModal }] =
+    useDisclosure(false);
   const clearSession = useAuthStore((state) => state.clearSession);
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
@@ -61,7 +69,8 @@ export const Navbar = () => {
         </Link>
         <Group gap="xl" className="overflow-x-auto">
           {NAV_LINKS.map(({ to, label }) => {
-            const isActive = pathname === to;
+            const isActive = isLinkActive(pathname, to);
+            const { c, fw } = getActiveLinkTextProps(isActive);
             return (
               <Anchor
                 key={to}
@@ -69,8 +78,11 @@ export const Navbar = () => {
                 to={to}
                 underline="never"
                 inherit={!isActive}
-                c={isActive ? 'green.5' : undefined}
-                className="shrink-0 whitespace-nowrap text-xl no-underline hover:text-white hover:no-underline transition-colors"
+                c={c}
+                fw={fw}
+                className={`shrink-0 whitespace-nowrap text-xl no-underline hover:no-underline transition-colors ${
+                  isActive ? '' : 'hover:text-white'
+                }`}
               >
                 {label}
               </Anchor>
@@ -89,12 +101,15 @@ export const Navbar = () => {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item component={Link} to="/treasuries">
-              Treasuries
-            </Menu.Item>
-            <Menu.Item component={Link} to="/tags">
-              Tags
-            </Menu.Item>
+            {BURGER_LINKS.map(({ to, label }) => {
+              const isActive = isLinkActive(pathname, to);
+              const { c, fw } = getActiveLinkTextProps(isActive);
+              return (
+                <Menu.Item key={to} component={Link} to={to} c={c} fw={fw}>
+                  {label}
+                </Menu.Item>
+              );
+            })}
           </Menu.Dropdown>
         </Menu>
       </Group>
@@ -143,7 +158,9 @@ export const Navbar = () => {
 
             <Menu shadow="md" width={200}>
               <Menu.Target>
-                <Button variant="light">{actorEntity.name}</Button>
+                <Button variant="light" ml="xl">
+                  {actorEntity.name}
+                </Button>
               </Menu.Target>
 
               <Menu.Dropdown>
@@ -167,14 +184,8 @@ export const Navbar = () => {
       </Group>
 
       <CardTopUpModal opened={cardModalOpened} onClose={closeCardModal} />
-      <RequestMoneyModal
-        opened={requestMoneyOpened}
-        onClose={() => setRequestMoneyOpened(false)}
-      />
-      <ExchangeModal
-        opened={exchangeModalOpened}
-        onClose={closeExchangeModal}
-      />
+      <RequestMoneyModal opened={requestMoneyOpened} onClose={() => setRequestMoneyOpened(false)} />
+      <ExchangeModal opened={exchangeModalOpened} onClose={closeExchangeModal} />
 
       <Modal opened={opened} onClose={close} title="Logout" centered>
         <Text size="sm" c="dimmed" mb="md">

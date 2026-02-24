@@ -13,10 +13,13 @@ React + Vite + TypeScript frontend that runs alongside the legacy Flask/Jinja2 U
 ## Run
 
 ```bash
-# from repo root
+# from repo root (runs api + legacy ui + ui-new)
 make dev
+```
 
-# in another terminal
+Optional standalone frontend run:
+
+```bash
 cd ui-new
 npm run dev
 ```

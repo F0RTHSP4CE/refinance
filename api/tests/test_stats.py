@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -63,6 +63,202 @@ def test_entity_money_flow_by_day(test_app: TestClient, token):
     body = bundle.json()
     assert "money_flow_by_day" in body
     assert isinstance(body["money_flow_by_day"], list)
+
+
+def test_entity_stats_bundle_respects_explicit_timeframe_for_top_sections(
+    test_app: TestClient, token
+):
+    source = test_app.post(
+        "/entities",
+        json={"name": "Bundle Timeframe Source"},
+        headers={"x-token": token},
+    ).json()["id"]
+    target = test_app.post(
+        "/entities",
+        json={"name": "Bundle Timeframe Target"},
+        headers={"x-token": token},
+    ).json()["id"]
+
+    tx_response = test_app.post(
+        "/transactions",
+        json={
+            "from_entity_id": source,
+            "to_entity_id": target,
+            "amount": "25.00",
+            "currency": "usd",
+            "status": "completed",
+        },
+        headers={"x-token": token},
+    )
+    assert tx_response.status_code == 200
+
+    tomorrow = date.today() + timedelta(days=1)
+    timeframe = tomorrow.isoformat()
+
+    bundle_response = test_app.get(
+        f"/stats/entity/{target}",
+        params={
+            "limit": 8,
+            "months": 12,
+            "timeframe_from": timeframe,
+            "timeframe_to": timeframe,
+        },
+        headers={"x-token": token},
+    )
+    assert bundle_response.status_code == 200
+    bundle = bundle_response.json()
+
+    assert bundle["top_incoming"] == []
+    assert bundle["top_outgoing"] == []
+    assert bundle["top_incoming_tags"] == []
+    assert bundle["top_outgoing_tags"] == []
+
+
+def test_transactions_sum_bucketed_by_grain(test_app: TestClient, token):
+    source = test_app.post(
+        "/entities",
+        json={"name": "Bucket Source"},
+        headers={"x-token": token},
+    ).json()["id"]
+    target = test_app.post(
+        "/entities",
+        json={"name": "Bucket Target"},
+        headers={"x-token": token},
+    ).json()["id"]
+
+    for amount, currency in (("10.00", "usd"), ("20.00", "gel"), ("30.00", "eur")):
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": source,
+                "to_entity_id": target,
+                "amount": amount,
+                "currency": currency,
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+
+    today = date.today()
+    today_iso = today.isoformat()
+
+    month_response = test_app.get(
+        "/stats/transactions-sum",
+        params={
+            "timeframe_from": today_iso,
+            "timeframe_to": today_iso,
+            "grain": "month",
+        },
+        headers={"x-token": token},
+    )
+    assert month_response.status_code == 200
+    month_data = month_response.json()
+    assert len(month_data) == 1
+    month_row = month_data[0]
+    assert month_row["grain"] == "month"
+    assert month_row["bucket_start"] == today.replace(day=1).isoformat()
+    assert month_row["amounts"]["usd"] >= 10.0
+    assert month_row["amounts"]["gel"] >= 20.0
+    assert month_row["amounts"]["eur"] >= 30.0
+
+    week_response = test_app.get(
+        "/stats/transactions-sum",
+        params={
+            "timeframe_from": today_iso,
+            "timeframe_to": today_iso,
+            "grain": "week",
+        },
+        headers={"x-token": token},
+    )
+    assert week_response.status_code == 200
+    week_data = week_response.json()
+    assert len(week_data) == 1
+    week_row = week_data[0]
+    assert week_row["grain"] == "week"
+    expected_week_start = today - timedelta(days=today.weekday())
+    assert week_row["bucket_start"] == expected_week_start.isoformat()
+    assert week_row["amounts"]["usd"] >= 10.0
+    assert week_row["amounts"]["gel"] >= 20.0
+    assert week_row["amounts"]["eur"] >= 30.0
+
+
+def test_resident_fee_sum_bucketed_by_grain(test_app: TestClient, token):
+    from app.seeding import fee_tag
+
+    resident = test_app.post(
+        "/entities",
+        json={"name": "Resident Bucket Test"},
+        headers={"x-token": token},
+    ).json()["id"]
+    hackerspace_id = 1
+
+    billing_period = date.today().replace(day=1).isoformat()
+    invoice_response = test_app.post(
+        "/invoices",
+        json={
+            "from_entity_id": resident,
+            "to_entity_id": hackerspace_id,
+            "amounts": [{"currency": "usd", "amount": "42.00"}],
+            "billing_period": billing_period,
+            "tag_ids": [fee_tag.id],
+        },
+        headers={"x-token": token},
+    )
+    assert invoice_response.status_code == 200
+    invoice_id = invoice_response.json()["id"]
+
+    pay_response = test_app.post(
+        "/transactions",
+        json={
+            "from_entity_id": resident,
+            "to_entity_id": hackerspace_id,
+            "amount": "42.00",
+            "currency": "usd",
+            "status": "completed",
+            "invoice_id": invoice_id,
+        },
+        headers={"x-token": token},
+    )
+    assert pay_response.status_code == 200
+
+    today = date.today()
+    today_iso = today.isoformat()
+
+    month_response = test_app.get(
+        "/stats/resident-fee-sum",
+        params={
+            "timeframe_from": today_iso,
+            "timeframe_to": today_iso,
+            "grain": "month",
+        },
+        headers={"x-token": token},
+    )
+    assert month_response.status_code == 200
+    month_data = month_response.json()
+    assert len(month_data) >= 1
+    month_row = month_data[-1]
+    assert month_row["grain"] == "month"
+    assert month_row["bucket_start"] == today.replace(day=1).isoformat()
+    assert month_row["amounts"]["usd"] >= 42.0
+
+    week_response = test_app.get(
+        "/stats/resident-fee-sum",
+        params={
+            "timeframe_from": today_iso,
+            "timeframe_to": today_iso,
+            "grain": "week",
+        },
+        headers={"x-token": token},
+    )
+    assert week_response.status_code == 200
+    week_data = week_response.json()
+    assert len(week_data) >= 1
+    week_row = week_data[-1]
+    assert week_row["grain"] == "week"
+    expected_week_start = today - timedelta(days=today.weekday())
+    assert week_row["bucket_start"] == expected_week_start.isoformat()
+    assert week_row["amounts"]["usd"] >= 42.0
 
 
 @pytest.fixture(scope="class")

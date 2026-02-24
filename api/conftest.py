@@ -1,6 +1,9 @@
 """Test configuration and shared fixtures"""
 
 import os
+
+# Disable CSRF for tests (TestClient does not send cookies)
+os.environ["REFINANCE_CSRF_DISABLED"] = "1"
 import sys
 import traceback
 import uuid
@@ -49,7 +52,8 @@ DEFAULT_TEST_DATABASE_URL = "postgresql://postgres:postgres@db:5432/refinance_te
 
 
 def _quote_database(name: str) -> str:
-    return f'"{name.replace("\"", "\"\"")}"'
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
 
 
 @contextmanager

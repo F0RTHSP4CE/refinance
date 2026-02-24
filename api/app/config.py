@@ -43,6 +43,14 @@ class Config:
     keepz_poll_interval_seconds: int = field(
         default=int(getenv("REFINANCE_KEEPZ_POLL_INTERVAL_SECONDS", "60"))
     )
+    keepz_dev_mode: bool = field(
+        default=getenv("REFINANCE_KEEPZ_DEV_MODE", "").lower()
+        in ("1", "true", "yes"),
+    )
+    csrf_disabled: bool = field(
+        default=getenv("REFINANCE_CSRF_DISABLED", "").lower()
+        in ("1", "true", "yes"),
+    )
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))

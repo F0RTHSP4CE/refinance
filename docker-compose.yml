@@ -14,6 +14,14 @@ services:
       dockerfile: ui/Dockerfile
     env_file:
       - secrets.env.example
+
+  ui-new:
+    build:
+      context: ./ui-new
+      dockerfile: Dockerfile
+      target: prod
+    depends_on:
+      - api
   
   db:
     image: postgres:17

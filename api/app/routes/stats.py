@@ -1,6 +1,6 @@
 """Routes for stats"""
 
-from datetime import date, timedelta
+from datetime import date
 from typing import List, Optional
 
 from app.dependencies.services import get_stats_service
@@ -10,6 +10,8 @@ from app.schemas.stats import (
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
+    StatsBucketSumSchema,
+    StatsGrain,
     TopEntityStatSchema,
     TopTagStatSchema,
     TransactionsSumByTagByMonthSchema,
@@ -41,6 +43,34 @@ def get_transactions_sum_by_week(
     stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_transactions_sum_by_week(timeframe_from, timeframe_to)
+
+
+@router.get("/resident-fee-sum", response_model=List[StatsBucketSumSchema])
+def get_resident_fee_sum(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    grain: StatsGrain = "month",
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_resident_fee_sum(
+        timeframe_from=timeframe_from,
+        timeframe_to=timeframe_to,
+        grain=grain,
+    )
+
+
+@router.get("/transactions-sum", response_model=List[StatsBucketSumSchema])
+def get_transactions_sum(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    grain: StatsGrain = "month",
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_transactions_sum(
+        timeframe_from=timeframe_from,
+        timeframe_to=timeframe_to,
+        grain=grain,
+    )
 
 
 @router.get(
@@ -107,6 +137,7 @@ def get_transactions_sum_by_tag_by_month(
 def get_top_incoming_entities(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -114,6 +145,7 @@ def get_top_incoming_entities(
     return stats_service.get_top_incoming_entities(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -123,6 +155,7 @@ def get_top_incoming_entities(
 def get_top_outgoing_entities(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -130,6 +163,7 @@ def get_top_outgoing_entities(
     return stats_service.get_top_outgoing_entities(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -139,6 +173,7 @@ def get_top_outgoing_entities(
 def get_top_incoming_tags(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -146,6 +181,7 @@ def get_top_incoming_tags(
     return stats_service.get_top_incoming_tags(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -155,6 +191,7 @@ def get_top_incoming_tags(
 def get_top_outgoing_tags(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -162,6 +199,7 @@ def get_top_outgoing_tags(
     return stats_service.get_top_outgoing_tags(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -211,6 +249,7 @@ def get_entity_stats_bundle(
             int(entity_id),
             int(normalized_limit),
             int(normalized_months),
+            bundle_timeframe_from,
             normalized_timeframe_to,
         )
 
@@ -299,24 +338,28 @@ def get_entity_stats_bundle(
     top_incoming = stats_service.get_top_incoming_entities(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_outgoing = stats_service.get_top_outgoing_entities(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_incoming_tags = stats_service.get_top_incoming_tags(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_outgoing_tags = stats_service.get_top_outgoing_tags(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
