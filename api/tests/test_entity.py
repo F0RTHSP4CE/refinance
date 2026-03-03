@@ -241,3 +241,125 @@ class TestEntityBalanceSorting:
         data = response.json()
         assert data["total"] == 1
         assert data["items"][0]["id"] == entity_a_id
+
+
+class TestEntityTelegramIdFilter:
+    """Tests for the auth_telegram_id filter, including BigInteger Telegram IDs
+    and edge cases like empty-string telegram_id in auth JSON."""
+
+    def _create_entity_with_telegram_id(
+        self, test_app: TestClient, token: str, name: str, telegram_id: int | str | None
+    ) -> int:
+        response = test_app.post(
+            "/entities",
+            json={"name": name, "auth": {"telegram_id": telegram_id}},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    def test_filter_by_telegram_id_returns_correct_entity(
+        self, test_app: TestClient, token
+    ):
+        """Basic lookup: a single entity with a matching telegram_id is returned."""
+        eid = self._create_entity_with_telegram_id(
+            test_app, token, "TgFilter User", 123456789
+        )
+
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": 123456789},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["id"] == eid
+
+    def test_filter_by_telegram_id_no_match(self, test_app: TestClient, token):
+        """Looking up a telegram_id that is not in the DB returns zero results."""
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": 999999999},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+
+    def test_filter_by_large_telegram_id(self, test_app: TestClient, token):
+        """Telegram IDs can exceed 32-bit INTEGER range (up to ~5.9B).
+        The filter must not overflow and must find the entity correctly."""
+        large_tid = 5_900_000_000  # > 2^31-1, would overflow a plain INTEGER
+        eid = self._create_entity_with_telegram_id(
+            test_app, token, "TgFilter LargeId", large_tid
+        )
+
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": large_tid},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["id"] == eid
+
+    def test_entity_with_empty_telegram_id_is_not_matched(
+        self, test_app: TestClient, token
+    ):
+        """Entities with auth.telegram_id == "" must not match any numeric filter
+        and must not cause a DB cast error."""
+        self._create_entity_with_telegram_id(
+            test_app, token, "TgFilter EmptyStr", ""
+        )
+
+        # Filtering by any numeric telegram_id must not return the empty-string entity
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": 1},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        # Only seeded system entities (id=1) could theoretically match — but their
+        # auth.telegram_id is not "1", so total must be 0.
+        for item in response.json()["items"]:
+            assert (item.get("auth") or {}).get("telegram_id") != ""
+
+    def test_entity_with_null_telegram_id_is_not_matched(
+        self, test_app: TestClient, token
+    ):
+        """Entities with no auth or null telegram_id must not be returned."""
+        test_app.post(
+            "/entities",
+            json={"name": "TgFilter NullAuth"},
+            headers={"x-token": token},
+        )
+
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": 42},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        for item in response.json()["items"]:
+            assert (item.get("auth") or {}).get("telegram_id") == 42
+
+    def test_filter_does_not_return_wrong_entity(self, test_app: TestClient, token):
+        """Two entities with different telegram_ids — only the matching one is returned."""
+        eid_a = self._create_entity_with_telegram_id(
+            test_app, token, "TgFilter Alice", 111_000_111
+        )
+        _eid_b = self._create_entity_with_telegram_id(
+            test_app, token, "TgFilter Bob", 222_000_222
+        )
+
+        response = test_app.get(
+            "/entities",
+            params={"auth_telegram_id": 111_000_111},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["id"] == eid_a
