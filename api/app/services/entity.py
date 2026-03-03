@@ -18,7 +18,7 @@ from app.services.mixins.taggable_mixin import TaggableServiceMixin
 from app.services.tag import TagService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import Integer, Text, cast
+from sqlalchemy import BigInteger, Text, cast
 from sqlalchemy.orm import Query, Session
 from sqlalchemy.sql import func
 
@@ -47,7 +47,7 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
             query = query.filter(self.model.active == filters.active)
         if filters.auth_telegram_id is not None:
             query = query.filter(
-                cast(cast(self.model.auth["telegram_id"], Text), Integer)
+                cast(func.nullif(self.model.auth.op("->>")("telegram_id"), ""), BigInteger)
                 == filters.auth_telegram_id
             )
         if filters.tags_ids:
@@ -91,7 +91,7 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         db_obj = (
             self.db.query(self.model)
             .filter(
-                cast(cast(self.model.auth["telegram_id"], Text), Integer) == telegram_id
+                cast(func.nullif(self.model.auth.op("->>")("telegram_id"), ""), BigInteger) == telegram_id
             )
             .first()
         )
