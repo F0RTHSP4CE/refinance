@@ -36,6 +36,7 @@ class SplitParticipantSchema(BaseSchema):
 class SplitSharePreview(BaseSchema):
     current_share: CurrencyDecimal
     next_share: CurrencyDecimal
+    average_share: CurrencyDecimal
 
 
 class SplitSchema(BaseReadSchema):

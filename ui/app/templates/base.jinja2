@@ -8,6 +8,9 @@
     <title>refinance</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
         crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css?1232103021">
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
 </head>
@@ -88,7 +91,7 @@
     </div>
 
     <main>
-        <h1>{% block title %}{% endblock title %}</h1>
+        {% block heading %}<h1>{% block title %}{% endblock title %}</h1>{% endblock heading %}
         {% block content %}
         {% endblock content %}
     </main>

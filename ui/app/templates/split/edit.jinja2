@@ -1,26 +1,41 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
-{% from 'widgets/tag_selector.jinja2' import tag_selector %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Edit split {{ split.id }}{% endblock %}
 
 {% block content %}
-<form method="post">
-    <table>
-        <tr>
-            <td>{{ form.recipient_entity_name.label }}</td>
-            <td>
-                {{ entity_selector('recipient_entity', split.recipient_entity.name, split.recipient_entity.id) }}
-            </td>
-        </tr>
-        {{ render_form(form, except=('recipient_entity_name', 'recipient_entity_id', 'tag_ids'), new_table=False) }}
-        {# <tr>
-            <td>Tags</td>
-            <td>{{ tag_selector('tag_ids', all_tags, form.tag_ids.data or []) }}</td>
-        </tr> #}
-    </table>
-</form>
+<div class="transaction-form-layout shortcut-form-container">
+    <section class="deposit-topup-card">
+        <form method="post" class="deposit-topup-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                <label class="form-label">Recipient</label>
+                {{ entity_selector('recipient_entity', split.recipient_entity.name, split.recipient_entity.id, show_id_input=False) }}
+            </div>
+
+            <div class="deposit-row">
+                <div class="deposit-field deposit-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    {{ form.amount(class_='form-input', step='0.01') }}
+                </div>
+                <div class="deposit-field deposit-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    {{ form.currency(class_='form-input') }}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="comment">Comment</label>
+                {{ form.comment(class_='form-input') }}
+            </div>
+
+            <div class="deposit-topup-actions">
+                {{ form.submit(class_='big-button', value='Save Changes') }}
+            </div>
+        </form>
+    </section>
+</div>
 
 <script src="/static/js/entitySelector.js"></script>
 {% endblock %}

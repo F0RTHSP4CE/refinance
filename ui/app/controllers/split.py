@@ -53,7 +53,7 @@ class SplitAddParticipant(FlaskForm):
             Optional(),
             NumberRange(min=0.01, message="Amount must be greater than 0"),
         ],
-        description="Optional. Automatic share will be recalculated with each participant. Fixed amount will be sent as is.",
+        description="Leave empty for equal split of the remaining amount",
     )
     submit = SubmitField("Submit")
 
