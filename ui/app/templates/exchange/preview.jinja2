@@ -1,18 +1,37 @@
 {% extends 'base.jinja2' %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Currency exchange preview{% endblock %}
 
 {% block content %}
-<p>Exchange <strong>{{ preview.source_amount }}</strong> {{ preview.source_currency.upper() }} to <strong>{{
-        preview.target_amount }}</strong> {{ preview.target_currency.upper() }}? Rate is {{ preview.rate }}</p>
+<div class="xform-wrap">
 
-<form method="post" action="{{ url_for('exchange.exchange') }}">
+  <div class="xpreview-block">
+    <div class="xpreview-row">
+      <div class="xpreview-side">
+        <div class="xpreview-label">YOU SELL</div>
+        <div class="xpreview-value">{{ preview.source_amount }} <span class="xpreview-currency">{{ preview.source_currency.upper() }}</span></div>
+      </div>
+      <div class="xpreview-arrow" aria-hidden="true">→</div>
+      <div class="xpreview-side">
+        <div class="xpreview-label">YOU GET</div>
+        <div class="xpreview-value">{{ preview.target_amount }} <span class="xpreview-currency">{{ preview.target_currency.upper() }}</span></div>
+      </div>
+    </div>
+    <div class="xpreview-rate">RATE: {{ preview.rate }}</div>
+  </div>
+
+  <form method="post" action="{{ url_for('exchange.exchange') }}">
+    <input type="hidden" name="csrf_token" value="{{ form.csrf_token._value() }}">
     <input type="hidden" name="source_amount" value="{{ form.data.source_amount }}">
     <input type="hidden" name="source_currency" value="{{ form.data.source_currency }}">
     <input type="hidden" name="target_amount" value="{{ form.data.target_amount }}">
     <input type="hidden" name="target_currency" value="{{ form.data.target_currency }}">
     <input type="hidden" name="entity_id" value="{{ form.data.entity_id }}">
-    <button type="submit">Exchange</button>
-</form>
+    <div class="xform-actions">
+      <button type="submit" class="xform-submit">CONFIRM EXCHANGE ✓</button>
+      <a href="{{ url_for('exchange.index') }}" class="xform-cancel">← CANCEL</a>
+    </div>
+  </form>
+
+</div>
 {% endblock %}
