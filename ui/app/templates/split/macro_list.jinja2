@@ -1,79 +1,83 @@
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 
-{% macro split_list(splits, actor_entity_id) %}
-{% if splits %}
-<div class="wide-table-wrapper">
-    <table>
-        <thead>
-            <tr>
-                <td>ID</td>
-                <td>Actor</td>
-                <td>Created At</td>
-                <td>Recipient</td>
-                <td>Comment</td>
-                {# <td>Tags</td> #}
-                <td>Amount</td>
-                <td>Currency</td>
-                <td>Participants</td>
-                <td class="right-align">≈Calc. share</td>
-                <td class="right-align">≈Next share</td>
-                <td></td>
-            </tr>
-        </thead>
-        <tbody>
-            {% for split in splits %}
-            <tr {% if split.performed %} class="secondary" {%endif%}>
-                <td><a href="{{ url_for('split.detail', id=split.id) }}">{{ split.id }}</a></td>
+{% macro split_card(split) %}
+    {% set participant_count = split.participants | length %}
+    {% set is_joined = split.participants | selectattr("entity.id", "equalto", g.actor_entity.id) | list | length > 0 %}
+    {% set ns = namespace(coll=0.0) %}
+    {% for p in split.participants %}
+    {% set ps = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+    {% set ns.coll = ns.coll + ps %}
+    {% endfor %}
+    {% set collected = ns.coll | round(2) %}
 
-                <td>
-                    <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}"
-                        class="{% if not split.actor_entity.active %}secondary inactive{% endif %}">
-                        {{ split.actor_entity.name }}
-                    </a>
-                </td>
-                <td>{{ human_readable_date(split.created_at) }}</td>
-                <td>
-                    <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}"
-                        class="{% if not split.recipient_entity.active %}secondary inactive{% endif %}">
-                        {{ split.recipient_entity.name }}
-                    </a>
-                    {% for tag in split.recipient_entity.tags %}
-                    {{ tag_inline(tag) }}
-                    {% endfor %}
-                </td>
-                <td>{{ split.comment or ""}}</td>
-                {# <td>
-                    {% for tag in split.tags %}
-                    {{ tag_inline(tag) }}
-                    {% endfor %}
-                </td> #}
-                <td class="right-align">{{ split.amount }}</td>
-                <td>{{ split.currency | upper }}</td>
-                <td class="center-align">{{ split.participants | length or "" }}</td>
-                <td class="right-align">
-                    {% if split.share_preview.current_share | float > 0 %}
-                    {{ split.share_preview.current_share }} {{ split.currency | upper }}
-                    {% endif %}
-                </td>
-                <td class="right-align">
-                    {% if not split.performed %}
-                    {% if split.share_preview.next_share | float > 0 %}
-                    {{ split.share_preview.next_share }} {{ split.currency | upper }}
-                    {% endif %}
-                    {% endif %}
-                </td>
-                <td>
-                    {% if (split.participants | selectattr("entity.id", "equalto", g.actor_entity.id) | list) or
-                    split.performed %}
-                    {% else %}
-                    <a href="{{ url_for('split.add_participant', id=split.id ) }}">Join!</a>
-                    {% endif %}
-                </td>
-            </tr>
+    <div class="split-card{% if split.performed %} split-card--done{% endif %}">
+
+        <div class="split-card-header">
+            <a href="{{ url_for('split.detail', id=split.id) }}" class="split-card-title">
+                {{ split.comment or ("Split #" ~ split.id) }}
+            </a>
+            <div class="split-card-meta">
+                <span class="split-card-id">#{{ split.id }}</span>
+                {% if split.performed %}
+                <span class="split-card-badge split-card-badge--done">Done</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="split-card-amount"><span class="split-card-collected">{{ collected }}</span> / {{ split.amount }} <span class="split-card-currency">{{ split.currency | upper }}</span></div>
+
+        <div class="split-card-progress-track">
+            {% for p in split.participants %}
+            {% set share = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+            {% set w = (share / (split.amount | float) * 100) | round(2) %}
+            {% set hue = (p.entity.id * 137 + 30) % 360 %}
+            {% if split.performed %}
+            <div class="split-card-progress-segment" style="width:{{ w }}%; background:hsl({{ hue }},100%,55%); opacity:0.28;" title="{{ p.entity.name }} · {{ share | round(2) }} {{ split.currency | upper }}"></div>
+            {% else %}
+            <div class="split-card-progress-segment" style="width:{{ w }}%; background:hsl({{ hue }},100%,55%);" title="{{ p.entity.name }} · {{ share | round(2) }} {{ split.currency | upper }}"></div>
+            {% endif %}
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+        <div class="split-card-stats">
+            {{ participant_count }} participant{{ 's' if participant_count != 1 else '' }}
+            {% set has_fixed = split.participants | selectattr("fixed_amount") | list | length > 0 %}
+            {% if has_fixed and split.share_preview.average_share | float > 0 %}
+            · average <strong>{{ split.share_preview.average_share }} {{ split.currency | upper }}</strong>
+            {% elif split.share_preview.current_share | float > 0 %}
+            · <strong>{{ split.share_preview.current_share }} {{ split.currency | upper }}</strong> each
+            {% endif %}
+        </div>
+
+        {% if not split.performed %}
+            {% if is_joined %}
+            <div class="split-card-joined-badge">You're in</div>
+            {% else %}
+            <a href="{{ url_for('split.add_participant', id=split.id) }}" class="big-button">Join</a>
+            {% endif %}
+        {% endif %}
+
+    </div>
+{% endmacro %}
+
+{% macro split_list(splits, actor_entity_id) %}
+{% set active_splits = splits | selectattr("performed", "equalto", false) | list %}
+{% set done_splits = splits | selectattr("performed", "equalto", true) | list %}
+{% if splits %}
+{% if active_splits %}
+<div class="split-cards-grid">
+    {% for split in active_splits %}
+    {{ split_card(split) }}
+    {% endfor %}
 </div>
+{% endif %}
+{% if done_splits %}
+<h2 class="split-section-title">Completed</h2>
+<div class="split-cards-grid">
+    {% for split in done_splits %}
+    {{ split_card(split) }}
+    {% endfor %}
+</div>
+{% endif %}
 {% else %}
 <p>No splits.</p>
 {% endif %}
