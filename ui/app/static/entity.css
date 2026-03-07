@@ -1,0 +1,776 @@
+/* Entity dashboard */
+.entity-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1rem;
+  padding-bottom: 1rem;
+  min-width: 0;
+}
+
+.entity-hero-card,
+.entity-card {
+  border: 3px solid black;
+  background: linear-gradient(135deg, #ffffff 0%, #fafaf7 100%);
+  box-shadow: 7px 7px 0 black;
+  padding: 1.1rem 1.2rem;
+}
+
+.entity-hero-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.entity-hero-card::after {
+  content: "";
+  position: absolute;
+  right: -120px;
+  top: -100px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(255, 184, 0, 0.24), rgba(255, 184, 0, 0));
+  pointer-events: none;
+}
+
+.entity-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.entity-kicker {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.entity-kicker-single-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entity-kicker-dot {
+  opacity: 0.65;
+  margin: 0 0.4rem;
+}
+
+.entity-hero-title {
+  margin: 0.35rem 0 0.2rem;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+  text-transform: uppercase;
+  line-height: 1.08;
+  word-break: break-word;
+}
+
+.entity-identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.entity-identity-row .entity-hero-title {
+  margin-bottom: 0;
+  margin-right: 0;
+}
+
+.entity-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.entity-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid black;
+  background: white;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  line-height: 1.2;
+}
+
+.entity-chip-ok {
+  background: #f4fbea;
+}
+
+.entity-chip-warning {
+  background: #fff2de;
+}
+
+.entity-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+  margin-top: 0.65rem;
+}
+
+.entity-hero-actions .big-button {
+  width: auto;
+  white-space: nowrap;
+}
+
+.entity-comment {
+  margin-top: 0.85rem;
+  max-width: 80ch;
+  line-height: 1.45;
+  font-size: 1.03rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.entity-edit-button {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.entity-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.entity-tags-inline {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.entity-tags-inline .tag-badge {
+  font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+  font-family: 'Unbounded', Arial, sans-serif;
+  border-width: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: #fff !important;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 900;
+  line-height: 1.08;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  text-shadow: 
+    3px 3px 0 var(--tag-color);
+}
+
+.entity-tags-inline .tag-badge a,
+.entity-tags-inline .tag-badge span {
+  color: #fff !important;
+}
+
+.entity-empty-pill {
+  border: 2px dashed #666;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #444;
+  background: #f9f9f9;
+}
+
+.entity-main-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  min-width: 0;
+}
+
+.entity-left-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.entity-right-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.entity-card-title {
+  margin: 0;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+
+.entity-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.entity-meta-grid,
+.entity-auth-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: minmax(115px, 140px) minmax(0, 1fr);
+  row-gap: 0.4rem;
+  column-gap: 0.55rem;
+}
+
+.entity-meta-grid dt,
+.entity-auth-grid dt {
+  font-weight: 700;
+  color: #222;
+}
+
+.entity-meta-grid dd,
+.entity-auth-grid dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.entity-balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 0.9rem;
+}
+
+.entity-balance-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid #ddd;
+  padding: 0.65rem 0;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.entity-balance-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.entity-balance-row-draft {
+  opacity: 0.65;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(200, 200, 200, 0.15) 10px,
+    rgba(200, 200, 200, 0.15) 20px
+  );
+}
+
+.entity-balance-separator {
+  margin-top: 0.85rem;
+  padding: 0.5rem 0 0.35rem;
+  border-top: 2px solid #333;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.entity-draft-find-button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.entity-balance-currency {
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.entity-balance-amount {
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.entity-balance-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.entity-card-header-tight {
+  margin-bottom: 0.35rem;
+}
+
+.entity-dashboard .big-button {
+  border-radius: 0;
+  border-width: 2px;
+  box-shadow: none;
+  transform: none;
+  padding: 0.32rem 0.56rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.entity-dashboard .big-button:hover,
+.entity-dashboard .big-button:active {
+  box-shadow: none;
+  transform: none;
+}
+
+.entity-card-header-tight .big-button {
+  width: auto;
+  padding: 0.3rem 0.52rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.entity-stats-card {
+  min-width: 0;
+}
+
+.entity-empty-state {
+  margin-top: 0.8rem;
+  color: #555;
+  font-style: italic;
+}
+
+.stats-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.stats-controls span {
+  color: #444;
+  font-weight: 600;
+}
+
+.stats-controls a,
+.stats-controls button {
+  padding: 4px 10px;
+  border-radius: 0;
+  border: 2px solid black;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font: inherit;
+}
+
+.stats-controls a:hover,
+.stats-controls button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 3px 3px 0 black;
+}
+
+.stats-controls a.active,
+.stats-controls button.active {
+  background: black;
+  color: #fff;
+}
+
+.stats-controls .divider {
+  color: #777;
+  margin: 0 4px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.chart-cell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: #fff;
+  border: 2px solid black;
+  box-shadow: 4px 4px 0 black;
+}
+
+.charts-grid > .chart-cell:first-child {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.charts-grid.balance-width-one > .chart-cell:first-child {
+  width: calc((100% - 16px) / 2);
+}
+
+.charts-grid.balance-width-full > .chart-cell:first-child {
+  width: 100%;
+}
+
+.chart-cell h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.balance-chart-container {
+  width: 100%;
+  min-height: 360px;
+  height: 450px;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.charts-grid.balance-width-full .balance-chart-container {
+  min-height: 730px;
+  height: 900px;
+  max-height: none;
+}
+
+#balance-change-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.activity-charts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+  justify-content: space-around;
+}
+
+.bar-chart {
+  flex: 0 1 260px;
+  min-width: 220px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 320px;
+}
+
+.bar-chart h3,
+.pie-chart h3 {
+  font-size: 0.94rem;
+  margin: 0;
+}
+
+.bar-chart canvas {
+  flex: 1 1 auto;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.pie-chart {
+  flex: 0 1 300px;
+  min-width: 220px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.pie-chart canvas {
+  width: 100% !important;
+  max-width: 300px;
+}
+
+.chart-placeholder {
+  color: #666;
+  font-style: italic;
+  margin: 1rem 0;
+}
+
+.entity-list-card .pagination {
+  margin-top: 0.9rem;
+}
+
+.entity-list-card .pagination a,
+.entity-transactions-card .pagination a {
+  display: inline-block;
+  padding: 0.4rem 0.7rem;
+  background: black;
+  color: white;
+  border: 2px solid black;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.entity-list-card .pagination a:hover,
+.entity-transactions-card .pagination a:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 black;
+}
+
+.entity-list-card .pagination span,
+.entity-transactions-card .pagination span {
+  display: inline-block;
+  margin: 0 0.6rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.entity-invoice-count {
+  color: #e30000;
+  font-weight: 900;
+}
+
+.entity-invoice-compact-list {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.entity-invoice-compact-item {
+  padding: 0;
+}
+
+.entity-invoice-compact-link {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.34rem 0.52rem;
+  background: #f31010;
+  color: #fff;
+  border: 2px solid #f31010;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.entity-invoice-compact-link:hover {
+  background: #fff;
+  color: #f31010;
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #f31010;
+}
+
+.entity-invoice-compact-link:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.entity-invoice-compact-link-paid {
+  background: #fff;
+  border-color: #111;
+  color: #111;
+}
+
+.entity-invoice-compact-link-paid:hover {
+  background: #111;
+  color: #fff;
+  box-shadow: 6px 6px 0 #111;
+}
+
+.entity-invoice-compact-amount {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 900;
+  text-align: center;
+  word-break: break-word;
+}
+
+.entity-invoice-compact-meta {
+  margin-top: 0.22rem;
+  display: block;
+  font-size: 0.72rem;
+  text-align: center;
+  opacity: 0.92;
+}
+
+.entity-invoice-compact-note {
+  margin: 0.62rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+@media (max-width: 1080px) {
+  .entity-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .entity-transactions-card .wide-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .entity-transactions-card .wide-table-wrapper > table {
+    display: block;
+    white-space: nowrap;
+    font-size: 0.86rem;
+  }
+
+  .entity-transactions-card .transaction-table-compact .tx-secondary {
+    font-size: 0.7rem;
+  }
+
+  .entity-transactions-card td {
+    padding: 0.22rem 0.25rem;
+  }
+
+  .entity-transactions-card .tag-badge {
+    font-size: 0.73rem;
+    padding: 0.06rem 0.16rem;
+  }
+
+  .entity-left-rail,
+  .entity-right-rail {
+    width: 100%;
+  }
+
+  .entity-hero-top {
+    flex-direction: column;
+  }
+
+  .entity-hero-actions {
+    justify-content: flex-start;
+    margin-top: 0;
+    width: 100%;
+  }
+
+  .entity-identity-row {
+    gap: 0.7rem;
+  }
+
+  .entity-tags-inline .tag-badge {
+    font-size: clamp(1.5rem, 4.5vw, 2rem);
+  }
+
+  .entity-hero-title {
+    font-size: clamp(1.6rem, 5.2vw, 2.3rem);
+  }
+
+  .entity-chip {
+    font-size: 0.88rem;
+    padding: 0.28rem 0.65rem;
+  }
+
+  .entity-comment {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .charts-grid > .chart-cell:first-child,
+  .charts-grid.balance-width-one > .chart-cell:first-child,
+  .charts-grid.balance-width-full > .chart-cell:first-child {
+    width: 100%;
+  }
+
+  .activity-charts {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 620px) {
+  .entity-hero-card,
+  .entity-card {
+    padding: 1rem;
+  }
+
+  .entity-card-header-tight {
+    align-items: center;
+  }
+
+  .entity-card-header-tight .big-button {
+    width: auto;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .stats-controls {
+    gap: 0.4rem;
+  }
+
+  .entity-kicker-single-line {
+    white-space: normal;
+    font-size: 0.76rem;
+  }
+
+  .entity-identity-row {
+    gap: 0.6rem;
+  }
+
+  .entity-hero-title {
+    font-size: clamp(1.5rem, 6.5vw, 2.1rem);
+  }
+
+  .entity-tags-inline .tag-badge {
+    font-size: clamp(1.3rem, 5.5vw, 1.8rem);
+  }
+
+  .entity-chip {
+    font-size: 0.82rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .entity-balance-currency,
+  .entity-balance-amount {
+    font-size: clamp(1.4rem, 4vw, 1.9rem);
+  }
+
+  .entity-hero-meta {
+    gap: 0.45rem;
+  }
+
+  .bar-chart,
+  .pie-chart {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .bar-chart {
+    height: 260px;
+  }
+
+  .entity-list-card {
+    min-width: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .entity-list-card table {
+    width: 100%;
+    table-layout: auto;
+    font-size: 0.9rem;
+  }
+}

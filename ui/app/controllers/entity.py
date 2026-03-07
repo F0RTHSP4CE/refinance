@@ -2,7 +2,7 @@ from datetime import date
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Invoice, Tag, Transaction
+from app.schemas import Balance, Entity, Invoice, InvoiceStatus, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -231,6 +231,21 @@ def detail(id):
     ).json()
     invoices_total = invoices_page["total"]
     invoices = [Invoice(**item) for item in invoices_page["items"]]
+
+    # For paid invoices, prefer the settled transaction amount/currency in compact UI.
+    for invoice in invoices[:6]:
+        status = (
+            invoice.status.value
+            if isinstance(invoice.status, InvoiceStatus)
+            else str(invoice.status).lower()
+        )
+        if status != InvoiceStatus.PAID.value or not invoice.transaction_id:
+            continue
+
+        tx_data = api.http("GET", f"transactions/{invoice.transaction_id}").json()
+        tx = Transaction(**tx_data)
+        invoice.paid_amount = tx.amount
+        invoice.paid_currency = tx.currency.upper()
 
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:

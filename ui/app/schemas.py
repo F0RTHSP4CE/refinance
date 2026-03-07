@@ -95,6 +95,8 @@ class Invoice(Base):
     tags: list[Tag]
     transaction_id: int | None = None
     billing_period: date | None = None
+    paid_amount: Decimal | None = None
+    paid_currency: str | None = None
 
 
 class DepositProvider(enum.Enum):
