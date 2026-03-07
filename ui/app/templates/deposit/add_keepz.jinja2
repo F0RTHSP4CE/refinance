@@ -4,13 +4,13 @@
 
 {% block content %}
 
-<div class="deposit-topup-layout">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+<div class="entry-form-layout">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             {{ form.hidden_tag() }}
 
-            <div class="deposit-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="amount">Amount</label>
                     {{ form.amount(class_='form-input', step='0.01', min='0.01', inputmode='decimal', autocomplete='off', placeholder='100') }}
                     {% if form.amount.errors %}
@@ -18,7 +18,7 @@
                     {% endif %}
                 </div>
 
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="currency">Currency</label>
                     {{ form.currency(class_='form-input') }}
                     {% if form.currency.errors %}
@@ -31,7 +31,7 @@
             <div class="form-error">{{ form.to_entity_id.errors[0] }}</div>
             {% endif %}
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form.submit(class_='big-button', value='Top up') }}
             </div>
         </form>

@@ -1,0 +1,101 @@
+/* ELEMENTS  */
+a {
+  text-decoration: none;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #222;
+  border: 1px solid #222;
+}
+
+.button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+table td {
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+
+th,
+thead {
+  text-align: left;
+  font-weight: bold;
+}
+
+td {
+  /* padding-left: 0.5rem; */
+  padding-right: 0.5rem;
+}
+
+.fee-trend-cell {
+  width: 90px;
+  min-width: 90px;
+  padding-right: 0;
+  vertical-align: middle;
+}
+
+
+.fee-trend-graph {
+  width: 90px;
+  height: 24px;
+}
+
+.fee-trend-empty {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.balance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.balance-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.balance-amount {
+  min-width: 5.5rem;
+}
+
+.balance-cell {
+  vertical-align: top;
+  min-width: 4.5rem;
+}
+
+.balance-value,
+.balance-draft {
+  line-height: 1.1;
+}
+
+.balance-draft {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.wide-table-wrapper {
+  max-width: 100%;
+}
+
+.wide-table-wrapper>table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+

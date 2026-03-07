@@ -5,8 +5,8 @@
 
 {% block content %}
 <div class="transaction-form-layout shortcut-form-container">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             {{ form_entity.hidden_tag() }}
 
             <div class="form-group">
@@ -14,29 +14,29 @@
                 {{ entity_selector('entity', g.actor_entity.name, g.actor_entity.id, show_id_input=False) }}
             </div>
 
-            <div class="deposit-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="fixed_amount">Amount <span style="font-weight:400; opacity:0.5; font-size:0.85em;">(optional)</span></label>
                     {{ form_entity.fixed_amount(class_='form-input', placeholder=split.share_preview.next_share, step='0.01') }}
                     {% if form_entity.fixed_amount.description %}
                     <div class="field-description">{{ form_entity.fixed_amount.description }}</div>
                     {% endif %}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" style="visibility:hidden;">_</label>
                     <div class="split-currency-badge">{{ split.currency | upper }}</div>
                 </div>
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form_entity.submit(class_='big-button', value='Add Participant') }}
             </div>
         </form>
     </section>
 
-    <details class="deposit-topup-card">
+    <details class="entry-form-card">
         <summary style="cursor:pointer; font-weight:600; margin: -1rem -1.1rem; padding: 1rem 1.1rem;">Add by tag instead</summary>
-        <form method="post" class="deposit-topup-form" style="margin-top: 1rem;">
+        <form method="post" class="entry-form" style="margin-top: 1rem;">
             {{ form_tag.hidden_tag() }}
 
             <div class="form-group">
@@ -44,18 +44,18 @@
                 {{ form_tag.entity_tag_id(class_='form-input') }}
             </div>
 
-            <div class="deposit-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="fixed_amount">Amount <span style="font-weight:400; opacity:0.5; font-size:0.85em;">(optional)</span></label>
                     {{ form_tag.fixed_amount(class_='form-input', step='0.01') }}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" style="visibility:hidden;">_</label>
                     <div class="split-currency-badge">{{ split.currency | upper }}</div>
                 </div>
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form_tag.submit(class_='big-button') }}
             </div>
         </form>

@@ -6,8 +6,8 @@
 
 {% block content %}
 <div class="transaction-form-layout shortcut-form-container">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             {{ form.hidden_tag() }}
 
             <div class="form-group">
@@ -15,12 +15,12 @@
                 {{ entity_selector('recipient_entity', g.actor_entity.name, g.actor_entity.id, show_id_input=False) }}
             </div>
 
-            <div class="deposit-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="amount">Amount</label>
                     {{ form.amount(class_='form-input', step='0.01') }}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="currency">Currency</label>
                     {{ form.currency(class_='form-input') }}
                 </div>
@@ -31,7 +31,7 @@
                 {{ form.comment(class_='form-input') }}
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form.submit(class_='big-button', value='Create Split') }}
             </div>
         </form>

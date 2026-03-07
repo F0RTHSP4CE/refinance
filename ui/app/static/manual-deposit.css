@@ -1,0 +1,29 @@
+/* MANUAL DEPOSIT */
+.manual-deposit-note {
+  max-width: 60ch;
+}
+
+.manual-treasury-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.manual-treasury {
+  border: 2px solid black;
+  background: white;
+  padding: 0.85rem 1rem;
+}
+
+.manual-treasury-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.manual-treasury-comment {
+  margin-top: 0.4rem;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
