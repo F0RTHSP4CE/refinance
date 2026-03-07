@@ -183,8 +183,25 @@
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  max-width: 900px;
+  max-width: none;
   margin-top: 1rem;
+}
+
+.split-detail-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.split-detail-left {
+  flex: 1 1 560px;
+  min-width: 0;
+}
+
+.split-detail-right {
+  flex: 1 1 450px;
+  min-width: 0;
 }
 
 .split-detail-header {
@@ -263,7 +280,7 @@
 /* ── Amount block with large progress bar ── */
 .split-detail-amount-block {
   border: 3px solid black;
-  padding: 1.5rem 1.5rem 9rem;
+  padding: 1.5rem;
   background: white;
   box-shadow: 6px 6px 0 black;
   display: flex;
@@ -384,6 +401,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  width: 100%;
 }
 
 .split-detail-section-header {

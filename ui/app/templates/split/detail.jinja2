@@ -28,6 +28,9 @@
         </h1>
     </div>
 
+    <div class="split-detail-content">
+        <div class="split-detail-left">
+
     {# ── Amount + Large Progress Bar ── #}
     <div class="split-detail-amount-block">
         <div class="split-detail-amount-corner">
@@ -92,14 +95,11 @@
         </div>
     </div>
 
-    {# ── Transactions ── #}
-    {% if split.performed %}
-    <div class="split-detail-section">
-        <h2 class="split-section-title split-section-title--visible">Transactions</h2>
-        {{ transaction_list(split.performed_transactions) }}
-    </div>
-    {% endif %}
+        </div> {# end split-detail-left #}
 
+        <div class="split-detail-right">
+
+    {# ── Split Actions ── #}
     {% if not split.performed %}
     <div class="split-detail-section">
         <h2 class="split-section-title split-section-title--visible">Split Actions</h2>
@@ -130,6 +130,18 @@
         </div>
         {% endif %}
     </div>
+
+        </div> {# end split-detail-right #}
+
+    </div> {# end split-detail-content #}
+
+    {# ── Transactions ── #}
+    {% if split.performed %}
+    <div class="split-detail-section">
+        <h2 class="split-section-title split-section-title--visible">Transactions</h2>
+        {{ transaction_list(split.performed_transactions) }}
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}
