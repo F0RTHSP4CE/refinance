@@ -12,13 +12,6 @@ nav a {
   color: lightgray;
 }
 
-nav a:hover {
-  color: white;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.22em;
-}
-
 table tr:not(:has(input[type="submit"])):nth-child(even) {
   background-color: #f8f8f8;
 }
