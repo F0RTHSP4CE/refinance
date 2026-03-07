@@ -69,6 +69,9 @@
     <div id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" hidden>
         <div class="mobile-menu-header">
             <div class="mobile-menu-title">REFINANCE</div>
+            {% if g.actor_entity %}
+            <a href="{{ url_for('auth.logout') }}" class="mobile-menu-logout">Log out</a>
+            {% endif %}
             <a href="#" class="mobile-menu-close" role="button" aria-label="Close menu">×</a>
         </div>
 
@@ -93,20 +96,10 @@
         </div>
         
         {% if g.actor_entity %}
-        <div class="mobile-menu-user">
-            <div class="mobile-menu-balance">
-                {% for currency,value in g.actor_entity_balance["completed"].items() %}
-                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" {% if value | float < 0 %} class="amount-negative" {% endif %}>
-                    {{ value }} {{ currency | upper}}
-                </a>
-                {% endfor %}
-            </div>
-            <div class="mobile-menu-user-actions">
-                <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}">
-                    <strong class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}</strong>
-                </a>
-                <a href="{{ url_for('auth.logout') }}">Log out</a>
-            </div>
+        <div class="mobile-menu-footer">
+            <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" class="mobile-menu-entity">
+                {{ g.actor_entity.name }}
+            </a>
         </div>
         {% endif %}
     </div>

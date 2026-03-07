@@ -1,33 +1,63 @@
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 {% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
 
-{% macro transaction_list(transactions) %}
+{% macro transaction_list(transactions, compact=true) %}
 {% if transactions %}
 <div class="wide-table-wrapper">
-    <table>
+    <table class="transaction-table{% if compact %} transaction-table-compact{% endif %}">
         <thead>
             <tr>
-                <td>ID</td>
-                <td>Date</td>
-                <td>From</td>
-                <td>To</td>
-                <td>Amount</td>
-                <td>Currency</td>
-                <td>Treasury</td>
-                <td>Tags</td>
-                <td>Comment</td>
-                <td>Invoice</td>
-                <td>Status</td>
-                <td>Actor</td>
+                <td class="tx-head-id">ID</td>
+                {% if not compact %}
+                <td class="tx-head-date">Date</td>
+                {% endif %}
+                <td class="tx-head-from">From</td>
+                <td class="tx-head-to">To</td>
+                <td class="tx-head-amount">Amount</td>
+                <td class="tx-head-currency">Currency</td>
+                {% if compact %}
+                <td class="tx-head-tags">Tags</td>
+                <td class="tx-head-comment">Comment</td>
+                <td class="tx-head-treasury">Treasury</td>
+                {% else %}
+                <td class="tx-head-treasury">Treasury</td>
+                <td class="tx-head-tags">Tags</td>
+                <td class="tx-head-comment">Comment</td>
+                {% endif %}
+                <td class="tx-head-invoice">Invoice</td>
+                {% if not compact %}
+                <td class="tx-head-status">Status</td>
+                {% endif %}
+                <td class="tx-head-actor">{% if compact %}Actor / Status{% else %}Actor{% endif %}</td>
             </tr>
         </thead>
         {% for transaction in transactions %}
         <tr {% if transaction.status=="draft" %} class="secondary" {%endif%}>
-            <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
+            <td class="tx-col-id">
+                {% if compact %}
+                <span class="tx-primary"><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></span>
+                <span class="tx-secondary">{{ human_readable_date(transaction.created_at) }}</span>
+                {% else %}
+                <a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a>
+                {% endif %}
+            </td>
 
-            <td>{{ human_readable_date(transaction.created_at) }}</td>
+            {% if not compact %}
+            <td class="tx-col-date">{{ human_readable_date(transaction.created_at) }}</td>
+            {% endif %}
 
-            <td>
+            <td class="tx-col-from">
+                {% if compact %}
+                <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}"
+                    class="{% if not transaction.from_entity.active %}secondary inactive{% endif %}">{{ transaction.from_entity.name }}</a>
+                {% if transaction.from_entity.tags %}
+                <span class="tx-entity-tags {% if transaction.from_entity.tags|length > 1 %}tx-nextline-tags{% else %}tx-inline-tags{% endif %}">
+                    {% for tag in transaction.from_entity.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
+                </span>
+                {% endif %}
+                {% else %}
                 <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}"
                     class="{% if not transaction.from_entity.active %}secondary inactive{% endif %}">{{
                     transaction.from_entity.name
@@ -35,9 +65,21 @@
                 {% for tag in transaction.from_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
+                {% endif %}
             </td>
 
-            <td>
+            <td class="tx-col-to">
+                {% if compact %}
+                <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}"
+                    class="{% if not transaction.to_entity.active %}secondary inactive{% endif %}">{{ transaction.to_entity.name }}</a>
+                {% if transaction.to_entity.tags %}
+                <span class="tx-entity-tags {% if transaction.to_entity.tags|length > 1 %}tx-nextline-tags{% else %}tx-inline-tags{% endif %}">
+                    {% for tag in transaction.to_entity.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
+                </span>
+                {% endif %}
+                {% else %}
                 <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}"
                     class="{% if not transaction.to_entity.active %}secondary inactive{% endif %}">{{
                     transaction.to_entity.name
@@ -45,14 +87,53 @@
                 {% for tag in transaction.to_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
+                {% endif %}
             </td>
 
+            <td class="tx-col-amount {% if not compact %}right-align{% endif %}">
+                {% if compact %}
+                {{ transaction.amount }}
+                {% else %}
+                {{ transaction.amount }}
+                {% endif %}
+            </td>
+            <td class="tx-col-currency">
+                {% if compact %}
+                {{ transaction.currency | upper }}
+                {% else %}
+                {{ transaction.currency | upper }}
+                {% endif %}
+            </td>
 
-            <td class="right-align">{{ transaction.amount }}</td>
-            <td>{{ transaction.currency | upper }}</td>
+            {% if compact %}
+            <td class="tx-col-tags">
+                <span class="tx-tags-grid">
+                {% for tag in transaction.tags %}
+                {{ tag_inline(tag) }}
+                {% endfor %}
+                </span>
+            </td>
+            <td class="tx-col-comment">{{ transaction.comment or '' }}</td>
+            <td class="tx-col-treasury">
+                {% if transaction.from_treasury_id or transaction.to_treasury_id %}
 
+                {% if transaction.from_treasury_id %}
+                {{ treasury_inline(transaction.from_treasury) }}
+                {% else %}
+                x
+                {% endif %}
+                →
+                {% if transaction.to_treasury_id %}
+                {{ treasury_inline(transaction.to_treasury) }}
+                {% else %}
+                x
+                {% endif %}
 
-            <td>
+                {% endif %}
+
+            </td>
+            {% else %}
+            <td class="tx-col-treasury">
                 {% if transaction.from_treasury_id or transaction.to_treasury_id %}
 
                 {% if transaction.from_treasury_id %}
@@ -71,25 +152,49 @@
 
             </td>
 
-            <td>
+            <td class="tx-col-tags">
+                <span class="tx-tags-grid">
                 {% for tag in transaction.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
+                </span>
             </td>
-            <td>{{ transaction.comment or '' }}</td>
+            <td class="tx-col-comment">{{ transaction.comment or '' }}</td>
+            {% endif %}
 
 
-            <td>
+            <td class="tx-col-invoice">
+                {% if compact %}
+                <span class="tx-primary">
+                    {% if transaction.invoice_id %}
+                    <a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a>
+                    {% else %}
+                    -
+                    {% endif %}
+                </span>
+                {% else %}
                 {% if transaction.invoice_id %}
                 <a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a>
                 {% endif %}
+                {% endif %}
             </td>
+            {% if not compact %}
             <td>{{ transaction.status }}</td>
+            {% endif %}
 
-            <td>
+            <td class="tx-col-actor">
+                {% if compact %}
+                <span class="tx-primary">
+                    <a href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}"
+                        class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{transaction.actor_entity.name}}</a>
+                </span>
+                <span class="tx-secondary">{{ transaction.status }}</span>
+                {% else %}
                 <a href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}"
                     class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{transaction.actor_entity.name}}</a>
+                {% endif %}
             </td>
+
         </tr>
         {% endfor %}
     </table>
