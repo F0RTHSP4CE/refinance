@@ -89,6 +89,7 @@ def test_app():
         test_config = Config(
             app_name="refinance-test",
             database_url_env=database_url,
+            pos_secret="test-pos-secret",
         )
         app.dependency_overrides = {get_config: lambda: test_config}
 
@@ -111,6 +112,12 @@ def test_app():
             client.close()
             app.dependency_overrides.clear()
             db_conn.engine.dispose()
+            # Clear in-memory caches so stale data from one test class
+            # does not bleed into the next (each class uses its own DB).
+            from app.services.balance import BalanceService
+
+            BalanceService._cache.clear()
+            BalanceService._treasury_cache.clear()
 
 
 # general fixture to get the token of any entity

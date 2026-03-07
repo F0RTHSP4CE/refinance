@@ -1,0 +1,332 @@
+/* ===== CURRENCY EXCHANGE FORM ===== */
+.xform-wrap {
+  max-width: 600px;
+  padding-top: 1.5rem;
+}
+
+/* Currency selection row */
+.xform-currencies {
+  display: flex;
+  align-items: center;
+  border: 3px solid black;
+  border-bottom: none;
+  position: relative;
+}
+
+.xform-currency-slot {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+}
+
+.xform-currency-slot:first-child {
+  border-right: 3px solid black;
+  padding-right: 1.8rem;
+}
+
+.xform-currency-slot:last-child {
+  padding-left: 1.8rem;
+}
+
+.xform-currency-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 900;
+  background: black;
+  color: white;
+  width: 2.4rem;
+  text-align: center;
+  padding: 0.25rem 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+/* Exchange panels */
+.xform-panels {
+  display: flex;
+  align-items: stretch;
+  border: 3px solid black;
+  position: relative;
+}
+
+.xform-panel {
+  flex: 1;
+  padding: 1rem;
+  min-width: 0;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.xform-panel:first-child {
+  border-right: 3px solid black;
+  padding-right: 1.8rem;
+}
+
+.xform-panel:last-child {
+  padding-left: 1.8rem;
+}
+
+.xform-panel-role {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.xform-currency {
+  font-size: 1.5rem;
+  font-weight: 900;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+  appearance: auto;
+}
+
+.xform-currency:focus {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+.xform-amount {
+  display: block;
+  width: 100%;
+  font-size: 2.2rem;
+  font-family: monospace;
+  font-weight: 700;
+  border: none;
+  border-bottom: 3px solid black;
+  background: transparent;
+  padding: 0.2rem 0;
+  box-sizing: border-box;
+  color: inherit;
+}
+
+.xform-amount:focus {
+  outline: none;
+  border-bottom-color: #007bff;
+}
+
+.xform-amount:disabled {
+  opacity: 0.3;
+  border-bottom-style: dashed;
+  cursor: not-allowed;
+}
+
+.xform-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1.2rem;
+  font-weight: 900;
+  background: black;
+  color: white;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+/* Entity row */
+.xform-entity {
+  border: 3px solid black;
+  border-top: none;
+  padding: 0.75rem 1rem;
+}
+
+.xform-entity-label {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 0.4rem;
+}
+
+/* Errors */
+.xform-errors {
+  border: 3px solid black;
+  border-top: none;
+  margin: 0;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: #fff0f0;
+}
+
+.xform-errors li {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #900;
+}
+
+/* Submit / action buttons */
+.xform-submit {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  background: black;
+  color: white;
+  border: 3px solid black;
+  border-top: none;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.1s, color 0.1s;
+  box-sizing: border-box;
+}
+
+.xform-submit:hover {
+  background: #333;
+}
+
+.xform-divider {
+  margin: 2rem 0;
+  border: none;
+  border-top: 3px solid black;
+}
+
+.xform-aux-link {
+  font-weight: 900;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: black;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.xform-aux-link:hover {
+  text-decoration: none;
+  color: black;
+}
+
+/* Form actions row (preview confirm) */
+.xform-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 0;
+}
+
+.xform-actions .xform-submit {
+  flex: 1;
+  border-top: 3px solid black;
+}
+
+.xform-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 1.25rem;
+  background: white;
+  color: black;
+  border: 3px solid black;
+  border-left: none;
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.xform-cancel:hover {
+  background: #eee;
+}
+
+/* Exchange preview block */
+.xpreview-block {
+  border: 3px solid black;
+  margin-bottom: 0;
+}
+
+.xpreview-row {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.xpreview-side {
+  flex: 1;
+  padding: 1.25rem 1rem;
+  min-width: 0;
+}
+
+.xpreview-side:first-child {
+  border-right: 3px solid black;
+  padding-right: 1.8rem;
+}
+
+.xpreview-side:last-child {
+  padding-left: 1.8rem;
+}
+
+.xpreview-arrow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 1.2rem;
+  font-weight: 900;
+  background: black;
+  color: white;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+.xpreview-label {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #555;
+  margin-bottom: 0.35rem;
+}
+
+.xpreview-value {
+  font-size: 1.9rem;
+  font-family: monospace;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xpreview-currency {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.xpreview-rate {
+  border-top: 3px solid black;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: #f8f8f8;
+}

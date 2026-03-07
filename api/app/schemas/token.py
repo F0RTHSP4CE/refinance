@@ -7,10 +7,6 @@ class TokenSendRequestSchema(BaseSchema):
     entity_name: str
 
 
-class TokenByCardHashRequestSchema(BaseSchema):
-    card_hash: str
-
-
 class TokenResponseSchema(BaseSchema):
     token: str
 

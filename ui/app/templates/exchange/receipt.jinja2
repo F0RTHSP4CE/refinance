@@ -1,14 +1,29 @@
 {% extends 'base.jinja2' %}
-{% from 'form.jinja2' import render_form %}
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
 
 {% block title %}Currency exchange completed{% endblock %}
 
 {% block content %}
-<p>Exchanged {{ receipt.source_amount }} {{ receipt.source_currency}} to <strong>{{ receipt.target_amount }} {{
-        receipt.target_currency }}</strong>. Rate is {{ receipt.rate }}</p>
+<div class="xform-wrap">
 
-{{ transaction_list(receipt.transactions) }}
-<p><strong>⚠️ DO NOT REFRESH THIS PAGE!</strong></p>
+  <div class="xpreview-block">
+    <div class="xpreview-row">
+      <div class="xpreview-side">
+        <div class="xpreview-label">SOLD</div>
+        <div class="xpreview-value">{{ receipt.source_amount }} <span class="xpreview-currency">{{ receipt.source_currency.upper() }}</span></div>
+      </div>
+      <div class="xpreview-arrow" aria-hidden="true">→</div>
+      <div class="xpreview-side">
+        <div class="xpreview-label">RECEIVED</div>
+        <div class="xpreview-value">{{ receipt.target_amount }} <span class="xpreview-currency">{{ receipt.target_currency.upper() }}</span></div>
+      </div>
+    </div>
+    <div class="xpreview-rate">RATE: {{ receipt.rate }}</div>
+  </div>
 
+  <p style="font-weight:900; margin-top:1rem;">⚠️ DO NOT REFRESH THIS PAGE!</p>
+
+  {{ transaction_list(receipt.transactions) }}
+
+</div>
 {% endblock %}

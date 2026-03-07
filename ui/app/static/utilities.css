@@ -1,0 +1,25 @@
+/* SHARED UTILITIES */
+.right-align {
+  text-align: right;
+}
+
+.center-align {
+  text-align: center;
+}
+
+.secondary {
+  filter: opacity(0.5);
+}
+
+.inactive {
+  text-decoration: line-through;
+}
+
+/* Date Toggle Styles */
+.human-date {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(0, 0, 0, 0.3);
+  text-underline-offset: 0.3em;
+}

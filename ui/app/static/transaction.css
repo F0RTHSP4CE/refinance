@@ -1,0 +1,312 @@
+/* Shared transaction table styles for all pages using transaction/macro_list.jinja2 */
+
+.wide-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.wide-table-wrapper > .transaction-table {
+  display: table;
+  width: 100%;
+  table-layout: auto;
+  white-space: normal;
+  border-collapse: collapse;
+  font-family: "Noto Sans", "Segoe UI", sans-serif;
+  font-size: 0.92rem;
+  line-height: 1.12;
+}
+
+.transaction-table thead td {
+  border-bottom: 2px solid #111;
+  padding-bottom: 0.33rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.42px;
+}
+
+.transaction-table td {
+  padding: 0.24rem 0.28rem;
+  vertical-align: top;
+}
+
+.transaction-table .tx-col-id,
+.transaction-table .tx-col-amount,
+.transaction-table .tx-col-currency,
+.transaction-table .tx-col-invoice,
+.transaction-table .tx-col-actor {
+  white-space: nowrap;
+}
+
+.transaction-table .tx-col-comment {
+  word-break: break-word;
+  max-width: 22ch;
+}
+
+.transaction-table tbody tr {
+  border-bottom: 1px solid #d6d6d6;
+}
+
+.transaction-table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+.transaction-table tbody tr:nth-child(even):not(.secondary) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.transaction-table .tx-col-amount {
+  text-align: right;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.transaction-table .tx-col-from,
+.transaction-table .tx-col-to,
+.transaction-table .tx-col-tags {
+  line-height: 1.18;
+}
+
+.transaction-table .tx-col-from > a,
+.transaction-table .tx-col-to > a,
+.transaction-table .tx-col-from .tx-primary > a,
+.transaction-table .tx-col-to .tx-primary > a {
+  font-weight: 700;
+}
+
+.transaction-table .tx-col-id a {
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.transaction-table .tx-col-invoice a,
+.transaction-table .tx-col-actor a {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.transaction-table .tx-col-comment {
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.transaction-table .tx-col-treasury {
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.transaction-table .tx-col-id {
+  min-width: 5.2rem;
+}
+
+.transaction-table .tx-col-from,
+.transaction-table .tx-col-to {
+  min-width: 7rem;
+}
+
+.transaction-table .tx-col-amount {
+  min-width: 5.2rem;
+}
+
+.transaction-table .tx-col-currency {
+  min-width: 3.8rem;
+}
+
+.transaction-table .tx-col-treasury {
+  min-width: 6rem;
+}
+
+.transaction-table .tx-col-invoice {
+  min-width: 6.4rem;
+}
+
+.transaction-table .tx-col-actor {
+  min-width: 6.2rem;
+}
+
+.transaction-table .tag-badge {
+  font-family: "Noto Sans", "Segoe UI", sans-serif;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16px;
+  line-height: 1;
+  text-transform: uppercase;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  opacity: 1;
+  vertical-align: middle;
+  margin-top: 0.08rem;
+  margin-right: 0.08rem;
+}
+
+.transaction-table .tag-badge a {
+  font-weight: 700;
+}
+
+.transaction-table .treasury-badge {
+  font-family: "Noto Sans", "Segoe UI", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 0;
+  padding: 0.06rem 0.18rem;
+  opacity: 1;
+}
+
+.transaction-table-compact td {
+  padding-top: 0.28rem;
+  padding-bottom: 0.28rem;
+  vertical-align: middle;
+}
+
+.transaction-table-compact .tx-primary,
+.transaction-table-compact .tx-secondary {
+  display: block;
+  line-height: 1.08;
+}
+
+.transaction-table-compact .tx-primary {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.transaction-table-compact .tx-col-from > a,
+.transaction-table-compact .tx-col-to > a,
+.transaction-table-compact .tx-col-from .tx-primary > a,
+.transaction-table-compact .tx-col-to .tx-primary > a {
+  font-size: 1.04rem;
+  line-height: 1.05;
+  font-weight: 700;
+}
+
+.transaction-table-compact .tx-col-id .tx-primary {
+  font-weight: 400;
+}
+
+.transaction-table-compact .tx-secondary {
+  margin-top: 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  opacity: 0.78;
+  text-transform: uppercase;
+  letter-spacing: 0.22px;
+}
+
+.transaction-table-compact .tx-col-amount,
+.transaction-table-compact .tx-col-currency {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.transaction-table-compact .tx-entity-tags {
+  display: block;
+  margin-top: 0.12rem;
+}
+
+.transaction-table-compact .tx-inline-tags {
+  display: inline;
+  margin-top: 0;
+  margin-left: 0.2rem;
+}
+
+.transaction-table-compact .tx-nextline-tags {
+  display: block;
+  margin-top: 0.12rem;
+  margin-left: 0;
+}
+
+.transaction-table-compact .tx-tags-grid {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(2, max-content);
+  gap: 0.08rem 0.18rem;
+  align-items: start;
+}
+
+.wide-table-wrapper + .pagination a {
+  display: inline-block;
+  padding: 0.4rem 0.7rem;
+  background: black;
+  color: white;
+  border: 2px solid black;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wide-table-wrapper + .pagination a:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 black;
+}
+
+.wide-table-wrapper + .pagination span {
+  display: inline-block;
+  margin: 0 0.6rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .transaction-table-compact {
+    font-size: 0.86rem;
+    line-height: 1.08;
+  }
+
+  .transaction-table-compact .tx-col-from > a,
+  .transaction-table-compact .tx-col-to > a,
+  .transaction-table-compact .tx-col-from .tx-primary > a,
+  .transaction-table-compact .tx-col-to .tx-primary > a {
+    font-size: 0.96rem;
+    max-width: 10.5ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: bottom;
+  }
+
+  .transaction-table-compact .tx-col-amount,
+  .transaction-table-compact .tx-col-currency {
+    font-size: 1rem;
+  }
+
+  .transaction-table-compact .tx-col-id {
+    min-width: 4.4rem;
+  }
+
+  .transaction-table-compact .tx-col-from,
+  .transaction-table-compact .tx-col-to {
+    min-width: 6rem;
+  }
+
+  .transaction-table-compact .tx-inline-tags {
+    display: block;
+    margin-top: 0.12rem;
+    margin-left: 0;
+  }
+
+  .transaction-table-compact .tx-head-tags,
+  .transaction-table-compact .tx-head-comment,
+  .transaction-table-compact .tx-head-treasury,
+  .transaction-table-compact .tx-head-invoice,
+  .transaction-table-compact .tx-head-actor,
+  .transaction-table-compact .tx-col-tags,
+  .transaction-table-compact .tx-col-comment,
+  .transaction-table-compact .tx-col-treasury,
+  .transaction-table-compact .tx-col-invoice,
+  .transaction-table-compact .tx-col-actor {
+    display: none;
+  }
+}

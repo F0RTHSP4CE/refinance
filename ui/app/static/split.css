@@ -1,0 +1,535 @@
+/* ── Split Cards ── */
+.split-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.split-card {
+  border: 3px solid black;
+  background: white;
+  box-shadow: 6px 6px 0px black;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.split-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0px black;
+}
+
+.split-card--done {
+  border-color: #bbb;
+  box-shadow: 3px 3px 0px #bbb;
+  opacity: 0.75;
+}
+
+.split-card--done:hover {
+  transform: none;
+  box-shadow: 3px 3px 0px #bbb;
+}
+
+.split-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.split-card-title {
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-weight: 900;
+  font-size: 1.7rem;
+  line-height: 1.2;
+  color: inherit;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.split-card-title:hover {
+  text-decoration: underline;
+}
+
+.split-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.split-card-id {
+  font-size: 0.78rem;
+  color: #999;
+  font-weight: 600;
+}
+
+.split-card-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12em 0.4em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1.5px solid;
+}
+
+.split-card-badge--done {
+  border-color: #999;
+  color: #999;
+}
+
+.split-card-recipient {
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.split-card-arrow {
+  color: #aaa;
+  margin-right: 0.2em;
+  font-style: normal;
+}
+
+.split-card-byline {
+  display: block;
+  font-size: 0.88rem;
+  color: #999;
+  margin-top: 0.1rem;
+}
+
+.split-card-amount {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.split-card-collected {
+  font-size: 1.4rem;
+  font-weight: 600;
+  opacity: 0.5;
+  letter-spacing: -0.5px;
+  vertical-align: baseline;
+}
+
+.split-card-currency {
+  font-size: 1.2rem;
+  font-weight: 700;
+  opacity: 0.55;
+}
+
+.split-card-progress-track {
+  display: flex;
+  height: 14px;
+  background: white;
+  border: 2px solid black;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.split-card-progress-segment {
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.split-card--done .split-card-progress-track {
+  border-color: #bbb;
+}
+
+.split-card-progress-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: -0.3rem;
+}
+
+.split-card-stats {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.split-section-title {
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-weight: 900;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.4;
+}
+
+.split-card-joined-badge {
+  width: 100%;
+  padding: 1rem;
+  background: white;
+  color: black;
+  border: 2px dashed #ccc;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: default;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+  display: block;
+  font-style: normal;
+}
+
+/* ── Split Detail Page ────────────────────────────────────── */
+.split-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: none;
+  margin-top: 1rem;
+}
+
+.split-detail-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.split-detail-left {
+  flex: 1 1 560px;
+  min-width: 0;
+}
+
+.split-detail-right {
+  flex: 1 1 450px;
+  min-width: 0;
+}
+
+.split-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.split-detail-byline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+  opacity: 0.65;
+}
+
+.split-detail-byline-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.split-detail-byline-sep {
+  opacity: 0.3;
+}
+
+.split-detail-byline-link {
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+}
+
+.split-detail-byline-link:hover {
+  text-decoration: underline;
+}
+
+.split-detail-title {
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-weight: 900;
+  font-size: 2.6rem;
+  line-height: 1.2;
+  text-transform: uppercase;
+  margin: 0;
+  word-break: break-word;
+}
+
+.split-detail-title-inline-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+
+.split-card-badge--active {
+  background: black;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border: 1px solid black;
+}
+
+.split-detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ── Amount block with large progress bar ── */
+.split-detail-amount-block {
+  border: 3px solid black;
+  padding: 1.5rem;
+  background: white;
+  box-shadow: 6px 6px 0 black;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  position: relative;
+  overflow: visible;
+}
+
+.split-detail-amount-corner {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.split-detail-amount-corner .split-card-id {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.split-detail-amount-corner .split-card-badge {
+  font-size: 0.85rem;
+  padding: 0.2em 0.65em;
+  border-width: 2px;
+}
+
+.split-detail-progress-track {
+  display: flex;
+  height: 32px;
+  background: white;
+  border: 2px solid black;
+  overflow: hidden;
+  gap: 0;
+}
+
+.split-detail-progress-track--done {
+}
+
+.split-card-progress-segment {
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.split-detail-progress-labels {
+  display: flex;
+  gap: 0;
+  overflow: visible;
+  height: 8rem;
+}
+
+.split-detail-progress-label {
+  flex-shrink: 0;
+  overflow: visible;
+  min-width: 0;
+}
+
+.split-detail-label-name {
+  display: block;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transform: translateX(10px) rotate(45deg);
+  transform-origin: top left;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.split-detail-participant-share {
+  /* overridden below in participants section */
+}
+
+/* ── Meta block (rows) ── */
+.split-detail-meta {
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #eee;
+}
+
+.split-detail-meta-row:last-child {
+  border-bottom: none;
+}
+
+.split-detail-meta-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.45;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.split-detail-meta-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* ── Section layout ── */
+.split-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.split-detail-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.split-section-title--visible {
+  opacity: 1;
+  margin: 0;
+}
+
+.split-section-count {
+  opacity: 0.35;
+}
+
+.split-detail-add-btn {
+  font-size: 0.85rem !important;
+  padding: 0.55rem 1rem !important;
+  align-self: flex-start;
+  width: auto !important;
+  display: inline-block !important;
+}
+
+.split-detail-title-btn {
+  font-size: 0.75rem !important;
+  padding: 0.35rem 0.75rem !important;
+}
+
+.split-currency-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 54px;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* ── Participants list ── */
+.split-detail-participants {
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+}
+
+.split-detail-participant {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+}
+
+.split-detail-participant:last-child {
+  border-bottom: none;
+}
+
+.split-detail-participant--done {
+}
+
+.split-detail-participant-swatch {
+  width: 6px;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-radius: 3px;
+  margin: 0.6rem 0.75rem 0.6rem 0;
+}
+
+.split-detail-participant-info {
+  flex: 1;
+  padding: 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.split-detail-participant-name {
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.split-detail-participant-name:hover {
+  text-decoration: underline;
+}
+
+.split-detail-participant-share {
+  font-size: 1.4rem;
+  font-weight: 900;
+  padding: 1rem 0.75rem;
+  white-space: nowrap;
+}
+
+.split-detail-fixed-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 5px;
+  background: black;
+  color: white;
+  margin-right: 0.25rem;
+  flex-shrink: 0;
+}
+
+.split-detail-participant-remove {
+  padding: 1rem 0.5rem 1rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  transition: color 0.1s;
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+.split-detail-participant-remove:hover {
+  color: black;
+}
+
+.split-detail-empty {
+  opacity: 0.45;
+  font-style: italic;
+}
+

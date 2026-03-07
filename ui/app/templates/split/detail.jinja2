@@ -2,133 +2,146 @@
 {% from "transaction/macro_list.jinja2" import transaction_list with context %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 
-{% block title %}Split {{ split.id }}{% endblock %}
+{% block title %}{{ split.comment or ("Split #" ~ split.id) }}{% endblock %}
+{% block heading %}{% endblock %}
 
 {% block content %}
-<table>
-    <tr>
-        <td>ID</td>
-        <td>{{ split.id }}</td>
-    </tr>
-    <tr>
-        <td>Comment</td>
-        <td>{{ split.comment or "" }}</td>
-    </tr>
-    <tr>
-        <td>Amount</td>
-        <td>{{ split.amount }}</td>
-    </tr>
-    <tr>
-        <td>Currency</td>
-        <td>{{ split.currency | upper }}</td>
-    </tr>
-    <tr>
-        <td>Tags</td>
-        <td>
-            <table>
-                <tbody>
-                    {% for tag in split.tags %}
-                    {{ tag_inline(tag) }}
-                    {% endfor %}
-                </tbody>
-            </table>
-        </td>
-    </tr>
-    <tr>
-        <td>Recipient</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}"
-                class="{% if not split.recipient_entity.active %}secondary inactive{% endif %}">
-                {{ split.recipient_entity.name }}
-            </a>
-            {% for tag in split.recipient_entity.tags %}
-            {{ tag_inline(tag) }}
+{% set recipient_in_participants = split.participants | selectattr("entity.id", "equalto", split.recipient_entity.id) | list | length > 0 %}
+{% set ns = namespace(coll=0.0) %}
+{% for p in split.participants %}
+{% set ps = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+{% set ns.coll = ns.coll + ps %}
+{% endfor %}
+{% set collected = ns.coll | round(2) %}
+
+<div class="split-detail">
+
+    {# ── Header ── #}
+    <div class="split-detail-header">
+        <h1 class="split-detail-title">
+            {{ split.comment or ("Split #" ~ split.id) }}
+            <span class="split-detail-byline">
+                <span class="split-detail-byline-item">to <a href="{{ url_for('entity.detail', id=split.recipient_entity.id) }}" class="split-detail-byline-link{% if not split.recipient_entity.active %} inactive{% endif %}">{{ split.recipient_entity.name }}</a>{% for tag in split.recipient_entity.tags %} {{ tag_inline(tag) }}{% endfor %}</span>
+                <span class="split-detail-byline-sep">/</span>
+                <span class="split-detail-byline-item">by <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}" class="split-detail-byline-link{% if not split.actor_entity.active %} inactive{% endif %}">{{ split.actor_entity.name }}</a>{% for tag in split.actor_entity.tags %} {{ tag_inline(tag) }}{% endfor %}</span>
+            </span>
+        </h1>
+    </div>
+
+    <div class="split-detail-content">
+        <div class="split-detail-left">
+
+    {# ── Amount + Large Progress Bar ── #}
+    <div class="split-detail-amount-block">
+        <div class="split-detail-amount-corner">
+            <span class="split-card-id">#{{ split.id }}</span>
+            {% if split.performed %}
+            <span class="split-card-badge split-card-badge--done">Done</span>
+            {% else %}
+            <span class="split-card-badge split-card-badge--active">Active</span>
+            {% endif %}
+        </div>
+        <div class="split-card-amount">
+            <span class="split-card-collected">{{ collected }}</span> / {{ split.amount }} <span class="split-card-currency">{{ split.currency | upper }}</span>
+        </div>
+        <div class="split-detail-progress-track{% if split.performed %} split-detail-progress-track--done{% endif %}">
+            {% for p in split.participants %}
+            {% set share = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+            {% set w = (share / (split.amount | float) * 100) | round(2) %}
+            {% set hue = (p.entity.id * 137 + 30) % 360 %}
+            <div class="split-card-progress-segment" style="width:{{ w }}%; background:hsl({{ hue }},100%,55%);" title="{{ p.entity.name }} · {{ share | round(2) }} {{ split.currency | upper }}"></div>
             {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Actor</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=split.actor_entity.id) }}"
-                class="{% if not split.actor_entity.active %}secondary inactive{% endif %}">
-                {{ split.actor_entity.name }}
-            </a>
-            {% for tag in split.actor_entity.tags %}
-            {{ tag_inline(tag) }}
+        </div>
+        <div class="split-detail-progress-labels">
+            {% for p in split.participants %}
+            {% set share = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+            {% set w = (share / (split.amount | float) * 100) | round(2) %}
+            {% set hue = (p.entity.id * 137 + 30) % 360 %}
+            <div class="split-detail-progress-label" style="width:{{ w }}%;">
+                <span class="split-detail-label-name" style="color:hsl({{ hue }},100%,55%);">{{ p.entity.name }}</span>
+            </div>
             {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Created at</td>
-        <td>{{ human_readable_date(split.created_at) }}</td>
-    </tr>
-    <tr>
-        <td>Modified at</td>
-        <td>{{ human_readable_date(split.modified_at) if split.modified_at else "" }}</td>
-    </tr>
-    <tr>
-        <td>Performed</td>
-        <td>{{ split.performed }}</td>
-    </tr>
+        </div>
 
-</table>
-
-{% if not split.performed %}
-<p><a href="{{ url_for('split.perform', id=split.id) }}">Perform</a></p>
-<p><a href="{{ url_for('split.edit', id=split.id) }}">Edit</a></p>
-<p><a href="{{ url_for('split.delete', id=split.id) }}">Delete</a></p>
-{% endif %}
-
-<h2>Participants</h2>
-{% if split.participants %}
-<table>
-    <tbody>
-        {% for participant in split.participants %}
-        <tr>
-            <td>
-                <a href="{{ url_for('entity.detail', id=participant.entity.id) }}"
-                    class="{% if not participant.entity.active %}secondary inactive{% endif %}">
-                    {{ participant.entity.name }}
-                </a>
-                {% for tag in participant.entity.tags %}
-                {{ tag_inline(tag) }}
+        {# ── Participants list ── #}
+        <div class="split-detail-section" style="margin-top: 1rem;">
+            <h2 class="split-section-title split-section-title--visible">Participants <span class="split-section-count">{{ split.participants | length }}</span></h2>
+            {% if split.participants %}
+            <div class="split-detail-participants">
+                {% for p in split.participants %}
+                {% set share = p.fixed_amount | float if p.fixed_amount else split.share_preview.current_share | float %}
+                {% set hue = (p.entity.id * 137 + 30) % 360 %}
+                <div class="split-detail-participant{% if split.performed %} split-detail-participant--done{% endif %}">
+                    <div class="split-detail-participant-swatch" style="background:hsl({{ hue }},100%,55%);"></div>
+                    <div class="split-detail-participant-info">
+                        <a href="{{ url_for('entity.detail', id=p.entity.id) }}" class="split-detail-participant-name{% if not p.entity.active %} inactive{% endif %}">{{ p.entity.name }}</a>
+                        {% for tag in p.entity.tags %}{{ tag_inline(tag) }}{% endfor %}
+                    </div>
+                    {% if p.fixed_amount %}<span class="split-detail-fixed-badge">fixed</span>{% endif %}<strong class="split-detail-participant-share">{{ share | round(2) }} {{ split.currency | upper }}</strong>
+                    {% if not split.performed %}
+                    <a href="{{ url_for('split.remove_participant', id=split.id, entity_id=p.entity.id) }}" class="split-detail-participant-remove" title="Remove">✕</a>
+                    {% endif %}
+                </div>
                 {% endfor %}
-            </td>
-            <td>
-                {% if participant.fixed_amount %}
-                =
-                {% else %}
+            </div>
+            {% else %}
+            <p class="split-detail-empty">No participants yet.</p>
+            {% endif %}
+            {% if not split.performed %}
+            <div class="split-detail-actions">
+                <a href="{{ url_for('split.add_participant', id=split.id) }}" class="big-button big-button-inline">+ Add Participant</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
-                {% endif %}
-            </td>
-            <td class="right-align">
-                {% if participant.fixed_amount %}
-                {{ participant.fixed_amount }} {{ split.currency | upper }}
-                {% else %}
-                {{ split.share_preview.current_share }} {{ split.currency | upper }}
-                {% endif %}
-            </td>
-            <td>
-                {% if not split.performed %}
-                <a href="{{ url_for('split.remove_participant', id=split.id, entity_id=participant.entity.id )}}">X</a>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<p>Total: {{ split.participants | length }}</p>
-{% else %}
-No participants yet.
-{% endif%}
-{% if not split.performed %}
-<p>
-    <a href="{{ url_for('split.add_participant', id=split.id ) }}">Add participant</a>
-</p>
-{% endif%}
+        </div> {# end split-detail-left #}
 
-{% if split.performed %}
-<h2>Transactions</h2>
-{{ transaction_list(split.performed_transactions) }}
-{% endif%}
+        <div class="split-detail-right">
+
+    {# ── Split Actions ── #}
+    {% if not split.performed %}
+    <div class="split-detail-section">
+        <h2 class="split-section-title split-section-title--visible">Split Actions</h2>
+        <div class="split-detail-actions">
+            <a href="{{ url_for('split.perform', id=split.id) }}" class="big-button big-button-inline">Perform</a>
+            <a href="{{ url_for('split.edit', id=split.id) }}" class="big-button big-button-outline big-button-inline">Edit</a>
+            <a href="{{ url_for('split.delete', id=split.id) }}" class="big-button big-button-outline big-button-danger-outline big-button-inline">Delete</a>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Meta ── #}
+    <div class="split-detail-meta">
+        <div class="split-detail-meta-row">
+            <span class="split-detail-meta-label">Created</span>
+            <span class="split-detail-meta-value">{{ human_readable_date(split.created_at) }}</span>
+        </div>
+        {% if split.modified_at %}
+        <div class="split-detail-meta-row">
+            <span class="split-detail-meta-label">Modified</span>
+            <span class="split-detail-meta-value">{{ human_readable_date(split.modified_at) }}</span>
+        </div>
+        {% endif %}
+        {% if split.tags %}
+        <div class="split-detail-meta-row">
+            <span class="split-detail-meta-label">Tags</span>
+            <div class="split-detail-meta-value">{% for tag in split.tags %}{{ tag_inline(tag) }}{% endfor %}</div>
+        </div>
+        {% endif %}
+    </div>
+
+        </div> {# end split-detail-right #}
+
+    </div> {# end split-detail-content #}
+
+    {# ── Transactions ── #}
+    {% if split.performed %}
+    <div class="split-detail-section">
+        <h2 class="split-section-title split-section-title--visible">Transactions</h2>
+        {{ transaction_list(split.performed_transactions) }}
+    </div>
+    {% endif %}
+
+</div>
 {% endblock %}

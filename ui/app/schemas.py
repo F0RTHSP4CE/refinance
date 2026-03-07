@@ -97,6 +97,8 @@ class Invoice(Base):
     tags: list[Tag]
     transaction_id: int | None = None
     billing_period: date | None = None
+    paid_amount: Decimal | None = None
+    paid_currency: str | None = None
 
 
 class DepositProvider(enum.Enum):
@@ -166,6 +168,39 @@ class CurrencyExchangeReceipt:
     target_amount: Decimal
     rate: Decimal
     transactions: list[Transaction]
+
+
+@dataclass
+class AutoBalanceExchangeItem:
+    source_currency: str
+    source_amount: Decimal
+    target_currency: str
+    target_amount: Decimal
+    rate: Decimal
+
+
+@dataclass
+class AutoBalanceEntityPlan:
+    entity_id: int
+    entity_name: str
+    exchanges: list[AutoBalanceExchangeItem]
+
+
+@dataclass
+class AutoBalancePreview:
+    plans: list[AutoBalanceEntityPlan]
+
+
+@dataclass
+class AutoBalanceEntityReceipt:
+    entity_id: int
+    entity_name: str
+    receipts: list[CurrencyExchangeReceipt]
+
+
+@dataclass
+class AutoBalanceRunResult:
+    results: list[AutoBalanceEntityReceipt]
 
 
 @dataclass

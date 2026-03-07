@@ -8,7 +8,10 @@
     <title>refinance</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
         crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css?98923">
     <script src="https://unpkg.com/htmx.org@1.6.1"></script>
 </head>
 
@@ -36,59 +39,73 @@
             {% endif %}
             <span class="mobile-menu-toggle-icon" aria-hidden="true">≡</span>
         </a>
+        
+        <ul class="desktop-nav">
+            {% if g.actor_entity %}
+            <li{% if request.endpoint == 'index.index' %} class="active"{% endif %}><a href="{{ url_for('index.index') }}">Home</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('transaction.') %} class="active"{% endif %}><a href="{{ url_for('transaction.list') }}">Transaction</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('invoice.') %} class="active"{% endif %}><a href="{{ url_for('invoice.list') }}">Invoice</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('deposit.') %} class="active"{% endif %}><a href="{{ url_for('deposit.list') }}">Deposit</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('fee.') %} class="active"{% endif %}><a href="{{ url_for('fee.index') }}">Fee</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active"{% endif %}><a href="{{ url_for('split.list') }}">Split</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active"{% endif %}><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('stats.') %} class="active"{% endif %}><a href="{{ url_for('stats.index') }}">Stats</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('treasury.') %} class="active"{% endif %}><a href="{{ url_for('treasury.list') }}">Treasury</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('entity.') %} class="active"{% endif %}><a href="{{ url_for('entity.list') }}">Entity</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('tag.') %} class="active"{% endif %}><a href="{{ url_for('tag.list') }}">Tag</a></li>
+            {% endif %}
+        </ul>
+        
+        {% if g.actor_entity %}
+        <div class="desktop-nav-user">
+            <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">
+                {{ g.actor_entity.name }}
+            </a>
+            <a href="{{ url_for('auth.logout') }}">Log out</a>
+        </div>
+        {% endif %}
     </nav>
 
     <div id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" hidden>
         <div class="mobile-menu-header">
             <div class="mobile-menu-title">REFINANCE</div>
+            {% if g.actor_entity %}
+            <a href="{{ url_for('auth.logout') }}" class="mobile-menu-logout">Log out</a>
+            {% endif %}
             <a href="#" class="mobile-menu-close" role="button" aria-label="Close menu">×</a>
         </div>
 
         <div class="mobile-menu-content">
             <ul class="mobile-menu-items">
                 {% if g.actor_entity %}
-                <li><a href="{{ url_for('index.index') }}">Home</a></li>
-                <li><a href="{{ url_for('transaction.list') }}">Transaction</a></li>
-                <li><a href="{{ url_for('invoice.list') }}">Invoice</a></li>
-                <li><a href="{{ url_for('deposit.list') }}">Deposit</a></li>
-                <li><a href="{{ url_for('fee.index') }}">Fee</a></li>
-                <li><a href="{{ url_for('split.list') }}">Split</a></li>
-                <li><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
-                <li><a href="{{ url_for('stats.index') }}">Stats</a></li>
-                <li><a href="{{ url_for('treasury.list') }}">Treasury</a></li>
-                <li><a href="{{ url_for('entity.list') }}">Entity</a></li>
-                <li><a href="{{ url_for('tag.list') }}">Tag</a></li>
+                <li{% if request.endpoint == 'index.index' %} class="active"{% endif %}><a href="{{ url_for('index.index') }}">Home</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('transaction.') %} class="active"{% endif %}><a href="{{ url_for('transaction.list') }}">Transaction</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('invoice.') %} class="active"{% endif %}><a href="{{ url_for('invoice.list') }}">Invoice</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('deposit.') %} class="active"{% endif %}><a href="{{ url_for('deposit.list') }}">Deposit</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('fee.') %} class="active"{% endif %}><a href="{{ url_for('fee.index') }}">Fee</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active"{% endif %}><a href="{{ url_for('split.list') }}">Split</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active"{% endif %}><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('stats.') %} class="active"{% endif %}><a href="{{ url_for('stats.index') }}">Stats</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('treasury.') %} class="active"{% endif %}><a href="{{ url_for('treasury.list') }}">Treasury</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('entity.') %} class="active"{% endif %}><a href="{{ url_for('entity.list') }}">Entity</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('tag.') %} class="active"{% endif %}><a href="{{ url_for('tag.list') }}">Tag</a></li>
                 {% else %}
                 <li><a href="/">Home</a></li>
                 {% endif %}
             </ul>
-
-            {% if g.actor_entity %}
-            <div class="mobile-menu-user">
-                <div class="mobile-menu-balance">
-                    {% for currency,value in g.actor_entity_balance["completed"].items() %}
-                    <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" {% if value | float < 0 %} class="amount-negative" {% endif %}>
-                        {{ value }} {{ currency | upper}}
-                    </a>
-                    {% endfor %}
-                </div>
-                <div class="mobile-menu-user-actions">
-                    <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}">
-                        <strong class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">{{ g.actor_entity.name }}</strong>
-                    </a>
-                    <a href="{{ url_for('auth.logout') }}">Log out</a>
-                </div>
-            </div>
-            {% else %}
-            <div class="mobile-menu-user">
-                <a href="{{ url_for('auth.logout') }}">Logout</a>
-            </div>
-            {% endif %}
         </div>
+        
+        {% if g.actor_entity %}
+        <div class="mobile-menu-footer">
+            <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" class="mobile-menu-entity">
+                {{ g.actor_entity.name }}
+            </a>
+        </div>
+        {% endif %}
     </div>
 
     <main>
-        <h1>{% block title %}{% endblock title %}</h1>
+        {% block heading %}<h1>{% block title %}{% endblock title %}</h1>{% endblock heading %}
         {% block content %}
         {% endblock content %}
     </main>

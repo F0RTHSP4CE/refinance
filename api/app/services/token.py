@@ -9,7 +9,6 @@ import jwt
 import requests
 from app.config import Config, get_config
 from app.dependencies.services import get_entity_service
-from app.errors.common import NotFoundError
 from app.errors.token import TokenInvalid
 from app.models.entity import Entity
 from app.schemas.token import TokenSendReportSchema
@@ -60,26 +59,6 @@ class TokenService:
             token, self.config.secret_key or ""
         )
         return self.entity_service.get(entity_id)
-
-    def get_token(
-        self,
-        telegram_id: int | None = None,
-        card_hash: str | None = None,
-    ) -> str:
-        search_criteria = [
-            (telegram_id, self.entity_service.get_by_telegram_id),
-            (card_hash, self.entity_service.get_by_card_hash),
-        ]
-
-        for value, method in search_criteria:
-            if value is not None:
-                try:
-                    entity = method(value)
-                    return self._generate_new_token(entity.id)
-                except Exception:
-                    continue
-
-        raise NotFoundError()
 
     def generate_and_send_new_token(self, entity_name: str) -> TokenSendReportSchema:
         """Generate a token for entity by name and send it via Telegram."""

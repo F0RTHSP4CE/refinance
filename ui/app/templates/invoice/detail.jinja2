@@ -1,93 +1,115 @@
 {% extends "base.jinja2" %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 
-{% block title %}Invoice {{ invoice.id }}{% endblock %}
+{% block title %}{% endblock %}
 {% block content %}
-<table>
-    <tr>
-        <td>ID</td>
-        <td>{{ invoice.id }}</td>
-    </tr>
-    <tr>
-        <td>Created at</td>
-        <td>{{ human_readable_date(invoice.created_at) }}</td>
-    </tr>
-    <tr>
-        <td>Billing period</td>
-        <td>{{ (invoice.billing_period|string)[:7] if invoice.billing_period else "" }}</td>
-    </tr>
-    <tr>
-        <td>From</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
-                class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
-                invoice.from_entity.name
-                }}</a>
-            {% for tag in invoice.from_entity.tags %}
-            {{ tag_inline(tag) }}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>To</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
-                class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
-                invoice.to_entity.name
-                }}</a>
-            {% for tag in invoice.to_entity.tags %}
-            {{ tag_inline(tag) }}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Amounts</td>
-        <td>
-            {% for item in invoice.amounts %}
-            {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} or {% endif %}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Status</td>
-        <td>{{ invoice.status }}</td>
-    </tr>
-    <tr>
-        <td>Comment</td>
-        <td>{{ invoice.comment or '' }}</td>
-    </tr>
-    <tr>
-        <td>Tags</td>
-        <td>
-            {% for tag in invoice.tags %}
-            {{ tag_inline(tag) }}
-            {% endfor %}
-        </td>
-    </tr>
-    <tr>
-        <td>Actor</td>
-        <td>
-            <a href="{{ url_for('entity.detail', id=invoice.actor_entity_id) }}"
-                class="{% if not invoice.actor_entity.active %}secondary inactive{% endif %}">{{
-                invoice.actor_entity.name
-                }}</a>
-        </td>
-    </tr>
-    {% if transaction %}
-    <tr>
-        <td>Transaction</td>
-        <td>
-            <a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a>
-        </td>
-    </tr>
-    {% endif %}
-</table>
+<div class="invoice-detail-layout">
+    <section class="invoice-detail-card">
+        <div class="invoice-detail-header">
+            <div>
+                <div class="invoice-detail-title">Invoice #{{ invoice.id }}</div>
+                {% if invoice.billing_period %}
+                <div class="invoice-detail-subtitle">Billing period {{ (invoice.billing_period|string)[:7] }}</div>
+                {% else %}
+                <div class="invoice-detail-subtitle">Invoice details</div>
+                {% endif %}
+            </div>
+            <div class="invoice-status-badge {% if invoice.status == 'paid' %}is-paid{% elif invoice.status == 'pending' %}is-pending{% else %}is-cancelled{% endif %}">
+                {{ invoice.status }}
+            </div>
+        </div>
 
-{% if invoice.status == "pending" %}
-<p><a href="{{ url_for('invoice.pay', id=invoice.id) }}">Pay</a></p>
-<p><a href="{{ url_for('invoice.edit', id=invoice.id) }}">Edit</a></p>
-{% if not invoice.transaction_id %}
-<p><a href="{{ url_for('invoice.delete', id=invoice.id) }}">Delete</a></p>
-{% endif %}
-{% endif %}
+        <div class="invoice-detail-grid">
+            <div>
+                <h2>Parties</h2>
+                <div class="invoice-parties-stack">
+                    <div class="invoice-party-block">
+                        <div class="invoice-party-label">From</div>
+                        <div class="invoice-party-value">
+                            <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                                class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{ invoice.from_entity.name }}</a>
+                            {% for tag in invoice.from_entity.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="invoice-party-block">
+                        <div class="invoice-party-label">To</div>
+                        <div class="invoice-party-value">
+                            <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
+                                class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{ invoice.to_entity.name }}</a>
+                            {% for tag in invoice.to_entity.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <h2>Amounts</h2>
+                <div class="invoice-amount-list">
+                    <div class="invoice-amount-item">
+                        {% for item in invoice.amounts %}
+                        {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} <span class="invoice-amount-sep">OR</span> {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if invoice.comment %}
+                <table>
+                    <tr>
+                        <td>Comment</td>
+                        <td>{{ invoice.comment }}</td>
+                    </tr>
+                </table>
+                {% endif %}
+            </div>
+
+            <div class="invoice-detail-secondary">
+                <table>
+                    <tr>
+                        <td>Created</td>
+                        <td>{{ human_readable_date(invoice.created_at) }}</td>
+                    </tr>
+                    {% if invoice.tags %}
+                    <tr>
+                        <td>Tags</td>
+                        <td>
+                            {% for tag in invoice.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>Actor</td>
+                        <td>
+                            <a href="{{ url_for('entity.detail', id=invoice.actor_entity_id) }}"
+                                class="{% if not invoice.actor_entity.active %}secondary inactive{% endif %}">{{ invoice.actor_entity.name }}</a>
+                        </td>
+                    </tr>
+                    {% if transaction %}
+                    <tr>
+                        <td>Transaction</td>
+                        <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </section>
+
+    {% if invoice.status == "pending" %}
+    <div class="invoice-detail-actions">
+        <a href="{{ url_for('invoice.pay', id=invoice.id) }}" class="big-button">Pay</a>
+        <div class="invoice-detail-actions-row">
+            <a href="{{ url_for('invoice.edit', id=invoice.id) }}" class="big-button big-button-outline">Edit</a>
+            {% if not invoice.transaction_id %}
+            <a href="{{ url_for('invoice.delete', id=invoice.id) }}" class="big-button big-button-outline big-button-danger-outline">Delete</a>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p class="invoice-detail-note secondary">This invoice can no longer be changed.</p>
+    {% endif %}
+</div>
 {% endblock %}

@@ -15,6 +15,7 @@ DEFAULT_FEE_PRESETS: list[dict[str, str | int]] = [
 @dataclass
 class Config:
     secret_key: str | None = field(default=getenv("REFINANCE_SECRET_KEY", ""))
+    pos_secret: str | None = field(default=getenv("REFINANCE_POS_SECRET", ""))
     telegram_bot_api_token: str | None = field(
         default=getenv("REFINANCE_TELEGRAM_BOT_API_TOKEN", "")
     )

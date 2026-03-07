@@ -97,15 +97,25 @@ class Split(BaseModel):
             share = share.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
             share_next = remaining / Decimal(non_fixed_count + 1)
             improvement = 100 - share_next / share * Decimal("100")
+            total_count = len(self.participants)
+            average = (
+                (self.amount / Decimal(total_count)).quantize(
+                    Decimal("0.01"), rounding=ROUND_DOWN
+                )
+                if total_count > 0
+                else Decimal("0")
+            )
             return SplitSharePreview(
                 current_share=share or Decimal("0"),
                 next_share=share_next.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
                 or Decimal("0"),
+                average_share=average,
             )
         except:
             return SplitSharePreview(
                 current_share=Decimal("0"),
                 next_share=Decimal("0"),
+                average_share=Decimal("0"),
             )
 
     @property

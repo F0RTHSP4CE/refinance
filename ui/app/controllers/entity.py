@@ -2,7 +2,7 @@ from datetime import date
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Invoice, Tag, Transaction
+from app.schemas import Balance, Entity, Invoice, InvoiceStatus, Tag, Transaction
 from flask import Blueprint, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -45,25 +45,6 @@ class AuthForm(FlaskForm):
     )
 
     submit = SubmitField("Submit")
-
-
-class AddCardForm(FlaskForm):
-    comment = StringField(
-        "Comment",
-        description="Optional card label",
-        render_kw={"placeholder": "main card"},
-    )
-    card_hash = StringField(
-        "Card Hash",
-        validators=[DataRequired()],
-        description="Unique card hash",
-        render_kw={"placeholder": "a1bc23d45e678f90g123h456i789j0kl"},
-    )
-    submit = SubmitField("Add Card")
-
-
-class DeleteForm(FlaskForm):
-    delete = SubmitField("Delete")
 
 
 class EntityFilterForm(FlaskForm):
@@ -182,9 +163,6 @@ def edit(id):
     auth_data = entity_data.get("auth", {})
     auth_form = AuthForm(prefix="auth", data=auth_data)
 
-    # Fetch cards for this entity
-    cards_data = api.http("GET", f"entities/{id}/cards").json()
-
     # Populate tag choices
     all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
     entity_form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
@@ -208,8 +186,6 @@ def edit(id):
         entity_form=entity_form,
         auth_form=auth_form,
         all_tags=all_tags,
-        cards=cards_data,
-        add_card_form=AddCardForm(prefix="card"),
     )
 
 
@@ -238,7 +214,6 @@ def detail(id):
 
     api = get_refinance_api_client()
     entity_data = api.http("GET", f"entities/{id}").json()
-    cards_data = api.http("GET", f"entities/{id}/cards").json()
     balance_data = api.http("GET", f"balances/{id}").json()
     transactions_page = api.http(
         "GET", "transactions", params={"skip": skip, "limit": limit, "entity_id": id}
@@ -257,14 +232,28 @@ def detail(id):
     invoices_total = invoices_page["total"]
     invoices = [Invoice(**item) for item in invoices_page["items"]]
 
+    # For paid invoices, prefer the settled transaction amount/currency in compact UI.
+    for invoice in invoices[:6]:
+        status = (
+            invoice.status.value
+            if isinstance(invoice.status, InvoiceStatus)
+            else str(invoice.status).lower()
+        )
+        if status != InvoiceStatus.PAID.value or not invoice.transaction_id:
+            continue
+
+        tx_data = api.http("GET", f"transactions/{invoice.transaction_id}").json()
+        tx = Transaction(**tx_data)
+        invoice.paid_amount = tx.amount
+        invoice.paid_currency = tx.currency.upper()
+
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:
-            return False, [], [], [], [], [], [], []
+            return False, [], [], [], [], [], []
         return (
             True,
             bundle.get("balance_changes", []),
             bundle.get("transactions_by_day", []),
-            bundle.get("money_flow_by_day", []),
             bundle.get("top_incoming", []),
             bundle.get("top_outgoing", []),
             bundle.get("top_incoming_tags", []),
@@ -274,7 +263,6 @@ def detail(id):
     stats_loaded = False
     balance_changes = []
     transactions_by_day = []
-    money_flow_by_day = []
     top_incoming = []
     top_outgoing = []
     top_incoming_tags = []
@@ -296,7 +284,6 @@ def detail(id):
         stats_loaded,
         balance_changes,
         transactions_by_day,
-        money_flow_by_day,
         top_incoming,
         top_outgoing,
         top_incoming_tags,
@@ -319,7 +306,6 @@ def detail(id):
             stats_loaded,
             balance_changes,
             transactions_by_day,
-            money_flow_by_day,
             top_incoming,
             top_outgoing,
             top_incoming_tags,
@@ -340,8 +326,6 @@ def detail(id):
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,
         transactions_by_day=transactions_by_day,
-        money_flow_by_day=money_flow_by_day,
-        cards=cards_data,
         top_incoming=top_incoming,
         top_outgoing=top_outgoing,
         top_incoming_tags=top_incoming_tags,
@@ -374,34 +358,4 @@ def stats(id):
             stats_months=stats_months,
             stats_limit=stats_limit,
         )
-    )
-
-
-@entity_bp.route("/<int:id>/cards", methods=["POST"])
-@token_required
-def add_card(id):
-    api = get_refinance_api_client()
-    form = AddCardForm(prefix="card")
-    if form.validate_on_submit():
-        payload = {
-            "comment": form.comment.data or None,
-            "card_hash": form.card_hash.data,
-        }
-        api.http("POST", f"entities/{id}/cards", data=payload)
-    return redirect(url_for("entity.edit", id=id))
-
-
-@entity_bp.route("/<int:id>/cards/<int:card_id>/delete", methods=["GET", "POST"])
-@token_required
-def delete_card(id, card_id):
-    api = get_refinance_api_client()
-    form = DeleteForm()
-    if form.validate_on_submit():
-        api.http("DELETE", f"entities/{id}/cards/{card_id}")
-        return redirect(url_for("entity.edit", id=id))
-    # Fetch card info for confirmation page
-    cards = api.http("GET", f"entities/{id}/cards").json()
-    card = next((c for c in cards if c.get("id") == card_id), None)
-    return render_template(
-        "entity/card_delete.jinja2", form=form, card=card, entity_id=id
     )

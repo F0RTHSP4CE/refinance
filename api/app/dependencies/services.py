@@ -182,6 +182,7 @@ class ServiceContainer:
                 db=self.db,
                 transaction_service=self.transaction_service,
                 entity_service=self.entity_service,
+                balance_service=self.balance_service,
             )
         return self._currency_exchange_service
 

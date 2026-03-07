@@ -1,0 +1,185 @@
+/* HOME PAGE */
+.home-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.home-card {
+  background: white;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.home-card h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.home-card-title-count {
+  color: red;
+  font-weight: 900;
+}
+
+.home-card-value, .home-card-note {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.home-card-value {
+  font-weight: 700;
+}
+
+.home-card-value-total {
+  margin-top: 0;
+  padding-top: 0.75rem;
+}
+
+.home-card-summary {
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.home-card-note {
+  color: #333;
+}
+
+.home-balance-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.home-balance-mini {
+  border: none;
+  background: transparent;
+  padding: 0.25rem 0.15rem;
+  min-width: 96px;
+  flex: 0 0 auto;
+}
+
+.home-balance-mini-currency {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.home-balance-mini-amount {
+  margin-top: 0.15rem;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.home-unpaid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.65rem;
+}
+
+.home-unpaid-invoice {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  background: red;
+  color: white;
+  border: 2px solid red;
+  border-radius: 0;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.home-unpaid-invoice:hover {
+  background: white;
+  color: red;
+  box-shadow: 4px 4px 0px red;
+  transform: translate(-2px, -2px);
+}
+
+.home-unpaid-invoice:active {
+  background: white;
+  color: red;
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.home-unpaid-invoice-amount {
+  font-size: 0.95rem;
+  line-height: 1.15;
+}
+
+.home-card-total {
+  font-weight: 900;
+  color: red;
+}
+
+.home-approx {
+  font-family: "DejaVu Sans", "Noto Sans", "Noto Sans Symbols2", "Segoe UI Symbol", system-ui, sans-serif;
+  font-weight: 900;
+}
+
+.home-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.home-card-button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 0.95rem;
+  border: 2px solid black;
+  background: black;
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.home-card-button:hover {
+  background: white;
+  color: black;
+}
+
+.home-card-button-secondary {
+  background: white;
+  color: black;
+}
+
+.home-card-button-secondary:hover {
+  background: black;
+  color: white;
+}
+
+.home-card-button-outline {
+  background: transparent;
+  color: black;
+}
+
+.home-card-button-outline:hover {
+  background: black;
+  color: white;
+}
+
+@media (max-width: 680px) {
+  .home-card {
+    box-shadow: none;
+  }
+}
+

@@ -327,12 +327,9 @@ def get_entity_stats_bundle(
         bundle_timeframe_from,
         normalized_timeframe_to,
     )
-
-    flow_timeframe_from = bundle_timeframe_from
-
     money_flow_by_day = stats_service.get_entity_money_flow_by_day(
         entity_id,
-        flow_timeframe_from,
+        bundle_timeframe_from,
         normalized_timeframe_to,
     )
     top_incoming = stats_service.get_top_incoming_entities(
