@@ -3,9 +3,9 @@
 {% block title %}Pay to Fridge{% endblock %}
 
 {% block content %}
-<div class="deposit-topup-layout shortcut-form-container">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+<div class="entry-form-layout shortcut-form-container">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             <input type="hidden" name="from_entity_id" value="{{ g.actor_entity.id }}">
             <input type="hidden" name="to_entity_id" value="{{ fridge_entity_id }}">
 
@@ -19,14 +19,14 @@
                 </select>
             </div>
 
-            <div class="deposit-row" id="custom_row" style="display: none;">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row" id="custom_row" style="display: none;">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="custom_amount">Custom Amount</label>
                     <input id="custom_amount" name="custom_amount" class="form-input" type="number" step="0.01"
                         placeholder="5.00">
                 </div>
 
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="custom_currency">Custom Currency</label>
                     <select id="custom_currency" name="custom_currency" class="form-input">
                         <option value="GEL" selected>GEL</option>
@@ -36,7 +36,7 @@
                 </div>
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 <button type="submit" class="big-button">Pay</button>
             </div>
         </form>

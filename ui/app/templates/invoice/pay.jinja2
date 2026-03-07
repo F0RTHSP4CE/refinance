@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="invoice-form-layout shortcut-form-container">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             {{ form.hidden_tag() }}
             {{ form.invoice_id() }}
             {{ form.from_entity_id() }}
@@ -57,7 +57,7 @@
                 </div>
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form.submit(class_='big-button', value='Create transaction') }}
             </div>
         </form>

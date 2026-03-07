@@ -6,8 +6,8 @@
 
 {% block content %}
 <div class="invoice-form-layout shortcut-form-container">
-    <section class="deposit-topup-card">
-        <form method="post" class="deposit-topup-form">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
             {{ form.hidden_tag() }}
 
             <div class="form-group">
@@ -30,34 +30,34 @@
                 {{ form.billing_period(class_='form-input') }}
             </div>
 
-            <div class="deposit-row transaction-equal-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row transaction-equal-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="amount_1">Amount 1</label>
                     {{ form.amount_1(class_='form-input', step='0.01') }}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_1">Currency 1</label>
                     {{ form.currency_1(class_='form-input') }}
                 </div>
             </div>
 
-            <div class="deposit-row transaction-equal-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row transaction-equal-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="amount_2">Amount 2</label>
                     {{ form.amount_2(class_='form-input', step='0.01') }}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_2">Currency 2</label>
                     {{ form.currency_2(class_='form-input') }}
                 </div>
             </div>
 
-            <div class="deposit-row transaction-equal-row">
-                <div class="deposit-field deposit-field-amount">
+            <div class="form-row transaction-equal-row">
+                <div class="form-field form-field-amount">
                     <label class="form-label" for="amount_3">Amount 3</label>
                     {{ form.amount_3(class_='form-input', step='0.01') }}
                 </div>
-                <div class="deposit-field deposit-field-currency">
+                <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_3">Currency 3</label>
                     {{ form.currency_3(class_='form-input') }}
                 </div>
@@ -68,7 +68,7 @@
                 {{ tag_selector('tag_ids', all_tags, []) }}
             </div>
 
-            <div class="deposit-topup-actions">
+            <div class="form-actions">
                 {{ form.submit(class_='big-button', value='Create Invoice') }}
             </div>
         </form>

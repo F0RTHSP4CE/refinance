@@ -1,0 +1,54 @@
+/* ENTRY FORM VARIANTS */
+.shortcut-form-container {
+  margin-bottom: 1.25rem;
+}
+
+.transaction-form-layout {
+  max-width: 340px;
+}
+
+.invoice-form-layout {
+  max-width: 420px;
+}
+
+.invoice-form-layout .inline-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.invoice-form-layout .inline-link:hover,
+.invoice-form-layout .inline-link:focus-visible {
+  text-decoration: underline;
+}
+
+.transaction-form-layout .entry-form {
+  gap: 0.7rem;
+}
+
+.transaction-form-layout .entry-form-card {
+  padding: 0.9rem 1rem;
+}
+
+.transaction-form-layout .form-label {
+  margin-bottom: 0.35rem;
+}
+
+.transaction-form-layout .form-input {
+  min-height: 48px;
+}
+
+.transaction-form-layout .form-row {
+  gap: 0.7rem;
+}
+
+.transaction-form-layout .transaction-equal-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.transaction-form-layout .field-description {
+  margin-top: 0.2rem;
+}

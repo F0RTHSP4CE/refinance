@@ -1,0 +1,104 @@
+/* BADGES */
+
+/* tag selector */
+.tag-selector {
+  margin: 0.5rem 0;
+}
+
+.tag-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+  user-select: none;
+  position: relative;
+}
+
+.tag-option input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.tag-option .tag-badge {
+  margin-left: 0;
+  font-size: 1rem;
+  padding: 0.32rem 0.55rem;
+  border-width: 2px;
+  border-radius: 0;
+  font-weight: 700;
+  opacity: 1;
+  background: white;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  pointer-events: none;
+}
+
+.tag-option input[type="checkbox"]:not(:checked)+.tag-badge {
+  opacity: 1;
+}
+
+.tag-option input[type="checkbox"]:checked+.tag-badge {
+  opacity: 1;
+}
+
+.tag-option:hover .tag-badge {
+  transform: translateY(-1px);
+  box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.16);
+}
+
+.tag-option input[type="checkbox"]:checked + .tag-badge {
+  background: currentColor;
+  border-color: currentColor;
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+.tag-option input[type="checkbox"]:checked + .tag-badge a,
+.tag-option input[type="checkbox"]:checked + .tag-badge span {
+  color: white !important;
+}
+
+.tag-option input[type="checkbox"]:focus-visible + .tag-badge {
+  outline: 2px solid black;
+  outline-offset: 2px;
+}
+
+.tag-badge {
+  display: inline-block;
+  padding: 0.1rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  border: 1px solid;
+  border-radius: 0.2rem;
+  vertical-align: baseline;
+  opacity: 0.8;
+}
+
+.tag-badge a {
+  text-decoration: none;
+}
+
+.treasury-badge {
+  display: inline-block;
+  padding: 0.1rem;
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
+  border-radius: 0.2rem;
+  vertical-align: baseline;
+  opacity: 0.8;
+}
+
+.treasury-badge a {
+  text-decoration: none;
+  color: white;
+}
