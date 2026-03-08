@@ -1,10 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import { Button, Group, SegmentedControl, SimpleGrid, Skeleton, Stack, Text, TextInput } from '@mantine/core';
+import {
+  Button,
+  Group,
+  SegmentedControl,
+  SimpleGrid,
+  Skeleton,
+  Stack,
+  Text,
+  TextInput,
+} from '@mantine/core';
 import * as echarts from 'echarts';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getResidentFeeSum, getTransactionsSum, type StatsBucketSum, type StatsGrain } from '@/api/stats';
-import { AppCard } from '@/components/ui';
+import {
+  getResidentFeeSum,
+  getTransactionsSum,
+  type StatsBucketSum,
+  type StatsGrain,
+} from '@/api/stats';
+import { AccentSurface, AppCard } from '@/components/ui';
 
 type PresetKey = 'last4w' | 'last3m' | 'last6m' | 'ytd' | 'custom';
 
@@ -45,7 +59,10 @@ const subtractMonths = (dt: Date, months: number): Date => {
   return shifted;
 };
 
-const getPresetRange = (preset: Exclude<PresetKey, 'custom'>, now: Date): { from: string; to: string } => {
+const getPresetRange = (
+  preset: Exclude<PresetKey, 'custom'>,
+  now: Date
+): { from: string; to: string } => {
   const end = formatDateInput(now);
   if (preset === 'last4w') {
     const fromDate = new Date(now);
@@ -68,14 +85,18 @@ const isStatsGrain = (value: string | null): value is StatsGrain =>
   value === 'week' || value === 'month';
 
 const isPresetKey = (value: string | null): value is PresetKey =>
-  value === 'last4w' || value === 'last3m' || value === 'last6m' || value === 'ytd' || value === 'custom';
+  value === 'last4w' ||
+  value === 'last3m' ||
+  value === 'last6m' ||
+  value === 'ytd' ||
+  value === 'custom';
 
 const getIsoWeek = (dt: Date): { year: number; week: number } => {
   const utcDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
   const day = utcDate.getUTCDay() || 7;
   utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   return { year: utcDate.getUTCFullYear(), week };
 };
 
@@ -162,7 +183,12 @@ const buildChartOption = (
       textStyle: { color: '#e2e8f0' },
       formatter: (params: unknown) => {
         const items = Array.isArray(params)
-          ? (params as Array<{ axisValueLabel: string; marker: string; seriesName: string; value: number }>)
+          ? (params as Array<{
+              axisValueLabel: string;
+              marker: string;
+              seriesName: string;
+              value: number;
+            }>)
           : [];
 
         if (!items.length) return '';
@@ -170,7 +196,8 @@ const buildChartOption = (
 
         for (const item of items) {
           const value = Number(item.value) || 0;
-          const renderedValue = item.seriesName === 'Total USD' ? `$${formatNumber(value)}` : formatNumber(value);
+          const renderedValue =
+            item.seriesName === 'Total USD' ? `$${formatNumber(value)}` : formatNumber(value);
           lines.push(`${item.marker}${item.seriesName}: ${renderedValue}`);
         }
         return lines.join('<br/>');
@@ -415,10 +442,7 @@ export const Stats = () => {
   });
 
   const residentFeeData = useMemo(() => residentFeeQuery.data ?? [], [residentFeeQuery.data]);
-  const transactionsData = useMemo(
-    () => transactionsQuery.data ?? [],
-    [transactionsQuery.data]
-  );
+  const transactionsData = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
   const selectedCurrencies = useMemo(
     () => pickTopCurrencies([...residentFeeData, ...transactionsData]),
     [residentFeeData, transactionsData]
@@ -435,7 +459,7 @@ export const Stats = () => {
 
   return (
     <Stack gap="lg">
-      <AppCard style={{ background: 'linear-gradient(120deg, rgba(14, 165, 233, 0.08), rgba(34, 197, 94, 0.08))' }}>
+      <AccentSurface>
         <Stack gap="md">
           <div>
             <Text size="xl" fw={800}>
@@ -476,16 +500,32 @@ export const Stats = () => {
           </SimpleGrid>
 
           <Group gap="xs" wrap="wrap">
-            <Button variant={selectedPreset === 'last4w' ? 'filled' : 'light'} size="xs" onClick={() => applyPreset('last4w')}>
+            <Button
+              variant={selectedPreset === 'last4w' ? 'filled' : 'light'}
+              size="xs"
+              onClick={() => applyPreset('last4w')}
+            >
               Last 4 weeks
             </Button>
-            <Button variant={selectedPreset === 'last3m' ? 'filled' : 'light'} size="xs" onClick={() => applyPreset('last3m')}>
+            <Button
+              variant={selectedPreset === 'last3m' ? 'filled' : 'light'}
+              size="xs"
+              onClick={() => applyPreset('last3m')}
+            >
               Last 3 months
             </Button>
-            <Button variant={selectedPreset === 'last6m' ? 'filled' : 'light'} size="xs" onClick={() => applyPreset('last6m')}>
+            <Button
+              variant={selectedPreset === 'last6m' ? 'filled' : 'light'}
+              size="xs"
+              onClick={() => applyPreset('last6m')}
+            >
               Last 6 months
             </Button>
-            <Button variant={selectedPreset === 'ytd' ? 'filled' : 'light'} size="xs" onClick={() => applyPreset('ytd')}>
+            <Button
+              variant={selectedPreset === 'ytd' ? 'filled' : 'light'}
+              size="xs"
+              onClick={() => applyPreset('ytd')}
+            >
               Year to date
             </Button>
             <Button variant="subtle" size="xs" color="gray" onClick={resetFilters}>
@@ -493,7 +533,7 @@ export const Stats = () => {
             </Button>
           </Group>
         </Stack>
-      </AppCard>
+      </AccentSurface>
 
       <StatsChartCard
         title="Resident Fee Sum"

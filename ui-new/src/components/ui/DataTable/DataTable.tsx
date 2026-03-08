@@ -15,6 +15,7 @@ type DataTableProps<T> = {
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
   getRowAriaLabel?: (row: T) => string;
+  getRowStyle?: (row: T) => CSSProperties | undefined;
 };
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -23,6 +24,7 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyMessage = 'No data.',
   onRowClick,
   getRowAriaLabel,
+  getRowStyle,
 }: DataTableProps<T>) {
   const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, row: T) => {
     if (!onRowClick) return;
@@ -78,8 +80,11 @@ export function DataTable<T extends Record<string, unknown>>({
               onKeyDown={onRowClick ? (event) => handleRowKeyDown(event, row) : undefined}
               tabIndex={onRowClick ? 0 : undefined}
               role={onRowClick ? 'button' : undefined}
-              aria-label={onRowClick ? getRowAriaLabel?.(row) ?? 'Open row details' : undefined}
-              style={onRowClick ? { cursor: 'pointer' } : undefined}
+              aria-label={onRowClick ? (getRowAriaLabel?.(row) ?? 'Open row details') : undefined}
+              style={{
+                ...(onRowClick ? { cursor: 'pointer' } : {}),
+                ...(getRowStyle?.(row) ?? {}),
+              }}
             >
               {columns.map((col) => (
                 <Table.Td key={col.key} style={col.cellStyle}>

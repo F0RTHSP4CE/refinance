@@ -12,9 +12,7 @@ type TagBadgeProps = {
 export const TagBadge = ({ id, name, overflow }: TagBadgeProps) => {
   const hue = (id * 41.9) % 360;
   const color = overflow ? 'var(--mantine-color-gray-5)' : TAG_COLOR_FORMULA(id);
-  const backgroundColor = overflow
-    ? 'transparent'
-    : `hsla(${hue}, 66%, 44%, 0.25)`;
+  const backgroundColor = overflow ? 'transparent' : `hsla(${hue}, 66%, 44%, 0.25)`;
 
   return (
     <Box

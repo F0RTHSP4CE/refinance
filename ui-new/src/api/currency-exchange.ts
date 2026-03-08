@@ -43,15 +43,33 @@ export type CurrencyExchangeReceipt = {
   }[];
 };
 
-export type ExchangeRatesResponse = Record<string, unknown>;
-
-export const previewExchange = async (params: CurrencyExchangePreviewRequest): Promise<CurrencyExchangePreviewResponse> => {
-  const { signal, ...rest } = params;
-  return apiRequest<CurrencyExchangePreviewResponse, Omit<CurrencyExchangePreviewRequest, 'signal'>>('/currency_exchange/preview', { method: 'POST', body: rest, signal });
+export type ExchangeRateCurrency = {
+  code: string;
+  rate: string;
+  quantity: string;
 };
 
-export const executeExchange = async (params: CurrencyExchangeRequest): Promise<CurrencyExchangeReceipt> => {
-  return apiRequest<CurrencyExchangeReceipt, CurrencyExchangeRequest>('/currency_exchange/exchange', { method: 'POST', body: params });
+export type ExchangeRatesResponse = {
+  currencies: ExchangeRateCurrency[];
+}[];
+
+export const previewExchange = async (
+  params: CurrencyExchangePreviewRequest
+): Promise<CurrencyExchangePreviewResponse> => {
+  const { signal, ...rest } = params;
+  return apiRequest<
+    CurrencyExchangePreviewResponse,
+    Omit<CurrencyExchangePreviewRequest, 'signal'>
+  >('/currency_exchange/preview', { method: 'POST', body: rest, signal });
+};
+
+export const executeExchange = async (
+  params: CurrencyExchangeRequest
+): Promise<CurrencyExchangeReceipt> => {
+  return apiRequest<CurrencyExchangeReceipt, CurrencyExchangeRequest>(
+    '/currency_exchange/exchange',
+    { method: 'POST', body: params }
+  );
 };
 
 export const getExchangeRates = async (): Promise<ExchangeRatesResponse> => {

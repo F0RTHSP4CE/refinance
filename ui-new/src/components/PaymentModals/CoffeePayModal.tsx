@@ -12,7 +12,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth';
@@ -51,13 +51,12 @@ export const CoffeePayModal = ({ opened, onClose }: CoffeePayModalProps) => {
     isCreating,
     isConfirming,
     createError,
-  } = usePaymentFlow({ onSuccess: () => { } });
+  } = usePaymentFlow({ onSuccess: () => {} });
 
   const {
     control,
     handleSubmit,
     setValue,
-    watch,
     reset: resetForm,
   } = useForm<CoffeePayFormValues>({
     resolver: zodResolver(coffeePaySchema),
@@ -68,8 +67,8 @@ export const CoffeePayModal = ({ opened, onClose }: CoffeePayModalProps) => {
     },
   });
 
-  const currency = watch('currency');
-  const amount = watch('amount');
+  const currency = useWatch({ control, name: 'currency' });
+  const amount = useWatch({ control, name: 'amount' });
   const { data: serviceEntityIds } = useQuery({
     queryKey: ['service-entity-ids'],
     queryFn: ({ signal }) => getServiceEntityIds(signal),

@@ -95,9 +95,7 @@ describe('ProfileStatistics filters', () => {
     await user.click(screen.getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => {
-      expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(
-        initialCallCount + 1
-      );
+      expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(initialCallCount + 1);
     });
 
     expect(apiMocks.getEntityStatsBundle).toHaveBeenLastCalledWith(
@@ -147,8 +145,7 @@ describe('ProfileStatistics filters', () => {
     const moneyFlowOption = chartMocks.setOption.mock.calls
       .map(([option]) => option)
       .find((option) => {
-        const maybeSeries = (option as { series?: Array<{ name?: string }> })
-          .series;
+        const maybeSeries = (option as { series?: Array<{ name?: string }> }).series;
         if (!maybeSeries || !Array.isArray(maybeSeries)) return false;
         return maybeSeries.some((series) => series.name === 'Income (USD)');
       }) as
@@ -172,12 +169,8 @@ describe('ProfileStatistics filters', () => {
       ])
     );
 
-    const incomeBars = moneyFlowOption.series.find(
-      (series) => series.name === 'Income (USD)'
-    );
-    const spendingBars = moneyFlowOption.series.find(
-      (series) => series.name === 'Spending (USD)'
-    );
+    const incomeBars = moneyFlowOption.series.find((series) => series.name === 'Income (USD)');
+    const spendingBars = moneyFlowOption.series.find((series) => series.name === 'Spending (USD)');
     const monthlyIncome = moneyFlowOption.series.find(
       (series) => series.name === 'Monthly Income (USD)'
     );

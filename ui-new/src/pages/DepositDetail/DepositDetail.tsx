@@ -16,12 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  completeDepositDev,
-  getDeposit,
-  getPaymentUrl,
-  isDevModeDeposit,
-} from '@/api/deposits';
+import { completeDepositDev, getDeposit, getPaymentUrl, isDevModeDeposit } from '@/api/deposits';
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
@@ -106,7 +101,7 @@ export const DepositDetail = () => {
   const [oldBalance, setOldBalance] = useState<string | null>(null);
   const [devCompleteError, setDevCompleteError] = useState<string | null>(null);
   const [devCompleteLoading, setDevCompleteLoading] = useState(false);
-  
+
   // Use reducer pattern for complex state management instead of multiple refs
   const devCompleteState = useRef<{
     triggered: boolean;
@@ -116,9 +111,15 @@ export const DepositDetail = () => {
 
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
-  const { data: deposit, isLoading, isError, error } = useQuery({
+  const {
+    data: deposit,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ['deposit', depositId],
-    queryFn: ({ signal }) => depositId ? getDeposit(depositId, signal) : Promise.reject(new Error('Invalid deposit ID')),
+    queryFn: ({ signal }) =>
+      depositId ? getDeposit(depositId, signal) : Promise.reject(new Error('Invalid deposit ID')),
     enabled: depositId !== null,
     refetchInterval: POLLING_INTERVALS.DEPOSIT_STATUS,
   });
@@ -163,23 +164,23 @@ export const DepositDetail = () => {
     ) {
       return;
     }
-    
+
     devCompleteState.current.triggered = true;
     const timer = setTimeout(() => {
       void handleCompleteDev();
     }, 10_000);
-    
+
     return () => clearTimeout(timer);
   }, [isDevDeposit, deposit, handleCompleteDev]);
 
   // Handle successful deposit completion
   useEffect(() => {
     if (deposit?.status !== 'completed' || devCompleteState.current.successShown) return;
-    
+
     devCompleteState.current.successShown = true;
     fireConfetti();
     setSuccessOpen(true);
-    
+
     if (actorEntity) {
       void queryClient.invalidateQueries({
         queryKey: ['balances', actorEntity.id],
@@ -235,8 +236,7 @@ export const DepositDetail = () => {
     );
   }
 
-  const treasuryName =
-    deposit.from_entity?.name ?? deposit.to_treasury?.name ?? 'keepz_in';
+  const treasuryName = deposit.from_entity?.name ?? deposit.to_treasury?.name ?? 'keepz_in';
 
   const currency = deposit.currency.toLowerCase();
   const newBalanceStr = balances?.completed?.[currency];

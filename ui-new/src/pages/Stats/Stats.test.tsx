@@ -180,8 +180,12 @@ describe('Stats Page', () => {
       expect(chartMocks.setOption).toHaveBeenCalled();
     });
 
-    const allOptions = chartMocks.setOption.mock.calls.map((call) => call[0] as { series?: unknown[] });
-    expect(allOptions.some((option) => Array.isArray(option.series) && option.series.length === 4)).toBe(true);
+    const allOptions = chartMocks.setOption.mock.calls.map(
+      (call) => call[0] as { series?: unknown[] }
+    );
+    expect(
+      allOptions.some((option) => Array.isArray(option.series) && option.series.length === 4)
+    ).toBe(true);
   });
 
   it('shows empty states when both datasets are empty', async () => {

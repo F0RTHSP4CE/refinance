@@ -23,7 +23,8 @@ export const formatRelativeTime = (dateString: string | null | undefined): strin
     const months = days / 30.44;
 
     if (seconds < 60) return 'just now';
-    if (minutes < 60) return `${Math.floor(minutes)} min${Math.floor(minutes) !== 1 ? 's' : ''} ago`;
+    if (minutes < 60)
+      return `${Math.floor(minutes)} min${Math.floor(minutes) !== 1 ? 's' : ''} ago`;
     if (hours < 24) return `${Math.floor(hours)} hour${Math.floor(hours) !== 1 ? 's' : ''} ago`;
     if (days < 2) return 'yesterday';
     if (days < 7) return `${Math.floor(days)} day${Math.floor(days) !== 1 ? 's' : ''} ago`;

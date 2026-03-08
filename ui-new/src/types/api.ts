@@ -86,10 +86,54 @@ export type Invoice = {
   to_entity: EntityRef;
   amounts: InvoiceAmount[];
   comment?: string | null;
-  status: string;
+  status: 'pending' | 'paid' | 'cancelled';
   tags: Tag[];
   actor_entity_id: number;
   actor_entity: EntityRef;
+  transaction_id?: number | null;
+};
+
+export type SplitParticipant = {
+  entity: Entity;
+  fixed_amount?: string | null;
+};
+
+export type SplitSharePreview = {
+  current_share: string;
+  next_share: string;
+  average_share: string;
+};
+
+export type Split = {
+  id: number;
+  created_at: string;
+  modified_at?: string | null;
+  comment?: string | null;
+  actor_entity: Entity;
+  recipient_entity: Entity;
+  participants: SplitParticipant[];
+  amount: string;
+  currency: string;
+  collected_amount: string;
+  performed: boolean;
+  share_preview: SplitSharePreview;
+  performed_transactions: Transaction[];
+  tags: Tag[];
+};
+
+export type MonthlyFee = {
+  year: number;
+  month: number;
+  amounts: Record<string, string>;
+  total_usd: number;
+  unpaid_invoice_id?: number | null;
+  paid_invoice_id?: number | null;
+  unpaid_invoice_amounts?: Record<string, string> | null;
+};
+
+export type FeeRow = {
+  entity: Entity;
+  fees: MonthlyFee[];
 };
 
 export type PaginatedResponse<T> = {

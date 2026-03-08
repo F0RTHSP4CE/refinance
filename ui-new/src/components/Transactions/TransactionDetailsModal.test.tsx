@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MantineProvider } from '@mantine/core';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { TransactionDetailsModal } from './TransactionDetailsModal';
 import type { Transaction } from '@/types/api';
@@ -27,14 +28,27 @@ const transaction: Transaction = {
   to_treasury: { id: 7, name: 'Bank' },
 };
 
-describe('TransactionDetailsModal', () => {
-  it('renders grouped details with full comment and tagged author', () => {
-    render(
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
       <MantineProvider>
-        <MemoryRouter>
-          <TransactionDetailsModal opened={true} transaction={transaction} onClose={() => {}} />
-        </MemoryRouter>
+        <MemoryRouter>{ui}</MemoryRouter>
       </MantineProvider>
+    </QueryClientProvider>
+  );
+};
+
+describe('TransactionDetailsModal', () => {
+  it('renders grouped details with author in the header meta area', () => {
+    renderWithProviders(
+      <TransactionDetailsModal opened={true} transaction={transaction} onClose={() => {}} />
     );
 
     expect(screen.getByText('Transaction #801')).toBeInTheDocument();
@@ -42,24 +56,30 @@ describe('TransactionDetailsModal', () => {
     expect(screen.getByText('Participants')).toBeInTheDocument();
     expect(screen.getByText('Context')).toBeInTheDocument();
     expect(screen.getByText('Comment')).toBeInTheDocument();
-    expect(screen.getByText('This is the full transaction comment in the details modal.')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is the full transaction comment in the details modal.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Author')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open Test User profile' })).toHaveAttribute(
       'href',
       '/profile/1'
     );
     expect(screen.getByText('operator')).toBeInTheDocument();
+
+    const participantsSection = screen.getByText('Participants').parentElement;
+    if (!participantsSection) throw new Error('Participants section not found');
+
+    expect(within(participantsSection).getByText('From')).toBeInTheDocument();
+    expect(within(participantsSection).getByText('To')).toBeInTheDocument();
+    expect(within(participantsSection).queryByText('Author')).not.toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
-    render(
-      <MantineProvider>
-        <MemoryRouter>
-          <TransactionDetailsModal opened={true} transaction={transaction} onClose={onClose} />
-        </MemoryRouter>
-      </MantineProvider>
+    renderWithProviders(
+      <TransactionDetailsModal opened={true} transaction={transaction} onClose={onClose} />
     );
 
     await user.click(screen.getByRole('button', { name: 'Close' }));

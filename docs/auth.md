@@ -12,6 +12,7 @@ Environment variables used:
 - `REFINANCE_UI_URL`: Used to construct login links.
 - `REFINANCE_API_URL`: Used by deposit callbacks.
 - `REFINANCE_TELEGRAM_BOT_API_TOKEN`: Telegram bot token to deliver login links.
+- `REFINANCE_TELEGRAM_BOT_USERNAME`: Telegram bot username used by the runtime Telegram sign-in widget/button.
 - `REFINANCE_DATABASE_URL`: PostgreSQL connection string (defaults to `postgresql://postgres:postgres@db:5432/refinance` when running via docker compose).
 
 Testing locally:
@@ -24,6 +25,8 @@ REFINANCE_UI_URL=http://localhost:9000
 REFINANCE_API_URL=http://localhost:8000
 # Optional: set a real Telegram bot token if you want to receive login links in Telegram
 REFINANCE_TELEGRAM_BOT_API_TOKEN=123456:ABC...
+# Optional but required for Telegram widget login in ui-new
+REFINANCE_TELEGRAM_BOT_USERNAME=refinance_bot
 # Optional: override REFINANCE_DATABASE_URL if Postgres is running elsewhere
 REFINANCE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/refinance
 ```
@@ -31,7 +34,7 @@ REFINANCE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/refinance
 ```console
 make dev
 ```
-3) Open UI `http://localhost:9000/auth/login`, enter an entity name that exists.
+3) Open UI `http://localhost:5173/sign-in`, enter an entity name that exists.
    - The seed includes `F0` and several system entities. To test personal login via Telegram, create your own entity and set `auth.telegram_id` to your Telegram numeric ID.
 4) Check API logs for debug info:
 ```console
@@ -52,7 +55,7 @@ make add-entity NAME=alice TELEGRAM_ID=123456789
 3) On the login page, enter `<name>`. If `TELEGRAM_ID` was set and the bot token is valid, you will receive a Telegram login link.
 
 Entity & user management:
-- UI: after login, go to `Entities` to add or edit entities. You can set `Auth → Telegram ID` (from `@myidbot`) and tags.
+- UI: after login, go to `Entities` to add or edit entities. To enable Telegram sign-in for yourself, sign in once by username and then use `Profile -> Telegram login` to connect your Telegram account.
 - CLI: use `make add-entity` to upsert by name or id. Under the hood it calls `python -m app.scripts.add_entity` inside the API container.
 - Deleting entities: not supported yet in the API/UI.
 

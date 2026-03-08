@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import {
   Alert,
   Anchor,
-  Badge,
   Button,
   Group,
   Modal,
@@ -19,10 +18,18 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { createEntity, getEntities } from '@/api/entities';
 import { getTags } from '@/api/tags';
+import { EntityEditModal } from '@/components/EntityEditModal';
+import {
+  MoneyActionModal,
+  type MoneyActionMode,
+} from '@/components/MoneyActionModal/MoneyActionModal';
+import { useAuthStore } from '@/stores/auth';
 import type { Entity, Tag } from '@/types/api';
+import { AccentSurface } from '../AccentSurface';
 import { AppCard } from '../AppCard';
 import { DataTable, type DataTableColumn } from '../DataTable';
 import { RelativeDate } from '../RelativeDate';
+import { StatusBadge } from '../StatusBadge';
 import { TagList } from '../TagList';
 
 export type EntityDirectoryConfig = {
@@ -61,22 +68,6 @@ const DEFAULT_FORM_VALUES: EntityCreateFormValues = {
 
 const MAX_ITEMS = 500;
 
-const getStatusStyle = (active: boolean) => {
-  if (active) {
-    return {
-      backgroundColor: 'var(--mantine-color-black)',
-      color: 'var(--mantine-color-white)',
-      border: '1px solid var(--mantine-color-black)',
-    };
-  }
-
-  return {
-    backgroundColor: 'var(--mantine-color-white)',
-    color: 'var(--mantine-color-black)',
-    border: '1px solid var(--mantine-color-black)',
-  };
-};
-
 const getCreateEntitySchema = (requireTagSelection: boolean) => {
   return z.object({
     name: z.string().trim().min(1, 'Name is required'),
@@ -89,9 +80,15 @@ const getCreateEntitySchema = (requireTagSelection: boolean) => {
 
 export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
   const queryClient = useQueryClient();
+  const actorEntity = useAuthStore((state) => state.actorEntity);
   const [search, setSearch] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [createOpened, setCreateOpened] = useState(false);
+  const [editingEntity, setEditingEntity] = useState<Entity | null>(null);
+  const [moneyAction, setMoneyAction] = useState<{
+    mode: MoneyActionMode;
+    entity: Entity;
+  } | null>(null);
 
   const createSchema = useMemo(() => {
     return getCreateEntitySchema(config.requireTagSelection);
@@ -170,7 +167,11 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
       key: 'tags',
       label: 'Tags',
       render: (entity) =>
-        entity.tags.length ? <TagList tags={entity.tags} showAll /> : <Text size="sm">—</Text>,
+        entity.tags.length ? (
+          <TagList tags={entity.tags} mode="compact" />
+        ) : (
+          <Text size="sm">—</Text>
+        ),
     },
     {
       key: 'comment',
@@ -181,15 +182,55 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
       key: 'active',
       label: 'Active',
       render: (entity) => (
-        <Badge variant="filled" style={getStatusStyle(entity.active)}>
+        <StatusBadge tone={entity.active ? 'positive' : 'neutral'}>
           {entity.active ? 'Active' : 'Inactive'}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {
       key: 'created_at',
       label: 'Created',
       render: (entity) => <RelativeDate isoString={entity.created_at} />,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (entity) => {
+        const isSelf = actorEntity?.id === entity.id;
+        return (
+          <Group gap="xs" wrap="nowrap">
+            <Button
+              variant="subtle"
+              size="xs"
+              onClick={() =>
+                setMoneyAction({
+                  mode: 'transfer',
+                  entity,
+                })
+              }
+              disabled={!actorEntity || isSelf}
+            >
+              Transfer
+            </Button>
+            <Button
+              variant="subtle"
+              size="xs"
+              onClick={() =>
+                setMoneyAction({
+                  mode: 'request',
+                  entity,
+                })
+              }
+              disabled={!actorEntity || isSelf}
+            >
+              Request
+            </Button>
+            <Button variant="subtle" size="xs" onClick={() => setEditingEntity(entity)}>
+              Edit
+            </Button>
+          </Group>
+        );
+      },
     },
   ];
 
@@ -220,7 +261,7 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
         </Button>
       </Group>
 
-      <AppCard>
+      <AccentSurface>
         <Stack gap="md">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <TextInput
@@ -240,16 +281,27 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
               nothingFoundMessage={tagsQuery.isLoading ? 'Loading...' : 'No tags found'}
             />
           </div>
+        </Stack>
+      </AccentSurface>
 
+      <AppCard>
+        <Stack gap="md">
           <DataTable
             columns={columns}
             data={entities}
-            emptyMessage={entitiesQuery.isLoading ? config.emptyLoadingMessage : config.emptyMessage}
+            emptyMessage={
+              entitiesQuery.isLoading ? config.emptyLoadingMessage : config.emptyMessage
+            }
           />
         </Stack>
       </AppCard>
 
-      <Modal opened={createOpened} onClose={handleCreateClose} title={config.createModalTitle} centered>
+      <Modal
+        opened={createOpened}
+        onClose={handleCreateClose}
+        title={config.createModalTitle}
+        centered
+      >
         <form onSubmit={(event) => void handleSubmit(onCreateEntity)(event)}>
           <Stack gap="md">
             <Controller
@@ -315,6 +367,33 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
           </Stack>
         </form>
       </Modal>
+
+      <EntityEditModal
+        opened={editingEntity != null}
+        entity={editingEntity}
+        tagOptions={selectableTags}
+        requireTagSelection={config.requireTagSelection}
+        onClose={() => setEditingEntity(null)}
+      />
+
+      <MoneyActionModal
+        opened={moneyAction != null}
+        mode={moneyAction?.mode ?? 'transfer'}
+        onClose={() => setMoneyAction(null)}
+        initialFromEntityId={
+          moneyAction?.mode === 'transfer' ? actorEntity?.id : moneyAction?.entity.id
+        }
+        initialToEntityId={
+          moneyAction?.mode === 'request' ? actorEntity?.id : moneyAction?.entity.id
+        }
+        title={
+          moneyAction
+            ? moneyAction.mode === 'transfer'
+              ? `Transfer with ${moneyAction.entity.name}`
+              : `Request from ${moneyAction.entity.name}`
+            : undefined
+        }
+      />
     </Stack>
   );
 };

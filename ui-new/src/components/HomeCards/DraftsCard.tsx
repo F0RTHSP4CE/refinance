@@ -1,10 +1,10 @@
-import { Badge, Button, Card, Group, Modal, Stack, Text, UnstyledButton } from '@mantine/core';
+import { Button, Card, Group, Modal, Stack, Text, UnstyledButton } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getTransactions } from '@/api/transactions';
-import { RelativeDate, TagList } from '@/components/ui';
+import { RelativeDate, StatusBadge, TagList } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
 import type { Transaction } from '@/types/api';
 
@@ -60,9 +60,9 @@ export const DraftsCard = () => {
               Drafts
             </Text>
             {draftCount > 0 && (
-              <Badge color="yellow" size="lg">
+              <StatusBadge size="lg" tone="neutral">
                 {draftCount}
-              </Badge>
+              </StatusBadge>
             )}
           </Group>
 
@@ -93,9 +93,9 @@ export const DraftsCard = () => {
                       <Text size="sm" fw={700}>
                         {formatAmount(draft.amount, draft.currency)}
                       </Text>
-                      <Badge variant="light" color="gray">
+                      <StatusBadge tone="neutral" size="sm">
                         draft
-                      </Badge>
+                      </StatusBadge>
                     </Group>
                   </Group>
                 </UnstyledButton>
@@ -143,9 +143,9 @@ export const DraftsCard = () => {
               <Text size="sm" c="dimmed">
                 Status
               </Text>
-              <Badge variant="light" color="gray">
+              <StatusBadge tone="neutral" size="sm">
                 {selectedDraft.status}
-              </Badge>
+              </StatusBadge>
             </Group>
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
@@ -158,7 +158,8 @@ export const DraftsCard = () => {
                 Treasury
               </Text>
               <Text size="sm">
-                {selectedDraft.from_treasury?.name ?? 'x'} → {selectedDraft.to_treasury?.name ?? 'x'}
+                {selectedDraft.from_treasury?.name ?? 'x'} →{' '}
+                {selectedDraft.to_treasury?.name ?? 'x'}
               </Text>
             </Group>
             <Group justify="space-between">

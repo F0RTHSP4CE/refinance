@@ -14,8 +14,7 @@ export const PROFILE_STATS_LIMIT_OPTIONS = [5, 8, 12] as const;
 
 export const DEFAULT_PROFILE_STATS_GRAIN: StatsGrain = 'month';
 export const DEFAULT_PROFILE_STATS_LIMIT = 8;
-export const DEFAULT_PROFILE_STATS_PRESET: Exclude<ProfileStatsPreset, 'custom'> =
-  'last3m';
+export const DEFAULT_PROFILE_STATS_PRESET: Exclude<ProfileStatsPreset, 'custom'> = 'last3m';
 
 export const PROFILE_PRESET_OPTIONS: Array<{
   key: Exclude<ProfileStatsPreset, 'custom'>;
@@ -38,9 +37,9 @@ export const parseDateInput = (value: string | null): Date | null => {
   if (!year || !month || !day) return null;
   const parsed = new Date(year, month - 1, day);
   if (
-    parsed.getFullYear() !== year
-    || parsed.getMonth() !== month - 1
-    || parsed.getDate() !== day
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
   ) {
     return null;
   }
@@ -52,11 +51,7 @@ export const subtractMonths = (dt: Date, months: number): Date => {
   const dayOfMonth = shifted.getDate();
   shifted.setDate(1);
   shifted.setMonth(shifted.getMonth() - months);
-  const maxDay = new Date(
-    shifted.getFullYear(),
-    shifted.getMonth() + 1,
-    0
-  ).getDate();
+  const maxDay = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
   shifted.setDate(Math.min(dayOfMonth, maxDay));
   return shifted;
 };
@@ -84,14 +79,12 @@ export const getPresetRange = (
   return { from: formatDateInput(subtractMonths(now, 3)), to: end };
 };
 
-export const isProfileStatsPreset = (
-  value: string | null
-): value is ProfileStatsPreset =>
-  value === 'last4w'
-  || value === 'last3m'
-  || value === 'last6m'
-  || value === 'ytd'
-  || value === 'custom';
+export const isProfileStatsPreset = (value: string | null): value is ProfileStatsPreset =>
+  value === 'last4w' ||
+  value === 'last3m' ||
+  value === 'last6m' ||
+  value === 'ytd' ||
+  value === 'custom';
 
 export const isStatsGrain = (value: string | null): value is StatsGrain =>
   value === 'week' || value === 'month';
@@ -100,16 +93,13 @@ export const areProfileStatsFiltersEqual = (
   left: ProfileStatsFiltersValue,
   right: ProfileStatsFiltersValue
 ): boolean =>
-  left.from === right.from
-  && left.to === right.to
-  && left.grain === right.grain
-  && left.limit === right.limit
-  && left.preset === right.preset;
+  left.from === right.from &&
+  left.to === right.to &&
+  left.grain === right.grain &&
+  left.limit === right.limit &&
+  left.preset === right.preset;
 
-export const normalizeRange = (
-  from: string,
-  to: string
-): { from: string; to: string } => {
+export const normalizeRange = (from: string, to: string): { from: string; to: string } => {
   if (from > to) {
     return { from: to, to };
   }

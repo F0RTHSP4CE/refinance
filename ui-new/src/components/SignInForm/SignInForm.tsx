@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Stack, TextInput } from '@mantine/core';
+import { Alert, Button, Divider, Stack, Text, TextInput } from '@mantine/core';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { requestToken } from '@/api/auth';
+import { TelegramAuthButton } from '@/components/TelegramAuth';
+import { useTelegramAuthConfig } from '@/hooks/useTelegramAuthConfig';
 
 const signInSchema = z.object({
   username: z.string().trim().min(1, 'Username is required'),
@@ -15,6 +17,7 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 export const SignInForm = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loginLink, setLoginLink] = useState<string | null>(null);
+  const telegramConfigQuery = useTelegramAuthConfig();
 
   const {
     register,
@@ -59,6 +62,17 @@ export const SignInForm = () => {
 
   return (
     <Stack gap="md">
+      <Stack gap="sm">
+        <TelegramAuthButton
+          mode="login"
+          botUsername={telegramConfigQuery.data?.bot_username}
+          enabled={telegramConfigQuery.data?.enabled}
+          reason={telegramConfigQuery.data?.reason}
+          loading={telegramConfigQuery.isLoading}
+        />
+        <Divider label="or continue by username" labelPosition="center" />
+      </Stack>
+
       <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
         <Stack gap="md">
           <TextInput
@@ -97,6 +111,11 @@ export const SignInForm = () => {
           )}
         </Alert>
       )}
+
+      <Text size="sm" c="dimmed">
+        If Telegram login says your account is not linked yet, sign in by username once and connect
+        Telegram in your profile.
+      </Text>
     </Stack>
   );
 };

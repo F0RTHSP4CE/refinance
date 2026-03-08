@@ -18,13 +18,8 @@ type ProfileStatsFiltersProps = {
   onApply: (nextFilters: ProfileStatsFiltersValue) => void;
 };
 
-export const ProfileStatsFilters = ({
-  appliedFilters,
-  onApply,
-}: ProfileStatsFiltersProps) => {
-  const [draftFilters, setDraftFilters] = useState<ProfileStatsFiltersValue>(
-    appliedFilters
-  );
+export const ProfileStatsFilters = ({ appliedFilters, onApply }: ProfileStatsFiltersProps) => {
+  const [draftFilters, setDraftFilters] = useState<ProfileStatsFiltersValue>(appliedFilters);
   const [initialFilters] = useState<ProfileStatsFiltersValue>(appliedFilters);
 
   useEffect(() => {
@@ -147,9 +142,7 @@ export const ProfileStatsFilters = ({
               size="xs"
               variant={draftFilters.limit === option ? 'filled' : 'subtle'}
               color={draftFilters.limit === option ? 'green' : 'gray'}
-              onClick={() =>
-                setDraftFilters((prev) => ({ ...prev, limit: option }))
-              }
+              onClick={() => setDraftFilters((prev) => ({ ...prev, limit: option }))}
             >
               {option}
             </Button>
@@ -158,11 +151,7 @@ export const ProfileStatsFilters = ({
 
         <Group justify="flex-end" gap="xs">
           {isDirtyVsInitial ? (
-            <Button
-              variant="subtle"
-              color="gray"
-              onClick={() => setDraftFilters(initialFilters)}
-            >
+            <Button variant="subtle" color="gray" onClick={() => setDraftFilters(initialFilters)}>
               Reset
             </Button>
           ) : null}

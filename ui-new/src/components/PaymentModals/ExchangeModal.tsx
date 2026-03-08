@@ -1,7 +1,21 @@
-import { ActionIcon, Alert, Button, Group, Modal, NumberInput, Select, Stack, Text } from '@mantine/core';
-import { IconArrowDown, IconArrowRight, IconExchange as TablerIconExchange } from '@tabler/icons-react';
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  Group,
+  Modal,
+  NumberInput,
+  Select,
+  Stack,
+  Text,
+} from '@mantine/core';
+import {
+  IconArrowDown,
+  IconArrowRight,
+  IconExchange as TablerIconExchange,
+} from '@tabler/icons-react';
 import { useState, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth';
@@ -17,15 +31,17 @@ const CURRENCIES = [
   { value: 'EUR', label: 'EUR' },
 ] as const;
 
-const exchangeSchema = z.object({
-  sourceCurrency: z.enum(['GEL', 'USD', 'EUR']),
-  targetCurrency: z.enum(['GEL', 'USD', 'EUR']),
-  sourceAmount: z.number().min(0.01, 'Amount must be at least 0.01').optional(),
-  targetAmount: z.number().min(0.01, 'Amount must be at least 0.01').optional(),
-}).refine((data) => data.sourceCurrency !== data.targetCurrency, {
-  message: 'Source and target currencies must be different',
-  path: ['targetCurrency'],
-});
+const exchangeSchema = z
+  .object({
+    sourceCurrency: z.enum(['GEL', 'USD', 'EUR']),
+    targetCurrency: z.enum(['GEL', 'USD', 'EUR']),
+    sourceAmount: z.number().min(0.01, 'Amount must be at least 0.01').optional(),
+    targetAmount: z.number().min(0.01, 'Amount must be at least 0.01').optional(),
+  })
+  .refine((data) => data.sourceCurrency !== data.targetCurrency, {
+    message: 'Source and target currencies must be different',
+    path: ['targetCurrency'],
+  });
 
 type ExchangeFormValues = z.infer<typeof exchangeSchema>;
 
@@ -111,7 +127,16 @@ function calculateConversion(
 
 export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   const actorEntity = useAuthStore((state) => state.actorEntity);
-  const { state, setPreviewData, executeExchange, cancelPreview, goToPreview, closeSuccess, isExecuting, executeError } = useExchangeFlow({
+  const {
+    state,
+    setPreviewData,
+    executeExchange,
+    cancelPreview,
+    goToPreview,
+    closeSuccess,
+    isExecuting,
+    executeError,
+  } = useExchangeFlow({
     onSuccess: onClose,
   });
 
@@ -124,7 +149,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
 
   const { data: ratesData } = useQuery({
     queryKey: ['exchange-rates'],
-    queryFn: () => getExchangeRates() as Promise<{ currencies: RatesData }[]>,
+    queryFn: () => getExchangeRates(),
     staleTime: Infinity,
   });
 
@@ -133,7 +158,11 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   const [inputMode, setInputMode] = useState<'source' | 'target'>('source');
   const [balancesBeforeExchange, setBalancesBeforeExchange] = useState<Record<string, number>>({});
 
-  const { control, watch, setValue, formState: { errors } } = useForm<ExchangeFormValues>({
+  const {
+    control,
+    setValue,
+    formState: { errors },
+  } = useForm<ExchangeFormValues>({
     resolver: zodResolver(exchangeSchema),
     defaultValues: {
       sourceCurrency: 'USD',
@@ -143,10 +172,10 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
     },
   });
 
-  const sourceCurrency = watch('sourceCurrency');
-  const targetCurrency = watch('targetCurrency');
-  const sourceAmount = watch('sourceAmount');
-  const targetAmount = watch('targetAmount');
+  const [sourceCurrency, targetCurrency, sourceAmount, targetAmount] = useWatch({
+    control,
+    name: ['sourceCurrency', 'targetCurrency', 'sourceAmount', 'targetAmount'],
+  });
 
   const getBalance = (currency: string): number => {
     const key = currency.toLowerCase() as keyof NonNullable<typeof freshBalances>['completed'];
@@ -154,13 +183,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
   };
 
   const conversion = useMemo(() => {
-    return calculateConversion(
-      sourceAmount,
-      targetAmount,
-      sourceCurrency,
-      targetCurrency,
-      rates
-    );
+    return calculateConversion(sourceAmount, targetAmount, sourceCurrency, targetCurrency, rates);
   }, [sourceAmount, targetAmount, sourceCurrency, targetCurrency, rates]);
 
   const exchangeRate = useMemo(() => {
@@ -247,11 +270,18 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
         closeOnEscape={state.step === 'form'}
       >
         {state.step === 'form' && (
-          <form onSubmit={(e) => { e.preventDefault(); handleGoToPreview(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleGoToPreview();
+            }}
+          >
             <Stack gap="md">
               <Group align="flex-start">
                 <Stack gap={4} flex={1}>
-                  <Text size="xs" c="dimmed" fw={600}>From</Text>
+                  <Text size="xs" c="dimmed" fw={600}>
+                    From
+                  </Text>
                   <Controller
                     name="sourceAmount"
                     control={control}
@@ -281,12 +311,14 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                         onChange={(value) => handleSourceCurrencyChange(value as string)}
                       />
                     )}
-                   />
+                  />
                   <Text size="xs" c="dimmed">
                     Balance: {getBalance(sourceCurrency).toFixed(2)} {sourceCurrency}
                   </Text>
                   <Text size="xs" c="dimmed" opacity={conversion ? 1 : 0}>
-                    {conversion ? `→ ${(getBalance(sourceCurrency) - conversion.sourceAmount).toFixed(2)} ${sourceCurrency}` : '−'}
+                    {conversion
+                      ? `→ ${(getBalance(sourceCurrency) - conversion.sourceAmount).toFixed(2)} ${sourceCurrency}`
+                      : '−'}
                   </Text>
                 </Stack>
 
@@ -295,7 +327,9 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                 </ActionIcon>
 
                 <Stack gap={4} flex={1}>
-                  <Text size="xs" c="dimmed" fw={600}>To</Text>
+                  <Text size="xs" c="dimmed" fw={600}>
+                    To
+                  </Text>
                   <Controller
                     name="targetAmount"
                     control={control}
@@ -325,12 +359,14 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                         onChange={(value) => handleTargetCurrencyChange(value as string)}
                       />
                     )}
-                   />
+                  />
                   <Text size="xs" c="dimmed">
                     Balance: {getBalance(targetCurrency).toFixed(2)} {targetCurrency}
                   </Text>
                   <Text size="xs" c="dimmed" opacity={conversion ? 1 : 0}>
-                    {conversion ? `→ ${(getBalance(targetCurrency) + conversion.targetAmount).toFixed(2)} ${targetCurrency}` : '−'}
+                    {conversion
+                      ? `→ ${(getBalance(targetCurrency) + conversion.targetAmount).toFixed(2)} ${targetCurrency}`
+                      : '−'}
                   </Text>
                 </Stack>
               </Group>
@@ -345,7 +381,12 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={!conversion || !!errors.sourceAmount || !!errors.targetAmount || !!errors.targetCurrency}
+                  disabled={
+                    !conversion ||
+                    !!errors.sourceAmount ||
+                    !!errors.targetAmount ||
+                    !!errors.targetCurrency
+                  }
                 >
                   Exchange
                 </Button>
@@ -356,8 +397,10 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
 
         {state.step === 'preview' && state.previewData && (
           <Stack gap="md">
-            <Text size="sm" c="dimmed">You are about to exchange:</Text>
-            
+            <Text size="sm" c="dimmed">
+              You are about to exchange:
+            </Text>
+
             <Group gap="xs" align="baseline">
               <Text size="xl" fw={700}>
                 {state.previewData.source_amount} {state.previewData.source_currency.toUpperCase()}
@@ -369,17 +412,34 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
             </Group>
 
             <Stack gap={2}>
-              <Text size="sm" fw={500}>Exchange rate:</Text>
-              <Text size="lg">1 {state.previewData.source_currency.toUpperCase()} = {state.previewData.rate} {state.previewData.target_currency.toUpperCase()}</Text>
+              <Text size="sm" fw={500}>
+                Exchange rate:
+              </Text>
+              <Text size="lg">
+                1 {state.previewData.source_currency.toUpperCase()} = {state.previewData.rate}{' '}
+                {state.previewData.target_currency.toUpperCase()}
+              </Text>
             </Stack>
 
             <Stack gap={2}>
-              <Text size="sm" fw={500}>Your balances will change:</Text>
-              <Text size="sm" c="dimmed">
-                {state.previewData.source_currency.toUpperCase()}: {getBalance(state.previewData.source_currency).toFixed(2)} → {(getBalance(state.previewData.source_currency) - parseFloat(state.previewData.source_amount)).toFixed(2)}
+              <Text size="sm" fw={500}>
+                Your balances will change:
               </Text>
               <Text size="sm" c="dimmed">
-                {state.previewData.target_currency.toUpperCase()}: {getBalance(state.previewData.target_currency).toFixed(2)} → {(getBalance(state.previewData.target_currency) + parseFloat(state.previewData.target_amount)).toFixed(2)}
+                {state.previewData.source_currency.toUpperCase()}:{' '}
+                {getBalance(state.previewData.source_currency).toFixed(2)} →{' '}
+                {(
+                  getBalance(state.previewData.source_currency) -
+                  parseFloat(state.previewData.source_amount)
+                ).toFixed(2)}
+              </Text>
+              <Text size="sm" c="dimmed">
+                {state.previewData.target_currency.toUpperCase()}:{' '}
+                {getBalance(state.previewData.target_currency).toFixed(2)} →{' '}
+                {(
+                  getBalance(state.previewData.target_currency) +
+                  parseFloat(state.previewData.target_amount)
+                ).toFixed(2)}
               </Text>
             </Stack>
 
@@ -411,12 +471,14 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
           exchangeCurrency={state.previewData.target_currency}
           balanceChanges={[
             {
-              oldBalance: balancesBeforeExchange[state.previewData.source_currency]?.toFixed(2) ?? '0.00',
+              oldBalance:
+                balancesBeforeExchange[state.previewData.source_currency]?.toFixed(2) ?? '0.00',
               newBalance: getBalance(state.previewData.source_currency).toFixed(2),
               currency: state.previewData.source_currency,
             },
             {
-              oldBalance: balancesBeforeExchange[state.previewData.target_currency]?.toFixed(2) ?? '0.00',
+              oldBalance:
+                balancesBeforeExchange[state.previewData.target_currency]?.toFixed(2) ?? '0.00',
               newBalance: getBalance(state.previewData.target_currency).toFixed(2),
               currency: state.previewData.target_currency,
             },

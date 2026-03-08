@@ -6,7 +6,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { CardTopUpModal } from '@/pages/TopUp/Card';
-import { RequestMoneyModal, ExchangeModal } from '@/components/PaymentModals';
+import { ExchangeModal } from '@/components/PaymentModals';
+import { MoneyActionModal } from '@/components/MoneyActionModal/MoneyActionModal';
 import { POLLING_INTERVALS } from '@/constants/polling';
 import logo from '@/assets/logo.png';
 import { getActiveLinkTextProps, isLinkActive } from './utils';
@@ -14,15 +15,13 @@ import { getActiveLinkTextProps, isLinkActive } from './utils';
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
   { to: '/transactions', label: 'Transactions' },
-  { to: '/invoices', label: 'Invoices' },
-  { to: '/deposits', label: 'Deposits' },
   { to: '/fee', label: 'Fee' },
-  { to: '/splits', label: 'Split' },
+  { to: '/splits', label: 'Splits' },
   { to: '/stats', label: 'Stats' },
-  { to: '/users', label: 'Users' },
 ] as const;
 
 const BURGER_LINKS = [
+  { to: '/users', label: 'Users' },
   { to: '/entities', label: 'Entities' },
   { to: '/treasuries', label: 'Treasuries' },
   { to: '/tags', label: 'Tags' },
@@ -147,9 +146,6 @@ export const Navbar = () => {
 
               <Menu.Dropdown>
                 <Menu.Item onClick={openCardModal}>By card</Menu.Item>
-                <Menu.Item component={Link} to="/top-up/manual">
-                  Cash / Bank / Crypto
-                </Menu.Item>
                 <Menu.Item onClick={() => setRequestMoneyOpened(true)}>Request Money</Menu.Item>
                 <Menu.Divider />
                 <Menu.Item onClick={openExchangeModal}>Exchange</Menu.Item>
@@ -184,7 +180,12 @@ export const Navbar = () => {
       </Group>
 
       <CardTopUpModal opened={cardModalOpened} onClose={closeCardModal} />
-      <RequestMoneyModal opened={requestMoneyOpened} onClose={() => setRequestMoneyOpened(false)} />
+      <MoneyActionModal
+        opened={requestMoneyOpened}
+        mode="request"
+        onClose={() => setRequestMoneyOpened(false)}
+        initialToEntityId={actorEntity?.id}
+      />
       <ExchangeModal opened={exchangeModalOpened} onClose={closeExchangeModal} />
 
       <Modal opened={opened} onClose={close} title="Logout" centered>

@@ -49,22 +49,25 @@ export const useExchangeFlow = (options?: UseExchangeFlowOptions) => {
     enabled: actorEntity !== null,
   });
 
-  const setPreviewData = useCallback((data: any) => {
+  const setPreviewData = useCallback((data: NonNullable<ExchangeFlowState['previewData']>) => {
     setState((prev) => ({ ...prev, previewData: data }));
   }, []);
 
-  const executeExchangeAction = useCallback((inputMode: 'source' | 'target') => {
-    if (!state.previewData || !actorEntity) return;
-    const { source_currency, target_currency, source_amount, target_amount } = state.previewData;
+  const executeExchangeAction = useCallback(
+    (inputMode: 'source' | 'target') => {
+      if (!state.previewData || !actorEntity) return;
+      const { source_currency, target_currency, source_amount, target_amount } = state.previewData;
 
-    executeMutation.mutate({
-      entity_id: actorEntity.id,
-      source_currency,
-      target_currency,
-      source_amount: inputMode === 'source' ? parseFloat(source_amount) : undefined,
-      target_amount: inputMode === 'target' ? parseFloat(target_amount) : undefined,
-    });
-  }, [executeMutation, state.previewData, actorEntity]);
+      executeMutation.mutate({
+        entity_id: actorEntity.id,
+        source_currency,
+        target_currency,
+        source_amount: inputMode === 'source' ? parseFloat(source_amount) : undefined,
+        target_amount: inputMode === 'target' ? parseFloat(target_amount) : undefined,
+      });
+    },
+    [executeMutation, state.previewData, actorEntity]
+  );
 
   const cancelPreview = useCallback(() => {
     setState((prev) => ({ ...prev, step: 'form', previewData: null }));

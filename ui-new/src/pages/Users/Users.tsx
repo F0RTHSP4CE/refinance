@@ -1,4 +1,7 @@
-import { EntityDirectoryPage, type EntityDirectoryConfig } from '@/components/ui';
+import {
+  EntityDirectoryPage,
+  type EntityDirectoryConfig,
+} from '@/components/ui/EntityDirectoryPage/EntityDirectoryPage';
 import { filterUserEntities, filterUserTagOptions } from '@/constants/entityTaxonomy';
 
 const USERS_CONFIG: EntityDirectoryConfig = {

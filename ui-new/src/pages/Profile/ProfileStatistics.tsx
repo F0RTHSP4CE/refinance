@@ -4,7 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import * as echarts from 'echarts';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getEntityStatsBundle, type EntityBalanceChangeByDay, type EntityMoneyFlowByDay } from '@/api/stats';
+import {
+  getEntityStatsBundle,
+  type EntityBalanceChangeByDay,
+  type EntityMoneyFlowByDay,
+} from '@/api/stats';
 import {
   DEFAULT_PROFILE_STATS_GRAIN,
   DEFAULT_PROFILE_STATS_LIMIT,
@@ -61,22 +65,12 @@ type ChartContainerProps = {
   height?: 'sm' | 'md';
 };
 
-const ChartContainer = ({
-  children,
-  title,
-  height = 'md',
-}: ChartContainerProps) => (
+const ChartContainer = ({ children, title, height = 'md' }: ChartContainerProps) => (
   <AppCard>
     <Text size="lg" fw={600} mb="md">
       {title}
     </Text>
-    <div
-      className={
-        height === 'sm'
-          ? 'w-full min-h-0 h-[240px]'
-          : 'w-full min-h-0 h-[280px]'
-      }
-    >
+    <div className={height === 'sm' ? 'w-full min-h-0 h-[240px]' : 'w-full min-h-0 h-[280px]'}>
       {children}
     </div>
   </AppCard>
@@ -131,9 +125,7 @@ const EChartsWrapper = ({ option, height = 'md' }: EChartsWrapperProps) => {
     <div
       ref={ref}
       className={
-        height === 'sm'
-          ? 'w-full h-full min-h-0 h-[240px]'
-          : 'w-full h-full min-h-0 h-[280px]'
+        height === 'sm' ? 'w-full h-full min-h-0 h-[240px]' : 'w-full h-full min-h-0 h-[280px]'
       }
     />
   );
@@ -144,9 +136,7 @@ const getIsoWeek = (dt: Date): { year: number; week: number } => {
   const day = utcDate.getUTCDay() || 7;
   utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const week = Math.ceil(
-    (utcDate.getTime() - yearStart.getTime()) / 86400000 / 7 + 1
-  );
+  const week = Math.ceil((utcDate.getTime() - yearStart.getTime()) / 86400000 / 7 + 1);
   return { year: utcDate.getUTCFullYear(), week };
 };
 
@@ -167,10 +157,7 @@ const formatBucketLabel = (
   return `${isoWeek.year}-W${pad(isoWeek.week)}`;
 };
 
-const getBucketStart = (
-  day: string,
-  grain: ProfileStatsFiltersValue['grain']
-): string => {
+const getBucketStart = (day: string, grain: ProfileStatsFiltersValue['grain']): string => {
   const dt = parseDateInput(day);
   if (!dt) return day;
 
@@ -179,7 +166,9 @@ const getBucketStart = (
   }
 
   const bucketStart = new Date(dt);
-  bucketStart.setDate(bucketStart.getDate() - bucketStart.getDay() + (bucketStart.getDay() === 0 ? -6 : 1));
+  bucketStart.setDate(
+    bucketStart.getDate() - bucketStart.getDay() + (bucketStart.getDay() === 0 ? -6 : 1)
+  );
   return formatDateInput(bucketStart);
 };
 
@@ -242,13 +231,8 @@ const aggregateMonthlyMoneyFlowOverlay = (
 
   const sortedRows = [...rows].sort((a, b) => a.day.localeCompare(b.day));
   const firstVisibleDay = sortedRows[0]?.day ?? null;
-  const firstVisibleBucketStart = firstVisibleDay
-    ? getBucketStart(firstVisibleDay, grain)
-    : null;
-  const monthTotals = new Map<
-    string,
-    { incoming: number; outgoing: number; lastDay: string }
-  >();
+  const firstVisibleBucketStart = firstVisibleDay ? getBucketStart(firstVisibleDay, grain) : null;
+  const monthTotals = new Map<string, { incoming: number; outgoing: number; lastDay: string }>();
 
   for (const row of sortedRows) {
     const monthKey = row.day.slice(0, 7);
@@ -268,9 +252,7 @@ const aggregateMonthlyMoneyFlowOverlay = (
   }
 
   const linePointsByBucket = new Map<string, { incoming: number; outgoing: number }>();
-  const sortedMonths = Array.from(monthTotals.keys()).sort((a, b) =>
-    a.localeCompare(b)
-  );
+  const sortedMonths = Array.from(monthTotals.keys()).sort((a, b) => a.localeCompare(b));
   for (const monthKey of sortedMonths) {
     const bucket = monthTotals.get(monthKey);
     if (!bucket) continue;
@@ -305,10 +287,7 @@ const aggregateMonthlyMoneyFlowOverlay = (
   };
 };
 
-const getAppliedFilters = (
-  searchParams: URLSearchParams,
-  now: Date
-): ProfileStatsFiltersValue => {
+const getAppliedFilters = (searchParams: URLSearchParams, now: Date): ProfileStatsFiltersValue => {
   const defaultRange = getPresetRange(DEFAULT_PROFILE_STATS_PRESET, now);
 
   const fromRaw = searchParams.get('from');
@@ -344,9 +323,7 @@ const getAppliedFilters = (
   }
 
   const grainParam = searchParams.get('grain');
-  const grain = isStatsGrain(grainParam)
-    ? grainParam
-    : DEFAULT_PROFILE_STATS_GRAIN;
+  const grain = isStatsGrain(grainParam) ? grainParam : DEFAULT_PROFILE_STATS_GRAIN;
 
   const limitRaw = Number.parseInt(searchParams.get('limit') ?? '', 10);
   const limit = PROFILE_STATS_LIMIT_OPTIONS.includes(
@@ -372,10 +349,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const now = useMemo(() => new Date(), []);
 
-  const appliedFilters = useMemo(
-    () => getAppliedFilters(searchParams, now),
-    [now, searchParams]
-  );
+  const appliedFilters = useMemo(() => getAppliedFilters(searchParams, now), [now, searchParams]);
 
   const applyFilters = useCallback(
     (nextFilters: ProfileStatsFiltersValue) => {
@@ -394,7 +368,11 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
     [setSearchParams]
   );
 
-  const { data: stats, isLoading, isError } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: [
       'profile-stats',
       profileId,
@@ -428,10 +406,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
     );
   }
 
-  const bucketedBalance = aggregateBalanceByGrain(
-    stats.balance_changes,
-    appliedFilters.grain
-  );
+  const bucketedBalance = aggregateBalanceByGrain(stats.balance_changes, appliedFilters.grain);
   const bucketedMoneyFlow = aggregateMoneyFlowByGrain(
     stats.money_flow_by_day,
     appliedFilters.grain
@@ -456,9 +431,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
       type: 'category',
       axisLine: CHART_AXIS_LINE,
       axisLabel: CHART_AXIS_LABEL,
-      data: bucketedBalance.map((row) =>
-        formatBucketLabel(row.bucketStart, appliedFilters.grain)
-      ),
+      data: bucketedBalance.map((row) => formatBucketLabel(row.bucketStart, appliedFilters.grain)),
     },
     yAxis: {
       type: 'value',
@@ -546,153 +519,149 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
     ],
   };
 
-  const topIncomingOption: echarts.EChartsOption | null =
-    stats.top_incoming.length
-      ? {
-          grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '10%',
-            containLabel: true,
+  const topIncomingOption: echarts.EChartsOption | null = stats.top_incoming.length
+    ? {
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '15%',
+          top: '10%',
+          containLabel: true,
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (p: unknown) => {
+            const params = p as Array<{ name: string; value: number }>;
+            const first = params[0];
+            return `${first.name}: ${formatUSD(first.value)}`;
           },
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: (p: unknown) => {
-              const params = p as Array<{ name: string; value: number }>;
-              const first = params[0];
-              return `${first.name}: ${formatUSD(first.value)}`;
-            },
+        },
+        xAxis: {
+          type: 'category',
+          data: stats.top_incoming.map((item) => item.entity_name),
+          axisLabel: { rotate: 30, ...CHART_AXIS_LABEL },
+          axisLine: CHART_AXIS_LINE,
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { formatter: '${value}', ...CHART_AXIS_LABEL },
+          splitLine: CHART_SPLIT_LINE,
+          axisLine: CHART_AXIS_LINE,
+        },
+        series: [
+          {
+            type: 'bar',
+            data: stats.top_incoming.map((item, index) => ({
+              value: item.total_usd,
+              itemStyle: { color: colorFromId(item.entity_id, index) },
+            })),
           },
-          xAxis: {
-            type: 'category',
-            data: stats.top_incoming.map((item) => item.entity_name),
-            axisLabel: { rotate: 30, ...CHART_AXIS_LABEL },
-            axisLine: CHART_AXIS_LINE,
-          },
-          yAxis: {
-            type: 'value',
-            axisLabel: { formatter: '${value}', ...CHART_AXIS_LABEL },
-            splitLine: CHART_SPLIT_LINE,
-            axisLine: CHART_AXIS_LINE,
-          },
-          series: [
-            {
-              type: 'bar',
-              data: stats.top_incoming.map((item, index) => ({
-                value: item.total_usd,
-                itemStyle: { color: colorFromId(item.entity_id, index) },
-              })),
-            },
-          ],
-        }
-      : null;
+        ],
+      }
+    : null;
 
-  const topIncomingTagsOption: echarts.EChartsOption | null =
-    stats.top_incoming_tags.length
-      ? {
-          tooltip: {
-            formatter: (p: unknown) => {
-              const point = p as {
-                name: string;
-                value: number;
-                percent: number;
-              };
-              return `${point.name}: ${formatUSD(point.value)} (${point.percent?.toFixed(1)}%)`;
-            },
+  const topIncomingTagsOption: echarts.EChartsOption | null = stats.top_incoming_tags.length
+    ? {
+        tooltip: {
+          formatter: (p: unknown) => {
+            const point = p as {
+              name: string;
+              value: number;
+              percent: number;
+            };
+            return `${point.name}: ${formatUSD(point.value)} (${point.percent?.toFixed(1)}%)`;
           },
-          legend: { bottom: '5%', textStyle: CHART_LEGEND_TEXT },
-          series: [
-            {
-              type: 'pie',
-              radius: ['40%', '70%'],
-              center: ['50%', '45%'],
-              label: PIE_LABEL,
-              labelLine: PIE_LABEL_LINE,
-              data: stats.top_incoming_tags.map((item, index) => ({
-                name: item.tag_name,
-                value: item.total_usd,
-                itemStyle: { color: colorFromId(item.tag_id, index) },
-              })),
-            },
-          ],
-        }
-      : null;
+        },
+        legend: { bottom: '5%', textStyle: CHART_LEGEND_TEXT },
+        series: [
+          {
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['50%', '45%'],
+            label: PIE_LABEL,
+            labelLine: PIE_LABEL_LINE,
+            data: stats.top_incoming_tags.map((item, index) => ({
+              name: item.tag_name,
+              value: item.total_usd,
+              itemStyle: { color: colorFromId(item.tag_id, index) },
+            })),
+          },
+        ],
+      }
+    : null;
 
-  const topOutgoingOption: echarts.EChartsOption | null =
-    stats.top_outgoing.length
-      ? {
-          grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '15%',
-            top: '10%',
-            containLabel: true,
+  const topOutgoingOption: echarts.EChartsOption | null = stats.top_outgoing.length
+    ? {
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '15%',
+          top: '10%',
+          containLabel: true,
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (p: unknown) => {
+            const params = p as Array<{ name: string; value: number }>;
+            const first = params[0];
+            return `${first.name}: ${formatUSD(first.value)}`;
           },
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'shadow' },
-            formatter: (p: unknown) => {
-              const params = p as Array<{ name: string; value: number }>;
-              const first = params[0];
-              return `${first.name}: ${formatUSD(first.value)}`;
-            },
+        },
+        xAxis: {
+          type: 'category',
+          data: stats.top_outgoing.map((item) => item.entity_name),
+          axisLabel: { rotate: 30, ...CHART_AXIS_LABEL },
+          axisLine: CHART_AXIS_LINE,
+        },
+        yAxis: {
+          type: 'value',
+          axisLabel: { formatter: '${value}', ...CHART_AXIS_LABEL },
+          splitLine: CHART_SPLIT_LINE,
+          axisLine: CHART_AXIS_LINE,
+        },
+        series: [
+          {
+            type: 'bar',
+            data: stats.top_outgoing.map((item, index) => ({
+              value: item.total_usd,
+              itemStyle: { color: colorFromId(item.entity_id, index) },
+            })),
           },
-          xAxis: {
-            type: 'category',
-            data: stats.top_outgoing.map((item) => item.entity_name),
-            axisLabel: { rotate: 30, ...CHART_AXIS_LABEL },
-            axisLine: CHART_AXIS_LINE,
-          },
-          yAxis: {
-            type: 'value',
-            axisLabel: { formatter: '${value}', ...CHART_AXIS_LABEL },
-            splitLine: CHART_SPLIT_LINE,
-            axisLine: CHART_AXIS_LINE,
-          },
-          series: [
-            {
-              type: 'bar',
-              data: stats.top_outgoing.map((item, index) => ({
-                value: item.total_usd,
-                itemStyle: { color: colorFromId(item.entity_id, index) },
-              })),
-            },
-          ],
-        }
-      : null;
+        ],
+      }
+    : null;
 
-  const topOutgoingTagsOption: echarts.EChartsOption | null =
-    stats.top_outgoing_tags.length
-      ? {
-          tooltip: {
-            formatter: (p: unknown) => {
-              const point = p as {
-                name: string;
-                value: number;
-                percent: number;
-              };
-              return `${point.name}: ${formatUSD(point.value)} (${point.percent?.toFixed(1)}%)`;
-            },
+  const topOutgoingTagsOption: echarts.EChartsOption | null = stats.top_outgoing_tags.length
+    ? {
+        tooltip: {
+          formatter: (p: unknown) => {
+            const point = p as {
+              name: string;
+              value: number;
+              percent: number;
+            };
+            return `${point.name}: ${formatUSD(point.value)} (${point.percent?.toFixed(1)}%)`;
           },
-          legend: { bottom: '5%', textStyle: CHART_LEGEND_TEXT },
-          series: [
-            {
-              type: 'pie',
-              radius: ['40%', '70%'],
-              center: ['50%', '45%'],
-              label: PIE_LABEL,
-              labelLine: PIE_LABEL_LINE,
-              data: stats.top_outgoing_tags.map((item, index) => ({
-                name: item.tag_name,
-                value: item.total_usd,
-                itemStyle: { color: colorFromId(item.tag_id, index) },
-              })),
-            },
-          ],
-        }
-      : null;
+        },
+        legend: { bottom: '5%', textStyle: CHART_LEGEND_TEXT },
+        series: [
+          {
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['50%', '45%'],
+            label: PIE_LABEL,
+            labelLine: PIE_LABEL_LINE,
+            data: stats.top_outgoing_tags.map((item, index) => ({
+              name: item.tag_name,
+              value: item.total_usd,
+              itemStyle: { color: colorFromId(item.tag_id, index) },
+            })),
+          },
+        ],
+      }
+    : null;
 
   return (
     <Stack gap="lg" mt="md">

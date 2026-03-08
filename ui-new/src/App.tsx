@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { useAuthStore } from '@/stores/auth';
 
@@ -12,8 +12,6 @@ const Home = lazy(() => import('@/pages/Home').then((m) => ({ default: m.Home })
 const Transactions = lazy(() =>
   import('@/pages/Transactions').then((m) => ({ default: m.Transactions }))
 );
-const Invoices = lazy(() => import('@/pages/Invoices').then((m) => ({ default: m.Invoices })));
-const Deposits = lazy(() => import('@/pages/Deposits').then((m) => ({ default: m.Deposits })));
 const DepositDetail = lazy(() =>
   import('@/pages/DepositDetail').then((m) => ({ default: m.DepositDetail }))
 );
@@ -26,9 +24,6 @@ const Treasuries = lazy(() =>
   import('@/pages/Treasuries').then((m) => ({ default: m.Treasuries }))
 );
 const Tags = lazy(() => import('@/pages/Tags').then((m) => ({ default: m.Tags })));
-const ManualTopUp = lazy(() =>
-  import('@/pages/TopUp/Manual').then((m) => ({ default: m.ManualTopUp }))
-);
 const Profile = lazy(() => import('@/pages/Profile').then((m) => ({ default: m.Profile })));
 
 // Loading fallback component
@@ -52,6 +47,13 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/" replace />;
   }
   return <>{children}</>;
+};
+
+const InvoiceListRedirect = () => <Navigate to="/fee?tab=invoices" replace />;
+
+const InvoiceDetailsRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/fee?tab=invoices${id ? `&invoiceId=${id}` : ''}`} replace />;
 };
 
 export const App = () => {
@@ -102,8 +104,8 @@ export const App = () => {
         >
           <Route index element={<Home />} />
           <Route path="transactions" element={<Transactions />} />
-          <Route path="invoices" element={<Invoices />} />
-          <Route path="deposits" element={<Deposits />} />
+          <Route path="invoices" element={<InvoiceListRedirect />} />
+          <Route path="invoices/:id" element={<InvoiceDetailsRedirect />} />
           <Route path="deposits/:id" element={<DepositDetail />} />
           <Route path="fee" element={<Fee />} />
           <Route path="splits" element={<Splits />} />
@@ -112,8 +114,6 @@ export const App = () => {
           <Route path="entities" element={<Entities />} />
           <Route path="treasuries" element={<Treasuries />} />
           <Route path="tags" element={<Tags />} />
-
-          <Route path="top-up/manual" element={<ManualTopUp />} />
           <Route path="profile/:id?" element={<Profile />} />
         </Route>
       </Routes>

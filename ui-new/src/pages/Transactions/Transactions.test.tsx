@@ -54,7 +54,12 @@ describe('Transactions Page', () => {
         status: 'completed',
         tags: [],
         actor_entity_id: 1,
-        actor_entity: { id: 1, name: 'Test User', active: true, tags: [{ id: 3, name: 'operator' }] },
+        actor_entity: {
+          id: 1,
+          name: 'Test User',
+          active: true,
+          tags: [{ id: 3, name: 'operator' }],
+        },
         comment: 'This is a very long comment that should be truncated in table view.',
         invoice_id: null,
         from_treasury_id: null,

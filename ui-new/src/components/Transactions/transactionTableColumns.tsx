@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   AmountCurrency,
   RelativeDate,
+  StatusBadge,
   TagList,
   type DataTableColumn,
 } from '@/components/ui';
@@ -107,15 +108,16 @@ export const transactionTableColumns: DataTableColumn<Transaction>[] = [
   {
     key: 'invoice_id',
     label: 'Invoice',
-    render: (r) => (r.invoice_id ? <Text size="sm">{r.invoice_id}</Text> : <Text size="sm">—</Text>),
+    render: (r) =>
+      r.invoice_id ? <Text size="sm">{r.invoice_id}</Text> : <Text size="sm">—</Text>,
   },
   {
     key: 'status',
     label: 'Status',
     render: (r) => (
-      <Text size="sm" c={r.status === 'completed' ? 'green' : 'gray'}>
+      <StatusBadge tone={r.status === 'completed' ? 'positive' : 'neutral'} size="sm">
         {r.status}
-      </Text>
+      </StatusBadge>
     ),
   },
   {

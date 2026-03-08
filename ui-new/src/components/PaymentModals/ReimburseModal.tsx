@@ -12,7 +12,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useForm, Controller } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth';
@@ -55,12 +55,11 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
     isCreating,
     isConfirming,
     createError,
-  } = usePaymentFlow({ onSuccess: () => { } });
+  } = usePaymentFlow({ onSuccess: () => {} });
 
   const {
     control,
     handleSubmit,
-    watch,
     reset: resetForm,
   } = useForm<ReimburseFormValues>({
     resolver: zodResolver(reimburseSchema),
@@ -72,9 +71,9 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
     },
   });
 
-  const currency = watch('currency');
-  const amount = watch('amount');
-  const source = watch('source');
+  const currency = useWatch({ control, name: 'currency' });
+  const amount = useWatch({ control, name: 'amount' });
+  const source = useWatch({ control, name: 'source' });
   const { data: serviceEntityIds } = useQuery({
     queryKey: ['service-entity-ids'],
     queryFn: ({ signal }) => getServiceEntityIds(signal),
@@ -86,8 +85,7 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
   const handleFormSubmit = useCallback(
     (values: ReimburseFormValues) => {
       if (!actorEntity) return;
-      const sourceEntityId =
-        values.source === 'fridge' ? fridgeEntityId : coffeeEntityId;
+      const sourceEntityId = values.source === 'fridge' ? fridgeEntityId : coffeeEntityId;
       submitForm({
         from_entity_id: sourceEntityId,
         to_entity_id: actorEntity.id,

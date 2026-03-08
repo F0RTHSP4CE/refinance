@@ -43,3 +43,21 @@ export const createEntity = async (data: CreateEntityParams): Promise<Entity> =>
     body: data,
   });
 };
+
+export type UpdateEntityParams = {
+  name?: string;
+  comment?: string;
+  active?: boolean;
+  tag_ids?: number[];
+  auth?: {
+    telegram_id?: string | number | null;
+    signal_id?: string | number | null;
+  };
+};
+
+export const updateEntity = async (id: number, data: UpdateEntityParams): Promise<Entity> => {
+  return apiRequest<Entity>(`entities/${id}`, {
+    method: 'PATCH',
+    body: data,
+  });
+};

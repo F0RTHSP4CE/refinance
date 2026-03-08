@@ -2,17 +2,18 @@ import { Button, Card, Group, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useDisclosure } from '@mantine/hooks';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 import { getBalances } from '@/api/balance';
 import { CardTopUpModal } from '@/pages/TopUp/Card';
-import { RequestMoneyModal, ExchangeModal, IconExchange } from '@/components/PaymentModals';
+import { ExchangeModal, IconExchange } from '@/components/PaymentModals';
+import { MoneyActionModal } from '@/components/MoneyActionModal/MoneyActionModal';
 
 export const BalanceCard = () => {
   const actorEntity = useAuthStore((s) => s.actorEntity);
   const [cardModalOpened, { open: openCardModal, close: closeCardModal }] = useDisclosure(false);
   const [requestMoneyOpened, setRequestMoneyOpened] = useState(false);
-  const [exchangeModalOpened, { open: openExchangeModal, close: closeExchangeModal }] = useDisclosure(false);
+  const [exchangeModalOpened, { open: openExchangeModal, close: closeExchangeModal }] =
+    useDisclosure(false);
 
   const { data: balances } = useQuery({
     queryKey: ['balances', actorEntity?.id],
@@ -32,7 +33,12 @@ export const BalanceCard = () => {
             <Text size="lg" fw={700}>
               Balance
             </Text>
-            <Button variant="default" size="xs" onClick={openExchangeModal} leftSection={<IconExchange size={16} />}>
+            <Button
+              variant="default"
+              size="xs"
+              onClick={openExchangeModal}
+              leftSection={<IconExchange size={16} />}
+            >
               Exchange
             </Button>
           </Group>
@@ -62,9 +68,6 @@ export const BalanceCard = () => {
             <Button variant="default" onClick={openCardModal}>
               Top up by card
             </Button>
-            <Button variant="default" component={Link} to="/top-up/manual">
-              Cash / Bank / Crypto
-            </Button>
             <Button variant="default" onClick={() => setRequestMoneyOpened(true)}>
               Request money
             </Button>
@@ -73,14 +76,13 @@ export const BalanceCard = () => {
       </Card>
 
       <CardTopUpModal opened={cardModalOpened} onClose={closeCardModal} />
-      <RequestMoneyModal
+      <MoneyActionModal
         opened={requestMoneyOpened}
+        mode="request"
         onClose={() => setRequestMoneyOpened(false)}
+        initialToEntityId={actorEntity?.id}
       />
-      <ExchangeModal
-        opened={exchangeModalOpened}
-        onClose={closeExchangeModal}
-      />
+      <ExchangeModal opened={exchangeModalOpened} onClose={closeExchangeModal} />
     </>
   );
 };

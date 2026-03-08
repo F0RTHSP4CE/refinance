@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import { Component, type ReactNode } from 'react';
 
 interface Props {

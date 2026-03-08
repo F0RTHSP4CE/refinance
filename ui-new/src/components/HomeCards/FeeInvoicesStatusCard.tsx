@@ -1,8 +1,9 @@
-import { Anchor, Badge, Card, Group, Stack, Text } from '@mantine/core';
+import { Anchor, Card, Group, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getPendingInvoices } from '@/api/invoices';
 import { useAuthStore } from '@/stores/auth';
+import { StatusBadge } from '@/components/ui';
 
 const LIMIT = 10;
 
@@ -45,9 +46,9 @@ export const FeeInvoicesStatusCard = () => {
             Fee / Invoices
           </Text>
           {pendingCount > 0 && (
-            <Badge color="red" size="lg">
+            <StatusBadge size="lg" tone="neutral">
               {pendingCount}
-            </Badge>
+            </StatusBadge>
           )}
         </Group>
 
@@ -62,7 +63,7 @@ export const FeeInvoicesStatusCard = () => {
                 </Text>
                 <Card
                   component={Link}
-                  to={`/invoices/${nextInvoice.id}`}
+                  to={`/fee?tab=invoices&invoiceId=${nextInvoice.id}`}
                   padding="sm"
                   radius="md"
                   withBorder
@@ -79,9 +80,7 @@ export const FeeInvoicesStatusCard = () => {
                         </Text>
                       )}
                     </Stack>
-                    <Badge variant="light" color="red">
-                      pending
-                    </Badge>
+                    <StatusBadge tone="neutral">pending</StatusBadge>
                   </Group>
                 </Card>
               </Stack>
@@ -94,7 +93,11 @@ export const FeeInvoicesStatusCard = () => {
                 </Text>
                 {otherInvoices.map((invoice) => (
                   <Group key={invoice.id} justify="space-between" align="center">
-                    <Anchor size="sm" component={Link} to={`/invoices/${invoice.id}`}>
+                    <Anchor
+                      size="sm"
+                      component={Link}
+                      to={`/fee?tab=invoices&invoiceId=${invoice.id}`}
+                    >
                       {formatAmounts(invoice.amounts)}
                       {invoice.billing_period && (
                         <Text span c="dimmed" ml={4}>

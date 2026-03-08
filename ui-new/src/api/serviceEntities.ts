@@ -13,10 +13,7 @@ const SERVICE_ENTITY_FALLBACK_IDS = {
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
-const pickEntityIdByAliases = (
-  entities: Entity[],
-  aliases: readonly string[]
-): number | null => {
+const pickEntityIdByAliases = (entities: Entity[], aliases: readonly string[]): number | null => {
   const normalizedAliases = aliases.map(normalize);
   const normalizedEntities = entities.map((entity) => ({
     ...entity,
@@ -83,13 +80,12 @@ const getEntityByIdSafe = async (id: number, signal?: AbortSignal): Promise<Enti
 
 export const getServiceEntityIds = async (signal?: AbortSignal): Promise<ServiceEntityIds> => {
   try {
-    const [fridgeEntities, coffeeEntities, fridgeFallback, coffeeFallback] =
-      await Promise.all([
-        getEntitiesByAliases(SERVICE_ENTITY_ALIASES.fridge, signal),
-        getEntitiesByAliases(SERVICE_ENTITY_ALIASES.coffee, signal),
-        getEntityByIdSafe(SERVICE_ENTITY_FALLBACK_IDS.fridge, signal),
-        getEntityByIdSafe(SERVICE_ENTITY_FALLBACK_IDS.coffee, signal),
-      ]);
+    const [fridgeEntities, coffeeEntities, fridgeFallback, coffeeFallback] = await Promise.all([
+      getEntitiesByAliases(SERVICE_ENTITY_ALIASES.fridge, signal),
+      getEntitiesByAliases(SERVICE_ENTITY_ALIASES.coffee, signal),
+      getEntityByIdSafe(SERVICE_ENTITY_FALLBACK_IDS.fridge, signal),
+      getEntityByIdSafe(SERVICE_ENTITY_FALLBACK_IDS.coffee, signal),
+    ]);
 
     return {
       fridge:
@@ -108,4 +104,3 @@ export const getServiceEntityIds = async (signal?: AbortSignal): Promise<Service
     };
   }
 };
-

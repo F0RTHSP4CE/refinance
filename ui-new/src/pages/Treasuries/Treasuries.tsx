@@ -1,16 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Badge,
-  Button,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Alert, Button, Group, Modal, Select, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +7,14 @@ import { z } from 'zod';
 import { IconCircleCheck, IconCircleX } from '@tabler/icons-react';
 import { createTreasury, getTreasuries, updateTreasury, type Treasury } from '@/api/treasuries';
 import { getEntities } from '@/api/entities';
-import { AppCard, DataTable, RelativeDate, type DataTableColumn } from '@/components/ui';
+import {
+  AccentSurface,
+  AppCard,
+  DataTable,
+  RelativeDate,
+  StatusBadge,
+  type DataTableColumn,
+} from '@/components/ui';
 
 const treasuryFormSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
@@ -215,24 +211,9 @@ export const Treasuries = () => {
       key: 'active',
       label: 'Active',
       render: (treasury) => (
-        <Badge
-          variant="filled"
-          style={
-            treasury.active
-              ? {
-                  backgroundColor: 'var(--mantine-color-black)',
-                  color: 'var(--mantine-color-white)',
-                  border: '1px solid var(--mantine-color-black)',
-                }
-              : {
-                  backgroundColor: 'var(--mantine-color-white)',
-                  color: 'var(--mantine-color-black)',
-                  border: '1px solid var(--mantine-color-black)',
-                }
-          }
-        >
+        <StatusBadge tone={treasury.active ? 'positive' : 'neutral'}>
           {treasury.active ? 'Active' : 'Inactive'}
-        </Badge>
+        </StatusBadge>
       ),
     },
     {
@@ -265,7 +246,7 @@ export const Treasuries = () => {
         </Button>
       </Group>
 
-      <AppCard>
+      <AccentSurface>
         <Stack gap="md">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,9fr)_minmax(8.75rem,1fr)]">
             <TextInput
@@ -287,12 +268,24 @@ export const Treasuries = () => {
               allowDeselect={false}
             />
           </div>
+        </Stack>
+      </AccentSurface>
 
+      <AppCard>
+        <Stack gap="md">
           <DataTable
             columns={columns}
             data={treasuriesQuery.data?.items ?? []}
             emptyMessage={
               treasuriesQuery.isLoading ? 'Loading treasuries...' : 'No treasuries found.'
+            }
+            getRowStyle={(treasury) =>
+              treasury.active
+                ? undefined
+                : {
+                    color: 'var(--mantine-color-gray-7)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.03)',
+                  }
             }
           />
         </Stack>

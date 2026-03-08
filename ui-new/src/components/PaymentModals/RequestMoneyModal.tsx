@@ -91,8 +91,14 @@ export const RequestMoneyModal = ({ opened, onClose }: RequestMoneyModalProps) =
     (values: RequestMoneyFormValues) => {
       if (!actorEntity) return;
       const selectedEntityId = Number.parseInt(values.from_entity_id, 10);
-      const isValidSelection = getSelectOptions().some((option) => option.value === values.from_entity_id);
-      if (Number.isNaN(selectedEntityId) || !isValidSelection || selectedEntityId === actorEntity.id) {
+      const isValidSelection = getSelectOptions().some(
+        (option) => option.value === values.from_entity_id
+      );
+      if (
+        Number.isNaN(selectedEntityId) ||
+        !isValidSelection ||
+        selectedEntityId === actorEntity.id
+      ) {
         setError('from_entity_id', {
           type: 'manual',
           message: 'Please select a valid user from the list',
@@ -120,12 +126,7 @@ export const RequestMoneyModal = ({ opened, onClose }: RequestMoneyModalProps) =
   if (!actorEntity) return null;
 
   return (
-    <Modal
-      opened={opened}
-      onClose={handleClose}
-      title="Request Money"
-      centered
-    >
+    <Modal opened={opened} onClose={handleClose} title="Request Money" centered>
       {!success ? (
         <form onSubmit={(e) => void handleSubmit(handleFormSubmit)(e)}>
           <Stack gap="md">
@@ -140,9 +141,7 @@ export const RequestMoneyModal = ({ opened, onClose }: RequestMoneyModalProps) =
                   searchable
                   searchValue={searchValue}
                   onSearchChange={setSearchValue}
-                  nothingFoundMessage={
-                    isLoadingEntities ? <Loader size="xs" /> : 'No users found'
-                  }
+                  nothingFoundMessage={isLoadingEntities ? <Loader size="xs" /> : 'No users found'}
                   error={errors.from_entity_id?.message}
                   value={field.value}
                   onChange={field.onChange}

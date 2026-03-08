@@ -12,8 +12,7 @@ export const Home = () => {
     <Stack
       gap="md"
       style={{
-        minHeight:
-          'calc(100dvh - var(--app-shell-header-height, 60px) - 2rem)',
+        minHeight: 'calc(100dvh - var(--app-shell-header-height, 60px) - 2rem)',
       }}
     >
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 2 }} spacing="md">

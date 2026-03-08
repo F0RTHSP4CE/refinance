@@ -158,3 +158,93 @@ class TestFeeService:
         assert fees2[0]["month"] == current_month
         assert fees2[0]["amounts"] == {}
         assert fees2[0]["total_usd"] == pytest.approx(0.0)
+
+    def test_get_fees_with_explicit_range_hides_empty_rows_and_months(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        from app.services.currency_exchange import CurrencyExchangeService
+
+        monkeypatch.setattr(
+            CurrencyExchangeService,
+            "_raw_rates",
+            property(
+                lambda self: [
+                    {
+                        "currencies": [
+                            {"code": "usd", "rate": "3.00", "quantity": "1"},
+                            {"code": "gel", "rate": "1", "quantity": "1"},
+                        ]
+                    }
+                ]
+            ),
+        )
+
+        hackerspace_id = 1
+        resident_resp = test_app.post(
+            "/entities",
+            json={
+                "name": "Range Resident",
+                "comment": "range resident",
+                "tag_ids": [resident_tag.id],
+            },
+            headers={"x-token": token},
+        )
+        assert resident_resp.status_code == 200
+        resident_id = resident_resp.json()["id"]
+
+        empty_resp = test_app.post(
+            "/entities",
+            json={
+                "name": "Empty Resident",
+                "comment": "empty resident",
+                "tag_ids": [resident_tag.id],
+            },
+            headers={"x-token": token},
+        )
+        assert empty_resp.status_code == 200
+
+        invoice_resp = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": resident_id,
+                "to_entity_id": hackerspace_id,
+                "amounts": [{"currency": "usd", "amount": "55"}],
+                "billing_period": "2025-12-01",
+                "tag_ids": [fee_tag.id],
+            },
+            headers={"x-token": token},
+        )
+        assert invoice_resp.status_code == 200
+
+        tx_resp = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": resident_id,
+                "to_entity_id": hackerspace_id,
+                "amount": "55",
+                "currency": "usd",
+                "status": "completed",
+                "invoice_id": invoice_resp.json()["id"],
+            },
+            headers={"x-token": token},
+        )
+        assert tx_resp.status_code == 200
+
+        response = test_app.get(
+            "/fees/?from_period=2025-11-01&to_period=2025-12-01",
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data) == 1
+        assert data[0]["entity"]["name"] == "Range Resident"
+        assert len(data[0]["fees"]) == 1
+        fee = data[0]["fees"][0]
+        assert fee["year"] == 2025
+        assert fee["month"] == 12
+        assert fee["amounts"] == {"usd": "55.00"}
+        assert fee["total_usd"] == pytest.approx(55.0)
+        assert fee["unpaid_invoice_id"] is None
+        assert fee["paid_invoice_id"] == invoice_resp.json()["id"]
+        assert fee["unpaid_invoice_amounts"] is None

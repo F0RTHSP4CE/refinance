@@ -1,7 +1,10 @@
 export { AmountCurrency, AmountsCurrency } from './AmountCurrency';
+export { AccentSurface } from './AccentSurface';
 export { AppCard } from './AppCard';
 export { DataTable, type DataTableColumn } from './DataTable';
+export { DetailItem, DetailSectionCard, EntityInline } from './DetailSection';
 export { EntityDirectoryPage, type EntityDirectoryConfig } from './EntityDirectoryPage';
 export { RelativeDate } from './RelativeDate';
+export { StatusBadge, type StatusBadgeTone } from './StatusBadge';
 export { TagBadge } from './TagBadge';
 export { TagList } from './TagList';

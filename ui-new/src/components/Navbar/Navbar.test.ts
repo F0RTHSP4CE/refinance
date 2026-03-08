@@ -8,8 +8,8 @@ describe('Navbar active-link behavior', () => {
   });
 
   it('matches section links on exact or nested paths', () => {
-    expect(isLinkActive('/deposits', '/deposits')).toBe(true);
-    expect(isLinkActive('/deposits/123', '/deposits')).toBe(true);
+    expect(isLinkActive('/users', '/users')).toBe(true);
+    expect(isLinkActive('/users/123', '/users')).toBe(true);
   });
 
   it('does not treat similarly prefixed paths as active', () => {

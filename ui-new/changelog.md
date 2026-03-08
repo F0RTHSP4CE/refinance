@@ -1,75 +1,84 @@
 # ui-new Changelog
 
 ## 2026-02-16 01:00
+
 - Prompt: Remove blocking config-error blocks and force old-flow fallback IDs for fridge/coffee/reimburse.
 - Changes:
- - `src/api/serviceEntities.ts`: resolver now always returns numeric IDs; falls back to `141/150` on lookup misses or transient query failures.
- - `src/components/PaymentModals/FridgePayModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback fridge ID.
- - `src/components/PaymentModals/CoffeePayModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback coffee ID.
- - `src/components/PaymentModals/ReimburseModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback source IDs.
+- `src/api/serviceEntities.ts`: resolver now always returns numeric IDs; falls back to `141/150` on lookup misses or transient query failures.
+- `src/components/PaymentModals/FridgePayModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback fridge ID.
+- `src/components/PaymentModals/CoffeePayModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback coffee ID.
+- `src/components/PaymentModals/ReimburseModal.tsx`: removed configuration-error alert and unresolved-ID submit blocking; always uses resolved-or-fallback source IDs.
 - Notes: preserves normal mutation/API error alerts while removing runtime config blocker UI.
 
 ## 2026-02-16 00:55
+
 - Prompt: Fix false \"entity not found\" for fridge/coffee when entities are named like `Fridge (id: 141)` and `Coffee Machine (id: 150)`.
 - Changes:
- - `src/api/serviceEntities.ts`: improved resolver to query by aliases directly and added safe fallback resolution by known IDs (`141`, `150`) via `getEntity`.
+- `src/api/serviceEntities.ts`: improved resolver to query by aliases directly and added safe fallback resolution by known IDs (`141`, `150`) via `getEntity`.
 - Notes: removes false configuration errors in environments where entity naming/order differ.
 
 ## 2026-02-16 00:52
+
 - Prompt: Fix crash/warnings after recent modal changes (`getSelectOptions` init error, nested button warning, error-boundary crash loop).
 - Changes:
- - `src/components/PaymentModals/RequestMoneyModal.tsx`: moved `getSelectOptions` initialization above `handleFormSubmit` to fix `Cannot access 'getSelectOptions' before initialization`.
- - `src/components/Navbar/Navbar.tsx`: rendered `Burger` with `component=\"div\"` inside button trigger to remove nested `<button>` warning.
- - `src/components/ErrorBoundary/ErrorBoundary.tsx`: replaced Mantine fallback UI with plain HTML fallback so boundary can render safely even if provider tree is broken.
+- `src/components/PaymentModals/RequestMoneyModal.tsx`: moved `getSelectOptions` initialization above `handleFormSubmit` to fix `Cannot access 'getSelectOptions' before initialization`.
+- `src/components/Navbar/Navbar.tsx`: rendered `Burger` with `component=\"div\"` inside button trigger to remove nested `<button>` warning.
+- `src/components/ErrorBoundary/ErrorBoundary.tsx`: replaced Mantine fallback UI with plain HTML fallback so boundary can render safely even if provider tree is broken.
 - Notes: restores app boot stability and removes concurrent render recovery loop from this crash path.
 
 ## 2026-02-16 00:51
+
 - Prompt: Fix FK violations in pay/reimburse/request-money flows caused by invalid service entity IDs.
 - Changes:
- - `src/api/serviceEntities.ts`: added runtime resolver that finds fridge/coffee entity IDs from backend entities by name aliases.
- - `src/components/PaymentModals/FridgePayModal.tsx`: replaced hardcoded target ID with resolved fridge ID; disables submit and shows configuration error when unresolved.
- - `src/components/PaymentModals/CoffeePayModal.tsx`: replaced hardcoded target ID with resolved coffee ID; disables submit and shows configuration error when unresolved.
- - `src/components/PaymentModals/ReimburseModal.tsx`: replaced hardcoded source IDs with resolved fridge/coffee IDs; adds source-aware configuration errors and safe submit disabling.
- - `src/components/PaymentModals/RequestMoneyModal.tsx`: added strict selected-user validation before submit and clearer create-error message.
- - `src/constants/entities.ts`: removed hardcoded `ENTITY_IDS` constants to avoid stale FK targets.
+- `src/api/serviceEntities.ts`: added runtime resolver that finds fridge/coffee entity IDs from backend entities by name aliases.
+- `src/components/PaymentModals/FridgePayModal.tsx`: replaced hardcoded target ID with resolved fridge ID; disables submit and shows configuration error when unresolved.
+- `src/components/PaymentModals/CoffeePayModal.tsx`: replaced hardcoded target ID with resolved coffee ID; disables submit and shows configuration error when unresolved.
+- `src/components/PaymentModals/ReimburseModal.tsx`: replaced hardcoded source IDs with resolved fridge/coffee IDs; adds source-aware configuration errors and safe submit disabling.
+- `src/components/PaymentModals/RequestMoneyModal.tsx`: added strict selected-user validation before submit and clearer create-error message.
+- `src/constants/entities.ts`: removed hardcoded `ENTITY_IDS` constants to avoid stale FK targets.
 - Notes: Keeps environment-safe behavior when service entities have different IDs between databases.
 
 ## 2026-02-16 00:40
+
 - Prompt: Allow closing dialogs/modals by clicking outside and Escape.
 - Changes:
- - `src/pages/TopUp/Card/CardTopUp.tsx`: enabled `closeOnClickOutside` and `closeOnEscape` for card top-up modal.
- - `src/components/ConfirmTransaction/ConfirmTransactionModal.tsx`: enabled `closeOnClickOutside` and `closeOnEscape`.
- - `src/components/PaymentSuccess/PaymentSuccessModal.tsx`: enabled `closeOnClickOutside` and `closeOnEscape`.
+- `src/pages/TopUp/Card/CardTopUp.tsx`: enabled `closeOnClickOutside` and `closeOnEscape` for card top-up modal.
+- `src/components/ConfirmTransaction/ConfirmTransactionModal.tsx`: enabled `closeOnClickOutside` and `closeOnEscape`.
+- `src/components/PaymentSuccess/PaymentSuccessModal.tsx`: enabled `closeOnClickOutside` and `closeOnEscape`.
 - Notes: none
 
 ## 2026-02-16 00:39
+
 - Prompt: Make amount/currency rows 70/30 in every modal dialog.
 - Changes:
- - `src/components/PaymentModals/RequestMoneyModal.tsx`: amount/currency row changed from equal width to 70/30.
- - `src/components/PaymentModals/ReimburseModal.tsx`: amount/currency row changed from equal width to 70/30.
- - `src/components/PaymentModals/FridgePayModal.tsx`: kept 70/30 and replaced inline style with Mantine `flex` props.
- - `src/components/PaymentModals/CoffeePayModal.tsx`: kept 70/30 and replaced inline style with Mantine `flex` props.
- - `src/pages/TopUp/Card/CardTopUp.tsx`: moved amount/currency into one 70/30 row.
+- `src/components/PaymentModals/RequestMoneyModal.tsx`: amount/currency row changed from equal width to 70/30.
+- `src/components/PaymentModals/ReimburseModal.tsx`: amount/currency row changed from equal width to 70/30.
+- `src/components/PaymentModals/FridgePayModal.tsx`: kept 70/30 and replaced inline style with Mantine `flex` props.
+- `src/components/PaymentModals/CoffeePayModal.tsx`: kept 70/30 and replaced inline style with Mantine `flex` props.
+- `src/pages/TopUp/Card/CardTopUp.tsx`: moved amount/currency into one 70/30 row.
 - Notes: none
 
 ## 2026-02-16 00:37
+
 - Prompt: Make Home action design consistent between Top Up and Fridge/Coffee/Reimburse blocks.
 - Changes:
- - `src/components/HomeCards/FridgeCoffeeCard.tsx`: switched action layout from vertical full-width stack to the same horizontal `Group` with `grow` used in balance top-up actions; kept `variant="default"` for all three buttons.
+- `src/components/HomeCards/FridgeCoffeeCard.tsx`: switched action layout from vertical full-width stack to the same horizontal `Group` with `grow` used in balance top-up actions; kept `variant="default"` for all three buttons.
 - Notes: none
 
 ## 2026-02-16 00:36
+
 - Prompt: Fix Home top-up buttons to behave like Navbar dropdown and keep Request Money as 3rd menu item.
 - Changes:
- - `src/components/HomeCards/BalanceCard.tsx`: restored 3 action buttons; `Top up by card` now opens `CardTopUpModal` (no redirect), `Cash / Bank / Crypto` routes to manual top-up, and `Request money` opens request modal.
- - `src/components/Navbar/Navbar.tsx`: kept `Request Money` as the 3rd item in `Top Up` dropdown without divider.
+- `src/components/HomeCards/BalanceCard.tsx`: restored 3 action buttons; `Top up by card` now opens `CardTopUpModal` (no redirect), `Cash / Bank / Crypto` routes to manual top-up, and `Request money` opens request modal.
+- `src/components/Navbar/Navbar.tsx`: kept `Request Money` as the 3rd item in `Top Up` dropdown without divider.
 - Notes: none
 
 ## 2026-02-16 00:35
+
 - Prompt: Put Request Money as third item in Top Up dropdown and remove resurrected Home action buttons.
 - Changes:
- - `src/components/Navbar/Navbar.tsx`: moved `Request Money` to the 3rd item in `Top Up` menu (after card and manual), removed divider.
- - `src/components/HomeCards/BalanceCard.tsx`: removed action button row and modal trigger from Home balance card.
+- `src/components/Navbar/Navbar.tsx`: moved `Request Money` to the 3rd item in `Top Up` menu (after card and manual), removed divider.
+- `src/components/HomeCards/BalanceCard.tsx`: removed action button row and modal trigger from Home balance card.
 - Notes: none
 
 ## 2026-02-16

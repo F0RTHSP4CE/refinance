@@ -1,20 +1,29 @@
 """Token service. Generates a token and sends it to Telegram. Verifies generated tokens."""
 
+import hashlib
+import hmac
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import jwt
 import requests
 from app.config import Config, get_config
 from app.dependencies.services import get_entity_service
+from app.errors.common import NotFoundError
 from app.errors.token import TokenInvalid
 from app.models.entity import Entity
-from app.schemas.token import TokenSendReportSchema
+from app.schemas.entity import EntityUpdateSchema
+from app.schemas.token import (
+    TelegramAuthConfigResponseSchema,
+    TelegramAuthPayloadSchema,
+    TelegramLoginResponseSchema,
+    TokenSendReportSchema,
+)
 from app.services.entity import EntityService
 from app.uow import get_uow
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -22,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 class TokenService:
     ALGORITHM = "HS256"
+    TELEGRAM_AUTH_MAX_AGE_SECONDS = int(timedelta(hours=24).total_seconds())
 
     @staticmethod
     def decode_entity_id_from_token(token: str, secret_key: str) -> int:
@@ -29,7 +39,7 @@ class TokenService:
         try:
             payload = jwt.decode(token, secret_key, algorithms=[TokenService.ALGORITHM])
             return int(payload.get("sub") or 0)
-        except Exception as e:
+        except Exception:
             raise TokenInvalid
 
     def __init__(
@@ -52,6 +62,9 @@ class TokenService:
         encoded_jwt = jwt.encode(data, self.config.secret_key, algorithm=self.ALGORITHM)
         return encoded_jwt
 
+    def generate_new_token(self, entity_id: int) -> str:
+        return self._generate_new_token(entity_id)
+
     def get_entity_from_token(self, token: str) -> Entity:
         """Verify the token, decode the entity id, then retrieve the associated entity via DB."""
         # Decode entity id and then load entity from DB
@@ -59,6 +72,123 @@ class TokenService:
             token, self.config.secret_key or ""
         )
         return self.entity_service.get(entity_id)
+
+    def _verify_telegram_auth(self, payload: TelegramAuthPayloadSchema) -> int:
+        bot_token = (self.config.telegram_bot_api_token or "").strip()
+        if not bot_token:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Telegram login is not configured.",
+            )
+
+        now = int(time.time())
+        if payload.auth_date > now + 60:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Telegram auth timestamp is invalid.",
+            )
+        if now - payload.auth_date > self.TELEGRAM_AUTH_MAX_AGE_SECONDS:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Telegram auth payload has expired.",
+            )
+
+        secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        payload_data = payload.model_dump(exclude_none=True)
+        provided_hash = payload_data.pop("hash", "")
+        payload_data.pop("link_to_current_entity", None)
+        data_check_string = "\n".join(
+            f"{key}={value}" for key, value in sorted(payload_data.items())
+        )
+        expected_hash = hmac.new(
+            secret_key,
+            data_check_string.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected_hash, provided_hash):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Telegram auth signature is invalid.",
+            )
+
+        return int(payload.id)
+
+    def login_or_link_with_telegram(
+        self,
+        payload: TelegramAuthPayloadSchema,
+        actor_entity: Entity | None = None,
+    ) -> TelegramLoginResponseSchema:
+        telegram_id = self._verify_telegram_auth(payload)
+
+        if payload.link_to_current_entity:
+            if actor_entity is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Log in first to connect Telegram.",
+                )
+
+            try:
+                existing_entity = self.entity_service.get_by_telegram_id(telegram_id)
+            except NotFoundError:
+                existing_entity = None
+
+            if existing_entity is not None and existing_entity.id != actor_entity.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This Telegram account is already linked to another entity.",
+                )
+
+            linked_entity = self.entity_service.update(
+                actor_entity.id,
+                EntityUpdateSchema(auth={"telegram_id": telegram_id}),
+            )
+            return TelegramLoginResponseSchema(
+                token=self._generate_new_token(linked_entity.id),
+                entity_id=linked_entity.id,
+                linked=True,
+            )
+
+        try:
+            entity = self.entity_service.get_by_telegram_id(telegram_id)
+        except NotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Telegram account is not linked yet. "
+                    "Sign in by username once and connect Telegram in Profile."
+                ),
+            ) from exc
+
+        return TelegramLoginResponseSchema(
+            token=self._generate_new_token(entity.id),
+            entity_id=entity.id,
+            linked=False,
+        )
+
+    def get_telegram_auth_config(self) -> TelegramAuthConfigResponseSchema:
+        bot_username = (self.config.telegram_bot_username or "").strip() or None
+        bot_token = (self.config.telegram_bot_api_token or "").strip()
+
+        if not bot_username:
+            return TelegramAuthConfigResponseSchema(
+                enabled=False,
+                bot_username=None,
+                reason="missing_bot_username",
+            )
+
+        if not bot_token:
+            return TelegramAuthConfigResponseSchema(
+                enabled=False,
+                bot_username=bot_username,
+                reason="missing_bot_token",
+            )
+
+        return TelegramAuthConfigResponseSchema(
+            enabled=True,
+            bot_username=bot_username,
+            reason=None,
+        )
 
     def generate_and_send_new_token(self, entity_name: str) -> TokenSendReportSchema:
         """Generate a token for entity by name and send it via Telegram."""

@@ -1,11 +1,14 @@
-import { Anchor, Badge, Flex, Group, Stack, Tabs, Text, Tooltip } from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
+import { Anchor, Button, Flex, Group, Stack, Tabs, Text, Tooltip } from '@mantine/core';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getBalances } from '@/api/balance';
 import { getEntity, getMe } from '@/api/entities';
 import { getInvoices } from '@/api/invoices';
 import { getTransactions } from '@/api/transactions';
+import { InvoiceDetailsModal } from '@/components/Invoices/InvoiceDetailsModal';
+import { MoneyActionModal } from '@/components/MoneyActionModal/MoneyActionModal';
+import { TelegramAuthButton } from '@/components/TelegramAuth';
 import {
   transactionTableColumns,
   TransactionDetailsModal,
@@ -13,12 +16,15 @@ import {
 } from '@/components/Transactions';
 import {
   AmountsCurrency,
+  AccentSurface,
   AppCard,
   DataTable,
   RelativeDate,
+  StatusBadge,
   TagList,
   type DataTableColumn,
 } from '@/components/ui';
+import { useTelegramAuthConfig } from '@/hooks/useTelegramAuthConfig';
 import { ProfileStatistics } from './ProfileStatistics';
 import { useAuthStore } from '@/stores/auth';
 import type { Entity, Invoice } from '@/types/api';
@@ -40,6 +46,8 @@ export const Profile = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const actorEntity = useAuthStore((state) => state.actorEntity);
+  const queryClient = useQueryClient();
+  const telegramConfigQuery = useTelegramAuthConfig();
 
   const tab = searchParams.get('tab') ?? 'profile';
   const { opened, selectedTransaction, openTransaction, closeTransaction } =
@@ -48,6 +56,8 @@ export const Profile = () => {
   const validatedId = useMemo(() => validateEntityId(id), [id]);
   const profileId = id === undefined ? actorEntity?.id : validatedId;
   const isOwnProfile = profileId != null && profileId === actorEntity?.id;
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [moneyActionMode, setMoneyActionMode] = useState<'transfer' | 'request' | null>(null);
 
   useEffect(() => {
     if (!id && actorEntity) {
@@ -55,7 +65,11 @@ export const Profile = () => {
     }
   }, [id, actorEntity, navigate]);
 
-  const { data: entity, isError: entityError, isLoading: entityLoading } = useQuery({
+  const {
+    data: entity,
+    isError: entityError,
+    isLoading: entityLoading,
+  } = useQuery({
     queryKey: ['entities', profileId],
     queryFn: ({ signal }) => {
       if (isOwnProfile) {
@@ -84,7 +98,8 @@ export const Profile = () => {
 
   const { data: invoicesData } = useQuery({
     queryKey: ['invoices', profileId],
-    queryFn: ({ signal }) => (profileId ? getInvoices({ entity_id: profileId, limit: LIMIT, signal }) : null),
+    queryFn: ({ signal }) =>
+      profileId ? getInvoices({ entity_id: profileId, limit: LIMIT, signal }) : null,
     enabled: !!profileId,
   });
 
@@ -196,18 +211,9 @@ export const Profile = () => {
       key: 'status',
       label: 'Status',
       render: (r) => (
-        <Text
-          size="sm"
-          c={
-            r.status === 'paid'
-              ? 'green'
-              : r.status === 'cancelled'
-                ? 'red'
-                : 'gray'
-          }
-        >
+        <StatusBadge tone={r.status === 'paid' ? 'positive' : 'neutral'} size="sm">
           {r.status}
-        </Text>
+        </StatusBadge>
       ),
     },
     {
@@ -226,38 +232,61 @@ export const Profile = () => {
 
   return (
     <Stack gap="lg">
-      <Tabs
-        value={tab}
-        onChange={(v) => setSearchParams({ tab: v ?? 'profile' })}
-      >
+      <Tabs value={tab} onChange={(v) => setSearchParams({ tab: v ?? 'profile' })}>
         <Tabs.List>
           <Tabs.Tab value="profile">
-            <Text component="span" className="text-xl">Profile</Text>
+            <Text component="span" className="text-xl">
+              Profile
+            </Text>
           </Tabs.Tab>
           <Tabs.Tab value="statistics">
-            <Text component="span" className="text-xl">Statistics</Text>
+            <Text component="span" className="text-xl">
+              Statistics
+            </Text>
           </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="profile">
           <Stack gap="lg" mt="md">
-            <AppCard>
+            <AccentSurface>
               <Stack gap="md">
-                <Flex gap="sm" align="center" wrap="nowrap">
-                  <Text size="xl" fw={700} lh={1}>
-                    {e.name}
-                  </Text>
-                  {isOwnProfile && (
-                    <Badge
-                      size="sm"
-                      variant="light"
-                      color="blue"
-                      className="shrink-0 leading-none mt-px"
-                    >
-                      This is you
-                    </Badge>
-                  )}
-                </Flex>
+                <Group justify="space-between" align="start" wrap="wrap">
+                  <Flex gap="sm" align="center" wrap="nowrap">
+                    <Text size="xl" fw={700} lh={1}>
+                      {e.name}
+                    </Text>
+                    {isOwnProfile && (
+                      <StatusBadge
+                        size="sm"
+                        className="shrink-0 leading-none mt-px"
+                        tone="positive"
+                      >
+                        This is you
+                      </StatusBadge>
+                    )}
+                  </Flex>
+
+                  <Group gap="xs">
+                    {!isOwnProfile ? (
+                      <>
+                        <Button
+                          variant="default"
+                          size="xs"
+                          onClick={() => setMoneyActionMode('transfer')}
+                        >
+                          Transfer
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="xs"
+                          onClick={() => setMoneyActionMode('request')}
+                        >
+                          Request
+                        </Button>
+                      </>
+                    ) : null}
+                  </Group>
+                </Group>
                 <Group gap="md">
                   <Text size="sm" c="dimmed">
                     ID: {e.id}
@@ -265,25 +294,9 @@ export const Profile = () => {
                   <Text size="sm" c="dimmed">
                     Name: {e.name}
                   </Text>
-                  <Badge
-                    size="sm"
-                    variant="filled"
-                    style={
-                      e.active
-                        ? {
-                            backgroundColor: 'var(--mantine-color-black)',
-                            color: 'var(--mantine-color-white)',
-                            border: '1px solid var(--mantine-color-black)',
-                          }
-                        : {
-                            backgroundColor: 'var(--mantine-color-white)',
-                            color: 'var(--mantine-color-black)',
-                            border: '1px solid var(--mantine-color-black)',
-                          }
-                    }
-                  >
+                  <StatusBadge size="sm" tone={e.active ? 'positive' : 'neutral'}>
                     {e.active ? 'Active' : 'Inactive'}
-                  </Badge>
+                  </StatusBadge>
                 </Group>
                 {e?.tags?.length ? <TagList tags={e.tags} showAll /> : null}
                 {e?.created_at && (
@@ -335,8 +348,30 @@ export const Profile = () => {
                     ) : null}
                   </>
                 )}
+
+                {isOwnProfile ? (
+                  <AppCard p="md">
+                    <Stack gap="sm">
+                      <Text fw={600}>Telegram login</Text>
+                      <Text size="sm" c="dimmed">
+                        Link your Telegram account once to unlock one-tap sign-in from the blue
+                        Telegram button.
+                      </Text>
+                      <TelegramAuthButton
+                        mode="connect"
+                        botUsername={telegramConfigQuery.data?.bot_username}
+                        enabled={telegramConfigQuery.data?.enabled}
+                        reason={telegramConfigQuery.data?.reason}
+                        loading={telegramConfigQuery.isLoading}
+                        onSuccess={() => {
+                          void queryClient.invalidateQueries({ queryKey: ['entities', profileId] });
+                        }}
+                      />
+                    </Stack>
+                  </AppCard>
+                ) : null}
               </Stack>
-            </AppCard>
+            </AccentSurface>
 
             <AppCard>
               <Text size="lg" fw={600} mb="md">
@@ -392,7 +427,13 @@ export const Profile = () => {
               <Text size="lg" fw={600} mb="md">
                 Invoices
               </Text>
-              <DataTable columns={invoiceColumns} data={invoices} emptyMessage="No invoices." />
+              <DataTable
+                columns={invoiceColumns}
+                data={invoices}
+                emptyMessage="No invoices."
+                onRowClick={(invoice) => setSelectedInvoice(invoice)}
+                getRowAriaLabel={(invoice) => `Open invoice #${invoice.id}`}
+              />
             </AppCard>
           </Stack>
         </Tabs.Panel>
@@ -401,6 +442,27 @@ export const Profile = () => {
           {profileId != null && <ProfileStatistics profileId={profileId} />}
         </Tabs.Panel>
       </Tabs>
+
+      <InvoiceDetailsModal
+        opened={selectedInvoice != null}
+        invoice={selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+      />
+
+      <MoneyActionModal
+        opened={moneyActionMode != null}
+        mode={moneyActionMode ?? 'transfer'}
+        onClose={() => setMoneyActionMode(null)}
+        initialFromEntityId={moneyActionMode === 'transfer' ? actorEntity?.id : e.id}
+        initialToEntityId={moneyActionMode === 'request' ? actorEntity?.id : e.id}
+        title={
+          moneyActionMode
+            ? moneyActionMode === 'transfer'
+              ? `Transfer with ${e.name}`
+              : `Request from ${e.name}`
+            : undefined
+        }
+      />
     </Stack>
   );
 };

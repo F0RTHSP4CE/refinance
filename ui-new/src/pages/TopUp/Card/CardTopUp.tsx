@@ -29,7 +29,11 @@ export const CardTopUpModal = ({ opened, onClose }: CardTopUpModalProps) => {
   const navigate = useNavigate();
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<CardTopUpFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CardTopUpFormValues>({
     resolver: zodResolver(cardTopUpSchema),
     defaultValues: { amount: 100, currency: 'GEL' },
   });
@@ -116,10 +120,5 @@ export const CardTopUpModal = ({ opened, onClose }: CardTopUpModalProps) => {
 
 export const CardTopUp = () => {
   const navigate = useNavigate();
-  return (
-    <CardTopUpModal
-      opened
-      onClose={() => navigate('/')}
-    />
-  );
+  return <CardTopUpModal opened onClose={() => navigate('/')} />;
 };

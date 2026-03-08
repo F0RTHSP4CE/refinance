@@ -1,11 +1,5 @@
-import { Center, Text } from '@mantine/core';
+import { Navigate } from 'react-router-dom';
 
 export const Invoices = () => {
-  return (
-    <Center h="100%">
-      <Text size="xl" fw={900}>
-        Invoices
-      </Text>
-    </Center>
-  );
+  return <Navigate to="/fee?tab=invoices" replace />;
 };
