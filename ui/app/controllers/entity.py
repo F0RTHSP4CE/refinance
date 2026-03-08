@@ -88,10 +88,19 @@ def list():
     entities = [Entity(**x) for x in response["items"]]
     total = response["total"]
 
+    entity_ids = [entity.id for entity in entities]
+    balances_response = api.http(
+        "GET",
+        "balances",
+        params={"entity_ids": entity_ids},
+    ).json()
+
     balances = {}
     currencies = set()
     for entity in entities:
-        balance_data = api.http("GET", f"balances/{entity.id}").json()
+        balance_data = balances_response.get(
+            str(entity.id), {"completed": {}, "draft": {}}
+        )
         balance = Balance(**balance_data)
         balances[entity.id] = balance
         currencies.update(balance.completed.keys())

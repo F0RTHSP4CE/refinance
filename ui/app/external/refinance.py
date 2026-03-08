@@ -40,7 +40,7 @@ class RefinanceAPI:
                 data,
                 bool(self.token),
             )
-            r = requests.request(
+            r = self._session.request(
                 method,
                 f"{self.url}/{endpoint}",
                 params=params,
@@ -67,6 +67,7 @@ class RefinanceAPI:
 
     def __init__(self, token: str | None) -> None:
         self.token = token
+        self._session = requests.Session()
 
 
 def get_refinance_api_client() -> RefinanceAPI:
