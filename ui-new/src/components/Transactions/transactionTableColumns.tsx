@@ -115,7 +115,7 @@ export const transactionTableColumns: DataTableColumn<Transaction>[] = [
     key: 'status',
     label: 'Status',
     render: (r) => (
-      <StatusBadge tone={r.status === 'completed' ? 'positive' : 'neutral'} size="sm">
+      <StatusBadge tone={r.status === 'completed' ? 'success' : 'draft'} size="sm">
         {r.status}
       </StatusBadge>
     ),

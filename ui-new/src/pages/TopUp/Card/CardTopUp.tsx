@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Group, Modal, NumberInput, Select, Stack } from '@mantine/core';
+import { Alert, Button, NumberInput, Stack } from '@mantine/core';
 import { useMutation } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { createKeepzDeposit } from '@/api/deposits';
 import { useAuthStore } from '@/stores/auth';
+import { AppModal, AppModalFooter, AppSelect, ModalStepHeader } from '@/components/ui';
 
 const CURRENCIES = [
   { value: 'GEL', label: 'GEL' },
@@ -58,16 +59,35 @@ export const CardTopUpModal = ({ opened, onClose }: CardTopUpModalProps) => {
   if (!actorEntity) return null;
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title="Top up by card"
-      centered
+      subtitle="Create a payment handoff and continue on the deposit status page."
       closeOnClickOutside={false}
       closeOnEscape={false}
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button type="submit" form="card-top-up-form" loading={mutation.isPending}>
+              Top up
+            </Button>
+          }
+        />
+      }
     >
-      <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      <form id="card-top-up-form" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
         <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Card payment"
+            title="Start a top-up"
+            description="Pick the amount and currency, then continue on the hosted payment flow."
+          />
           <Controller
             name="amount"
             control={control}
@@ -89,7 +109,7 @@ export const CardTopUpModal = ({ opened, onClose }: CardTopUpModalProps) => {
             name="currency"
             control={control}
             render={({ field }) => (
-              <Select
+              <AppSelect
                 label="Currency"
                 data={CURRENCIES}
                 error={errors.currency?.message}
@@ -104,17 +124,9 @@ export const CardTopUpModal = ({ opened, onClose }: CardTopUpModalProps) => {
               {mutation.error.message}
             </Alert>
           )}
-          <Group justify="flex-end" gap="xs">
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={mutation.isPending}>
-              Top up
-            </Button>
-          </Group>
         </Stack>
       </form>
-    </Modal>
+    </AppModal>
   );
 };
 

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Group, Modal, Select, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,10 +8,15 @@ import { IconCircleCheck, IconCircleX } from '@tabler/icons-react';
 import { createTreasury, getTreasuries, updateTreasury, type Treasury } from '@/api/treasuries';
 import { getEntities } from '@/api/entities';
 import {
-  AccentSurface,
-  AppCard,
+  AppModal,
+  AppModalFooter,
+  AppSelect,
   DataTable,
+  FilterBar,
+  ModalStepHeader,
+  PageHeader,
   RelativeDate,
+  SectionCard,
   StatusBadge,
   type DataTableColumn,
 } from '@/components/ui';
@@ -194,7 +199,7 @@ export const Treasuries = () => {
     },
     {
       key: 'author',
-      label: 'Author',
+      label: 'Keeper',
       render: (treasury) => <Text size="sm">{treasury.author_entity?.name || '—'}</Text>,
     },
     {
@@ -211,7 +216,7 @@ export const Treasuries = () => {
       key: 'active',
       label: 'Active',
       render: (treasury) => (
-        <StatusBadge tone={treasury.active ? 'positive' : 'neutral'}>
+        <StatusBadge tone={treasury.active ? 'success' : 'danger'}>
           {treasury.active ? 'Active' : 'Inactive'}
         </StatusBadge>
       ),
@@ -234,29 +239,32 @@ export const Treasuries = () => {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="end">
-        <div>
-          <Title order={2}>Treasuries</Title>
-          <Text c="dimmed" size="sm">
-            Managed balances with optional author ownership.
-          </Text>
-        </div>
-        <Button variant="default" onClick={openCreateEditor}>
-          Add Treasury
-        </Button>
-      </Group>
+      <PageHeader
+        eyebrow="F0RTHSP4CE funds"
+        title="Funds"
+        subtitle="Shared funds used by hackerspace operations, dues collection, and money movement."
+        actions={
+          <Button variant="default" onClick={openCreateEditor}>
+            Add fund
+          </Button>
+        }
+      />
 
-      <AccentSurface>
+      <FilterBar
+        title="Filter funds"
+        description="Search and trim the fund list before opening a sheet to edit one."
+        resultSummary={`${treasuriesQuery.data?.items.length ?? 0} fund${(treasuriesQuery.data?.items.length ?? 0) === 1 ? '' : 's'} shown`}
+      >
         <Stack gap="md">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,9fr)_minmax(8.75rem,1fr)]">
             <TextInput
               label="Search"
-              placeholder="Filter by name"
+              placeholder="Filter by fund name"
               value={nameFilter}
               onChange={(event) => setNameFilter(event.currentTarget.value)}
             />
 
-            <Select
+            <AppSelect
               label="Status"
               value={activeFilter}
               onChange={(value) => setActiveFilter((value as ActiveFilter) || 'all')}
@@ -269,16 +277,23 @@ export const Treasuries = () => {
             />
           </div>
         </Stack>
-      </AccentSurface>
+      </FilterBar>
 
-      <AppCard>
+      <SectionCard
+        title="Fund list"
+        description="Inspect balances, keeper assignment, and activity state without forcing a raw admin table on mobile."
+      >
         <Stack gap="md">
           <DataTable
             columns={columns}
             data={treasuriesQuery.data?.items ?? []}
-            emptyMessage={
-              treasuriesQuery.isLoading ? 'Loading treasuries...' : 'No treasuries found.'
-            }
+            isLoading={treasuriesQuery.isLoading}
+            loadingState={{ cards: 2, lines: 4 }}
+            emptyState={{
+              title: 'No funds found',
+              description: 'Try a broader search or create the first shared fund for the space.',
+            }}
+            resultSummary={`${treasuriesQuery.data?.items.length ?? 0} fund${(treasuriesQuery.data?.items.length ?? 0) === 1 ? '' : 's'} shown`}
             getRowStyle={(treasury) =>
               treasury.active
                 ? undefined
@@ -287,25 +302,70 @@ export const Treasuries = () => {
                     backgroundColor: 'rgba(15, 23, 42, 0.03)',
                   }
             }
+            renderMobileTitle={(treasury) => treasury.name}
+            renderMobileSubtitle={(treasury) => treasury.author_entity?.name || 'No keeper'}
+            renderMobileAside={(treasury) => (
+              <StatusBadge tone={treasury.active ? 'success' : 'danger'} size="sm">
+                {treasury.active ? 'Active' : 'Inactive'}
+              </StatusBadge>
+            )}
+            renderMobileDetails={(treasury) => [
+              { label: 'Comment', value: treasury.comment || '—' },
+              { label: 'Created', value: <RelativeDate isoString={treasury.created_at} /> },
+            ]}
+            renderMobileFooter={(treasury) => (
+              <Group justify="flex-end">
+                <Button variant="outline" size="xs" onClick={() => openEditEditor(treasury)}>
+                  Edit
+                </Button>
+              </Group>
+            )}
           />
         </Stack>
-      </AppCard>
+      </SectionCard>
 
-      <Modal
+      <AppModal
         opened={editorOpened}
         onClose={closeEditor}
-        title={editingTreasury ? 'Edit Treasury' : 'Create Treasury'}
-        centered
+        title={editingTreasury ? 'Edit fund' : 'Create fund'}
+        subtitle="Define the keeper, note, and activity state for this shared fund."
+        footer={
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={closeEditor}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button
+                type="submit"
+                form="treasury-editor-form"
+                variant="default"
+                loading={isSubmitting}
+              >
+                {editingTreasury ? 'Save changes' : 'Create fund'}
+              </Button>
+            }
+          />
+        }
       >
-        <form onSubmit={(event) => void handleSubmit(onSubmitTreasury)(event)}>
+        <form
+          id="treasury-editor-form"
+          onSubmit={(event) => void handleSubmit(onSubmitTreasury)(event)}
+        >
           <Stack gap="md">
+            <ModalStepHeader
+              eyebrow="Fund setup"
+              title={editingTreasury ? editingTreasury.name : 'Create fund'}
+              description="Funds hold shared balances for the space, so keep names and keeper assignment intentional."
+            />
             <Controller
               name="name"
               control={control}
               render={({ field }) => (
                 <TextInput
                   label="Name"
-                  placeholder="treasury name"
+                  placeholder="fund name"
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -320,7 +380,7 @@ export const Treasuries = () => {
               render={({ field }) => (
                 <TextInput
                   label="Comment"
-                  placeholder="optional"
+                  placeholder="optional note"
                   value={field.value || ''}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -332,16 +392,18 @@ export const Treasuries = () => {
               name="author_entity_id"
               control={control}
               render={({ field }) => (
-                <Select
-                  label="Author"
-                  placeholder="Select author entity"
+                <AppSelect
+                  label="Keeper"
+                  placeholder="Select fund keeper"
                   data={authorOptions}
                   searchable
                   clearable
                   value={field.value || null}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  nothingFoundMessage={entitiesQuery.isLoading ? 'Loading...' : 'No entities found'}
+                  nothingFoundMessage={
+                    entitiesQuery.isLoading ? 'Loading entities...' : 'No entities found'
+                  }
                 />
               )}
             />
@@ -400,8 +462,8 @@ export const Treasuries = () => {
                   </Group>
                   <Text size="xs" c="dimmed">
                     {field.value
-                      ? 'Treasury is enabled and available for operations.'
-                      : 'Treasury is disabled for new operations.'}
+                      ? 'This fund is enabled and available for new operations.'
+                      : 'This fund is disabled for new operations.'}
                   </Text>
                 </Stack>
               )}
@@ -412,18 +474,9 @@ export const Treasuries = () => {
                 {mutationError.message}
               </Alert>
             ) : null}
-
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={closeEditor}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="default" loading={isSubmitting}>
-                {editingTreasury ? 'Save Changes' : 'Create Treasury'}
-              </Button>
-            </Group>
           </Stack>
         </form>
-      </Modal>
+      </AppModal>
     </Stack>
   );
 };

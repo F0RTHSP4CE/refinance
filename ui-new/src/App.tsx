@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
+import { ErrorState, LoadingState } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
 
 // Lazy load all pages for code splitting
@@ -26,15 +27,17 @@ const Treasuries = lazy(() =>
 const Tags = lazy(() => import('@/pages/Tags').then((m) => ({ default: m.Tags })));
 const Profile = lazy(() => import('@/pages/Profile').then((m) => ({ default: m.Profile })));
 
-// Loading fallback component
-const PageLoader = () => (
-  <div className="flex justify-center items-center h-screen">
-    <div>Loading...</div>
-  </div>
-);
+const PageLoader = () => <LoadingState fullScreen cards={2} lines={4} />;
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = useAuthStore((state) => state.token);
   const actorEntity = useAuthStore((state) => state.actorEntity);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  if (token && (!isInitialized || isLoading)) {
+    return <LoadingState fullScreen cards={2} lines={3} />;
+  }
   if (!actorEntity) {
     return <Navigate to="/sign-in" replace />;
   }
@@ -42,7 +45,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const token = useAuthStore((state) => state.token);
   const actorEntity = useAuthStore((state) => state.actorEntity);
+  const isLoading = useAuthStore((state) => state.isLoading);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  if (token && (!isInitialized || isLoading)) {
+    return <LoadingState fullScreen cards={1} lines={3} />;
+  }
   if (actorEntity) {
     return <Navigate to="/" replace />;
   }
@@ -59,18 +69,24 @@ const InvoiceDetailsRedirect = () => {
 export const App = () => {
   const loadActor = useAuthStore((state) => state.loadActor);
   const authError = useAuthStore((state) => state.authError);
+  const clearSession = useAuthStore((state) => state.clearSession);
 
   useEffect(() => {
     void loadActor();
   }, [loadActor]);
 
-  // Show error if auth loading fails
   if (authError) {
     return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h2>Authentication Error</h2>
-        <p>{authError}</p>
-        <button onClick={() => window.location.reload()}>Retry</button>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '1rem' }}>
+        <ErrorState
+          title="Authentication could not be restored"
+          description={authError}
+          retryLabel="Sign out and retry"
+          onRetry={() => {
+            clearSession();
+            window.location.assign('/sign-in');
+          }}
+        />
       </div>
     );
   }

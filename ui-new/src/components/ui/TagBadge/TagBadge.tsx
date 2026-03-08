@@ -1,6 +1,5 @@
 import { Box } from '@mantine/core';
-
-const TAG_COLOR_FORMULA = (id: number) => `hsl(${(id * 41.9) % 360}, 66%, 44%)`;
+import { FALLBACK_TAG_COLORS, TAG_COLOR_BY_NAME, colorByStableIndex, withAlpha } from '@/constants/uiPalette';
 
 type TagBadgeProps = {
   id: number;
@@ -10,22 +9,27 @@ type TagBadgeProps = {
 };
 
 export const TagBadge = ({ id, name, overflow }: TagBadgeProps) => {
-  const hue = (id * 41.9) % 360;
-  const color = overflow ? 'var(--mantine-color-gray-5)' : TAG_COLOR_FORMULA(id);
-  const backgroundColor = overflow ? 'transparent' : `hsla(${hue}, 66%, 44%, 0.25)`;
+  const normalizedName = name.trim().toLowerCase();
+  const baseColor =
+    TAG_COLOR_BY_NAME[normalizedName] ?? colorByStableIndex(`${normalizedName}:${id}`, FALLBACK_TAG_COLORS);
+  const color = overflow ? 'var(--app-text-secondary)' : baseColor;
+  const backgroundColor = overflow ? 'rgba(255, 255, 255, 0.04)' : withAlpha(baseColor, 0.16);
+  const borderColor = overflow ? 'var(--app-border-subtle)' : withAlpha(baseColor, 0.34);
 
   return (
     <Box
       component="span"
       style={{
         display: 'inline-block',
-        padding: '0.15rem 0.35rem',
-        border: `1px solid ${color}`,
-        borderRadius: '0.2rem',
+        padding: '0.22rem 0.48rem',
+        border: `1px solid ${borderColor}`,
+        borderRadius: '999px',
         color,
         backgroundColor,
-        opacity: 0.8,
         verticalAlign: 'baseline',
+        fontSize: '0.78rem',
+        fontWeight: 700,
+        letterSpacing: '0.01em',
       }}
     >
       {name}

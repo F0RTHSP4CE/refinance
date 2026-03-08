@@ -1,26 +1,14 @@
 import { useCallback, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Group,
-  Image,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from '@mantine/core';
+import { Alert, Button, Image, Group, NumberInput, Stack, TextInput } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/stores/auth';
 import { FRIDGE_PRESETS, CURRENCIES } from '@/constants/entities';
 import { getServiceEntityIds } from '@/api/serviceEntities';
 import { usePaymentFlow } from './usePaymentFlow';
-import { ConfirmTransactionModal } from '@/components/ConfirmTransaction';
-import { PaymentSuccessModal } from '@/components/PaymentSuccess';
+import { AppModal, AppModalFooter, AppSelect, ModalStepHeader, SectionCard } from '@/components/ui';
 
 const fridgePaySchema = z.object({
   amount: z.number().min(0.01, 'Amount must be at least 0.01'),
@@ -67,8 +55,6 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
     },
   });
 
-  const currency = useWatch({ control, name: 'currency' });
-  const amount = useWatch({ control, name: 'amount' });
   const { data: serviceEntityIds } = useQuery({
     queryKey: ['service-entity-ids'],
     queryFn: ({ signal }) => getServiceEntityIds(signal),
@@ -131,20 +117,70 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
   if (!actorEntity) return null;
 
   const balanceInfo = getBalanceInfo();
+  const isFormStep = state.step === 'form';
+  const isConfirmStep = state.step === 'confirm';
+  const isSuccessStep = state.step === 'success';
 
   return (
-    <>
-      <Modal
-        opened={opened && state.step === 'form'}
-        onClose={handleClose}
-        title="Pay to Fridge"
-        centered
-      >
-        <form onSubmit={(e) => void handleSubmit(handleFormSubmit)(e)}>
+    <AppModal
+      opened={opened}
+      onClose={handleClose}
+      title={
+        isSuccessStep ? 'Fridge stash updated' : isConfirmStep ? 'Review payment' : 'Fridge stash'
+      }
+      subtitle={
+        isSuccessStep
+          ? 'The contribution is complete and your balance has already refreshed.'
+          : isConfirmStep
+            ? 'Check the stash, amount, and note before confirming this payment.'
+            : 'Top up the shared fridge stash for drinks, ingredients, and kitchen restocks.'
+      }
+      footer={
+        isSuccessStep ? (
+          <AppModalFooter
+            primary={
+              <Button variant="default" onClick={handleSuccessClose}>
+                Done
+              </Button>
+            }
+          />
+        ) : isConfirmStep ? (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleConfirmCancel}>
+                Back
+              </Button>
+            }
+            primary={
+              <Button variant="default" onClick={handleConfirmConfirm} loading={isConfirming}>
+                Confirm
+              </Button>
+            }
+          />
+        ) : (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleClose}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button type="submit" form="fridge-pay-form" loading={isCreating} variant="default">
+                Review
+              </Button>
+            }
+          />
+        )
+      }
+    >
+      {isFormStep ? (
+        <form id="fridge-pay-form" onSubmit={(e) => void handleSubmit(handleFormSubmit)(e)}>
           <Stack gap="md">
-            <Text size="sm" c="dimmed">
-              Select a preset amount or enter a custom value.
-            </Text>
+            <ModalStepHeader
+              eyebrow="Shared supplies"
+              title="Fridge stash"
+              description="Pick a common amount or set a custom one, then review the payment before it leaves your balance."
+            />
 
             <Group gap="xs">
               {FRIDGE_PRESETS.map((preset) => (
@@ -166,11 +202,11 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
                 onClick={handleCustomClick}
                 c={isCustom ? undefined : 'dimmed'}
               >
-                Other
+                Custom
               </Button>
             </Group>
 
-            {isCustom && (
+            {isCustom ? (
               <Group align="flex-start">
                 <Controller
                   name="amount"
@@ -194,9 +230,9 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
                   name="currency"
                   control={control}
                   render={({ field, fieldState }) => (
-                    <Select
+                    <AppSelect
                       label="Currency"
-                      data={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                      data={CURRENCIES.map((item) => ({ value: item, label: item }))}
                       error={fieldState.error?.message}
                       value={field.value}
                       onChange={field.onChange}
@@ -206,15 +242,15 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
                   )}
                 />
               </Group>
-            )}
+            ) : null}
 
             <Controller
               name="comment"
               control={control}
               render={({ field }) => (
                 <TextInput
-                  label="Comment"
-                  placeholder="optional"
+                  label="Note"
+                  placeholder="Optional note for the fridge stash"
                   value={field.value || ''}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -222,45 +258,55 @@ export const FridgePayModal = ({ opened, onClose }: FridgePayModalProps) => {
               )}
             />
 
-            {createError && (
-              <Alert color="red" title="Error">
+            {createError ? (
+              <Alert color="red" title="Could not prepare the contribution">
                 {createError.message}
               </Alert>
-            )}
+            ) : null}
 
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={isCreating} variant="default">
-                Pay {amount} {currency}
-              </Button>
-            </Group>
-
-            <Image src="/images/fridge.jpg" alt="Fridge" radius="md" mt="md" />
+            <Image src="/images/fridge.jpg" alt="F0RTHSP4CE fridge stash" radius="md" />
           </Stack>
         </form>
-      </Modal>
+      ) : null}
 
-      <ConfirmTransactionModal
-        opened={state.step === 'confirm'}
-        onConfirm={handleConfirmConfirm}
-        onCancel={handleConfirmCancel}
-        isLoading={isConfirming}
-        amount={state.amount}
-        currency={state.currency}
-        direction="pay"
-        targetName="Fridge"
-      />
+      {isConfirmStep ? (
+        <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Review payment"
+            title={`${state.amount} ${state.currency.toUpperCase()}`}
+            description="You are about to pay into the shared fridge stash."
+          />
+          <SectionCard title="What will happen">
+            <Stack gap="sm">
+              <Alert color="blue" title="Outgoing payment">
+                This moves money from your balance to the fridge stash and marks the payment as completed.
+              </Alert>
+            </Stack>
+          </SectionCard>
+        </Stack>
+      ) : null}
 
-      <PaymentSuccessModal
-        opened={state.step === 'success'}
-        onClose={handleSuccessClose}
-        amount={state.amount}
-        currency={state.currency}
-        oldBalance={balanceInfo.old}
-        newBalance={balanceInfo.new}
-      />
-    </>
+      {isSuccessStep ? (
+        <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Completed"
+            title={`${state.amount} ${state.currency.toUpperCase()}`}
+            description="The fridge stash payment is complete."
+          />
+          {balanceInfo.old && balanceInfo.new ? (
+            <SectionCard title="Balance update">
+              <Stack gap={4}>
+                <div className="app-muted-copy">
+                  Before: {balanceInfo.old} {state.currency.toUpperCase()}
+                </div>
+                <div>
+                  Now: {balanceInfo.new} {state.currency.toUpperCase()}
+                </div>
+              </Stack>
+            </SectionCard>
+          ) : null}
+        </Stack>
+      ) : null}
+    </AppModal>
   );
 };

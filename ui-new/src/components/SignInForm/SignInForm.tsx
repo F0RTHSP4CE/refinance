@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Alert, Button, Divider, Stack, Text, TextInput } from '@mantine/core';
+import { Accordion, Alert, Button, Divider, Stack, Text, TextInput } from '@mantine/core';
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { requestToken } from '@/api/auth';
 import { TelegramAuthButton } from '@/components/TelegramAuth';
+import { APP_BRAND } from '@/content/uiVocabulary';
 import { useTelegramAuthConfig } from '@/hooks/useTelegramAuthConfig';
 
 const signInSchema = z.object({
@@ -18,6 +19,11 @@ export const SignInForm = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loginLink, setLoginLink] = useState<string | null>(null);
   const telegramConfigQuery = useTelegramAuthConfig();
+  const telegramEnabled = telegramConfigQuery.data?.enabled ?? false;
+  const usernameAccordionDefault = useMemo(
+    () => (!telegramEnabled && !telegramConfigQuery.isLoading ? 'username' : null),
+    [telegramConfigQuery.isLoading, telegramEnabled]
+  );
 
   const {
     register,
@@ -32,10 +38,10 @@ export const SignInForm = () => {
     onSuccess: (data) => {
       if (data.entity_found && data.token_generated) {
         if (data.message_sent) {
-          setSuccessMessage('Success! Check your Telegram for the login link.');
+          setSuccessMessage('Check Telegram for your sign-in link.');
           setLoginLink(null);
         } else if (data.login_link) {
-          setSuccessMessage('Dev mode: Login link generated below.');
+          setSuccessMessage('Local sign-in link generated below.');
           try {
             const url = new URL(data.login_link);
             const path = url.pathname;
@@ -44,7 +50,7 @@ export const SignInForm = () => {
             setLoginLink(null);
           }
         } else {
-          setSuccessMessage('Token generated but message sending failed.');
+          setSuccessMessage('The sign-in link was generated, but Telegram delivery failed.');
           setLoginLink(null);
         }
       } else {
@@ -61,7 +67,7 @@ export const SignInForm = () => {
   };
 
   return (
-    <Stack gap="md">
+    <Stack gap="lg">
       <Stack gap="sm">
         <TelegramAuthButton
           mode="login"
@@ -70,51 +76,84 @@ export const SignInForm = () => {
           reason={telegramConfigQuery.data?.reason}
           loading={telegramConfigQuery.isLoading}
         />
-        <Divider label="or continue by username" labelPosition="center" />
+        <Text size="sm" className="app-muted-copy">
+          Telegram is the fastest route because it drops you back into {APP_BRAND.name} without the
+          extra recovery step.
+        </Text>
       </Stack>
 
-      <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
-        <Stack gap="md">
-          <TextInput
-            label="Username"
-            placeholder="Enter your username"
-            error={errors.username?.message}
-            {...register('username')}
-          />
-          <Button type="submit" loading={mutation.isPending} fullWidth>
-            Request Login Link
-          </Button>
-        </Stack>
-      </form>
+      <Divider label="Recovery access" labelPosition="center" />
+
+      <Accordion
+        variant="separated"
+        radius="lg"
+        defaultValue={usernameAccordionDefault}
+        styles={{
+          item: {
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--app-border-subtle)',
+          },
+        }}
+      >
+        <Accordion.Item value="username">
+          <Accordion.Control>
+            <Stack gap={2}>
+              <Text fw={700}>Use username recovery</Text>
+              <Text size="sm" className="app-muted-copy">
+                Use this for local development, blocked widgets, or accounts that still need their
+                Telegram link set up.
+              </Text>
+            </Stack>
+          </Accordion.Control>
+          <Accordion.Panel>
+            <form onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+              <Stack gap="md">
+                <TextInput
+                  label="Username"
+                  placeholder="Enter your username"
+                  error={errors.username?.message}
+                  {...register('username')}
+                />
+                <Button type="submit" loading={mutation.isPending} fullWidth>
+                  Generate sign-in link
+                </Button>
+              </Stack>
+            </form>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
 
       {mutation.isError && (
-        <Alert color="gray" title="Error">
+        <Alert color="red" title="Could not request a login link">
           {mutation.error.message}
         </Alert>
       )}
 
       {mutation.isSuccess && !mutation.data.entity_found && (
-        <Alert color="gray" title="Authentication failed">
-          Entity not found. Please check your username.
+        <Alert color="gray" title="Account not found">
+          No matching member or actor was found for that username.
         </Alert>
       )}
 
       {successMessage && (
-        <Alert color="gray" title="Success">
+        <Alert color={loginLink ? 'blue' : 'green'} title="Login link ready">
           {successMessage}
           {loginLink && (
-            <div className="mt-2">
+            <div className="mt-3">
+              <Text size="xs" mb={8} className="app-muted-copy">
+                Local development only.
+              </Text>
               <Button component="a" href={loginLink} variant="outline" color="gray" size="xs">
-                Log in directly (Dev)
+                Open generated link
               </Button>
             </div>
           )}
         </Alert>
       )}
 
-      <Text size="sm" c="dimmed">
-        If Telegram login says your account is not linked yet, sign in by username once and connect
-        Telegram in your profile.
+      <Text size="sm" className="app-muted-copy">
+        If Telegram says your account is not linked yet, use username recovery once and connect
+        Telegram from your profile.
       </Text>
     </Stack>
   );

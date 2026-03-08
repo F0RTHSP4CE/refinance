@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, Card, Group, Stack, Text } from '@mantine/core';
+import { Button, Group, Stack, Text } from '@mantine/core';
 import { FridgePayModal, CoffeePayModal, ReimburseModal } from '@/components/PaymentModals';
+import { SectionCard } from '@/components/ui';
 
 export const FridgeCoffeeCard = () => {
   const [fridgeOpened, setFridgeOpened] = useState(false);
@@ -9,31 +10,28 @@ export const FridgeCoffeeCard = () => {
 
   return (
     <>
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Stack gap="md">
-          <Text size="lg" fw={700}>
-            Fridge &amp; Coffee Machine
+      <SectionCard
+        title="Shared supplies"
+        description="Low-friction flows for kitchen stash top-ups and shared restocks."
+      >
+        <Stack gap="sm">
+          <Text size="sm" className="app-muted-copy">
+            Use these for fridge runs, coffee restocks, and reimbursement when you covered shared supplies for F0RTHSP4CE.
           </Text>
 
-          <Text size="sm" c="dimmed">
-            Pay for drinks, snacks and coffee.
-            <br />
-            Get paid when you refill them.
-          </Text>
-
-          <Group gap="xs" grow>
-            <Button variant="default" onClick={() => setFridgeOpened(true)}>
-              Pay Fridge
+          <Group gap="xs" wrap="wrap">
+            <Button variant="subtle" size="sm" onClick={() => setFridgeOpened(true)}>
+              Fridge stash
             </Button>
-            <Button variant="default" onClick={() => setCoffeeOpened(true)}>
-              Pay Coffee Machine
+            <Button variant="subtle" size="sm" onClick={() => setCoffeeOpened(true)}>
+              Coffee stash
             </Button>
-            <Button variant="default" onClick={() => setReimburseOpened(true)}>
-              Reimburse
+            <Button variant="subtle" size="sm" onClick={() => setReimburseOpened(true)}>
+              Reimburse spend
             </Button>
           </Group>
         </Stack>
-      </Card>
+      </SectionCard>
 
       <FridgePayModal opened={fridgeOpened} onClose={() => setFridgeOpened(false)} />
       <CoffeePayModal opened={coffeeOpened} onClose={() => setCoffeeOpened(false)} />

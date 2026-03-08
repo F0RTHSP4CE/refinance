@@ -1,24 +1,20 @@
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  Group,
-  Modal,
-  Paper,
-  SimpleGrid,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, Paper, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconX } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { deleteSplit, getSplit, performSplit, removeSplitParticipant } from '@/api/splits';
 import { TransactionDetailsModal, useTransactionDetailsModal } from '@/components/Transactions';
 import {
+  AppModal,
+  AppModalFooter,
   DataTable,
   DetailItem,
   DetailSectionCard,
   EntityInline,
+  ErrorState,
+  InlineMeta,
+  LoadingState,
+  ModalStepHeader,
   RelativeDate,
   StatusBadge,
   TagList,
@@ -63,8 +59,7 @@ export const SplitDetailsModal = ({
   const queryClient = useQueryClient();
   const [editorOpened, setEditorOpened] = useState(false);
   const [participantModalOpened, setParticipantModalOpened] = useState(false);
-  const [performConfirmOpened, setPerformConfirmOpened] = useState(false);
-  const [deleteConfirmOpened, setDeleteConfirmOpened] = useState(false);
+  const [sheetStep, setSheetStep] = useState<'details' | 'perform' | 'delete'>('details');
   const {
     opened: transactionOpened,
     selectedTransaction,
@@ -99,7 +94,7 @@ export const SplitDetailsModal = ({
     onSuccess: async (updatedSplit) => {
       await invalidateSplitQueries(updatedSplit.id);
       queryClient.setQueryData(['split', updatedSplit.id], updatedSplit);
-      setPerformConfirmOpened(false);
+      setSheetStep('details');
     },
   });
 
@@ -125,7 +120,7 @@ export const SplitDetailsModal = ({
     },
     onSuccess: async (deletedId) => {
       await invalidateSplitQueries(deletedId);
-      setDeleteConfirmOpened(false);
+      setSheetStep('details');
       onDeleted?.(deletedId);
       onClose();
     },
@@ -168,35 +163,171 @@ export const SplitDetailsModal = ({
     },
   ];
 
+  const handleClose = () => {
+    setSheetStep('details');
+    onClose();
+  };
+
+  const footer =
+    sheetStep === 'perform' ? (
+      <AppModalFooter
+        secondary={
+          <Button variant="subtle" onClick={() => setSheetStep('details')}>
+            Back
+          </Button>
+        }
+        primary={
+          <Button
+            variant="default"
+            onClick={() => performMutation.mutate()}
+            loading={performMutation.isPending}
+          >
+            Perform split
+          </Button>
+        }
+      />
+    ) : sheetStep === 'delete' ? (
+      <AppModalFooter
+        secondary={
+          <Button variant="subtle" onClick={() => setSheetStep('details')}>
+            Back
+          </Button>
+        }
+        primary={
+          <Button
+            color="red"
+            variant="light"
+            onClick={() => deleteMutation.mutate()}
+            loading={deleteMutation.isPending}
+          >
+            Delete split
+          </Button>
+        }
+      />
+    ) : split && !split.performed ? (
+      <AppModalFooter
+        secondary={
+          <Button variant="subtle" onClick={handleClose}>
+            Close
+          </Button>
+        }
+        primary={
+          <Group gap="xs">
+            <Button color="red" variant="subtle" onClick={() => setSheetStep('delete')}>
+              Delete
+            </Button>
+            <Button variant="subtle" onClick={() => setEditorOpened(true)}>
+              Edit
+            </Button>
+            <Button variant="outline" onClick={() => setParticipantModalOpened(true)}>
+              Add participant
+            </Button>
+            <Button variant="default" onClick={() => setSheetStep('perform')}>
+              Perform
+            </Button>
+          </Group>
+        }
+      />
+    ) : (
+      <AppModalFooter primary={<Button onClick={handleClose}>Close</Button>} />
+    );
+
   return (
     <>
-      <Modal
+      <AppModal
         opened={opened}
-        onClose={onClose}
-        title={split ? getSplitDisplayName(split) : 'Split'}
-        centered
-        size="xl"
+        onClose={handleClose}
+        title={
+          sheetStep === 'perform'
+            ? split
+              ? `Perform ${getSplitDisplayName(split)}`
+              : 'Perform split'
+            : sheetStep === 'delete'
+              ? split
+                ? `Delete ${getSplitDisplayName(split)}`
+                : 'Delete split'
+              : split
+                ? getSplitDisplayName(split)
+                : 'Split'
+        }
+        variant="detail"
+        subtitle={
+          sheetStep === 'perform'
+            ? 'Confirm this run to create the resulting completed transactions for every participant.'
+            : sheetStep === 'delete'
+              ? 'This removes the split definition and its participant setup.'
+              : 'Inspect participants, progress, and follow-up actions from the same right-side flow.'
+        }
+        footer={footer}
       >
-        {split ? (
+        {split ? sheetStep === 'perform' ? (
+          <Stack gap="md">
+            <ModalStepHeader
+              eyebrow="Perform split"
+              title={getSplitDisplayName(split)}
+              description="This locks in the participant list and creates the completed transactions for every share."
+            />
+            <Alert color="blue" title="What happens next">
+              Performing this split creates completed transactions for each participant share and
+              marks the run as done.
+            </Alert>
+            <DetailSectionCard title="Ready to perform">
+              <Stack gap="sm">
+                <Text size="sm">
+                  Recipient: <strong>{split.recipient_entity.name}</strong>
+                </Text>
+                <Text size="sm">
+                  Participants: <strong>{split.participants.length}</strong>
+                </Text>
+                <Text size="sm">
+                  Total amount:{' '}
+                  <strong>
+                    {formatSplitMoney(split.amount)} {split.currency.toUpperCase()}
+                  </strong>
+                </Text>
+              </Stack>
+            </DetailSectionCard>
+            {mutationError ? (
+              <Alert color="red" title="Could not update split">
+                {mutationError}
+              </Alert>
+            ) : null}
+          </Stack>
+        ) : sheetStep === 'delete' ? (
+          <Stack gap="md">
+            <ModalStepHeader
+              eyebrow="Delete split"
+              title={getSplitDisplayName(split)}
+              description="Remove this split run and its participant setup."
+            />
+            <Alert color="red" title="Permanent action">
+              Deleting this split removes the setup permanently. Existing performed transactions are
+              not recreated later.
+            </Alert>
+            {mutationError ? (
+              <Alert color="red" title="Could not delete split">
+                {mutationError}
+              </Alert>
+            ) : null}
+          </Stack>
+        ) : (
           <Stack gap="sm">
-            <Group justify="space-between" gap="xs" wrap="wrap">
-              <Group gap="xs" wrap="wrap">
-                <Text size="xs" c="dimmed">
-                  #{split.id}
-                </Text>
-                <StatusBadge tone={split.performed ? 'positive' : 'neutral'}>
+            <ModalStepHeader
+              eyebrow="Split details"
+              title={getSplitDisplayName(split)}
+              description={`Created ${formatDateTime(split.created_at)}`}
+            />
+            <InlineMeta
+              items={[
+                `#${split.id}`,
+                <StatusBadge tone={split.performed ? 'success' : 'info'}>
                   {split.performed ? 'done' : 'active'}
-                </StatusBadge>
-              </Group>
-              <Group gap="xs" wrap="wrap">
-                <Text size="xs" c="dimmed">
+                </StatusBadge>,
+                <>
                   Created <RelativeDate isoString={split.created_at} size="xs" />
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {formatDateTime(split.created_at)}
-                </Text>
-              </Group>
-            </Group>
+                </>,
+              ]}
+            />
 
             <DetailSectionCard title="Amount">
               <Stack gap="md">
@@ -211,7 +342,7 @@ export const SplitDetailsModal = ({
                       {split.participants.length === 1 ? '' : 's'} currently included
                     </Text>
                   </Stack>
-                  <StatusBadge tone={split.performed ? 'positive' : 'neutral'}>
+                  <StatusBadge tone={split.performed ? 'success' : 'info'}>
                     {split.performed ? 'performed' : 'collecting'}
                   </StatusBadge>
                 </Group>
@@ -246,7 +377,7 @@ export const SplitDetailsModal = ({
 
                         <Group gap="xs" wrap="nowrap">
                           {participant.fixed_amount ? (
-                            <StatusBadge tone="neutral">fixed</StatusBadge>
+                            <StatusBadge tone="warning">fixed</StatusBadge>
                           ) : null}
                           <Text fw={700} size="sm">
                             {formatSplitMoney(getSplitParticipantShare(participant, split))}{' '}
@@ -298,34 +429,6 @@ export const SplitDetailsModal = ({
               </SimpleGrid>
             </DetailSectionCard>
 
-            <DetailSectionCard title="Actions">
-              {!split.performed ? (
-                <Group gap="xs" wrap="wrap">
-                  <Button variant="default" onClick={() => setParticipantModalOpened(true)}>
-                    Add participant
-                  </Button>
-                  <Button variant="default" onClick={() => setPerformConfirmOpened(true)}>
-                    Perform
-                  </Button>
-                  <Button variant="outline" onClick={() => setEditorOpened(true)}>
-                    Edit
-                  </Button>
-                  <Button
-                    color="red"
-                    variant="outline"
-                    onClick={() => setDeleteConfirmOpened(true)}
-                  >
-                    Delete
-                  </Button>
-                </Group>
-              ) : (
-                <Text size="sm" c="dimmed">
-                  This split has already been performed. You can still inspect its transactions
-                  below.
-                </Text>
-              )}
-            </DetailSectionCard>
-
             <DetailSectionCard title="Performed transactions">
               {split.performed ? (
                 <DataTable
@@ -349,11 +452,15 @@ export const SplitDetailsModal = ({
             ) : null}
           </Stack>
         ) : splitQuery.isLoading ? (
-          <Text c="dimmed">Loading split...</Text>
+          <LoadingState cards={1} lines={3} />
         ) : (
-          <Text c="dimmed">Split not found.</Text>
+          <ErrorState
+            compact
+            title="Split run not found"
+            description="This split run could not be loaded or no longer exists."
+          />
         )}
-      </Modal>
+      </AppModal>
 
       <SplitEditorModal
         opened={editorOpened}
@@ -375,55 +482,6 @@ export const SplitDetailsModal = ({
           void invalidateSplitQueries(updatedSplit.id);
         }}
       />
-
-      <Modal
-        opened={performConfirmOpened}
-        onClose={() => setPerformConfirmOpened(false)}
-        title={split ? `Perform ${getSplitDisplayName(split)}?` : 'Perform split?'}
-        centered
-      >
-        <Stack gap="md">
-          <Text>
-            This will create completed transactions for each participant and mark the split as done.
-          </Text>
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setPerformConfirmOpened(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              onClick={() => performMutation.mutate()}
-              loading={performMutation.isPending}
-            >
-              Perform
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Modal
-        opened={deleteConfirmOpened}
-        onClose={() => setDeleteConfirmOpened(false)}
-        title={split ? `Delete ${getSplitDisplayName(split)}?` : 'Delete split?'}
-        centered
-      >
-        <Stack gap="md">
-          <Text>This action removes the split permanently.</Text>
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setDeleteConfirmOpened(false)}>
-              Cancel
-            </Button>
-            <Button
-              color="red"
-              variant="light"
-              onClick={() => deleteMutation.mutate()}
-              loading={deleteMutation.isPending}
-            >
-              Delete
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
 
       <TransactionDetailsModal
         opened={transactionOpened}

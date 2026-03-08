@@ -4,6 +4,7 @@ import { IconBrandTelegram } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { telegramLogin, type TelegramAuthPayload } from '@/api/auth';
+import { APP_BRAND } from '@/content/uiVocabulary';
 import { useAuthStore } from '@/stores/auth';
 
 type TelegramWidgetUser = Omit<TelegramAuthPayload, 'link_to_current_entity'>;
@@ -19,7 +20,7 @@ type TelegramAuthButtonProps = {
 
 declare global {
   interface Window {
-    refinanceTelegramAuth?: (user: TelegramWidgetUser) => void;
+    forthspaceTelegramAuth?: (user: TelegramWidgetUser) => void;
   }
 }
 
@@ -50,6 +51,9 @@ export const TelegramAuthButton = ({
 }: TelegramAuthButtonProps) => {
   const normalizedBotUsername = botUsername?.trim() || null;
   const fallbackUrl = normalizedBotUsername ? `https://t.me/${normalizedBotUsername}` : null;
+  const hostname = typeof window === 'undefined' ? '' : window.location.hostname;
+  const isLocalOrigin = ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'].includes(hostname);
+  const widgetEnabled = enabled && !isLocalOrigin;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const widgetInitializedRef = useRef(false);
   const navigate = useNavigate();
@@ -76,7 +80,7 @@ export const TelegramAuthButton = ({
 
   useEffect(() => {
     if (
-      !enabled ||
+      !widgetEnabled ||
       !normalizedBotUsername ||
       !containerRef.current ||
       widgetInitializedRef.current
@@ -86,7 +90,7 @@ export const TelegramAuthButton = ({
 
     widgetInitializedRef.current = true;
     const container = containerRef.current;
-    window.refinanceTelegramAuth = (user) => {
+    window.forthspaceTelegramAuth = (user) => {
       void mutation.mutate(user);
     };
 
@@ -98,7 +102,7 @@ export const TelegramAuthButton = ({
     script.setAttribute('data-radius', '999');
     script.setAttribute('data-userpic', 'false');
     script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-onauth', 'refinanceTelegramAuth(user)');
+    script.setAttribute('data-onauth', 'forthspaceTelegramAuth(user)');
     script.onerror = () => {
       setWidgetLoadError('Telegram widget could not be loaded in this environment.');
     };
@@ -108,29 +112,29 @@ export const TelegramAuthButton = ({
       if (container.contains(script)) {
         container.removeChild(script);
       }
-      delete window.refinanceTelegramAuth;
+      delete window.forthspaceTelegramAuth;
       widgetInitializedRef.current = false;
     };
-  }, [enabled, mutation, normalizedBotUsername]);
+  }, [mutation, normalizedBotUsername, widgetEnabled]);
 
   return (
     <Stack gap="sm">
       <Button
-        component={enabled && fallbackUrl ? 'a' : 'button'}
-        href={enabled ? (fallbackUrl ?? undefined) : undefined}
-        target={enabled ? '_blank' : undefined}
-        rel={enabled ? 'noreferrer' : undefined}
+        component={widgetEnabled && fallbackUrl ? 'a' : 'button'}
+        href={widgetEnabled ? (fallbackUrl ?? undefined) : undefined}
+        target={widgetEnabled ? '_blank' : undefined}
+        rel={widgetEnabled ? 'noreferrer' : undefined}
         fullWidth
         radius="xl"
         color="blue"
-        disabled={!enabled || loading}
+        disabled={!widgetEnabled || loading}
         loading={loading}
         leftSection={<IconBrandTelegram size={18} />}
       >
         {mode === 'connect' ? 'Connect via Telegram' : 'Continue with Telegram'}
       </Button>
 
-      {enabled ? (
+      {widgetEnabled ? (
         <Box
           ref={containerRef}
           style={{
@@ -143,14 +147,26 @@ export const TelegramAuthButton = ({
       ) : null}
 
       <Text size="sm" c="dimmed">
-        {mode === 'connect'
-          ? 'Authorize once in Telegram to link this account to your profile.'
-          : 'Use the Telegram widget above, or open the bot manually if the widget is blocked.'}
+        {isLocalOrigin
+          ? mode === 'connect'
+            ? `Telegram linking needs the widget to run on a public URL registered for the ${APP_BRAND.shortName} bot.`
+            : `For local development, use username recovery below or open ${APP_BRAND.shortName} through a public URL registered for this bot.`
+          : mode === 'connect'
+            ? 'Authorize once in Telegram to link this account to your member profile.'
+            : 'Use the Telegram widget above, or open the bot manually if the widget is blocked.'}
       </Text>
 
       {!enabled && !loading ? (
         <Alert color="gray" title="Telegram unavailable">
           {getUnavailableMessage(reason, mode)}
+        </Alert>
+      ) : null}
+
+      {enabled && isLocalOrigin ? (
+        <Alert color="yellow" title="Bot domain invalid on localhost">
+          {mode === 'connect'
+            ? 'Telegram rejects the website login widget on local origins. Open this app through a public HTTPS URL and register that URL for the bot in BotFather Web Login before linking Telegram.'
+            : 'Telegram rejects the website login widget on local origins. Use username recovery below for local testing, or open this app through a public HTTPS URL and register that URL for the bot in BotFather Web Login.'}
         </Alert>
       ) : null}
 

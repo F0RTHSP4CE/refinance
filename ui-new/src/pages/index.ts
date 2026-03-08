@@ -8,7 +8,6 @@ export { Transactions } from './Transactions';
 export { Invoices } from './Invoices';
 export { Fee } from './Fee';
 export { Splits } from './Splits';
-export { Exchange } from './Exchange';
 export { Stats } from './Stats';
 export { Users } from './Users';
 export { Entities } from './Entities';

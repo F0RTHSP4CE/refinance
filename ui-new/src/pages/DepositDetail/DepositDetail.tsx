@@ -1,15 +1,4 @@
-import {
-  Alert,
-  Button,
-  Card,
-  Center,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Text,
-  Tooltip,
-} from '@mantine/core';
+import { Alert, Button, Center, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { IconCopy } from '@tabler/icons-react';
 import confetti from 'canvas-confetti';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,6 +10,14 @@ import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
 import { POLLING_INTERVALS } from '@/constants/polling';
+import {
+  AppCard,
+  ErrorState,
+  LoadingState,
+  PageHeader,
+  SectionCard,
+  StatusBadge,
+} from '@/components/ui';
 
 const CONFETTI_COLORS = ['#FFD700', '#FFA500', '#FF6347', '#00C851', '#2BBBAD', '#fff', '#AA66CC'];
 
@@ -97,7 +94,7 @@ export const DepositDetail = () => {
   const depositId = useMemo(() => validateDepositId(id), [id]);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
-  const [successOpen, setSuccessOpen] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
   const [oldBalance, setOldBalance] = useState<string | null>(null);
   const [devCompleteError, setDevCompleteError] = useState<string | null>(null);
   const [devCompleteLoading, setDevCompleteLoading] = useState(false);
@@ -128,7 +125,7 @@ export const DepositDetail = () => {
     queryKey: ['balances', actorEntity?.id],
     queryFn: ({ signal }) =>
       actorEntity ? getBalances(actorEntity.id, signal) : Promise.resolve(null),
-    enabled: !!actorEntity && successOpen,
+    enabled: !!actorEntity && successVisible,
   });
 
   const paymentUrl = deposit ? getPaymentUrl(deposit) : null;
@@ -179,7 +176,7 @@ export const DepositDetail = () => {
 
     devCompleteState.current.successShown = true;
     fireConfetti();
-    setSuccessOpen(true);
+    setSuccessVisible(true);
 
     if (actorEntity) {
       void queryClient.invalidateQueries({
@@ -189,7 +186,7 @@ export const DepositDetail = () => {
   }, [deposit?.status, actorEntity, queryClient]);
 
   useEffect(() => {
-    if (!successOpen || !deposit || !balances) return;
+    if (!successVisible || !deposit || !balances) return;
     const currency = deposit.currency.toLowerCase();
     const newVal = balances.completed?.[currency];
     if (newVal !== undefined) {
@@ -199,7 +196,7 @@ export const DepositDetail = () => {
     } else {
       setOldBalance('0.00');
     }
-  }, [successOpen, deposit, balances]);
+  }, [successVisible, deposit, balances]);
 
   const handleCopy = useCallback(async () => {
     if (!paymentUrl) return;
@@ -215,25 +212,22 @@ export const DepositDetail = () => {
     }
   }, [paymentUrl]);
 
-  const handleSuccessOk = useCallback(() => {
-    setSuccessOpen(false);
+  const handleSuccessDone = useCallback(() => {
+    setSuccessVisible(false);
     navigate('/');
   }, [navigate]);
 
   if (depositId === null || isError) {
     return (
-      <Center h="100%">
-        <Text c="dimmed">{error?.message ?? 'Invalid deposit ID'}</Text>
-      </Center>
+      <ErrorState
+        title="Top-up link unavailable"
+        description={error?.message ?? 'This top-up link is invalid or has already expired.'}
+      />
     );
   }
 
   if (isLoading || !deposit) {
-    return (
-      <Center h="100%">
-        <Loader />
-      </Center>
-    );
+    return <LoadingState cards={1} lines={5} />;
   }
 
   const treasuryName = deposit.from_entity?.name ?? deposit.to_treasury?.name ?? 'keepz_in';
@@ -241,35 +235,75 @@ export const DepositDetail = () => {
   const currency = deposit.currency.toLowerCase();
   const newBalanceStr = balances?.completed?.[currency];
   const newBalance = newBalanceStr ?? deposit.amount;
+  const isCompleted = deposit.status === 'completed';
+  const showSuccessPanel = successVisible || isCompleted;
 
   return (
-    <>
-      <Center py="xl">
-        <Card shadow="sm" padding="lg" radius="md" w="100%" maw={420}>
+    <Stack gap="lg">
+      <PageHeader
+        eyebrow="F0RTHSP4CE Finance"
+        title={`${deposit.amount} ${deposit.currency.toUpperCase()} top-up`}
+        subtitle="Keep this page open while the hosted payment settles, or use the link/QR code from another device."
+        actions={
+          <StatusBadge tone={isCompleted ? 'success' : 'warning'}>
+            {deposit.status}
+          </StatusBadge>
+        }
+      />
+
+      {showSuccessPanel ? (
+        <SectionCard
+          title="Top-up complete"
+          description="The payment landed and your balance is already updated."
+          action={<Button onClick={handleSuccessDone}>Back home</Button>}
+        >
+          <Group gap="lg" wrap="wrap" align="end">
+            <Stack gap={4}>
+              <Text size="sm" className="app-muted-copy">
+                Previous balance
+              </Text>
+              <Text size="lg" td="line-through" c="dimmed">
+                {oldBalance ?? '—'} {deposit.currency.toUpperCase()}
+              </Text>
+            </Stack>
+            <Stack gap={4}>
+              <Text size="sm" className="app-muted-copy">
+                Current balance
+              </Text>
+              <Text size="2rem" fw={800}>
+                {newBalance} {deposit.currency.toUpperCase()}
+              </Text>
+            </Stack>
+          </Group>
+        </SectionCard>
+      ) : null}
+
+      <div className="app-page-grid lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
+        <AppCard>
           <Stack gap="lg">
             <div>
               <Text size="xl" fw={700}>
                 {deposit.amount} {deposit.currency.toUpperCase()}
               </Text>
-              <Text size="sm" c="dimmed">
-                Status: {deposit.status} · Provider: {deposit.provider}
+              <Text size="sm" className="app-muted-copy">
+                Provider: {deposit.provider} · Into fund {treasuryName}
               </Text>
             </div>
 
-            {deposit.status === 'pending' && paymentUrl && (
+            {deposit.status === 'pending' && paymentUrl ? (
               <>
-                <Group wrap="nowrap" gap="xs" h={36}>
+                <Group wrap="nowrap" gap="xs" h={42}>
                   <Button
                     component="a"
                     href={paymentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    variant="filled"
+                    variant="default"
                     flex={1}
                     h="100%"
                     size="md"
                   >
-                    Pay now
+                    Continue payment
                   </Button>
                   <Tooltip
                     label={copied ? 'Copied!' : 'Copy link'}
@@ -277,10 +311,10 @@ export const DepositDetail = () => {
                     opened={copied ? true : undefined}
                   >
                     <Button
-                      variant="filled"
+                      variant="outline"
                       onClick={handleCopy}
                       h="100%"
-                      w={36}
+                      w={42}
                       p={0}
                       style={{ flexShrink: 0 }}
                     >
@@ -289,33 +323,36 @@ export const DepositDetail = () => {
                   </Tooltip>
                 </Group>
 
-                {copyError && (
+                {copyError ? (
                   <Alert color="red" variant="light" p="xs">
                     <Text size="xs">{copyError}</Text>
                   </Alert>
-                )}
+                ) : null}
 
-                {isDevDeposit && (
-                  <>
-                    <Text size="xs" c="dimmed">
-                      Dev mode: deposit will auto-complete in ~10 seconds.
-                    </Text>
-                    <Button
-                      variant="subtle"
-                      size="xs"
-                      onClick={() => {
-                        devCompleteState.current.triggered = true;
-                        void handleCompleteDev();
-                      }}
-                      loading={devCompleteLoading}
-                    >
-                      Complete now (dev)
-                    </Button>
-                  </>
-                )}
+                {isDevDeposit ? (
+                  <SectionCard title="Local dev">
+                    <Stack gap="xs">
+                      <Text size="sm" className="app-muted-copy">
+                        This dev top-up auto-completes in about 10 seconds.
+                      </Text>
+                      <Button
+                        variant="subtle"
+                        size="xs"
+                        w="fit-content"
+                        onClick={() => {
+                          devCompleteState.current.triggered = true;
+                          void handleCompleteDev();
+                        }}
+                        loading={devCompleteLoading}
+                      >
+                        Complete now
+                      </Button>
+                    </Stack>
+                  </SectionCard>
+                ) : null}
 
-                {devCompleteError && (
-                  <Alert color="gray" title="Dev complete failed">
+                {devCompleteError ? (
+                  <Alert color="gray" title="Dev completion failed">
                     <Stack gap="xs">
                       <Text size="sm">{devCompleteError}</Text>
                       <Button
@@ -329,60 +366,45 @@ export const DepositDetail = () => {
                       </Button>
                     </Stack>
                   </Alert>
-                )}
-
-                <Text size="xs" c="dimmed">
-                  Scan the QR code to pay from mobile.
-                </Text>
-
-                <Center>
-                  <QRCodeSVG value={paymentUrl} size={200} level="M" />
-                </Center>
+                ) : null}
               </>
+            ) : (
+              <Alert color={isCompleted ? 'green' : 'gray'} title={isCompleted ? 'Payment settled' : 'Waiting for payment'}>
+                {isCompleted
+                  ? 'The hosted payment finished and the resulting balance is shown above.'
+                  : 'Open the payment link again if you still need to complete this top-up.'}
+              </Alert>
             )}
 
-            <Text size="sm" c="dimmed">
-              Depositing to treasury {treasuryName}
-            </Text>
-
-            <Group gap="md">
-              <Text size="xs" c="dimmed">
+            <Group gap="md" wrap="wrap">
+              <Text size="xs" className="app-muted-copy">
                 ID: {deposit.id}
               </Text>
-              <Text size="xs" c="dimmed">
+              <Text size="xs" className="app-muted-copy">
                 Created: {formatRelativeTime(deposit.created_at)}
               </Text>
             </Group>
           </Stack>
-        </Card>
-      </Center>
+        </AppCard>
 
-      <Modal
-        opened={successOpen}
-        onClose={handleSuccessOk}
-        title="Payment successful!"
-        centered
-        withCloseButton={false}
-      >
-        <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Your balance has been updated.
-          </Text>
-          <Group gap="xs" align="baseline">
-            {oldBalance !== null && (
-              <Text size="lg" td="line-through" c="dimmed">
-                {oldBalance} {deposit.currency.toUpperCase()}
+        <AppCard>
+          <Stack gap="md" align="center">
+            <Text fw={700}>Pay from another device</Text>
+            <Text size="sm" ta="center" className="app-muted-copy">
+              Scan this QR code from mobile if that is the fastest way to finish the top-up.
+            </Text>
+            {paymentUrl ? (
+              <Center>
+                <QRCodeSVG value={paymentUrl} size={200} level="M" />
+              </Center>
+            ) : (
+              <Text size="sm" className="app-muted-copy">
+                QR code appears when a payment link is available.
               </Text>
             )}
-            <Text size="lg" fw={700}>
-              {newBalance} {deposit.currency.toUpperCase()}
-            </Text>
-          </Group>
-          <Button onClick={handleSuccessOk} fullWidth>
-            OK
-          </Button>
-        </Stack>
-      </Modal>
-    </>
+          </Stack>
+        </AppCard>
+      </div>
+    </Stack>
   );
 };

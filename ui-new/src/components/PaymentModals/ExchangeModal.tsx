@@ -1,14 +1,4 @@
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  Group,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-} from '@mantine/core';
+import { ActionIcon, Alert, Button, Group, NumberInput, Stack, Text } from '@mantine/core';
 import {
   IconArrowDown,
   IconArrowRight,
@@ -20,10 +10,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth';
 import { useExchangeFlow } from './useExchangeFlow';
-import { PaymentSuccessModal } from '../PaymentSuccess';
 import { getBalances } from '@/api/balance';
 import { getExchangeRates } from '@/api/currency-exchange';
 import { z } from 'zod';
+import {
+  AppModal,
+  AppModalFooter,
+  AppSelect,
+  ModalStepHeader,
+  SectionCard,
+  StatCard,
+} from '@/components/ui';
 
 const CURRENCIES = [
   { value: 'GEL', label: 'GEL' },
@@ -134,11 +131,10 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
     cancelPreview,
     goToPreview,
     closeSuccess,
+    reset,
     isExecuting,
     executeError,
-  } = useExchangeFlow({
-    onSuccess: onClose,
-  });
+  } = useExchangeFlow();
 
   const { data: freshBalances } = useQuery({
     queryKey: ['balances', actorEntity?.id],
@@ -257,18 +253,72 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
     }
   };
 
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleSuccessClose = () => {
+    closeSuccess();
+    onClose();
+  };
+
   if (!actorEntity) return null;
 
   return (
-    <>
-      <Modal
-        opened={opened && state.step !== 'success'}
-        onClose={onClose}
-        title={state.step === 'form' ? 'Exchange' : 'Confirm Exchange'}
-        centered
-        closeOnClickOutside={state.step === 'form'}
-        closeOnEscape={state.step === 'form'}
-      >
+    <AppModal
+      opened={opened}
+      onClose={state.step === 'success' ? handleSuccessClose : handleClose}
+      variant="form"
+      title={state.step === 'success' ? 'Exchange completed' : 'Exchange balance'}
+      subtitle={
+        state.step === 'success'
+          ? 'The balance move has been applied and the updated balances are shown below.'
+          : 'Convert between currencies with a quick review step before anything is executed.'
+      }
+      closeOnClickOutside={state.step === 'form'}
+      closeOnEscape={state.step === 'form'}
+      footer={
+        state.step === 'form' ? (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleClose}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button
+                onClick={handleGoToPreview}
+                disabled={
+                  !conversion ||
+                  !!errors.sourceAmount ||
+                  !!errors.targetAmount ||
+                  !!errors.targetCurrency
+                }
+              >
+                Review exchange
+              </Button>
+            }
+          />
+        ) : state.step === 'preview' ? (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={cancelPreview}>
+                Back
+              </Button>
+            }
+            primary={
+              <Button onClick={() => executeExchange(inputMode)} loading={isExecuting}>
+                Confirm exchange
+              </Button>
+            }
+          />
+        ) : (
+          <AppModalFooter primary={<Button onClick={handleSuccessClose}>Close</Button>} />
+        )
+      }
+    >
+      <Stack gap="lg">
         {state.step === 'form' && (
           <form
             onSubmit={(e) => {
@@ -277,6 +327,12 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
             }}
           >
             <Stack gap="md">
+              <ModalStepHeader
+                eyebrow="Step 1"
+                title="Set the currencies and amount"
+                description="Enter the amount on either side and the exchange preview will calculate the other value."
+              />
+
               <Group align="flex-start">
                 <Stack gap={4} flex={1}>
                   <Text size="xs" c="dimmed" fw={600}>
@@ -304,7 +360,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     name="sourceCurrency"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <AppSelect
                         data={CURRENCIES}
                         error={errors.sourceCurrency?.message}
                         value={field.value}
@@ -352,7 +408,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     name="targetCurrency"
                     control={control}
                     render={({ field }) => (
-                      <Select
+                      <AppSelect
                         data={CURRENCIES}
                         error={errors.targetCurrency?.message}
                         value={field.value}
@@ -374,119 +430,106 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
               <Text size="sm" c="dimmed" ta="center">
                 1 {sourceCurrency} = {exchangeRate ?? '−'} {targetCurrency}
               </Text>
-
-              <Group justify="flex-end" gap="xs">
-                <Button variant="subtle" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    !conversion ||
-                    !!errors.sourceAmount ||
-                    !!errors.targetAmount ||
-                    !!errors.targetCurrency
-                  }
-                >
-                  Exchange
-                </Button>
-              </Group>
             </Stack>
           </form>
         )}
 
         {state.step === 'preview' && state.previewData && (
           <Stack gap="md">
-            <Text size="sm" c="dimmed">
-              You are about to exchange:
-            </Text>
+            <ModalStepHeader
+              eyebrow="Step 2"
+              title="Review exchange"
+              description="Check the direction, rate, and resulting balances before confirming."
+            />
 
-            <Group gap="xs" align="baseline">
-              <Text size="xl" fw={700}>
-                {state.previewData.source_amount} {state.previewData.source_currency.toUpperCase()}
-              </Text>
-              <IconArrowRight size={20} />
-              <Text size="xl" fw={700}>
-                {state.previewData.target_amount} {state.previewData.target_currency.toUpperCase()}
-              </Text>
-            </Group>
+            <SectionCard title="Exchange direction">
+              <Group gap="xs" align="baseline">
+                <Text size="xl" fw={700}>
+                  {state.previewData.source_amount}{' '}
+                  {state.previewData.source_currency.toUpperCase()}
+                </Text>
+                <IconArrowRight size={20} />
+                <Text size="xl" fw={700}>
+                  {state.previewData.target_amount}{' '}
+                  {state.previewData.target_currency.toUpperCase()}
+                </Text>
+              </Group>
+            </SectionCard>
 
-            <Stack gap={2}>
-              <Text size="sm" fw={500}>
-                Exchange rate:
-              </Text>
+            <SectionCard title="Rate">
               <Text size="lg">
                 1 {state.previewData.source_currency.toUpperCase()} = {state.previewData.rate}{' '}
                 {state.previewData.target_currency.toUpperCase()}
               </Text>
-            </Stack>
+            </SectionCard>
 
-            <Stack gap={2}>
-              <Text size="sm" fw={500}>
-                Your balances will change:
-              </Text>
-              <Text size="sm" c="dimmed">
-                {state.previewData.source_currency.toUpperCase()}:{' '}
-                {getBalance(state.previewData.source_currency).toFixed(2)} →{' '}
-                {(
-                  getBalance(state.previewData.source_currency) -
-                  parseFloat(state.previewData.source_amount)
-                ).toFixed(2)}
-              </Text>
-              <Text size="sm" c="dimmed">
-                {state.previewData.target_currency.toUpperCase()}:{' '}
-                {getBalance(state.previewData.target_currency).toFixed(2)} →{' '}
-                {(
-                  getBalance(state.previewData.target_currency) +
-                  parseFloat(state.previewData.target_amount)
-                ).toFixed(2)}
-              </Text>
-            </Stack>
+            <SectionCard title="Balance impact">
+              <Group grow align="stretch">
+                <StatCard
+                  label={state.previewData.source_currency.toUpperCase()}
+                  value={(
+                    getBalance(state.previewData.source_currency) -
+                    parseFloat(state.previewData.source_amount)
+                  ).toFixed(2)}
+                  caption={`Was ${getBalance(state.previewData.source_currency).toFixed(2)}`}
+                />
+                <StatCard
+                  label={state.previewData.target_currency.toUpperCase()}
+                  value={(
+                    getBalance(state.previewData.target_currency) +
+                    parseFloat(state.previewData.target_amount)
+                  ).toFixed(2)}
+                  caption={`Was ${getBalance(state.previewData.target_currency).toFixed(2)}`}
+                />
+              </Group>
+            </SectionCard>
 
             {executeError && (
               <Alert color="red" title="Error">
                 {executeError.message}
               </Alert>
             )}
-
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={cancelPreview}>
-                Back
-              </Button>
-              <Button onClick={() => executeExchange(inputMode)} loading={isExecuting}>
-                Confirm Exchange
-              </Button>
-            </Group>
           </Stack>
         )}
-      </Modal>
 
-      {state.step === 'success' && state.previewData && (
-        <PaymentSuccessModal
-          opened
-          onClose={closeSuccess}
-          amount={parseFloat(state.previewData.source_amount)}
-          currency={state.previewData.source_currency}
-          exchangeAmount={parseFloat(state.previewData.target_amount)}
-          exchangeCurrency={state.previewData.target_currency}
-          balanceChanges={[
-            {
-              oldBalance:
-                balancesBeforeExchange[state.previewData.source_currency]?.toFixed(2) ?? '0.00',
-              newBalance: getBalance(state.previewData.source_currency).toFixed(2),
-              currency: state.previewData.source_currency,
-            },
-            {
-              oldBalance:
-                balancesBeforeExchange[state.previewData.target_currency]?.toFixed(2) ?? '0.00',
-              newBalance: getBalance(state.previewData.target_currency).toFixed(2),
-              currency: state.previewData.target_currency,
-            },
-          ]}
-          title="Exchange Successful!"
-        />
-      )}
-    </>
+        {state.step === 'success' && state.previewData ? (
+          <Stack gap="md">
+            <ModalStepHeader
+              eyebrow="Completed"
+              title="Balances updated"
+              description="The exchange is complete and the new balances are reflected below."
+            />
+
+            <SectionCard title="Result">
+              <Group gap="xs" align="baseline">
+                <Text size="xl" fw={700}>
+                  {state.previewData.source_amount}{' '}
+                  {state.previewData.source_currency.toUpperCase()}
+                </Text>
+                <IconArrowRight size={20} />
+                <Text size="xl" fw={700}>
+                  {state.previewData.target_amount}{' '}
+                  {state.previewData.target_currency.toUpperCase()}
+                </Text>
+              </Group>
+            </SectionCard>
+
+            <Group grow align="stretch">
+              <StatCard
+                label={`${state.previewData.source_currency.toUpperCase()} balance`}
+                value={getBalance(state.previewData.source_currency).toFixed(2)}
+                caption={`Was ${balancesBeforeExchange[state.previewData.source_currency]?.toFixed(2) ?? '0.00'}`}
+              />
+              <StatCard
+                label={`${state.previewData.target_currency.toUpperCase()} balance`}
+                value={getBalance(state.previewData.target_currency).toFixed(2)}
+                caption={`Was ${balancesBeforeExchange[state.previewData.target_currency]?.toFixed(2) ?? '0.00'}`}
+              />
+            </Group>
+          </Stack>
+        ) : null}
+      </Stack>
+    </AppModal>
   );
 };
 

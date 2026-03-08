@@ -1,8 +1,9 @@
-import { Alert, Button, Group, Modal, Select, Stack, Text } from '@mantine/core';
+import { Alert, Button, Stack } from '@mantine/core';
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { payInvoice } from '@/api/invoices';
 import type { Invoice, Transaction } from '@/types/api';
+import { AppModal, AppModalFooter, AppSelect, ModalStepHeader } from '@/components/ui';
 
 type InvoicePayModalProps = {
   opened: boolean;
@@ -49,19 +50,40 @@ export const InvoicePayModal = ({ opened, invoice, onClose, onPaid }: InvoicePay
   });
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={invoice ? `Pay Invoice #${invoice.id}` : 'Pay invoice'}
-      centered
+      variant="compact"
+      subtitle="Choose which amount to settle and create the completed transaction."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button
+              variant="default"
+              onClick={() => payMutation.mutate()}
+              loading={payMutation.isPending}
+            >
+              Pay now
+            </Button>
+          }
+        />
+      }
     >
       <Stack gap="md">
         {invoice ? (
           <>
-            <Text size="sm" c="dimmed">
-              Choose which invoice amount to pay. The payment is created as a completed transaction.
-            </Text>
-            <Select
+            <ModalStepHeader
+              eyebrow="Settlement"
+              title={`Invoice #${invoice.id}`}
+              description="Choose which invoice amount to pay. The payment is created as a completed transaction."
+            />
+            <AppSelect
               label="Amount"
               data={options}
               value={selectedCurrency}
@@ -76,20 +98,7 @@ export const InvoicePayModal = ({ opened, invoice, onClose, onPaid }: InvoicePay
             {payMutation.error.message}
           </Alert>
         ) : null}
-
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="default"
-            onClick={() => payMutation.mutate()}
-            loading={payMutation.isPending}
-          >
-            Pay now
-          </Button>
-        </Group>
       </Stack>
-    </Modal>
+    </AppModal>
   );
 };

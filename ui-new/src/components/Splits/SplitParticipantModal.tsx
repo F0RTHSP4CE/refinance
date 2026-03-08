@@ -1,11 +1,7 @@
 import {
   Alert,
   Button,
-  Group,
-  Modal,
   NumberInput,
-  SegmentedControl,
-  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -21,6 +17,13 @@ import { addSplitParticipant, getSplit } from '@/api/splits';
 import { getTags } from '@/api/tags';
 import { useAuthStore } from '@/stores/auth';
 import type { Split } from '@/types/api';
+import {
+  AppModal,
+  AppModalFooter,
+  AppSegmentedControl,
+  AppSelect,
+  ModalStepHeader,
+} from '@/components/ui';
 
 const participantSchema = z.object({
   entity_id: z.string().optional(),
@@ -168,14 +171,41 @@ export const SplitParticipantModal = ({
   const fixedAmountPlaceholder = split?.share_preview.next_share ?? '';
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={handleClose}
       title={mode === 'join' ? 'Join split' : 'Add participant'}
-      centered
+      subtitle="Add a person or tag group and optionally set a fixed amount for their share."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={handleClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button
+              type="submit"
+              form="split-participant-form"
+              variant="default"
+              loading={saveMutation.isPending}
+            >
+              {mode === 'join' ? 'Join split' : 'Add participant'}
+            </Button>
+          }
+        />
+      }
     >
-      <form onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}>
+      <form
+        id="split-participant-form"
+        onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}
+      >
         <Stack gap="md">
+          <ModalStepHeader
+            eyebrow={mode === 'join' ? 'Participation' : 'Participants'}
+            title={mode === 'join' ? 'Join split' : 'Add participant'}
+            description="Use a fixed amount only when this person or tag should not share the remaining amount equally."
+          />
           {mode === 'join' ? (
             <TextInput label="Entity" value={actorEntity?.name ?? 'Current actor'} readOnly />
           ) : null}
@@ -185,7 +215,7 @@ export const SplitParticipantModal = ({
               <Text size="sm" fw={500} mb={6}>
                 Add by
               </Text>
-              <SegmentedControl
+              <AppSegmentedControl
                 fullWidth
                 value={activeSelectionMode}
                 onChange={(value) => {
@@ -207,7 +237,7 @@ export const SplitParticipantModal = ({
               name="entity_id"
               control={control}
               render={({ field }) => (
-                <Select
+                <AppSelect
                   label="Entity"
                   placeholder="Select participant"
                   searchable
@@ -228,7 +258,7 @@ export const SplitParticipantModal = ({
               name="entity_tag_id"
               control={control}
               render={({ field }) => (
-                <Select
+                <AppSelect
                   label="Entity tag"
                   placeholder="Add all matching entities"
                   searchable
@@ -272,17 +302,8 @@ export const SplitParticipantModal = ({
               {saveMutation.error.message}
             </Alert>
           ) : null}
-
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" loading={saveMutation.isPending}>
-              {mode === 'join' ? 'Join' : 'Add participant'}
-            </Button>
-          </Group>
         </Stack>
       </form>
-    </Modal>
+    </AppModal>
   );
 };

@@ -3,10 +3,7 @@ import {
   Alert,
   Button,
   Group,
-  Modal,
-  MultiSelect,
   NumberInput,
-  Select,
   Stack,
   Text,
   TextInput,
@@ -22,6 +19,14 @@ import { getEntities } from '@/api/entities';
 import { getTags } from '@/api/tags';
 import { CURRENCIES } from '@/constants/entities';
 import type { Invoice } from '@/types/api';
+import {
+  AppModal,
+  AppModalFooter,
+  AppMonthField,
+  AppMultiSelect,
+  AppSelect,
+  ModalStepHeader,
+} from '@/components/ui';
 
 const amountRowSchema = z.object({
   currency: z.enum(CURRENCIES),
@@ -184,21 +189,48 @@ export const InvoiceEditorModal = ({
       .sort((left, right) => left.label.localeCompare(right.label)) ?? [];
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={invoice ? `Edit Invoice #${invoice.id}` : 'Create Invoice'}
-      centered
-      size="lg"
+      variant="detail"
+      subtitle="Define participants, amounts, period, and tags in one invoice editing flow."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button
+              type="submit"
+              form="invoice-editor-form"
+              variant="default"
+              loading={saveMutation.isPending}
+            >
+              {invoice ? 'Save changes' : 'Create invoice'}
+            </Button>
+          }
+        />
+      }
     >
-      <form onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}>
+      <form
+        id="invoice-editor-form"
+        onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}
+      >
         <Stack gap="md">
+          <ModalStepHeader
+            eyebrow={invoice ? 'Invoice editor' : 'New invoice'}
+            title={invoice ? `Invoice #${invoice.id}` : 'Create invoice'}
+            description="Use multiple amount rows when the invoice can be settled in more than one currency."
+          />
           <Group grow align="start">
             <Controller
               name="from_entity_id"
               control={control}
               render={({ field }) => (
-                <Select
+                <AppSelect
                   label="From"
                   placeholder="Select payer"
                   searchable
@@ -213,7 +245,7 @@ export const InvoiceEditorModal = ({
               name="to_entity_id"
               control={control}
               render={({ field }) => (
-                <Select
+                <AppSelect
                   label="To"
                   placeholder="Select receiver"
                   searchable
@@ -230,8 +262,7 @@ export const InvoiceEditorModal = ({
             name="billing_period"
             control={control}
             render={({ field }) => (
-              <TextInput
-                type="month"
+              <AppMonthField
                 label="Billing period"
                 value={field.value || ''}
                 onChange={field.onChange}
@@ -243,7 +274,7 @@ export const InvoiceEditorModal = ({
             name="tag_ids"
             control={control}
             render={({ field }) => (
-              <MultiSelect
+              <AppMultiSelect
                 label="Tags"
                 placeholder="Optional tags"
                 data={tagOptions}
@@ -293,7 +324,7 @@ export const InvoiceEditorModal = ({
                   name={`amounts.${index}.currency`}
                   control={control}
                   render={({ field }) => (
-                    <Select
+                    <AppSelect
                       label={index === 0 ? 'Currency' : undefined}
                       data={CURRENCIES.map((currency) => ({ value: currency, label: currency }))}
                       value={field.value}
@@ -341,17 +372,8 @@ export const InvoiceEditorModal = ({
               {saveMutation.error.message}
             </Alert>
           ) : null}
-
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" loading={saveMutation.isPending}>
-              {invoice ? 'Save changes' : 'Create invoice'}
-            </Button>
-          </Group>
         </Stack>
       </form>
-    </Modal>
+    </AppModal>
   );
 };

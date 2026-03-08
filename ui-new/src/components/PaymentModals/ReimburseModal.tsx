@@ -1,16 +1,5 @@
 import { useCallback } from 'react';
-import {
-  Alert,
-  Button,
-  Group,
-  Image,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-} from '@mantine/core';
+import { Alert, Button, Image, Group, NumberInput, Stack, TextInput } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,8 +8,7 @@ import { useAuthStore } from '@/stores/auth';
 import { CURRENCIES } from '@/constants/entities';
 import { getServiceEntityIds } from '@/api/serviceEntities';
 import { usePaymentFlow } from './usePaymentFlow';
-import { ConfirmTransactionModal } from '@/components/ConfirmTransaction';
-import { PaymentSuccessModal } from '@/components/PaymentSuccess';
+import { AppModal, AppModalFooter, AppSelect, ModalStepHeader, SectionCard } from '@/components/ui';
 
 const reimburseSchema = z.object({
   source: z.enum(['fridge', 'coffee']),
@@ -32,8 +20,8 @@ const reimburseSchema = z.object({
 type ReimburseFormValues = z.infer<typeof reimburseSchema>;
 
 const SOURCE_OPTIONS = [
-  { value: 'fridge', label: 'Fridge' },
-  { value: 'coffee', label: 'Coffee Machine' },
+  { value: 'fridge', label: 'Fridge stash' },
+  { value: 'coffee', label: 'Coffee stash' },
 ] as const;
 
 type ReimburseModalProps = {
@@ -71,8 +59,6 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
     },
   });
 
-  const currency = useWatch({ control, name: 'currency' });
-  const amount = useWatch({ control, name: 'amount' });
   const source = useWatch({ control, name: 'source' });
   const { data: serviceEntityIds } = useQuery({
     queryKey: ['service-entity-ids'],
@@ -120,28 +106,82 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
   if (!actorEntity) return null;
 
   const balanceInfo = getBalanceInfo();
-  const sourceName = source === 'fridge' ? 'Fridge' : 'Coffee Machine';
+  const sourceName = source === 'fridge' ? 'Fridge stash' : 'Coffee stash';
+  const isFormStep = state.step === 'form';
+  const isConfirmStep = state.step === 'confirm';
+  const isSuccessStep = state.step === 'success';
 
   return (
-    <>
-      <Modal
-        opened={opened && state.step === 'form'}
-        onClose={handleClose}
-        title="Reimburse"
-        centered
-      >
-        <form onSubmit={(e) => void handleSubmit(handleFormSubmit)(e)}>
+    <AppModal
+      opened={opened}
+      onClose={handleClose}
+      title={
+        isSuccessStep
+          ? 'Reimbursement complete'
+          : isConfirmStep
+            ? 'Review reimbursement'
+            : 'Shared supplies reimbursement'
+      }
+      subtitle={
+        isSuccessStep
+          ? 'The reimbursement is complete and your balance is already refreshed.'
+          : isConfirmStep
+            ? 'Check the source, amount, and note before confirming this reimbursement.'
+            : 'Recover fridge or coffee supply costs you covered for F0RTHSP4CE.'
+      }
+      footer={
+        isSuccessStep ? (
+          <AppModalFooter
+            primary={
+              <Button variant="default" onClick={handleSuccessClose}>
+                Done
+              </Button>
+            }
+          />
+        ) : isConfirmStep ? (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleConfirmCancel}>
+                Back
+              </Button>
+            }
+            primary={
+              <Button variant="default" onClick={handleConfirmConfirm} loading={isConfirming}>
+                Confirm
+              </Button>
+            }
+          />
+        ) : (
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleClose}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button type="submit" form="reimburse-form" loading={isCreating} variant="default">
+                Review
+              </Button>
+            }
+          />
+        )
+      }
+    >
+      {isFormStep ? (
+        <form id="reimburse-form" onSubmit={(e) => void handleSubmit(handleFormSubmit)(e)}>
           <Stack gap="md">
-            <Text size="sm" c="dimmed">
-              Request reimbursement for drinks, snacks, or coffee supplies you refilled.
-            </Text>
+            <ModalStepHeader
+              eyebrow="Shared supplies"
+              title="Shared supplies reimbursement"
+              description="Choose the stash you refilled, set the amount, and review the reimbursement before it lands in your balance."
+            />
 
             <Controller
               name="source"
               control={control}
               render={({ field, fieldState }) => (
-                <Select
-                  label="Source"
+                <AppSelect
+                  label="Source stash"
                   data={SOURCE_OPTIONS}
                   error={fieldState.error?.message}
                   value={field.value}
@@ -174,9 +214,9 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
                 name="currency"
                 control={control}
                 render={({ field, fieldState }) => (
-                  <Select
+                  <AppSelect
                     label="Currency"
-                    data={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                    data={CURRENCIES.map((item) => ({ value: item, label: item }))}
                     error={fieldState.error?.message}
                     value={field.value}
                     onChange={field.onChange}
@@ -192,8 +232,8 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
               control={control}
               render={({ field }) => (
                 <TextInput
-                  label="Comment"
-                  placeholder="optional - e.g., 'Refilled drinks for March'"
+                  label="Note"
+                  placeholder="Optional note, for example: restocked drinks for March"
                   value={field.value || ''}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -201,46 +241,55 @@ export const ReimburseModal = ({ opened, onClose }: ReimburseModalProps) => {
               )}
             />
 
-            {createError && (
-              <Alert color="red" title="Error">
+            {createError ? (
+              <Alert color="red" title="Could not prepare the reimbursement">
                 {createError.message}
               </Alert>
-            )}
+            ) : null}
 
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button type="submit" loading={isCreating}>
-                Request {amount} {currency}
-              </Button>
-            </Group>
-
-            <Image src="/images/reimburse.jpg" alt="Reimburse" radius="md" mt="md" />
+            <Image src="/images/reimburse.jpg" alt="F0RTHSP4CE reimburse supplies" radius="md" />
           </Stack>
         </form>
-      </Modal>
+      ) : null}
 
-      <ConfirmTransactionModal
-        opened={state.step === 'confirm'}
-        onConfirm={handleConfirmConfirm}
-        onCancel={handleConfirmCancel}
-        isLoading={isConfirming}
-        amount={state.amount}
-        currency={state.currency}
-        direction="receive"
-        targetName={sourceName}
-      />
+      {isConfirmStep ? (
+        <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Review reimbursement"
+            title={`${state.amount} ${state.currency.toUpperCase()}`}
+            description={`You are about to receive funds back from the ${sourceName.toLowerCase()} stash.`}
+          />
+          <SectionCard title="What will happen">
+            <Stack gap="sm">
+              <Alert color="blue" title="Incoming reimbursement">
+                This returns money from the {sourceName.toLowerCase()} stash to your balance and completes the transaction.
+              </Alert>
+            </Stack>
+          </SectionCard>
+        </Stack>
+      ) : null}
 
-      <PaymentSuccessModal
-        opened={state.step === 'success'}
-        onClose={handleSuccessClose}
-        amount={state.amount}
-        currency={state.currency}
-        oldBalance={balanceInfo.old}
-        newBalance={balanceInfo.new}
-        title="Reimbursement Successful!"
-      />
-    </>
+      {isSuccessStep ? (
+        <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Completed"
+            title={`${state.amount} ${state.currency.toUpperCase()}`}
+            description="The reimbursement is complete."
+          />
+          {balanceInfo.old && balanceInfo.new ? (
+            <SectionCard title="Balance update">
+              <Stack gap={4}>
+                <div className="app-muted-copy">
+                  Before: {balanceInfo.old} {state.currency.toUpperCase()}
+                </div>
+                <div>
+                  Now: {balanceInfo.new} {state.currency.toUpperCase()}
+                </div>
+              </Stack>
+            </SectionCard>
+          ) : null}
+        </Stack>
+      ) : null}
+    </AppModal>
   );
 };

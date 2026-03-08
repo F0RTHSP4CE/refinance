@@ -4,6 +4,6 @@ export const isLinkActive = (pathname: string, to: string) => {
 };
 
 export const getActiveLinkTextProps = (isActive: boolean) => ({
-  c: isActive ? 'green.5' : undefined,
-  fw: isActive ? 600 : 400,
+  c: isActive ? 'var(--app-accent)' : 'var(--app-text-secondary)',
+  fw: isActive ? 700 : 500,
 });

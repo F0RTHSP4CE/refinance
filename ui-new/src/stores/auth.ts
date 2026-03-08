@@ -13,6 +13,7 @@ type AuthState = {
   token: string | null;
   actorEntity: ActorEntity | null;
   isLoading: boolean;
+  isInitialized: boolean;
   authError: string | null;
   setToken: (token: string) => void;
   clearSession: () => void;
@@ -23,29 +24,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: getInitialToken(),
   actorEntity: null,
   isLoading: false,
+  isInitialized: false,
   authError: null,
   setToken: (token: string) => {
     window.localStorage.setItem(TOKEN_KEY, token);
-    set({ token, authError: null });
+    set({ token, authError: null, isInitialized: false });
   },
   clearSession: () => {
     window.localStorage.removeItem(TOKEN_KEY);
-    set({ token: null, actorEntity: null, authError: null });
+    set({ token: null, actorEntity: null, authError: null, isLoading: false, isInitialized: true });
   },
   loadActor: async () => {
     const token = get().token;
     if (!token) {
-      set({ actorEntity: null, authError: null });
+      set({ actorEntity: null, authError: null, isLoading: false, isInitialized: true });
       return;
     }
 
     set({ isLoading: true, authError: null });
     try {
       const actorEntity = await apiRequest<ActorEntity>('entities/me', { token });
-      set({ actorEntity, isLoading: false });
+      set({ actorEntity, isLoading: false, isInitialized: true });
     } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        window.localStorage.removeItem(TOKEN_KEY);
+        set({
+          token: null,
+          actorEntity: null,
+          isLoading: false,
+          isInitialized: true,
+          authError: null,
+        });
+        return;
+      }
+
       const message = error instanceof ApiError ? error.message : 'Unknown authentication error';
-      set({ actorEntity: null, isLoading: false, authError: message });
+      set({ actorEntity: null, isLoading: false, isInitialized: true, authError: message });
     }
   },
 }));

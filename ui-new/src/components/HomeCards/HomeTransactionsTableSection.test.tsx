@@ -18,7 +18,21 @@ vi.mock('@/api/transactions', () => ({
 
 const mockActorEntity = { id: 1, name: 'Test User' };
 
+const setDesktopMatchMedia = () => {
+  window.matchMedia = vi.fn().mockImplementation((query) => ({
+    matches: query.includes('min-width'),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
 const renderWithProviders = (ui: React.ReactElement) => {
+  setDesktopMatchMedia();
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -72,7 +86,7 @@ describe('HomeTransactionsTableSection', () => {
     renderWithProviders(<HomeTransactionsTableSection />);
 
     await waitFor(() => {
-      expect(screen.getByText('Latest Transactions')).toBeInTheDocument();
+      expect(screen.getByText(/Latest transactions/i)).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute(
         'href',
         '/transactions'

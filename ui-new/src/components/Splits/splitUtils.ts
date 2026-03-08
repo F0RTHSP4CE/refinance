@@ -1,12 +1,11 @@
+import { SPLIT_PARTICIPANT_COLORS, colorByStableIndex } from '@/constants/uiPalette';
 import type { Split, SplitParticipant } from '@/types/api';
 
 export const getSplitDisplayName = (split: Pick<Split, 'id' | 'comment'>) =>
   split.comment || `Split #${split.id}`;
 
-export const getSplitParticipantHue = (entityId: number) => (entityId * 137 + 30) % 360;
-
 export const getSplitParticipantColor = (entityId: number) =>
-  `hsl(${getSplitParticipantHue(entityId)}, 100%, 55%)`;
+  colorByStableIndex(entityId, SPLIT_PARTICIPANT_COLORS);
 
 export const getSplitParticipantShare = (participant: SplitParticipant, split: Split) =>
   participant.fixed_amount ?? split.share_preview.current_share;

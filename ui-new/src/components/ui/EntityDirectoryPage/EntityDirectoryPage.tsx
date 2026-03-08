@@ -1,16 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  Anchor,
-  Button,
-  Group,
-  Modal,
-  MultiSelect,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+import { Anchor, Alert, Button, Group, Stack, Text, TextInput } from '@mantine/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
@@ -18,32 +7,51 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 import { createEntity, getEntities } from '@/api/entities';
 import { getTags } from '@/api/tags';
-import { EntityEditModal } from '@/components/EntityEditModal';
+import { EntityEditModal } from '@/components/EntityEditModal/EntityEditModal';
 import {
   MoneyActionModal,
   type MoneyActionMode,
 } from '@/components/MoneyActionModal/MoneyActionModal';
 import { useAuthStore } from '@/stores/auth';
 import type { Entity, Tag } from '@/types/api';
-import { AccentSurface } from '../AccentSurface';
-import { AppCard } from '../AppCard';
+import { AppModal, AppModalFooter } from '../AppModal';
+import { AppMultiSelect } from '../AppMultiSelect';
 import { DataTable, type DataTableColumn } from '../DataTable';
+import { FilterBar } from '../FilterBar';
+import { ModalStepHeader } from '../ModalStepHeader';
+import { PageHeader } from '../PageHeader';
 import { RelativeDate } from '../RelativeDate';
+import { SectionCard } from '../SectionCard';
 import { StatusBadge } from '../StatusBadge';
 import { TagList } from '../TagList';
 
 export type EntityDirectoryConfig = {
-  title: string;
-  subtitle: string;
-  addButtonLabel: string;
-  createModalTitle: string;
-  createSubmitLabel: string;
-  searchPlaceholder: string;
-  tagFilterPlaceholder: string;
-  emptyLoadingMessage: string;
-  emptyMessage: string;
-  formNamePlaceholder: string;
-  formTagPlaceholder: string;
+  labels: {
+    singular: string;
+    plural: string;
+    searchLabel: string;
+    tagsLabel: string;
+    activeLabel: string;
+    inactiveLabel: string;
+    emptyComment: string;
+  };
+  copy: {
+    eyebrow: string;
+    subtitle: string;
+    addButtonLabel: string;
+    createTitle: string;
+    createSubmitLabel: string;
+    createSubtitle: string;
+    createDescription: string;
+    searchPlaceholder: string;
+    tagFilterPlaceholder: string;
+    emptyLoadingMessage: string;
+    emptyMessage: string;
+    formNamePlaceholder: string;
+    formTagPlaceholder: string;
+    listTitle: string;
+    listDescription: string;
+  };
   queryScope: string;
   filterEntities: (entities: Entity[]) => Entity[];
   filterTagOptions: (tags: Tag[]) => Tag[];
@@ -182,8 +190,8 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
       key: 'active',
       label: 'Active',
       render: (entity) => (
-        <StatusBadge tone={entity.active ? 'positive' : 'neutral'}>
-          {entity.active ? 'Active' : 'Inactive'}
+        <StatusBadge tone={entity.active ? 'success' : 'danger'}>
+          {entity.active ? config.labels.activeLabel : config.labels.inactiveLabel}
         </StatusBadge>
       ),
     },
@@ -249,68 +257,160 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="end">
-        <div>
-          <Title order={2}>{config.title}</Title>
-          <Text c="dimmed" size="sm">
-            {config.subtitle}
-          </Text>
-        </div>
-        <Button variant="default" onClick={() => setCreateOpened(true)}>
-          {config.addButtonLabel}
-        </Button>
-      </Group>
+      <PageHeader
+        eyebrow={config.copy.eyebrow}
+        title={config.labels.plural}
+        subtitle={config.copy.subtitle}
+        actions={
+          <Button variant="default" onClick={() => setCreateOpened(true)}>
+            {config.copy.addButtonLabel}
+          </Button>
+        }
+      />
 
-      <AccentSurface>
+      <FilterBar
+        title="Filters"
+        description={`Search by name or narrow the ${config.labels.plural.toLowerCase()} list by shared labels.`}
+        resultSummary={`${entities.length} ${config.labels.plural.toLowerCase()} visible`}
+      >
         <Stack gap="md">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <TextInput
-              label="Search"
-              placeholder={config.searchPlaceholder}
+              label={config.labels.searchLabel}
+              placeholder={config.copy.searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.currentTarget.value)}
             />
-            <MultiSelect
-              label="Tags filter"
-              placeholder={config.tagFilterPlaceholder}
+            <AppMultiSelect
+              label={config.labels.tagsLabel}
+              placeholder={config.copy.tagFilterPlaceholder}
               data={selectableTags}
               searchable
               clearable
               value={selectedTagIds}
               onChange={setSelectedTagIds}
-              nothingFoundMessage={tagsQuery.isLoading ? 'Loading...' : 'No tags found'}
+              nothingFoundMessage={tagsQuery.isLoading ? 'Loading labels...' : 'No labels found'}
             />
           </div>
         </Stack>
-      </AccentSurface>
+      </FilterBar>
 
-      <AppCard>
+      <SectionCard
+        title={config.copy.listTitle}
+        description={config.copy.listDescription}
+      >
         <Stack gap="md">
           <DataTable
             columns={columns}
             data={entities}
+            isLoading={entitiesQuery.isLoading}
+            emptyState={{
+              title: 'Nothing matches right now',
+              description: config.copy.emptyMessage,
+            }}
+            resultSummary={`${entities.length} ${config.labels.plural.toLowerCase()} in view`}
             emptyMessage={
-              entitiesQuery.isLoading ? config.emptyLoadingMessage : config.emptyMessage
+              entitiesQuery.isLoading ? config.copy.emptyLoadingMessage : config.copy.emptyMessage
             }
+            renderMobileTitle={(entity) => entity.name}
+            renderMobileSubtitle={(entity) => entity.comment || config.labels.emptyComment}
+            renderMobileAside={(entity) => (
+              <StatusBadge tone={entity.active ? 'success' : 'danger'} size="sm">
+                {entity.active ? config.labels.activeLabel : config.labels.inactiveLabel}
+              </StatusBadge>
+            )}
+            renderMobileDetails={(entity) => [
+              {
+                label: 'Tags',
+                value: entity.tags.length ? <TagList tags={entity.tags} mode="compact" /> : '—',
+              },
+              {
+                label: 'Created',
+                value: <RelativeDate isoString={entity.created_at} />,
+              },
+            ]}
+            renderMobileFooter={(entity) => {
+              const isSelf = actorEntity?.id === entity.id;
+              return (
+                <Group gap="xs" wrap="wrap">
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={() =>
+                      setMoneyAction({
+                        mode: 'transfer',
+                        entity,
+                      })
+                    }
+                    disabled={!actorEntity || isSelf}
+                  >
+                    Transfer
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    size="xs"
+                    onClick={() =>
+                      setMoneyAction({
+                        mode: 'request',
+                        entity,
+                      })
+                    }
+                    disabled={!actorEntity || isSelf}
+                  >
+                    Request
+                  </Button>
+                  <Button variant="outline" size="xs" onClick={() => setEditingEntity(entity)}>
+                    Edit
+                  </Button>
+                </Group>
+              );
+            }}
           />
         </Stack>
-      </AppCard>
+      </SectionCard>
 
-      <Modal
+      <AppModal
         opened={createOpened}
         onClose={handleCreateClose}
-        title={config.createModalTitle}
-        centered
+        title={config.copy.createTitle}
+        subtitle={config.copy.createSubtitle}
+        footer={
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleCreateClose}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button
+                type="submit"
+                form={`entity-create-${config.queryScope}`}
+                variant="default"
+                loading={createEntityMutation.isPending}
+              >
+                {config.copy.createSubmitLabel}
+              </Button>
+            }
+          />
+        }
       >
-        <form onSubmit={(event) => void handleSubmit(onCreateEntity)(event)}>
+        <form
+          id={`entity-create-${config.queryScope}`}
+          onSubmit={(event) => void handleSubmit(onCreateEntity)(event)}
+        >
           <Stack gap="md">
+            <ModalStepHeader
+              eyebrow={config.copy.eyebrow}
+              title={config.copy.createTitle}
+              description={config.copy.createDescription}
+            />
             <Controller
               name="name"
               control={control}
               render={({ field }) => (
                 <TextInput
                   label="Name"
-                  placeholder={config.formNamePlaceholder}
+                  placeholder={config.copy.formNamePlaceholder}
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -337,9 +437,9 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
               name="tag_ids"
               control={control}
               render={({ field }) => (
-                <MultiSelect
-                  label="Tags"
-                  placeholder={config.formTagPlaceholder}
+                <AppMultiSelect
+                  label="Labels"
+                  placeholder={config.copy.formTagPlaceholder}
                   data={selectableTags}
                   searchable
                   value={field.value}
@@ -355,18 +455,9 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
                 {createEntityMutation.error.message}
               </Alert>
             ) : null}
-
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={handleCreateClose}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="default" loading={createEntityMutation.isPending}>
-                {config.createSubmitLabel}
-              </Button>
-            </Group>
           </Stack>
         </form>
-      </Modal>
+      </AppModal>
 
       <EntityEditModal
         opened={editingEntity != null}

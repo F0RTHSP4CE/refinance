@@ -26,9 +26,18 @@ type EntityInlineProps = {
 };
 
 export const DetailSectionCard = ({ title, children, ...props }: DetailSectionCardProps) => (
-  <Paper withBorder radius="md" p="md" {...props}>
+  <Paper
+    withBorder
+    radius="xl"
+    p="md"
+    style={{
+      background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.02))',
+      borderColor: 'var(--app-border-subtle)',
+    }}
+    {...props}
+  >
     <Stack gap="xs">
-      <Text size="xs" c="dimmed" tt="uppercase">
+      <Text size="xs" tt="uppercase" className="app-muted-copy">
         {title}
       </Text>
       {children}
@@ -38,7 +47,7 @@ export const DetailSectionCard = ({ title, children, ...props }: DetailSectionCa
 
 export const DetailItem = ({ label, children }: DetailItemProps) => (
   <Stack gap={4}>
-    <Text size="xs" c="dimmed" tt="uppercase">
+    <Text size="xs" tt="uppercase" className="app-muted-copy">
       {label}
     </Text>
     <Box>{children}</Box>

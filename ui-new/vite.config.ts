@@ -15,6 +15,14 @@ export default defineConfig({
     },
   },
   resolve: {
+    dedupe: [
+      'react',
+      'react-dom',
+      '@emotion/react',
+      '@mantine/core',
+      '@mantine/hooks',
+      '@mantine/dates',
+    ],
     alias: {
       '@': path.resolve(__dirname, './src'),
     },

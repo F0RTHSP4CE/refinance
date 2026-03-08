@@ -53,7 +53,7 @@ export const SplitSummaryCard = ({ split, onOpen, onJoin }: SplitSummaryCardProp
               <Text size="xs" c="dimmed">
                 #{split.id}
               </Text>
-              <StatusBadge tone={split.performed ? 'positive' : 'neutral'}>
+              <StatusBadge tone={split.performed ? 'success' : 'info'}>
                 {split.performed ? 'done' : 'active'}
               </StatusBadge>
             </Stack>

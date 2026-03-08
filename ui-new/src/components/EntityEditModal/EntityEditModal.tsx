@@ -1,4 +1,4 @@
-import { Alert, Button, Group, Modal, MultiSelect, Stack, Switch, TextInput } from '@mantine/core';
+import { Alert, Button, Stack, Switch, TextInput } from '@mantine/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { z } from 'zod';
 import { updateEntity } from '@/api/entities';
 import type { Entity } from '@/types/api';
+import { AppModal, AppModalFooter, AppMultiSelect, ModalStepHeader } from '@/components/ui';
 
 const entityEditSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
@@ -87,16 +88,41 @@ export const EntityEditModal = ({
   });
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={entity ? `Edit ${entity.name}` : 'Edit entity'}
-      centered
+      subtitle="Update labels, notes, and activity state so this record stays usable in F0RTHSP4CE finance flows."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button
+              type="submit"
+              form="entity-edit-form"
+              variant="default"
+              loading={updateMutation.isPending}
+            >
+              Save changes
+            </Button>
+          }
+        />
+      }
     >
       <form
+        id="entity-edit-form"
         onSubmit={(event) => void handleSubmit((values) => updateMutation.mutate(values))(event)}
       >
         <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Record editor"
+            title={entity ? entity.name : 'Edit entity'}
+            description="Keep names and labels deliberate so filters, dues, and money movement stay readable."
+          />
           <Controller
             name="name"
             control={control}
@@ -128,7 +154,7 @@ export const EntityEditModal = ({
             name="tag_ids"
             control={control}
             render={({ field }) => (
-              <MultiSelect
+              <AppMultiSelect
                 label="Tags"
                 placeholder="Select tags"
                 data={tagOptions}
@@ -158,17 +184,8 @@ export const EntityEditModal = ({
               {updateMutation.error.message}
             </Alert>
           ) : null}
-
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" loading={updateMutation.isPending}>
-              Save changes
-            </Button>
-          </Group>
         </Stack>
       </form>
-    </Modal>
+    </AppModal>
   );
 };

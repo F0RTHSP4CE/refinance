@@ -1,9 +1,9 @@
-import { Anchor, Card, Group, Stack, Text } from '@mantine/core';
+import { Anchor, Button, Group, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { getPendingInvoices } from '@/api/invoices';
 import { useAuthStore } from '@/stores/auth';
-import { StatusBadge } from '@/components/ui';
+import { EmptyState, SectionCard, StatusBadge } from '@/components/ui';
 
 const LIMIT = 10;
 
@@ -39,39 +39,48 @@ export const FeeInvoicesStatusCard = () => {
   const otherInvoices = invoices.slice(1);
 
   return (
-    <Card shadow="sm" padding="lg" radius="md" withBorder>
+    <SectionCard
+      title="Dues to settle"
+      description="Keep an eye on the next unpaid invoice so auto-settlement does not bounce."
+      action={
+        pendingCount > 0 ? (
+          <StatusBadge size="lg" tone="warning">
+            {pendingCount}
+          </StatusBadge>
+        ) : null
+      }
+    >
       <Stack gap="md">
-        <Group justify="space-between" align="center">
-          <Text size="lg" fw={700}>
-            Fee / Invoices
-          </Text>
-          {pendingCount > 0 && (
-            <StatusBadge size="lg" tone="neutral">
-              {pendingCount}
-            </StatusBadge>
-          )}
-        </Group>
-
         {pendingCount === 0 ? (
-          <Text c="dimmed">No unpaid invoices</Text>
+            <EmptyState
+              compact
+              title="No unpaid dues"
+              description="You are clear for now. New dues invoices will show up here as soon as they are issued."
+            />
         ) : (
           <>
             {nextInvoice && (
               <Stack gap="xs">
-                <Text size="xs" c="dimmed" fw={600}>
-                  NEXT DUE:
+                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                  Next to settle
                 </Text>
-                <Card
+                <Anchor
                   component={Link}
                   to={`/fee?tab=invoices&invoiceId=${nextInvoice.id}`}
-                  padding="sm"
-                  radius="md"
-                  withBorder
-                  style={{ textDecoration: 'none', color: 'inherit' }}
+                  underline="never"
+                  style={{
+                    display: 'block',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    padding: '0.95rem',
+                    borderRadius: '0.95rem',
+                    border: '1px solid rgba(255, 122, 120, 0.18)',
+                    background: 'rgba(255, 122, 120, 0.06)',
+                  }}
                 >
                   <Group justify="space-between" align="center">
                     <Stack gap={2}>
-                      <Text size="lg" fw={700} c="red">
+                      <Text size="lg" fw={800} c="var(--app-danger)">
                         {formatAmounts(nextInvoice.amounts)}
                       </Text>
                       {nextInvoice.billing_period && (
@@ -80,16 +89,16 @@ export const FeeInvoicesStatusCard = () => {
                         </Text>
                       )}
                     </Stack>
-                    <StatusBadge tone="neutral">pending</StatusBadge>
+                    <StatusBadge tone="warning">pending</StatusBadge>
                   </Group>
-                </Card>
+                </Anchor>
               </Stack>
             )}
 
             {otherInvoices.length > 0 && (
               <Stack gap="xs">
-                <Text size="xs" c="dimmed" fw={600}>
-                  OTHER PENDING:
+                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                  Other open invoices
                 </Text>
                 {otherInvoices.map((invoice) => (
                   <Group key={invoice.id} justify="space-between" align="center">
@@ -111,10 +120,15 @@ export const FeeInvoicesStatusCard = () => {
             )}
           </>
         )}
-        <Text size="sm" c="dimmed">
-          Top up your balance! Invoices are paid automatically when enough funds are available.
-        </Text>
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Text size="sm" className="app-muted-copy">
+            Dues invoices settle automatically as soon as your balance is high enough.
+          </Text>
+          <Button component={Link} to="/fee?tab=invoices" variant="subtle" size="sm">
+            Open dues
+          </Button>
+        </Group>
       </Stack>
-    </Card>
+    </SectionCard>
   );
 };

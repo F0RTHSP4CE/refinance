@@ -1,11 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Group, Modal, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Alert, Button, Stack, Text, TextInput } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createTag, getTags } from '@/api/tags';
-import { AppCard, DataTable, RelativeDate, TagBadge, type DataTableColumn } from '@/components/ui';
+import {
+  DataTable,
+  FilterBar,
+  PageHeader,
+  RelativeDate,
+  TagBadge,
+  AppModal,
+  AppModalFooter,
+  ModalStepHeader,
+  SectionCard,
+  type DataTableColumn,
+} from '@/components/ui';
 import type { Tag } from '@/types/api';
 
 const tagCreateSchema = z.object({
@@ -93,47 +104,92 @@ export const Tags = () => {
     });
   };
 
+  const resultSummary = `${tags.length} of ${tagsQuery.data?.total ?? 0} label${
+    (tagsQuery.data?.total ?? 0) === 1 ? '' : 's'
+  }`;
+
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="end">
-        <div>
-          <Title order={2}>Tags</Title>
-          <Text c="dimmed" size="sm">
-            Labels used across transactions and entities.
-          </Text>
-        </div>
-        <Button variant="default" onClick={() => setCreateOpened(true)}>
-          Add Tag
-        </Button>
-      </Group>
+      <PageHeader
+        eyebrow="F0RTHSP4CE labels"
+        title="Labels"
+        subtitle="The shared label set used across members, actors, dues, transactions, and split runs."
+        actions={
+          <Button variant="default" onClick={() => setCreateOpened(true)}>
+            Add label
+          </Button>
+        }
+      />
 
-      <AppCard>
-        <Stack gap="md">
-          <TextInput
-            label="Search"
-            placeholder="Find by tag name"
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
+      <FilterBar
+        title="Filter labels"
+        description="Search the shared label set without burying the results inside the filter card."
+        resultSummary={resultSummary}
+      >
+        <TextInput
+          label="Search"
+          placeholder="Find by label name"
+          value={search}
+          onChange={(event) => setSearch(event.currentTarget.value)}
+        />
+      </FilterBar>
+
+      <SectionCard
+        title="Shared label set"
+        description="Desktop keeps the full label table. Mobile collapses each row into a simpler card."
+      >
+        <DataTable
+          columns={columns}
+          data={tags}
+          isLoading={tagsQuery.isLoading}
+          loadingState={{ cards: 2, lines: 3 }}
+          emptyState={{
+            title: 'No labels found',
+            description: 'Try a broader search or create the first shared label for the space.',
+          }}
+          resultSummary={resultSummary}
+        />
+      </SectionCard>
+
+      <AppModal
+        opened={createOpened}
+        onClose={handleCreateClose}
+        title="Create label"
+        subtitle="Add a reusable label for members, actors, dues, transactions, and split flows."
+        footer={
+          <AppModalFooter
+            secondary={
+              <Button variant="subtle" onClick={handleCreateClose}>
+                Cancel
+              </Button>
+            }
+            primary={
+              <Button
+                type="submit"
+                form="create-tag-form"
+                variant="default"
+                loading={createTagMutation.isPending}
+              >
+                Create label
+              </Button>
+            }
           />
-
-          <DataTable
-            columns={columns}
-            data={tags}
-            emptyMessage={tagsQuery.isLoading ? 'Loading tags...' : 'No tags found.'}
-          />
-        </Stack>
-      </AppCard>
-
-      <Modal opened={createOpened} onClose={handleCreateClose} title="Create Tag" centered>
-        <form onSubmit={(event) => void handleSubmit(onCreateTag)(event)}>
+        }
+      >
+        <form id="create-tag-form" onSubmit={(event) => void handleSubmit(onCreateTag)(event)}>
           <Stack gap="md">
+            <ModalStepHeader
+              eyebrow="Label set"
+              title="Create label"
+              description="Choose a short name and optional note so the label stays understandable in filters, dues, and record details."
+            />
             <Controller
               name="name"
               control={control}
               render={({ field }) => (
                 <TextInput
                   label="Name"
-                  placeholder="tag name"
+                  placeholder="label name"
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -148,7 +204,7 @@ export const Tags = () => {
               render={({ field }) => (
                 <TextInput
                   label="Comment"
-                  placeholder="optional"
+                  placeholder="optional note"
                   value={field.value || ''}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -161,18 +217,9 @@ export const Tags = () => {
                 {createTagMutation.error.message}
               </Alert>
             ) : null}
-
-            <Group justify="flex-end" gap="xs">
-              <Button variant="subtle" onClick={handleCreateClose}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="default" loading={createTagMutation.isPending}>
-                Create Tag
-              </Button>
-            </Group>
           </Stack>
         </form>
-      </Modal>
+      </AppModal>
     </Stack>
   );
 };

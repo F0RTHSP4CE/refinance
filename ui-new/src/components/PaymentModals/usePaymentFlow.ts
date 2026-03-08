@@ -10,6 +10,7 @@ export type PaymentFlowState = {
   transactionId: number | null;
   amount: number;
   currency: string;
+  direction: 'pay' | 'receive';
 };
 
 const initialState: PaymentFlowState = {
@@ -17,6 +18,7 @@ const initialState: PaymentFlowState = {
   transactionId: null,
   amount: 0,
   currency: 'GEL',
+  direction: 'pay',
 };
 
 export type UsePaymentFlowOptions = {
@@ -37,6 +39,10 @@ export const usePaymentFlow = (options?: UsePaymentFlowOptions) => {
         transactionId: data.id,
         amount: parseFloat(data.amount),
         currency: data.currency,
+        direction:
+          actorEntity && data.to_entity_id === actorEntity.id && data.from_entity_id !== actorEntity.id
+            ? 'receive'
+            : 'pay',
       }));
     },
   });
@@ -89,13 +95,14 @@ export const usePaymentFlow = (options?: UsePaymentFlowOptions) => {
     const currency = state.currency.toLowerCase();
     const currentBalance = balances.completed?.[currency];
     if (currentBalance === undefined) return { old: null, new: null };
-    const currentNum = parseFloat(currentBalance);
-    const newNum = currentNum;
+    const newNum = parseFloat(currentBalance);
+    const oldNum =
+      state.direction === 'receive' ? newNum - state.amount : newNum + state.amount;
     return {
-      old: currentNum.toFixed(2),
+      old: oldNum.toFixed(2),
       new: newNum.toFixed(2),
     };
-  }, [balances, state.currency]);
+  }, [balances, state.amount, state.currency, state.direction]);
 
   return {
     state,

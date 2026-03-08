@@ -1,15 +1,4 @@
-import {
-  Alert,
-  Button,
-  Group,
-  Modal,
-  NumberInput,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-} from '@mantine/core';
+import { Alert, Button, NumberInput, SimpleGrid, Stack, TextInput } from '@mantine/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
@@ -20,6 +9,7 @@ import { createSplit, updateSplit } from '@/api/splits';
 import { CURRENCIES } from '@/constants/entities';
 import { useAuthStore } from '@/stores/auth';
 import type { Split } from '@/types/api';
+import { AppModal, AppModalFooter, AppSelect, ModalStepHeader } from '@/components/ui';
 
 const splitEditorSchema = z.object({
   name: z.string().optional(),
@@ -109,18 +99,41 @@ export const SplitEditorModal = ({ opened, split, onClose, onSaved }: SplitEdito
       .sort((left, right) => left.label.localeCompare(right.label)) ?? [];
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={split ? `Edit ${split.comment || `Split #${split.id}`}` : 'Create split'}
-      centered
+      subtitle="Define the recipient, total amount, and split label before participants are added."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Cancel
+            </Button>
+          }
+          primary={
+            <Button
+              type="submit"
+              form="split-editor-form"
+              variant="default"
+              loading={saveMutation.isPending}
+            >
+              {split ? 'Save changes' : 'Create split'}
+            </Button>
+          }
+        />
+      }
     >
-      <form onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}>
+      <form
+        id="split-editor-form"
+        onSubmit={(event) => void handleSubmit((values) => saveMutation.mutate(values))(event)}
+      >
         <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Give the split a recognizable name, choose the recipient, and set the total amount to
-            collect from participants.
-          </Text>
+          <ModalStepHeader
+            eyebrow={split ? 'Split editor' : 'New split'}
+            title={split ? split.comment || `Split #${split.id}` : 'Create split'}
+            description="Give the split a recognizable name, choose the recipient, and set the total amount to collect from participants."
+          />
 
           <Controller
             name="name"
@@ -139,7 +152,7 @@ export const SplitEditorModal = ({ opened, split, onClose, onSaved }: SplitEdito
             name="recipient_entity_id"
             control={control}
             render={({ field }) => (
-              <Select
+              <AppSelect
                 label="Recipient"
                 placeholder="Select recipient"
                 searchable
@@ -173,7 +186,7 @@ export const SplitEditorModal = ({ opened, split, onClose, onSaved }: SplitEdito
               name="currency"
               control={control}
               render={({ field }) => (
-                <Select
+                <AppSelect
                   label="Currency"
                   data={CURRENCIES.map((currency) => ({ value: currency, label: currency }))}
                   value={field.value}
@@ -190,17 +203,8 @@ export const SplitEditorModal = ({ opened, split, onClose, onSaved }: SplitEdito
               {saveMutation.error.message}
             </Alert>
           ) : null}
-
-          <Group justify="flex-end">
-            <Button variant="subtle" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" loading={saveMutation.isPending}>
-              {split ? 'Save changes' : 'Create split'}
-            </Button>
-          </Group>
         </Stack>
       </form>
-    </Modal>
+    </AppModal>
   );
 };

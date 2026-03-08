@@ -10,8 +10,9 @@ export const AccentSurface = ({ children, style, ...props }: AccentSurfaceProps)
   return (
     <AppCard
       style={{
-        background: 'linear-gradient(120deg, rgba(14, 165, 233, 0.08), rgba(34, 197, 94, 0.08))',
-        borderColor: 'rgba(15, 23, 42, 0.12)',
+        background:
+          'radial-gradient(circle at top left, rgba(155, 227, 65, 0.14), transparent 34%), linear-gradient(160deg, rgba(19, 28, 34, 0.98), rgba(21, 29, 38, 0.95))',
+        borderColor: 'rgba(155, 227, 65, 0.18)',
         ...style,
       }}
       {...props}

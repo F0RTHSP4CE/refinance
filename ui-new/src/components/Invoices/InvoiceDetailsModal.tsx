@@ -1,8 +1,12 @@
-import { Button, Group, Modal, Skeleton, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Button, Group, Skeleton, SimpleGrid, Stack, Text } from '@mantine/core';
 import {
+  AppModal,
+  AppModalFooter,
   DetailItem,
   DetailSectionCard,
   EntityInline,
+  InlineMeta,
+  ModalStepHeader,
   RelativeDate,
   StatusBadge,
   TagList,
@@ -28,7 +32,11 @@ const formatBillingPeriod = (period?: string | null) => {
 const formatAmountOptions = (invoice: Invoice) =>
   invoice.amounts.map((item) => `${item.amount} ${item.currency.toUpperCase()}`).join(' or ');
 
-const getInvoiceTone = (status: Invoice['status']) => (status === 'paid' ? 'positive' : 'neutral');
+const getInvoiceTone = (status: Invoice['status']) => {
+  if (status === 'paid') return 'success';
+  if (status === 'cancelled') return 'danger';
+  return 'warning';
+};
 
 export const InvoiceDetailsModal = ({
   opened,
@@ -40,35 +48,65 @@ export const InvoiceDetailsModal = ({
   onDelete,
 }: InvoiceDetailsModalProps) => {
   const isPending = invoice?.status === 'pending';
+  const footer = invoice ? (
+    <AppModalFooter
+      secondary={
+        <Button variant="subtle" onClick={onClose}>
+          Close
+        </Button>
+      }
+      primary={
+        <Group gap="xs">
+          {isPending && onDelete && !invoice.transaction_id ? (
+            <Button color="red" variant="outline" onClick={() => onDelete(invoice)}>
+              Delete
+            </Button>
+          ) : null}
+          {isPending && onEdit ? (
+            <Button variant="outline" onClick={() => onEdit(invoice)}>
+              Edit
+            </Button>
+          ) : null}
+          {isPending && onPay ? (
+            <Button variant="default" onClick={() => onPay(invoice)}>
+              Pay
+            </Button>
+          ) : null}
+        </Group>
+      }
+    />
+  ) : (
+    <AppModalFooter primary={<Button onClick={onClose}>Close</Button>} />
+  );
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={invoice ? `Invoice #${invoice.id}` : 'Invoice'}
-      centered
-      size="lg"
-      closeOnClickOutside
-      closeOnEscape
+      variant="detail"
+      subtitle={
+        invoice
+          ? 'Inspect participants, billing context, and actions from one consistent side panel.'
+          : undefined
+      }
+      footer={footer}
     >
       {invoice ? (
         <Stack gap="sm">
-          <Group justify="space-between" gap="xs" wrap="wrap">
-            <Group gap="xs" wrap="wrap">
-              <Text size="xs" c="dimmed">
+          <ModalStepHeader
+            eyebrow="Invoice details"
+            title={`#${invoice.id}`}
+            description={`Created ${formatDateTime(invoice.created_at)}`}
+          />
+          <InlineMeta
+            items={[
+              <>
                 Created <RelativeDate isoString={invoice.created_at} size="xs" />
-              </Text>
-              <Text size="xs" c="dimmed">
-                {formatDateTime(invoice.created_at)}
-              </Text>
-            </Group>
-            <Group gap={6} wrap="wrap">
-              <Text size="xs" c="dimmed" tt="uppercase">
-                Author
-              </Text>
-              <EntityInline entity={invoice.actor_entity} size="xs" tagMode="expanded" />
-            </Group>
-          </Group>
+              </>,
+              <>Author: {invoice.actor_entity.name}</>,
+            ]}
+          />
 
           <DetailSectionCard title="Amount">
             <Group justify="space-between" align="flex-start">
@@ -127,29 +165,6 @@ export const InvoiceDetailsModal = ({
               This invoice can no longer be changed.
             </Text>
           ) : null}
-
-          <Group justify="space-between" mt={4}>
-            <Group gap="xs">
-              {isPending && onPay ? (
-                <Button variant="default" onClick={() => onPay(invoice)}>
-                  Pay
-                </Button>
-              ) : null}
-              {isPending && onEdit ? (
-                <Button variant="outline" onClick={() => onEdit(invoice)}>
-                  Edit
-                </Button>
-              ) : null}
-              {isPending && !invoice.transaction_id && onDelete ? (
-                <Button color="red" variant="outline" onClick={() => onDelete(invoice)}>
-                  Delete
-                </Button>
-              ) : null}
-            </Group>
-            <Button variant="subtle" onClick={onClose}>
-              Close
-            </Button>
-          </Group>
         </Stack>
       ) : loading ? (
         <Stack gap="sm">
@@ -185,6 +200,6 @@ export const InvoiceDetailsModal = ({
           </DetailSectionCard>
         </Stack>
       ) : null}
-    </Modal>
+    </AppModal>
   );
 };

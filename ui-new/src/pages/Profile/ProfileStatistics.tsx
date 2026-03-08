@@ -1,4 +1,4 @@
-import { AppCard } from '@/components/ui';
+import { AppCard, ChartCard, InlineState } from '@/components/ui';
 import { SimpleGrid, Stack, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import * as echarts from 'echarts';
@@ -24,6 +24,14 @@ import {
   type ProfileStatsFiltersValue,
   type ProfileStatsPreset,
 } from './components/ProfileStatsFilters';
+import { APP_CHART_COLORS, colorByStableIndex } from '@/constants/uiPalette';
+import {
+  CHART_AXIS_LABEL,
+  CHART_AXIS_LINE,
+  CHART_LEGEND_TEXT,
+  CHART_SPLIT_LINE,
+  CHART_TOOLTIP_BASE,
+} from '@/constants/chartTheme';
 
 const formatUSD = (value: number) =>
   `$${Number(value).toLocaleString(undefined, {
@@ -31,50 +39,20 @@ const formatUSD = (value: number) =>
     maximumFractionDigits: 2,
   })}`;
 
-const hashString = (value: string) => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
-    hash = (hash << 5) - hash + value.charCodeAt(i);
-    hash |= 0;
-  }
-  return hash;
-};
+const CHART_PALETTE = [
+  APP_CHART_COLORS.blue,
+  APP_CHART_COLORS.lime,
+  APP_CHART_COLORS.amber,
+  APP_CHART_COLORS.coral,
+  APP_CHART_COLORS.slate,
+  APP_CHART_COLORS.mint,
+] as const;
 
-const colorFromId = (id: string | number, index: number) => {
-  const key = String(id ?? `fallback-${index}`);
-  const hash = Math.abs(hashString(key));
-  const hue = (hash * 137.508) % 360;
-  const sat = 62 + (hash % 24);
-  const light = 58 + ((hash >> 3) % 16);
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
-};
-
-const CHART_AXIS_LINE = { lineStyle: { color: '#94a3b8' } };
-const CHART_SPLIT_LINE = {
-  lineStyle: { color: '#334155', type: 'dashed' as const },
-};
-const CHART_AXIS_LABEL = { color: '#cbd5e1' };
-const CHART_LEGEND_TEXT = { color: '#e2e8f0' };
+const colorFromId = (id: string | number, index: number) =>
+  colorByStableIndex(`${String(id ?? '')}:${index}`, CHART_PALETTE);
 
 const PIE_LABEL = { show: false };
 const PIE_LABEL_LINE = { show: false };
-
-type ChartContainerProps = {
-  children: React.ReactNode;
-  title: string;
-  height?: 'sm' | 'md';
-};
-
-const ChartContainer = ({ children, title, height = 'md' }: ChartContainerProps) => (
-  <AppCard>
-    <Text size="lg" fw={600} mb="md">
-      {title}
-    </Text>
-    <div className={height === 'sm' ? 'w-full min-h-0 h-[240px]' : 'w-full min-h-0 h-[280px]'}>
-      {children}
-    </div>
-  </AppCard>
-);
 
 type EChartsWrapperProps = {
   option: echarts.EChartsOption;
@@ -393,7 +371,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   if (isLoading) {
     return (
       <Stack gap="lg" mt="md">
-        <Text c="dimmed">Loading statistics...</Text>
+        <InlineState kind="loading" cards={2} lines={4} />
       </Stack>
     );
   }
@@ -401,7 +379,11 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   if (isError || !stats) {
     return (
       <Stack gap="lg" mt="md">
-        <Text c="dimmed">Failed to load statistics.</Text>
+        <InlineState
+          kind="error"
+          title="Stats could not be loaded"
+          description="Profile stats are unavailable right now."
+        />
       </Stack>
     );
   }
@@ -419,7 +401,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   );
 
   const balanceOption: echarts.EChartsOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: { ...CHART_TOOLTIP_BASE, trigger: 'axis' },
     grid: {
       left: '3%',
       right: '4%',
@@ -447,14 +429,14 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
         smooth: true,
         symbol: 'circle',
         symbolSize: 5,
-        itemStyle: { color: '#a78bfa' },
-        lineStyle: { color: '#a78bfa', width: 2 },
+        itemStyle: { color: APP_CHART_COLORS.blue },
+        lineStyle: { color: APP_CHART_COLORS.blue, width: 2 },
       },
     ],
   };
 
   const moneyFlowOption: echarts.EChartsOption = {
-    tooltip: { trigger: 'axis' },
+    tooltip: { ...CHART_TOOLTIP_BASE, trigger: 'axis' },
     legend: { bottom: 0, textStyle: CHART_LEGEND_TEXT },
     grid: {
       left: '3%',
@@ -482,13 +464,13 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
         type: 'bar',
         name: 'Income (USD)',
         data: bucketedMoneyFlow.map((row) => row.incoming),
-        itemStyle: { color: '#34d399' },
+        itemStyle: { color: APP_CHART_COLORS.mint },
       },
       {
         type: 'bar',
         name: 'Spending (USD)',
         data: bucketedMoneyFlow.map((row) => row.outgoing),
-        itemStyle: { color: '#f87171' },
+        itemStyle: { color: APP_CHART_COLORS.coral },
       },
       {
         type: 'line',
@@ -499,8 +481,8 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
         showSymbol: true,
         symbol: 'circle',
         symbolSize: 6,
-        itemStyle: { color: '#16a34a' },
-        lineStyle: { color: '#16a34a', width: 2 },
+        itemStyle: { color: APP_CHART_COLORS.lime },
+        lineStyle: { color: APP_CHART_COLORS.lime, width: 2 },
         z: 10,
       },
       {
@@ -512,8 +494,8 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
         showSymbol: true,
         symbol: 'circle',
         symbolSize: 6,
-        itemStyle: { color: '#dc2626' },
-        lineStyle: { color: '#dc2626', width: 2 },
+        itemStyle: { color: APP_CHART_COLORS.coral },
+        lineStyle: { color: APP_CHART_COLORS.coral, width: 2 },
         z: 10,
       },
     ],
@@ -529,6 +511,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
           containLabel: true,
         },
         tooltip: {
+          ...CHART_TOOLTIP_BASE,
           trigger: 'axis',
           axisPointer: { type: 'shadow' },
           formatter: (p: unknown) => {
@@ -564,6 +547,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   const topIncomingTagsOption: echarts.EChartsOption | null = stats.top_incoming_tags.length
     ? {
         tooltip: {
+          ...CHART_TOOLTIP_BASE,
           formatter: (p: unknown) => {
             const point = p as {
               name: string;
@@ -601,6 +585,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
           containLabel: true,
         },
         tooltip: {
+          ...CHART_TOOLTIP_BASE,
           trigger: 'axis',
           axisPointer: { type: 'shadow' },
           formatter: (p: unknown) => {
@@ -636,6 +621,7 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
   const topOutgoingTagsOption: echarts.EChartsOption | null = stats.top_outgoing_tags.length
     ? {
         tooltip: {
+          ...CHART_TOOLTIP_BASE,
           formatter: (p: unknown) => {
             const point = p as {
               name: string;
@@ -671,13 +657,19 @@ export const ProfileStatistics = ({ profileId }: ProfileStatisticsProps) => {
         onApply={applyFilters}
       />
 
-      <ChartContainer title="Balance Change">
+      <ChartCard
+        title="Balance change"
+        description="How this profile's USD-equivalent balance moved across the selected range."
+      >
         <EChartsWrapper option={balanceOption} />
-      </ChartContainer>
+      </ChartCard>
 
-      <ChartContainer title="Income / Spending (USD)">
+      <ChartCard
+        title="Income and spending"
+        description="Incoming and outgoing movement with monthly overlays for easier trend reading."
+      >
         <EChartsWrapper option={moneyFlowOption} />
-      </ChartContainer>
+      </ChartCard>
 
       <AppCard>
         <Text size="lg" fw={600} mb="md">

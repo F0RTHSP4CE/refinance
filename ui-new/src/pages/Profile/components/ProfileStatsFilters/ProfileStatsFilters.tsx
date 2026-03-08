@@ -1,6 +1,6 @@
-import { Button, Group, SegmentedControl, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
-import { AppCard } from '@/components/ui';
+import { AppDateField, AppSegmentedControl, FilterBar } from '@/components/ui';
 import {
   PROFILE_PRESET_OPTIONS,
   PROFILE_STATS_LIMIT_OPTIONS,
@@ -79,30 +79,32 @@ export const ProfileStatsFilters = ({ appliedFilters, onApply }: ProfileStatsFil
   };
 
   return (
-    <AppCard>
+    <FilterBar
+      tone="accent"
+      title="Filters"
+      description="Set the time window, grain, and top-entry count for this profile."
+      action={
+        <Group gap="xs">
+          {isDirtyVsInitial ? (
+            <Button variant="subtle" color="gray" onClick={() => setDraftFilters(initialFilters)}>
+              Reset
+            </Button>
+          ) : null}
+          <Button variant="default" disabled={!isDirtyVsApplied} onClick={handleApply}>
+            Apply
+          </Button>
+        </Group>
+      }
+    >
       <Stack gap="md">
-        <Text size="lg" fw={600}>
-          Statistics Filters
-        </Text>
-
         <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-          <TextInput
-            label="From"
-            type="date"
-            value={draftFilters.from}
-            onChange={(event) => handleFromChange(event.currentTarget.value)}
-          />
-          <TextInput
-            label="To"
-            type="date"
-            value={draftFilters.to}
-            onChange={(event) => handleToChange(event.currentTarget.value)}
-          />
+          <AppDateField label="From" value={draftFilters.from} onChange={handleFromChange} />
+          <AppDateField label="To" value={draftFilters.to} onChange={handleToChange} />
           <div>
             <Text size="sm" fw={500} mb={6}>
               Grain
             </Text>
-            <SegmentedControl
+            <AppSegmentedControl
               fullWidth
               value={draftFilters.grain}
               onChange={(value) =>
@@ -148,18 +150,7 @@ export const ProfileStatsFilters = ({ appliedFilters, onApply }: ProfileStatsFil
             </Button>
           ))}
         </Group>
-
-        <Group justify="flex-end" gap="xs">
-          {isDirtyVsInitial ? (
-            <Button variant="subtle" color="gray" onClick={() => setDraftFilters(initialFilters)}>
-              Reset
-            </Button>
-          ) : null}
-          <Button disabled={!isDirtyVsApplied} onClick={handleApply}>
-            Apply
-          </Button>
-        </Group>
       </Stack>
-    </AppCard>
+    </FilterBar>
   );
 };

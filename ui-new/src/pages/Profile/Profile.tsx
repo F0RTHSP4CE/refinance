@@ -1,4 +1,4 @@
-import { Anchor, Button, Flex, Group, Stack, Tabs, Text, Tooltip } from '@mantine/core';
+import { Anchor, Button, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -18,8 +18,14 @@ import {
   AmountsCurrency,
   AccentSurface,
   AppCard,
+  AppTabs,
   DataTable,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeader,
   RelativeDate,
+  SectionCard,
   StatusBadge,
   TagList,
   type DataTableColumn,
@@ -130,35 +136,29 @@ export const Profile = () => {
   }, []);
 
   if (!actorEntity) {
-    return (
-      <Stack gap="md">
-        <Text c="dimmed">Loading profile...</Text>
-      </Stack>
-    );
+    return <LoadingState cards={1} lines={4} />;
   }
 
   if (profileId == null) {
     return (
-      <Stack gap="md">
-        <Text c="dimmed">{id ? 'Profile not found.' : 'Loading profile...'}</Text>
-      </Stack>
+      <ErrorState
+        title="Profile not found"
+        description={id ? 'This profile no longer exists or the link is invalid.' : 'Loading profile...'}
+      />
     );
   }
 
   if (entityError || (profileId && !entity && !entityLoading)) {
     return (
-      <Stack gap="md">
-        <Text c="dimmed">Profile not found.</Text>
-      </Stack>
+      <ErrorState
+        title="Profile not found"
+        description="This profile could not be loaded. It may have been removed or you may not have access."
+      />
     );
   }
 
   if (entityLoading || !entity) {
-    return (
-      <Stack gap="md">
-        <Text c="dimmed">Loading profile...</Text>
-      </Stack>
-    );
+    return <LoadingState cards={2} lines={4} />;
   }
 
   const profileEntity = entity as Entity;
@@ -211,7 +211,10 @@ export const Profile = () => {
       key: 'status',
       label: 'Status',
       render: (r) => (
-        <StatusBadge tone={r.status === 'paid' ? 'positive' : 'neutral'} size="sm">
+        <StatusBadge
+          tone={r.status === 'paid' ? 'success' : r.status === 'cancelled' ? 'danger' : 'warning'}
+          size="sm"
+        >
           {r.status}
         </StatusBadge>
       ),
@@ -232,59 +235,53 @@ export const Profile = () => {
 
   return (
     <Stack gap="lg">
-      <Tabs value={tab} onChange={(v) => setSearchParams({ tab: v ?? 'profile' })}>
-        <Tabs.List>
-          <Tabs.Tab value="profile">
-            <Text component="span" className="text-xl">
-              Profile
-            </Text>
-          </Tabs.Tab>
-          <Tabs.Tab value="statistics">
-            <Text component="span" className="text-xl">
-              Statistics
-            </Text>
-          </Tabs.Tab>
-        </Tabs.List>
+      <PageHeader
+        eyebrow={isOwnProfile ? 'Your finance profile' : 'Member profile'}
+        title={e.name}
+        subtitle={
+          isOwnProfile
+            ? 'Manage linked auth, inspect balances, and review your latest F0RTHSP4CE activity from one place.'
+            : 'Review balance, dues history, and recent movement without dropping into a dense admin screen.'
+        }
+        actions={
+          !isOwnProfile ? (
+            <Group gap="xs">
+              <Button variant="default" size="sm" onClick={() => setMoneyActionMode('transfer')}>
+                Transfer
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setMoneyActionMode('request')}>
+                Request
+              </Button>
+            </Group>
+          ) : undefined
+        }
+      />
 
-        <Tabs.Panel value="profile">
+      <AppTabs
+        value={tab}
+        onChange={(value) =>
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.set('tab', value ?? 'profile');
+            return next;
+          })
+        }
+      >
+        <AppTabs.List>
+          <AppTabs.Tab value="profile">Overview</AppTabs.Tab>
+          <AppTabs.Tab value="statistics">Stats</AppTabs.Tab>
+        </AppTabs.List>
+
+        <AppTabs.Panel value="profile">
           <Stack gap="lg" mt="md">
             <AccentSurface>
               <Stack gap="md">
                 <Group justify="space-between" align="start" wrap="wrap">
-                  <Flex gap="sm" align="center" wrap="nowrap">
-                    <Text size="xl" fw={700} lh={1}>
-                      {e.name}
-                    </Text>
-                    {isOwnProfile && (
-                      <StatusBadge
-                        size="sm"
-                        className="shrink-0 leading-none mt-px"
-                        tone="positive"
-                      >
-                        This is you
-                      </StatusBadge>
-                    )}
-                  </Flex>
-
-                  <Group gap="xs">
-                    {!isOwnProfile ? (
-                      <>
-                        <Button
-                          variant="default"
-                          size="xs"
-                          onClick={() => setMoneyActionMode('transfer')}
-                        >
-                          Transfer
-                        </Button>
-                        <Button
-                          variant="default"
-                          size="xs"
-                          onClick={() => setMoneyActionMode('request')}
-                        >
-                          Request
-                        </Button>
-                      </>
-                    ) : null}
+                  <Group gap="xs" wrap="wrap">
+                    {isOwnProfile ? <StatusBadge tone="info">This is you</StatusBadge> : null}
+                    <StatusBadge size="sm" tone={e.active ? 'success' : 'danger'}>
+                      {e.active ? 'Active' : 'Inactive'}
+                    </StatusBadge>
                   </Group>
                 </Group>
                 <Group gap="md">
@@ -294,9 +291,6 @@ export const Profile = () => {
                   <Text size="sm" c="dimmed">
                     Name: {e.name}
                   </Text>
-                  <StatusBadge size="sm" tone={e.active ? 'positive' : 'neutral'}>
-                    {e.active ? 'Active' : 'Inactive'}
-                  </StatusBadge>
                 </Group>
                 {e?.tags?.length ? <TagList tags={e.tags} showAll /> : null}
                 {e?.created_at && (
@@ -352,10 +346,10 @@ export const Profile = () => {
                 {isOwnProfile ? (
                   <AppCard p="md">
                     <Stack gap="sm">
-                      <Text fw={600}>Telegram login</Text>
+                      <Text fw={600}>Telegram access</Text>
                       <Text size="sm" c="dimmed">
-                        Link your Telegram account once to unlock one-tap sign-in from the blue
-                        Telegram button.
+                        Link Telegram once to unlock the fastest sign-in path back into
+                        F0RTHSP4CE Finance.
                       </Text>
                       <TelegramAuthButton
                         mode="connect"
@@ -373,10 +367,10 @@ export const Profile = () => {
               </Stack>
             </AccentSurface>
 
-            <AppCard>
-              <Text size="lg" fw={600} mb="md">
-                Balance
-              </Text>
+            <SectionCard
+              title="Balances"
+              description="Available and draft amounts for this profile."
+            >
               {balances && currencies.length > 0 ? (
                 <Stack gap="xs">
                   {currencies.map((currency: string) => {
@@ -399,49 +393,100 @@ export const Profile = () => {
                   })}
                 </Stack>
               ) : (
-                <Text size="sm" c="dimmed">
-                  No transactions.
-                </Text>
+                <EmptyState
+                  compact
+                  title="No balance yet"
+                  description="This profile has not moved any money through the space yet."
+                />
               )}
-            </AppCard>
+            </SectionCard>
 
-            <AppCard>
-              <Text size="lg" fw={600} mb="md">
-                Latest Transactions
-              </Text>
+            <SectionCard
+              title="Recent movement"
+              description="Recent money movement for this profile."
+            >
               <DataTable
                 columns={transactionTableColumns}
                 data={transactions}
                 emptyMessage="No transactions."
                 onRowClick={openTransaction}
                 getRowAriaLabel={(transaction) => `Open transaction #${transaction.id}`}
+                renderMobileTitle={(transaction) =>
+                  `${transaction.from_entity.name} -> ${transaction.to_entity.name}`
+                }
+                renderMobileSubtitle={(transaction) =>
+                  `${transaction.amount} ${transaction.currency.toUpperCase()}`
+                }
+                renderMobileAside={(transaction) => (
+                  <StatusBadge
+                    tone={transaction.status === 'completed' ? 'success' : 'draft'}
+                    size="sm"
+                  >
+                    {transaction.status}
+                  </StatusBadge>
+                )}
+                renderMobileDetails={(transaction) => [
+                  { label: 'Actor', value: transaction.actor_entity.name },
+                  { label: 'Comment', value: transaction.comment || '—' },
+                  {
+                    label: 'Tags',
+                    value: transaction.tags.length ? <TagList tags={transaction.tags} /> : '—',
+                  },
+                ]}
               />
               <TransactionDetailsModal
                 opened={opened}
                 transaction={selectedTransaction}
                 onClose={closeTransaction}
               />
-            </AppCard>
+            </SectionCard>
 
-            <AppCard>
-              <Text size="lg" fw={600} mb="md">
-                Invoices
-              </Text>
+            <SectionCard
+              title="Dues & invoices"
+              description="The latest dues and invoice records tied to this profile."
+            >
               <DataTable
                 columns={invoiceColumns}
                 data={invoices}
                 emptyMessage="No invoices."
                 onRowClick={(invoice) => setSelectedInvoice(invoice)}
                 getRowAriaLabel={(invoice) => `Open invoice #${invoice.id}`}
+                renderMobileTitle={(invoice) => `Invoice #${invoice.id}`}
+                renderMobileSubtitle={(invoice) =>
+                  invoice.amounts.map((item) => `${item.amount} ${item.currency.toUpperCase()}`).join(' · ')
+                }
+                renderMobileAside={(invoice) => (
+                  <StatusBadge
+                    tone={
+                      invoice.status === 'paid'
+                        ? 'success'
+                        : invoice.status === 'cancelled'
+                          ? 'danger'
+                          : 'warning'
+                    }
+                    size="sm"
+                  >
+                    {invoice.status}
+                  </StatusBadge>
+                )}
+                renderMobileDetails={(invoice) => [
+                  { label: 'Billing period', value: (invoice.billing_period ?? '').slice(0, 7) || '—' },
+                  { label: 'From', value: invoice.from_entity.name },
+                  { label: 'To', value: invoice.to_entity.name },
+                  {
+                    label: 'Tags',
+                    value: invoice.tags.length ? <TagList tags={invoice.tags} /> : '—',
+                  },
+                ]}
               />
-            </AppCard>
+            </SectionCard>
           </Stack>
-        </Tabs.Panel>
+        </AppTabs.Panel>
 
-        <Tabs.Panel value="statistics">
+        <AppTabs.Panel value="statistics">
           {profileId != null && <ProfileStatistics profileId={profileId} />}
-        </Tabs.Panel>
-      </Tabs>
+        </AppTabs.Panel>
+      </AppTabs>
 
       <InvoiceDetailsModal
         opened={selectedInvoice != null}

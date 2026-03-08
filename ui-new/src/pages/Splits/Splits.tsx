@@ -3,12 +3,10 @@ import {
   Group,
   NumberInput,
   Pagination,
-  Select,
   SimpleGrid,
   Stack,
   Text,
   TextInput,
-  Title,
 } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
@@ -21,7 +19,16 @@ import {
   SplitParticipantModal,
   SplitSummaryCard,
 } from '@/components/Splits';
-import { AccentSurface, AppCard } from '@/components/ui';
+import {
+  AccentSurface,
+  AppCard,
+  AppSelect,
+  EmptyState,
+  FilterBar,
+  LoadingState,
+  PageHeader,
+  SectionCard,
+} from '@/components/ui';
 import { CURRENCIES } from '@/constants/entities';
 
 type SplitSearchFormState = {
@@ -163,26 +170,24 @@ export const Splits = () => {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="end">
-        <div>
-          <Title order={2}>Splits</Title>
-          <Text c="dimmed" size="sm">
-            Create resident collections, track participation, and perform the resulting transfers
-            from one place.
-          </Text>
-        </div>
-        <Button variant="default" onClick={() => setCreateOpened(true)}>
-          Create split
-        </Button>
-      </Group>
+      <PageHeader
+        eyebrow="F0RTHSP4CE collection runs"
+        title="Splits"
+        subtitle="Run dues collections, group buys, reimbursements, and other shared-cost rounds from one place."
+        actions={
+          <Button variant="default" onClick={() => setCreateOpened(true)}>
+            New split run
+          </Button>
+        }
+      />
 
       <AccentSurface>
         <Stack gap="md">
           <div>
-            <Text fw={700}>How splits work</Text>
+            <Text fw={700}>How split runs work</Text>
             <Text size="sm" c="dimmed">
-              You define the recipient and total amount, participants join, and performing the split
-              creates completed transactions for each participant share.
+              Define who receives the money and the total amount, gather the participating members
+              or entities, then perform the run to create the resulting completed transactions.
             </Text>
           </div>
 
@@ -191,7 +196,7 @@ export const Splits = () => {
               <Stack gap={4}>
                 <Text fw={600}>1. Create</Text>
                 <Text size="sm" c="dimmed">
-                  Name the split, choose who receives the money, and set the total amount.
+                  Name the run, choose who receives the money, and set the total amount.
                 </Text>
               </Stack>
             </AppCard>
@@ -199,7 +204,7 @@ export const Splits = () => {
               <Stack gap={4}>
                 <Text fw={600}>2. Gather participants</Text>
                 <Text size="sm" c="dimmed">
-                  People can join directly, or you can add a participant or tag-based group.
+                  People can join directly, or you can add participants and label-based groups.
                 </Text>
               </Stack>
             </AppCard>
@@ -207,7 +212,7 @@ export const Splits = () => {
               <Stack gap={4}>
                 <Text fw={600}>3. Perform</Text>
                 <Text size="sm" c="dimmed">
-                  Once the list looks right, perform the split to generate the transactions.
+                  Once the list looks right, perform the run to generate the transactions.
                 </Text>
               </Stack>
             </AppCard>
@@ -215,20 +220,22 @@ export const Splits = () => {
         </Stack>
       </AccentSurface>
 
-      <AppCard>
+      <FilterBar
+        title="Filter split runs"
+        description="Narrow the runs you want to inspect by actor, recipient, amount, status, or name."
+        resultSummary={`${total} result${total === 1 ? '' : 's'}`}
+        action={
+          <Button type="button" variant="subtle" onClick={resetSearch}>
+            Reset
+          </Button>
+        }
+      >
         <form onSubmit={submitSearch}>
           <Stack gap="md">
-            <Group justify="space-between" align="center">
-              <Text fw={600}>Split filters</Text>
-              <Text size="sm" c="dimmed">
-                {total} result{total === 1 ? '' : 's'}
-              </Text>
-            </Group>
-
             <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-              <Select
-                label="Actor"
-                placeholder="Any actor"
+              <AppSelect
+                label="Created by"
+                placeholder="Any entity"
                 searchable
                 clearable
                 data={entityOptions}
@@ -237,7 +244,7 @@ export const Splits = () => {
                   setSearchForm((current) => ({ ...current, actor_entity_id: value ?? '' }))
                 }
               />
-              <Select
+              <AppSelect
                 label="Recipient"
                 placeholder="Any recipient"
                 searchable
@@ -251,7 +258,7 @@ export const Splits = () => {
                   }))
                 }
               />
-              <Select
+              <AppSelect
                 label="Currency"
                 clearable
                 data={CURRENCIES.map((currency) => ({ value: currency, label: currency }))}
@@ -286,7 +293,7 @@ export const Splits = () => {
                   }))
                 }
               />
-              <Select
+              <AppSelect
                 label="Status"
                 clearable
                 data={[
@@ -310,36 +317,28 @@ export const Splits = () => {
             />
 
             <Group justify="flex-end">
-              <Button type="button" variant="subtle" onClick={resetSearch}>
-                Reset
-              </Button>
               <Button type="submit" variant="default">
                 Apply filters
               </Button>
             </Group>
           </Stack>
         </form>
-      </AppCard>
+      </FilterBar>
 
       {splitsQuery.isLoading ? (
-        <Text c="dimmed">Loading splits...</Text>
+        <LoadingState cards={2} lines={4} />
       ) : splits.length === 0 ? (
-        <AppCard>
-          <Text c="dimmed">No splits found for the selected filters.</Text>
-        </AppCard>
+        <EmptyState
+          title="No split runs found"
+          description="Try widening the filters or create a new run for dues, supplies, or a group buy."
+        />
       ) : (
         <>
           {activeSplits.length ? (
-            <Stack gap="md">
-              <Group justify="space-between" align="center">
-                <Text size="lg" fw={600}>
-                  Active
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Open splits waiting for participants or execution
-                </Text>
-              </Group>
-
+            <SectionCard
+              title="Active runs"
+              description="Open collection runs waiting for more participants or final execution."
+            >
               <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
                 {activeSplits.map((split) => (
                   <SplitSummaryCard
@@ -350,20 +349,14 @@ export const Splits = () => {
                   />
                 ))}
               </SimpleGrid>
-            </Stack>
+            </SectionCard>
           ) : null}
 
           {completedSplits.length ? (
-            <Stack gap="md">
-              <Group justify="space-between" align="center">
-                <Text size="lg" fw={600}>
-                  Completed
-                </Text>
-                <Text size="sm" c="dimmed">
-                  Finished splits with generated transactions
-                </Text>
-              </Group>
-
+            <SectionCard
+              title="Completed runs"
+              description="Finished collection runs with their generated transaction trails."
+            >
               <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md">
                 {completedSplits.map((split) => (
                   <SplitSummaryCard
@@ -374,7 +367,7 @@ export const Splits = () => {
                   />
                 ))}
               </SimpleGrid>
-            </Stack>
+            </SectionCard>
           ) : null}
 
           {totalPages > 1 ? (

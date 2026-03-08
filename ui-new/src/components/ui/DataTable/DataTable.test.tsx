@@ -20,8 +20,23 @@ const columns: DataTableColumn<TestRow>[] = [
 
 const data: TestRow[] = [{ id: 1, name: 'Alice' }];
 
-const renderWithProvider = (ui: React.ReactElement) =>
-  render(<MantineProvider>{ui}</MantineProvider>);
+const setDesktopMatchMedia = () => {
+  window.matchMedia = vi.fn().mockImplementation((query) => ({
+    matches: query.includes('min-width'),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
+const renderWithProvider = (ui: React.ReactElement) => {
+  setDesktopMatchMedia();
+  return render(<MantineProvider>{ui}</MantineProvider>);
+};
 
 describe('DataTable', () => {
   it('calls onRowClick when row is clicked', async () => {

@@ -3,16 +3,13 @@ import {
   Anchor,
   Button,
   Group,
-  Modal,
-  Select,
+  SimpleGrid,
   Stack,
   Table,
-  Tabs,
   Text,
-  TextInput,
-  Title,
   UnstyledButton,
 } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -23,11 +20,20 @@ import { InvoiceDetailsModal } from '@/components/Invoices/InvoiceDetailsModal';
 import { InvoiceEditorModal } from '@/components/Invoices/InvoiceEditorModal';
 import { InvoicePayModal } from '@/components/Invoices/InvoicePayModal';
 import {
-  AccentSurface,
+  AppModal,
+  AppModalFooter,
+  AppMonthField,
+  AppSelect,
+  AppTabs,
   AmountsCurrency,
   AppCard,
   DataTable,
+  EmptyState,
+  FilterBar,
+  ModalStepHeader,
+  PageHeader,
   RelativeDate,
+  SectionCard,
   StatusBadge,
   TagList,
   type DataTableColumn,
@@ -176,8 +182,17 @@ const formatAmountEntries = (amounts: Record<string, string> | null | undefined)
   return lines.length > 0 ? lines.join(' · ') : '—';
 };
 
-const getInvoiceTone = (status: Invoice['status']) => (status === 'paid' ? 'positive' : 'neutral');
-const getFeeTone = (fee: MonthlyFee) => (fee.paid_invoice_id ? 'positive' : 'neutral');
+const getInvoiceTone = (status: Invoice['status']) => {
+  if (status === 'paid') return 'success';
+  if (status === 'cancelled') return 'danger';
+  return 'warning';
+};
+
+const getFeeTone = (fee: MonthlyFee) => {
+  if (fee.paid_invoice_id) return 'success';
+  if (fee.unpaid_invoice_id) return 'warning';
+  return 'info';
+};
 
 const getFeeVisualState = (fee: MonthlyFee): FeeVisualState => {
   if (fee.paid_invoice_id) return 'paid';
@@ -233,7 +248,7 @@ const FeeCellModal = ({
   const invoiceId = cell?.fee.unpaid_invoice_id ?? cell?.fee.paid_invoice_id ?? null;
 
   return (
-    <Modal
+    <AppModal
       opened={opened}
       onClose={onClose}
       title={
@@ -241,10 +256,32 @@ const FeeCellModal = ({
           ? `${cell.row.entity.name} · ${formatFeeMonth(cell.fee.year, cell.fee.month)}`
           : 'Fee details'
       }
-      centered
+      variant="compact"
+      subtitle="Inspect the fee cell and jump straight to the linked invoice when one exists."
+      footer={
+        <AppModalFooter
+          secondary={
+            <Button variant="subtle" onClick={onClose}>
+              Close
+            </Button>
+          }
+          primary={
+            invoiceId ? (
+              <Button variant="default" onClick={() => onOpenInvoice(invoiceId)}>
+                Open invoice
+              </Button>
+            ) : null
+          }
+        />
+      }
     >
       {cell ? (
         <Stack gap="md">
+          <ModalStepHeader
+            eyebrow="Fee cell"
+            title={cell.row.entity.name}
+            description={formatFeeMonth(cell.fee.year, cell.fee.month)}
+          />
           <Group justify="space-between">
             <Text size="sm" c="dimmed">
               Status
@@ -280,20 +317,17 @@ const FeeCellModal = ({
               {cell.fee.unpaid_invoice_id ?? '—'} / {cell.fee.paid_invoice_id ?? '—'}
             </Text>
           </Group>
-
-          {invoiceId ? (
-            <Button variant="default" onClick={() => onOpenInvoice(invoiceId)}>
-              Open invoice
-            </Button>
-          ) : null}
         </Stack>
       ) : null}
-    </Modal>
+    </AppModal>
   );
 };
 
 export const Fee = () => {
   const queryClient = useQueryClient();
+  const isDesktopMatrix = useMediaQuery('(min-width: 64em)', true, {
+    getInitialValueInEffect: false,
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const now = useMemo(() => new Date(), []);
   const defaultToPeriod = useMemo(() => toMonthInput(now), [now]);
@@ -518,26 +552,24 @@ export const Fee = () => {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="end">
-        <div>
-          <Title order={2}>Fee</Title>
-          <Text c="dimmed" size="sm">
-            Manage invoices and inspect fee history from one place. Details stay in modals instead
-            of separate screens.
-          </Text>
-        </div>
-        <Button
-          variant="default"
-          onClick={() => {
-            setEditingInvoice(null);
-            setInvoiceEditorOpened(true);
-          }}
-        >
-          Create invoice
-        </Button>
-      </Group>
+      <PageHeader
+        eyebrow="Dues operations"
+        title="Dues"
+        subtitle="Manage invoices and inspect resident fee history without turning mobile into a horizontal spreadsheet."
+        actions={
+          <Button
+            variant="default"
+            onClick={() => {
+              setEditingInvoice(null);
+              setInvoiceEditorOpened(true);
+            }}
+          >
+            Create invoice
+          </Button>
+        }
+      />
 
-      <Tabs
+      <AppTabs
         value={activeTab}
         onChange={(value) => {
           const nextParams = new URLSearchParams(searchParams);
@@ -545,85 +577,79 @@ export const Fee = () => {
           setSearchParams(nextParams);
         }}
       >
-        <Tabs.List>
-          <Tabs.Tab value="invoices">
-            <Text component="span" className="text-xl">
-              Invoices
-            </Text>
-          </Tabs.Tab>
-          <Tabs.Tab value="fees">
-            <Text component="span" className="text-xl">
-              Fees
-            </Text>
-          </Tabs.Tab>
-        </Tabs.List>
+        <AppTabs.List>
+          <AppTabs.Tab value="invoices">Invoices</AppTabs.Tab>
+          <AppTabs.Tab value="fees">Fees</AppTabs.Tab>
+        </AppTabs.List>
 
-        <Tabs.Panel value="invoices" pt="md">
+        <AppTabs.Panel value="invoices">
           <Stack gap="lg">
-            <AccentSurface>
-              <Stack gap="md">
-                <Text fw={600}>Invoice filters</Text>
+            <FilterBar
+              tone="accent"
+              title="Invoice filters"
+              description="Narrow the invoice queue by entity, direction, creator, status, or billing month."
+            >
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <AppSelect
+                  label="Entity"
+                  placeholder="Any entity"
+                  searchable
+                  clearable
+                  data={entityOptions}
+                  value={entityFilter}
+                  onChange={setEntityFilter}
+                />
+                <AppSelect
+                  label="From"
+                  placeholder="Any payer"
+                  searchable
+                  clearable
+                  data={entityOptions}
+                  value={fromEntityFilter}
+                  onChange={setFromEntityFilter}
+                />
+                <AppSelect
+                  label="To"
+                  placeholder="Any receiver"
+                  searchable
+                  clearable
+                  data={entityOptions}
+                  value={toEntityFilter}
+                  onChange={setToEntityFilter}
+                />
+                <AppSelect
+                  label="Created by"
+                  placeholder="Any entity"
+                  searchable
+                  clearable
+                  data={entityOptions}
+                  value={actorEntityFilter}
+                  onChange={setActorEntityFilter}
+                />
+                <AppSelect
+                  label="Status"
+                  placeholder="Any status"
+                  clearable
+                  data={[
+                    { value: 'pending', label: 'Pending' },
+                    { value: 'paid', label: 'Paid' },
+                    { value: 'cancelled', label: 'Cancelled' },
+                  ]}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                />
+                <AppMonthField
+                  label="Billing period"
+                  value={billingPeriodFilter}
+                  onChange={setBillingPeriodFilter}
+                />
+              </div>
+            </FilterBar>
 
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-                  <Select
-                    label="Entity"
-                    placeholder="Any entity"
-                    searchable
-                    clearable
-                    data={entityOptions}
-                    value={entityFilter}
-                    onChange={setEntityFilter}
-                  />
-                  <Select
-                    label="From"
-                    placeholder="Any payer"
-                    searchable
-                    clearable
-                    data={entityOptions}
-                    value={fromEntityFilter}
-                    onChange={setFromEntityFilter}
-                  />
-                  <Select
-                    label="To"
-                    placeholder="Any receiver"
-                    searchable
-                    clearable
-                    data={entityOptions}
-                    value={toEntityFilter}
-                    onChange={setToEntityFilter}
-                  />
-                  <Select
-                    label="Actor"
-                    placeholder="Any actor"
-                    searchable
-                    clearable
-                    data={entityOptions}
-                    value={actorEntityFilter}
-                    onChange={setActorEntityFilter}
-                  />
-                  <Select
-                    label="Status"
-                    placeholder="Any status"
-                    clearable
-                    data={[
-                      { value: 'pending', label: 'Pending' },
-                      { value: 'paid', label: 'Paid' },
-                      { value: 'cancelled', label: 'Cancelled' },
-                    ]}
-                    value={statusFilter}
-                    onChange={setStatusFilter}
-                  />
-                  <TextInput
-                    type="month"
-                    label="Billing period"
-                    value={billingPeriodFilter}
-                    onChange={(event) => setBillingPeriodFilter(event.currentTarget.value)}
-                  />
-                </div>
-              </Stack>
-            </AccentSurface>
-
-            <AppCard>
+            <SectionCard
+              title="Issued invoices"
+              description="Filter the invoice queue, then open any item for details, editing, or payment."
+            >
               <DataTable
                 columns={invoiceColumns}
                 data={invoicesQuery.data?.items ?? []}
@@ -632,8 +658,32 @@ export const Fee = () => {
                 }
                 onRowClick={(invoice) => openInvoice(invoice, 'invoices')}
                 getRowAriaLabel={(invoice) => `Open invoice #${invoice.id}`}
+                renderMobileTitle={(invoice) => `Invoice #${invoice.id}`}
+                renderMobileSubtitle={(invoice) =>
+                  invoice.amounts
+                    .map((amount) => `${amount.amount} ${amount.currency.toUpperCase()}`)
+                    .join(' · ')
+                }
+                renderMobileAside={(invoice) => (
+                  <StatusBadge tone={getInvoiceTone(invoice.status)} size="sm">
+                    {invoice.status}
+                  </StatusBadge>
+                )}
+                renderMobileDetails={(invoice) => [
+                  { label: 'Billing period', value: formatBillingPeriod(invoice.billing_period) },
+                  { label: 'From', value: invoice.from_entity.name },
+                  { label: 'To', value: invoice.to_entity.name },
+                  {
+                    label: 'Tags',
+                    value: invoice.tags.length ? (
+                      <TagList tags={invoice.tags} mode="compact" />
+                    ) : (
+                      '—'
+                    ),
+                  },
+                ]}
               />
-            </AppCard>
+            </SectionCard>
 
             {deleteInvoiceMutation.isError ? (
               <Alert color="red" title="Could not delete invoice">
@@ -641,58 +691,61 @@ export const Fee = () => {
               </Alert>
             ) : null}
           </Stack>
-        </Tabs.Panel>
+        </AppTabs.Panel>
 
-        <Tabs.Panel value="fees" pt="md">
+        <AppTabs.Panel value="fees">
           <Stack gap="lg">
-            <AccentSurface>
-              <Stack gap="md">
-                <Group justify="space-between" align="center">
-                  <Text fw={600}>Resident fee matrix</Text>
-                  {isRangeDirty ? (
-                    <Button
-                      variant="subtle"
-                      color="gray"
-                      onClick={() => {
-                        setFromPeriod(initialFeeRange.from);
-                        setToPeriod(initialFeeRange.to);
-                      }}
-                    >
-                      Reset range
-                    </Button>
-                  ) : null}
-                </Group>
+            <FilterBar
+              tone="accent"
+              title="Fee range"
+              description="Set the month range for the resident fee matrix. Empty placeholder cells stay hidden on purpose."
+              action={
+                isRangeDirty ? (
+                  <Button
+                    variant="subtle"
+                    color="gray"
+                    onClick={() => {
+                      setFromPeriod(initialFeeRange.from);
+                      setToPeriod(initialFeeRange.to);
+                    }}
+                  >
+                    Reset range
+                  </Button>
+                ) : null
+              }
+            >
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <AppMonthField
+                  label="From period"
+                  value={fromPeriod}
+                  onChange={setFromPeriod}
+                />
+                <AppMonthField
+                  label="To period"
+                  value={toPeriod}
+                  onChange={setToPeriod}
+                />
+              </div>
+            </FilterBar>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <TextInput
-                    type="month"
-                    label="From period"
-                    value={fromPeriod}
-                    onChange={(event) => setFromPeriod(event.currentTarget.value)}
-                  />
-                  <TextInput
-                    type="month"
-                    label="To period"
-                    value={toPeriod}
-                    onChange={(event) => setToPeriod(event.currentTarget.value)}
-                  />
-                </div>
-
-                <Text size="sm" c="dimmed">
-                  Only months with meaningful fee data are shown. Empty placeholder cells are
-                  intentionally suppressed.
-                </Text>
-              </Stack>
-            </AccentSurface>
-
-            <AppCard>
+            <SectionCard
+              title="Resident fee matrix"
+              description={
+                isDesktopMatrix
+                  ? 'Compare months side by side on larger screens.'
+                  : 'Tap a month card to inspect the underlying fee or related invoice.'
+              }
+            >
               <Stack gap="md">
                 <Group justify="space-between" align="flex-end" gap="md" wrap="wrap">
                   <div>
-                    <Text fw={600}>Resident fee matrix</Text>
+                    <Text fw={600}>
+                      {isDesktopMatrix ? 'Resident fee matrix' : 'Resident fee history'}
+                    </Text>
                     <Text size="sm" c="dimmed">
-                      Scroll sideways to compare monthly fees when the matrix exceeds the card
-                      width.
+                      {isDesktopMatrix
+                        ? 'Scroll sideways to compare monthly dues when the matrix exceeds the card width.'
+                        : 'The same dues data is stacked by member so it stays readable on smaller screens.'}
                     </Text>
                   </div>
 
@@ -728,10 +781,18 @@ export const Fee = () => {
                 </Group>
 
                 {feesQuery.isLoading ? (
-                  <Text c="dimmed">Loading fee history...</Text>
+                  <EmptyState
+                    compact
+                    title="Loading fee history..."
+                    description="The selected fee window is being prepared."
+                  />
                 ) : feeRows.length === 0 || feeMonths.length === 0 ? (
-                  <Text c="dimmed">No fee history in the selected range.</Text>
-                ) : (
+                  <EmptyState
+                    compact
+                    title="No fee history in the selected range"
+                    description="Try a wider date range to inspect older resident fees."
+                  />
+                ) : isDesktopMatrix ? (
                   <div
                     role="region"
                     aria-label="Resident fee matrix"
@@ -904,12 +965,83 @@ export const Fee = () => {
                       </Table.Tbody>
                     </Table>
                   </div>
+                ) : (
+                  <Stack gap="md">
+                    {feeRows.map((row) => {
+                      const feeByMonth = new Map(
+                        row.fees.map((fee) => [`${fee.year}-${fee.month}`, fee])
+                      );
+
+                      return (
+                        <AppCard key={row.entity.id} p="md">
+                          <Stack gap="md">
+                            <Stack gap={6}>
+                              <Anchor component={Link} fw={700} to={`/profile/${row.entity.id}`}>
+                                {row.entity.name}
+                              </Anchor>
+                              {row.entity.tags.length ? (
+                                <TagList tags={row.entity.tags} mode="compact" />
+                              ) : null}
+                            </Stack>
+
+                            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                              {feeMonths.flatMap((monthCell) => {
+                                const fee = feeByMonth.get(`${monthCell.year}-${monthCell.month}`);
+                                if (!fee) return [];
+
+                                const amountLines = formatAmountLines(
+                                  fee.unpaid_invoice_amounts ?? fee.amounts
+                                );
+
+                                return [
+                                  <UnstyledButton
+                                    key={`${row.entity.id}-${fee.year}-${fee.month}`}
+                                    onClick={() => setFeeCellState({ row, fee })}
+                                    style={{
+                                      width: '100%',
+                                      textAlign: 'left',
+                                      borderRadius: 14,
+                                      padding: '0.95rem',
+                                      border: '1px solid var(--app-border-subtle)',
+                                      background: 'rgba(255, 255, 255, 0.04)',
+                                    }}
+                                  >
+                                    <Stack gap="sm">
+                                      <Group justify="space-between" align="start">
+                                        <Text fw={700}>{formatFeeMonth(fee.year, fee.month)}</Text>
+                                        <StatusBadge tone={getFeeTone(fee)} size="sm">
+                                          {getFeeStatusLabel(fee)}
+                                        </StatusBadge>
+                                      </Group>
+                                      <Stack gap={2}>
+                                        {amountLines.length > 0 ? (
+                                          amountLines.map((line) => (
+                                            <Text key={line} size="sm" fw={600}>
+                                              {line}
+                                            </Text>
+                                          ))
+                                        ) : (
+                                          <Text size="sm" className="app-muted-copy">
+                                            No invoice yet
+                                          </Text>
+                                        )}
+                                      </Stack>
+                                    </Stack>
+                                  </UnstyledButton>,
+                                ];
+                              })}
+                            </SimpleGrid>
+                          </Stack>
+                        </AppCard>
+                      );
+                    })}
+                  </Stack>
                 )}
               </Stack>
-            </AppCard>
+            </SectionCard>
           </Stack>
-        </Tabs.Panel>
-      </Tabs>
+        </AppTabs.Panel>
+      </AppTabs>
 
       <InvoiceDetailsModal
         opened={selectedInvoiceId != null}

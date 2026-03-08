@@ -1,1 +1,1 @@
-export { AppCard } from './AppCard';
+export { AppCard, type AppCardProps } from './AppCard';
