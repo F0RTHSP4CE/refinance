@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router-dom';
@@ -22,7 +23,21 @@ vi.mock('@/api/invoices', () => ({
   deleteInvoice: vi.fn(),
 }));
 
+const setDesktopMatchMedia = () => {
+  window.matchMedia = vi.fn().mockImplementation((query) => ({
+    matches: query.includes('min-width'),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+};
+
 const renderWithProviders = (initialEntry = '/fee?tab=fees') => {
+  setDesktopMatchMedia();
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -44,8 +59,6 @@ const renderWithProviders = (initialEntry = '/fee?tab=fees') => {
 describe('Fee page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-03-08T12:00:00Z'));
 
     (getEntities as ReturnType<typeof vi.fn>).mockResolvedValue({
       items: [],
@@ -101,10 +114,6 @@ describe('Fee page', () => {
     ]);
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   it('shows reset range only after the filter changes and restores the initial state on reset', async () => {
     renderWithProviders();
 
@@ -112,15 +121,13 @@ describe('Fee page', () => {
 
     expect(screen.queryByRole('button', { name: 'Reset range' })).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('From period'), { target: { value: '2025-12' } });
+    const [fromPeriodClearButton] = screen.getAllByRole('button', { name: '' });
+    fireEvent.click(fromPeriodClearButton);
 
     expect(screen.getByRole('button', { name: 'Reset range' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset range' }));
-
-    await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'Reset range' })).not.toBeInTheDocument();
-    });
+    expect(screen.queryByRole('button', { name: 'Reset range' })).not.toBeInTheDocument();
   });
 
   it('renders the matrix in a horizontal scroll region with sticky columns and stacked amount lines', async () => {
@@ -160,13 +167,15 @@ describe('Fee page', () => {
   });
 
   it('opens the fee details modal when a fee tile is clicked', async () => {
+    const user = userEvent.setup();
+
     renderWithProviders();
 
     const pendingButton = await screen.findByRole('button', {
       name: 'Open fee details for Resident Alice, February 2026, pending',
     });
 
-    fireEvent.click(pendingButton);
+    await user.click(pendingButton);
 
     expect(await screen.findByText('Pending invoice amounts')).toBeInTheDocument();
     expect(screen.getByText('115.00 GEL · 42.00 USD')).toBeInTheDocument();

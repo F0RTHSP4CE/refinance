@@ -95,8 +95,8 @@ describe('Splits page', () => {
     renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText('How splits work')).toBeInTheDocument();
-      expect(screen.getByText('Split filters')).toBeInTheDocument();
+      expect(screen.getByText('How split runs work')).toBeInTheDocument();
+      expect(screen.getByText('Filter split runs')).toBeInTheDocument();
       expect(screen.getByText('March utilities')).toBeInTheDocument();
     });
 

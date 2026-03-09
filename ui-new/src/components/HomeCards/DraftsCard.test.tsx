@@ -51,7 +51,7 @@ describe('DraftsCard', () => {
     renderWithProviders(<DraftsCard />);
 
     await waitFor(() => {
-      expect(screen.getByText('No draft transactions.')).toBeInTheDocument();
+      expect(screen.getByText('No draft transactions')).toBeInTheDocument();
     });
   });
 
@@ -93,11 +93,9 @@ describe('DraftsCard', () => {
 
     await user.click(screen.getByText('Incoming request from Alice'));
 
-    await waitFor(() => {
-      expect(screen.getByText('Draft Transaction #501')).toBeInTheDocument();
-      expect(screen.getByText('Need approval')).toBeInTheDocument();
-      const dialog = screen.getByRole('dialog');
-      expect(within(dialog).getByText('20.00 USD')).toBeInTheDocument();
-    });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Transaction #501' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Need approval')).toBeInTheDocument();
+    expect(within(dialog).getByText('20.00 USD')).toBeInTheDocument();
   });
 });

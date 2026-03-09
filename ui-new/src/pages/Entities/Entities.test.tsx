@@ -122,7 +122,7 @@ describe('Entities page', () => {
     expect(await screen.findByText('Cash In')).toBeInTheDocument();
     expect(screen.getByText('Food Supplier')).toBeInTheDocument();
 
-    const tagsFilterInput = screen.getByRole('textbox', { name: 'Tags filter' });
+    const tagsFilterInput = screen.getByRole('textbox', { name: 'Entity labels' });
     await user.click(tagsFilterInput);
     await user.keyboard('{ArrowDown}{Enter}');
 

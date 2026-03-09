@@ -1,4 +1,4 @@
-import { Group, Text } from '@mantine/core';
+import { Box, Group } from '@mantine/core';
 import type { ReactNode } from 'react';
 
 type InlineMetaProps = {
@@ -15,9 +15,19 @@ export const InlineMeta = ({ items }: InlineMetaProps) => {
   return (
     <Group gap="xs" wrap="wrap">
       {visibleItems.map((item, index) => (
-        <Text key={index} size="xs" className="app-muted-copy">
+        <Box
+          key={index}
+          className="app-muted-copy"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            fontSize: 'var(--mantine-font-size-xs)',
+            lineHeight: 'var(--mantine-line-height-xs)',
+          }}
+        >
           {item}
-        </Text>
+        </Box>
       ))}
     </Group>
   );

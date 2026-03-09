@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MantineProvider } from '@mantine/core';
 import { MemoryRouter } from 'react-router-dom';
@@ -43,19 +43,25 @@ describe('InvoiceDetailsModal', () => {
       </MantineProvider>
     );
 
-    expect(screen.getByText('Invoice #501')).toBeInTheDocument();
-    expect(screen.getByText('Amount')).toBeInTheDocument();
-    expect(screen.getByText('Participants')).toBeInTheDocument();
-    expect(screen.getByText('Context')).toBeInTheDocument();
-    expect(screen.getByText('Comment')).toBeInTheDocument();
-    expect(screen.getByText('Author')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Treasurer profile' })).toHaveAttribute(
+    const dialog = screen.getByRole('dialog', { name: 'Invoice #501' });
+
+    expect(within(dialog).getByRole('heading', { name: 'Invoice #501' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Amount')).toBeInTheDocument();
+    expect(within(dialog).getByText('Participants')).toBeInTheDocument();
+    expect(within(dialog).getByText('Context')).toBeInTheDocument();
+    expect(within(dialog).getByText('Comment')).toBeInTheDocument();
+    expect(within(dialog).getByText('Author: Treasurer')).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Open Resident Alice profile' })).toHaveAttribute(
       'href',
-      '/profile/1'
+      '/profile/3'
     );
-    expect(screen.getByRole('button', { name: 'Pay' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Open Hackerspace profile' })).toHaveAttribute(
+      'href',
+      '/profile/2'
+    );
+    expect(within(dialog).getByRole('button', { name: 'Pay' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
   });
 
   it('calls onClose from the persistent close action', async () => {

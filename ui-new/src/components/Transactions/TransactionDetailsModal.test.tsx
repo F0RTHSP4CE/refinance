@@ -51,27 +51,33 @@ describe('TransactionDetailsModal', () => {
       <TransactionDetailsModal opened={true} transaction={transaction} onClose={() => {}} />
     );
 
-    expect(screen.getByText('Transaction #801')).toBeInTheDocument();
-    expect(screen.getByText('12.00 USD')).toBeInTheDocument();
-    expect(screen.getByText('Participants')).toBeInTheDocument();
-    expect(screen.getByText('Context')).toBeInTheDocument();
-    expect(screen.getByText('Comment')).toBeInTheDocument();
-    expect(
-      screen.getByText('This is the full transaction comment in the details modal.')
-    ).toBeInTheDocument();
-    expect(screen.getByText('Author')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open Test User profile' })).toHaveAttribute(
-      'href',
-      '/profile/1'
-    );
-    expect(screen.getByText('operator')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Transaction #801' });
 
-    const participantsSection = screen.getByText('Participants').parentElement;
+    expect(within(dialog).getByRole('heading', { name: 'Transaction #801' })).toBeInTheDocument();
+    expect(within(dialog).getByText('12.00 USD')).toBeInTheDocument();
+    expect(within(dialog).getByText('Participants')).toBeInTheDocument();
+    expect(within(dialog).getByText('Context')).toBeInTheDocument();
+    expect(within(dialog).getByText('Comment')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('This is the full transaction comment in the details modal.')
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('Author: Test User')).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'Open Alice profile' })).toHaveAttribute(
+      'href',
+      '/profile/3'
+    );
+    expect(within(dialog).getByRole('link', { name: 'Open Bob profile' })).toHaveAttribute(
+      'href',
+      '/profile/2'
+    );
+    expect(within(dialog).getByText('food')).toBeInTheDocument();
+
+    const participantsSection = within(dialog).getByText('Participants').parentElement;
     if (!participantsSection) throw new Error('Participants section not found');
 
     expect(within(participantsSection).getByText('From')).toBeInTheDocument();
     expect(within(participantsSection).getByText('To')).toBeInTheDocument();
-    expect(within(participantsSection).queryByText('Author')).not.toBeInTheDocument();
+    expect(within(participantsSection).queryByText(/Author:/)).not.toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked', async () => {

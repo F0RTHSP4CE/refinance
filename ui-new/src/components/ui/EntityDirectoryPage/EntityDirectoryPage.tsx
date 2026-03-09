@@ -312,7 +312,11 @@ export const EntityDirectoryPage = ({ config }: EntityDirectoryPageProps) => {
             emptyMessage={
               entitiesQuery.isLoading ? config.copy.emptyLoadingMessage : config.copy.emptyMessage
             }
-            renderMobileTitle={(entity) => entity.name}
+            renderMobileTitle={(entity) => (
+              <Anchor component={Link} to={`/profile/${entity.id}`} underline="hover" fw={600}>
+                {entity.name}
+              </Anchor>
+            )}
             renderMobileSubtitle={(entity) => entity.comment || config.labels.emptyComment}
             renderMobileAside={(entity) => (
               <StatusBadge tone={entity.active ? 'success' : 'danger'} size="sm">

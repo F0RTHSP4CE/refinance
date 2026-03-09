@@ -76,11 +76,12 @@ describe('SplitParticipantModal', () => {
     );
 
     expect(await screen.findByText('Add by')).toBeInTheDocument();
-    expect(screen.getByLabelText('Entity')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Entity' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Entity' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('radio', { name: 'Tag' }));
 
-    expect(screen.getByLabelText('Entity tag')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Entity')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Entity tag' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Entity' })).not.toBeInTheDocument();
   });
 });

@@ -85,20 +85,18 @@ describe('HomeTransactionsTableSection', () => {
 
     renderWithProviders(<HomeTransactionsTableSection />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Latest transactions/i)).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute(
-        'href',
-        '/transactions'
-      );
-      expect(screen.getByText('ID')).toBeInTheDocument();
-      expect(screen.getByText('From')).toBeInTheDocument();
-      expect(screen.getByText('To')).toBeInTheDocument();
-      expect(screen.getByText('Status')).toBeInTheDocument();
-      expect(screen.getByText('Actor')).toBeInTheDocument();
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('Recent movement')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View all transactions' })).toHaveAttribute(
+      'href',
+      '/transactions'
+    );
+    expect(screen.getByText('ID')).toBeInTheDocument();
+    expect(screen.getByText('From')).toBeInTheDocument();
+    expect(screen.getByText('To')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.getByText('Actor')).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
   it('renders empty table message when there are no transactions', async () => {
@@ -112,7 +110,7 @@ describe('HomeTransactionsTableSection', () => {
     renderWithProviders(<HomeTransactionsTableSection />);
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'View all transactions' })).toHaveAttribute(
         'href',
         '/transactions'
       );
@@ -160,6 +158,7 @@ describe('HomeTransactionsTableSection', () => {
     await user.click(tableRow);
 
     const dialog = await screen.findByRole('dialog', { name: 'Transaction #702' });
+    expect(within(dialog).getByRole('heading', { name: 'Transaction #702' })).toBeInTheDocument();
     expect(within(dialog).getByText('22.50 USD')).toBeInTheDocument();
   });
 });

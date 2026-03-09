@@ -122,7 +122,7 @@ describe('Users page', () => {
     expect(await screen.findByText('Resident Alice')).toBeInTheDocument();
     expect(screen.getByText('Guest Bob')).toBeInTheDocument();
 
-    const tagsFilterInput = screen.getByRole('textbox', { name: 'Tags filter' });
+    const tagsFilterInput = screen.getByRole('textbox', { name: 'Member labels' });
     await user.click(tagsFilterInput);
     await user.keyboard('{ArrowDown}{Enter}');
 

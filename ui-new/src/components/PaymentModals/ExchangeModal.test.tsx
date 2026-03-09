@@ -69,10 +69,9 @@ describe('ExchangeModal', () => {
   it('renders exchange modal with default currencies', async () => {
     renderWithProviders(<ExchangeModal opened={true} onClose={() => {}} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('From')).toBeInTheDocument();
-      expect(screen.getByText('To')).toBeInTheDocument();
-    });
+    expect(await screen.findByLabelText('From amount')).toBeInTheDocument();
+    expect(screen.getByLabelText('To amount')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review exchange' })).toBeDisabled();
   });
 
   it('shows exchange rate after loading', async () => {
@@ -90,12 +89,12 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const sourceInput = screen.getByPlaceholderText('0.00');
+    const sourceInput = screen.getByLabelText('From amount');
     await user.type(sourceInput, '10');
 
     await waitFor(() => {
-      const targetInput = screen.getAllByPlaceholderText('0.00')[1];
-      expect(targetInput).toHaveValue(26.8);
+      const targetInput = screen.getByLabelText('To amount');
+      expect(targetInput).toHaveValue('26.8');
     });
   });
 
@@ -106,13 +105,12 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const inputs = screen.getAllByPlaceholderText('0.00');
-    const targetInput = inputs[1];
+    const targetInput = screen.getByLabelText('To amount');
     await user.type(targetInput, '26.8');
 
     await waitFor(() => {
-      const sourceInput = screen.getAllByPlaceholderText('0.00')[0];
-      expect(sourceInput).toHaveValue(10);
+      const sourceInput = screen.getByLabelText('From amount');
+      expect(sourceInput).toHaveValue('10');
     });
   });
 
@@ -123,15 +121,15 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const sourceInput = screen.getByPlaceholderText('0.00');
+    const sourceInput = screen.getByLabelText('From amount');
     await user.type(sourceInput, '10');
 
     await waitFor(() => {
-      const targetInput = screen.getAllByPlaceholderText('0.00')[1];
-      expect(targetInput).toHaveValue(26.8);
+      const targetInput = screen.getByLabelText('To amount');
+      expect(targetInput).toHaveValue('26.8');
     });
 
-    const swapButton = screen.getByRole('button', { name: '' });
+    const swapButton = screen.getByRole('button', { name: 'Swap currencies' });
     await user.click(swapButton);
 
     await waitFor(() => {
@@ -146,15 +144,13 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const selects = screen.getAllByRole('combobox');
-    const targetCurrencySelect = selects[1];
+    const targetCurrencySelect = screen.getByRole('textbox', { name: 'To currency' });
 
     await user.click(targetCurrencySelect);
-    const usdOption = screen.getByText('USD');
-    await user.click(usdOption);
+    await user.keyboard('{ArrowDown}{Enter}');
 
     await waitFor(() => {
-      expect(screen.getByText(/1 GEL = /)).toBeInTheDocument();
+      expect(screen.getByText(/1 GEL = 0\.37 USD/)).toBeInTheDocument();
     });
   });
 
@@ -165,7 +161,7 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const exchangeButton = screen.getByRole('button', { name: 'Exchange' });
+    const exchangeButton = screen.getByRole('button', { name: 'Review exchange' });
     expect(exchangeButton).toBeDisabled();
   });
 
@@ -176,44 +172,36 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const sourceInput = screen.getByPlaceholderText('0.00');
+    const sourceInput = screen.getByLabelText('From amount');
     await user.type(sourceInput, '10');
 
     await waitFor(() => {
-      const exchangeButton = screen.getByRole('button', { name: 'Exchange' });
+      const exchangeButton = screen.getByRole('button', { name: 'Review exchange' });
       expect(exchangeButton).not.toBeDisabled();
     });
   });
 
   it('shows preview step when exchange button is clicked', async () => {
-    (currencyExchangeApi.executeExchange as ReturnType<typeof vi.fn>).mockResolvedValue({
-      source_currency: 'USD',
-      source_amount: '10.00',
-      target_currency: 'GEL',
-      target_amount: '26.80',
-      rate: '2.68',
-      transactions: [],
-    });
-
     renderWithProviders(<ExchangeModal opened={true} onClose={() => {}} />);
 
     await waitFor(() => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const sourceInput = screen.getByPlaceholderText('0.00');
+    const sourceInput = screen.getByLabelText('From amount');
     await user.type(sourceInput, '10');
 
     await waitFor(() => {
-      const exchangeButton = screen.getByRole('button', { name: 'Exchange' });
+      const exchangeButton = screen.getByRole('button', { name: 'Review exchange' });
       expect(exchangeButton).not.toBeDisabled();
     });
 
-    const exchangeButton = screen.getByRole('button', { name: 'Exchange' });
+    const exchangeButton = screen.getByRole('button', { name: 'Review exchange' });
     await user.click(exchangeButton);
 
     await waitFor(() => {
-      expect(screen.getByText('You are about to exchange:')).toBeInTheDocument();
+      expect(screen.getByText('Review exchange')).toBeInTheDocument();
+      expect(screen.getByText('Exchange direction')).toBeInTheDocument();
     });
   });
 
@@ -232,7 +220,7 @@ describe('ExchangeModal', () => {
       expect(screen.getByText('From')).toBeInTheDocument();
     });
 
-    const swapButton = screen.getByRole('button', { name: '' });
+    const swapButton = screen.getByRole('button', { name: 'Swap currencies' });
     await user.click(swapButton);
 
     await waitFor(() => {

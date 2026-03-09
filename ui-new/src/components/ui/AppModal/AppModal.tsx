@@ -1,6 +1,6 @@
 import { Box, Drawer, Group, ScrollArea, Stack, Text, type DrawerProps } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 export type AppModalVariant = 'compact' | 'form' | 'detail';
 
@@ -35,9 +35,12 @@ export const AppModal = ({
   const isMobile = useMediaQuery('(max-width: 47.99em)', true, {
     getInitialValueInEffect: false,
   });
+  const titleId = useId();
+  const labelledBy = title || subtitle || eyebrow ? titleId : undefined;
 
   return (
     <Drawer
+      title={title ?? subtitle ?? eyebrow}
       padding={padding}
       position="right"
       size={isMobile ? '100%' : DESKTOP_WIDTH[variant]}
@@ -58,6 +61,7 @@ export const AppModal = ({
           display: 'none',
         },
       }}
+      aria-labelledby={labelledBy}
       {...props}
     >
       <Stack gap={0} className="app-modal-shell">
@@ -66,9 +70,11 @@ export const AppModal = ({
             <Stack gap={8}>
               {eyebrow ? <Text className="app-kicker">{eyebrow}</Text> : null}
               {typeof title === 'string' ? (
-                <Text className="app-section-title">{title}</Text>
+                <Text component="h2" id={titleId} className="app-section-title">
+                  {title}
+                </Text>
               ) : (
-                title
+                <Box id={titleId}>{title}</Box>
               )}
               {subtitle ? (
                 <Text size="sm" className="app-muted-copy">

@@ -129,8 +129,8 @@ class TestFeeService:
 
         # --- Assertions for Resident One ---
         fees1 = sorted(resident1_data["fees"], key=lambda x: (x["year"], x["month"]))
-        # Expecting fees for previous, current, and next month
-        assert len(fees1) == 3
+        # The `months` filter is a closed range ending at the current month.
+        assert len(fees1) == 2
 
         # Previous month
         assert fees1[0]["year"] == prev_year
@@ -143,12 +143,9 @@ class TestFeeService:
         assert fees1[1]["month"] == current_month
         assert fees1[1]["amounts"] == {"usd": "100.00"}
         assert fees1[1]["total_usd"] == pytest.approx(100.0)
-
-        # Next month (future payment)
-        assert fees1[2]["year"] == next_year
-        assert fees1[2]["month"] == next_month
-        assert fees1[2]["amounts"] == {"usd": "100.00"}
-        assert fees1[2]["total_usd"] == pytest.approx(100.0)
+        assert all(
+            not (fee["year"] == next_year and fee["month"] == next_month) for fee in fees1
+        )
 
         # --- Assertions for Resident Two ---
         fees2 = sorted(resident2_data["fees"], key=lambda x: (x["year"], x["month"]))

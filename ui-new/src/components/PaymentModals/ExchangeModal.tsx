@@ -343,6 +343,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     control={control}
                     render={({ field }) => (
                       <NumberInput
+                        aria-label="From amount"
                         placeholder="0.00"
                         min={0.01}
                         step={0.01}
@@ -361,6 +362,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     control={control}
                     render={({ field }) => (
                       <AppSelect
+                        aria-label="From currency"
                         data={CURRENCIES}
                         error={errors.sourceCurrency?.message}
                         value={field.value}
@@ -378,7 +380,13 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                   </Text>
                 </Stack>
 
-                <ActionIcon variant="light" size="lg" onClick={swapCurrencies} mt={32}>
+                <ActionIcon
+                  variant="light"
+                  size="lg"
+                  onClick={swapCurrencies}
+                  aria-label="Swap currencies"
+                  mt={32}
+                >
                   <IconArrowDown size={20} />
                 </ActionIcon>
 
@@ -391,6 +399,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     control={control}
                     render={({ field }) => (
                       <NumberInput
+                        aria-label="To amount"
                         placeholder="0.00"
                         min={0.01}
                         step={0.01}
@@ -409,6 +418,7 @@ export const ExchangeModal = ({ opened, onClose }: ExchangeModalProps) => {
                     control={control}
                     render={({ field }) => (
                       <AppSelect
+                        aria-label="To currency"
                         data={CURRENCIES}
                         error={errors.targetCurrency?.message}
                         value={field.value}

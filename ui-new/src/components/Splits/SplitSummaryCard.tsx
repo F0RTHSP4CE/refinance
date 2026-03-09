@@ -1,7 +1,8 @@
-import { Button, Group, Stack, Text, UnstyledButton } from '@mantine/core';
+import { Button, Group, Stack, Text } from '@mantine/core';
 import { AppCard, StatusBadge, TagList } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth';
 import type { Split } from '@/types/api';
+import type { KeyboardEvent } from 'react';
 import { SplitProgressBar } from './SplitProgressBar';
 import {
   formatSplitMoney,
@@ -22,23 +23,31 @@ export const SplitSummaryCard = ({ split, onOpen, onJoin }: SplitSummaryCardProp
     actorEntity != null &&
     split.participants.some((participant) => participant.entity.id === actorEntity.id);
   const statsLabel = getSplitStatsLabel(split);
+  const openSplit = () => onOpen(split.id);
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openSplit();
+    }
+  };
 
   return (
-    <UnstyledButton
-      onClick={() => onOpen(split.id)}
+    <AppCard
+      h="100%"
+      role="button"
+      tabIndex={0}
       aria-label={`Open ${getSplitDisplayName(split)}`}
-      style={{ display: 'block', width: '100%', height: '100%' }}
+      onClick={openSplit}
+      onKeyDown={handleCardKeyDown}
+      style={{
+        background: split.performed
+          ? 'rgba(148, 163, 184, 0.08)'
+          : 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+        borderColor: split.performed ? 'rgba(148, 163, 184, 0.24)' : 'rgba(14, 165, 233, 0.14)',
+        transition: 'transform 120ms ease, border-color 120ms ease',
+        cursor: 'pointer',
+      }}
     >
-      <AppCard
-        h="100%"
-        style={{
-          background: split.performed
-            ? 'rgba(148, 163, 184, 0.08)'
-            : 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
-          borderColor: split.performed ? 'rgba(148, 163, 184, 0.24)' : 'rgba(14, 165, 233, 0.14)',
-          transition: 'transform 120ms ease, border-color 120ms ease',
-        }}
-      >
         <Stack gap="md" h="100%">
           <Group justify="space-between" align="flex-start" gap="sm">
             <Stack gap={4}>
@@ -90,13 +99,13 @@ export const SplitSummaryCard = ({ split, onOpen, onJoin }: SplitSummaryCardProp
                   event.stopPropagation();
                   onJoin(split.id);
                 }}
+                onKeyDown={(event) => event.stopPropagation()}
               >
                 Join
               </Button>
             ) : null}
           </Group>
         </Stack>
-      </AppCard>
-    </UnstyledButton>
+    </AppCard>
   );
 };

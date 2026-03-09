@@ -50,7 +50,7 @@ describe('FeeInvoicesStatusCard', () => {
     renderWithProviders(<FeeInvoicesStatusCard />);
 
     await waitFor(() => {
-      expect(screen.getByText('No unpaid invoices')).toBeInTheDocument();
+      expect(screen.getByText('No unpaid dues')).toBeInTheDocument();
     });
   });
 
@@ -80,7 +80,7 @@ describe('FeeInvoicesStatusCard', () => {
     renderWithProviders(<FeeInvoicesStatusCard />);
 
     await waitFor(() => {
-      expect(screen.getByText('NEXT DUE:')).toBeInTheDocument();
+      expect(screen.getByText('Next to settle')).toBeInTheDocument();
       expect(screen.getByText('pending')).toBeInTheDocument();
       expect(screen.getByText('25.00 USD')).toBeInTheDocument();
     });

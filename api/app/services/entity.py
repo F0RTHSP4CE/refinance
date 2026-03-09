@@ -2,6 +2,7 @@
 
 import datetime
 
+from app.errors.entity import DuplicateEntityAuthBinding
 from app.dependencies.services import get_tag_service
 from app.errors.common import NotFoundError
 from app.models.entity import Entity
@@ -87,17 +88,60 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
             items=items, total=total, skip=skip, limit=limit
         )
 
+    @staticmethod
+    def _normalize_auth_identifier(value: int | str | None) -> int | str | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                return None
+            if normalized.isdigit():
+                return int(normalized)
+            return normalized
+        return value
+
+    def _assert_unique_auth_bindings(
+        self,
+        auth: dict | None,
+        *,
+        exclude_entity_id: int | None = None,
+    ) -> None:
+        normalized_auth = auth or {}
+        duplicate_checks: list[tuple[str, int | str]] = []
+        for key in ("telegram_id", "signal_id"):
+            normalized = self._normalize_auth_identifier(normalized_auth.get(key))
+            if normalized is not None:
+                duplicate_checks.append((key, normalized))
+
+        for key, normalized in duplicate_checks:
+            query = self.db.query(self.model).filter(
+                cast(func.nullif(self.model.auth.op("->>")(key), ""), Text) == str(normalized)
+            )
+            if exclude_entity_id is not None:
+                query = query.filter(self.model.id != exclude_entity_id)
+            if query.first() is not None:
+                raise DuplicateEntityAuthBinding(f"{key}={normalized}")
+
+    def create(self, schema: EntityCreateSchema, overrides: dict = {}):  # type: ignore[override]
+        data = schema.dump()
+        self._assert_unique_auth_bindings(data.get("auth"))
+        return super().create(schema, overrides=overrides)
+
     def get_by_telegram_id(self, telegram_id: int) -> Entity:
-        db_obj = (
+        matches = (
             self.db.query(self.model)
             .filter(
                 cast(func.nullif(self.model.auth.op("->>")("telegram_id"), ""), BigInteger) == telegram_id
             )
-            .first()
+            .limit(2)
+            .all()
         )
-        if not db_obj:
+        if not matches:
             raise NotFoundError(f"{self.model.__name__}.auth.{telegram_id=}")
-        return db_obj
+        if len(matches) > 1:
+            raise DuplicateEntityAuthBinding(f"telegram_id={telegram_id}")
+        return matches[0]
 
     def get_by_name(self, name: str) -> Entity:
         db_obj = (
@@ -127,6 +171,7 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
             # Merge with existing auth instead of replacing wholesale
             existing_auth = obj.auth or {}
             merged_auth = {**existing_auth, **auth_update}
+            self._assert_unique_auth_bindings(merged_auth, exclude_entity_id=obj.id)
             obj.auth = merged_auth
 
         # Handle tags if supported and provided (keep parity with BaseService)

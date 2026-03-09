@@ -113,18 +113,16 @@ describe('SplitDetailsModal', () => {
     renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText('March utilities')).toBeInTheDocument();
-      expect(screen.getByText('Amount')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'March utilities' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'March utilities' })).toBeInTheDocument();
+      expect(screen.getByText('25.00 / 25.00 USD')).toBeInTheDocument();
       expect(screen.getByText('Participants')).toBeInTheDocument();
       expect(screen.getByText('Context')).toBeInTheDocument();
-      expect(screen.getByText('Actions')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
       expect(screen.getByText('Performed transactions')).toBeInTheDocument();
     });
 
-    const transactionRow = screen.getByText('#900').closest('tr');
-    if (!transactionRow) throw new Error('Transaction row not found');
-
-    await user.click(transactionRow);
+    await user.click(screen.getByRole('button', { name: 'Open transaction #900' }));
 
     expect(await screen.findByRole('dialog', { name: 'Transaction #900' })).toBeInTheDocument();
   });

@@ -1,9 +1,11 @@
 import { Card, type CardProps } from '@mantine/core';
-import type { ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react';
 
-export type AppCardProps = CardProps & {
-  children: ReactNode;
-};
+export type AppCardProps = Omit<CardProps, 'style'> &
+  ComponentPropsWithoutRef<'div'> & {
+    children: ReactNode;
+    style?: CSSProperties;
+  };
 
 export const AppCard = ({ children, style, ...props }: AppCardProps) => {
   return (

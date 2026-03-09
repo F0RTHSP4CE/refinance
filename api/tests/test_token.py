@@ -5,6 +5,8 @@ import hmac
 import time
 
 from app.config import get_config
+from app.errors.entity import DuplicateEntityAuthBinding
+from app.services.entity import EntityService
 from fastapi.testclient import TestClient
 
 
@@ -103,13 +105,13 @@ class TestTokenAuth:
             json={
                 "name": "Test Entity Auth Fields",
                 "comment": "test entity",
-                "auth": {"telegram_id": 123456789, "signal_id": "sig-1"},
+                "auth": {"telegram_id": 123456790, "signal_id": "sig-1"},
             },
             headers={"x-token": token},
         )
         assert response.status_code == 200
         entity_data = response.json()
-        assert entity_data["auth"]["telegram_id"] == 123456789
+        assert entity_data["auth"]["telegram_id"] == 123456790
         assert entity_data["auth"]["signal_id"] == "sig-1"
 
     def test_telegram_login_returns_token_for_linked_entity(
@@ -132,6 +134,25 @@ class TestTokenAuth:
         assert data["entity_id"] == entity_id
         assert data["linked"] is False
         assert data["token"]
+
+    def test_telegram_login_rejects_duplicate_linked_entities(
+        self, test_app: TestClient, monkeypatch
+    ):
+        _set_telegram_bot_token(test_app, "telegram-test-token")
+
+        def _raise_duplicate(self, telegram_id: int):
+            raise DuplicateEntityAuthBinding(f"telegram_id={telegram_id}")
+
+        monkeypatch.setattr(EntityService, "get_by_telegram_id", _raise_duplicate)
+
+        response = test_app.post(
+            "/tokens/telegram-login",
+            json=_build_telegram_payload("telegram-test-token"),
+        )
+        assert response.status_code == 409
+        data = response.json()
+        assert data["error_code"] == 4001
+        assert "telegram_id=123456789" in data["error"]
 
     def test_telegram_config_reports_missing_username(self, test_app: TestClient):
         override = test_app.app.dependency_overrides[get_config]

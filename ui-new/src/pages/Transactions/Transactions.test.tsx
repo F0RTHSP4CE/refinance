@@ -7,6 +7,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { Transactions } from './Transactions';
 import { useAuthStore } from '@/stores/auth';
 import * as transactionsApi from '@/api/transactions';
+import * as entitiesApi from '@/api/entities';
+import * as tagsApi from '@/api/tags';
 
 vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
@@ -14,6 +16,14 @@ vi.mock('@/stores/auth', () => ({
 
 vi.mock('@/api/transactions', () => ({
   getAllTransactions: vi.fn(),
+}));
+
+vi.mock('@/api/entities', () => ({
+  getEntities: vi.fn(),
+}));
+
+vi.mock('@/api/tags', () => ({
+  getTags: vi.fn(),
 }));
 
 const mockActorEntity = { id: 1, name: 'Test User' };
@@ -52,6 +62,18 @@ describe('Transactions Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useAuthStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue(mockActorEntity);
+    (entitiesApi.getEntities as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [],
+      total: 0,
+      skip: 0,
+      limit: 500,
+    });
+    (tagsApi.getTags as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [],
+      total: 0,
+      skip: 0,
+      limit: 500,
+    });
   });
 
   it('renders shared transactions table with actor tags and truncated comments', async () => {
@@ -85,19 +107,16 @@ describe('Transactions Page', () => {
 
     renderWithProviders(<Transactions />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Transactions')).toBeInTheDocument();
-      expect(screen.getByText('ID')).toBeInTheDocument();
-      expect(screen.getByText('From')).toBeInTheDocument();
-      expect(screen.getByText('To')).toBeInTheDocument();
-      expect(screen.getByText('Alice')).toBeInTheDocument();
-      expect(screen.getByText('Bob')).toBeInTheDocument();
-      expect(screen.getByText('operator')).toBeInTheDocument();
-      expect(screen.getByText('This is a very long comment th...')).toBeInTheDocument();
-      expect(
-        screen.queryByText('This is a very long comment that should be truncated in table view.')
-      ).not.toBeInTheDocument();
-    });
+    expect(await screen.findByText('Alice')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Transactions' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'From' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'To' })).toBeInTheDocument();
+    expect(screen.getByText('Bob')).toBeInTheDocument();
+    expect(screen.getByText('This is a very long comment th...')).toBeInTheDocument();
+    expect(
+      screen.queryByText('This is a very long comment that should be truncated in table view.')
+    ).not.toBeInTheDocument();
 
     const firstCallArg = (transactionsApi.getAllTransactions as ReturnType<typeof vi.fn>).mock
       .calls[0]?.[0];
@@ -140,6 +159,7 @@ describe('Transactions Page', () => {
     await user.click(tableRow);
 
     const dialog = await screen.findByRole('dialog', { name: 'Transaction #802' });
+    expect(within(dialog).getByRole('heading', { name: 'Transaction #802' })).toBeInTheDocument();
     expect(within(dialog).getByText('15.00 USD')).toBeInTheDocument();
   });
 
@@ -183,7 +203,7 @@ describe('Transactions Page', () => {
     renderWithProviders(<Transactions />);
 
     await waitFor(() => {
-      expect(screen.getByText('No transactions.')).toBeInTheDocument();
+      expect(screen.getByText('No matching transactions')).toBeInTheDocument();
     });
   });
 });

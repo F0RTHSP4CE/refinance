@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
@@ -100,22 +100,22 @@ describe('ProfileStatistics filters', () => {
     expect(apiMocks.getEntityStatsBundle).toHaveBeenCalled();
     const initialCallCount = apiMocks.getEntityStatsBundle.mock.calls.length;
 
-    const toInput = screen.getByLabelText('To');
-    fireEvent.change(toInput, { target: { value: '2026-02-15' } });
+    await user.click(screen.getByRole('button', { name: 'Last 4 weeks' }));
 
     expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(initialCallCount);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    expect(screen.getByTestId('location-search')).toHaveTextContent('preset=custom');
 
     await user.click(screen.getByRole('button', { name: 'Apply' }));
 
     await waitFor(() => {
       expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(initialCallCount + 1);
+      expect(screen.getByTestId('location-search')).toHaveTextContent('preset=last4w');
     });
 
     expect(apiMocks.getEntityStatsBundle).toHaveBeenLastCalledWith(
       1,
       expect.objectContaining({
-        timeframe_from: '2026-01-01',
-        timeframe_to: '2026-02-15',
         limit: 8,
       })
     );

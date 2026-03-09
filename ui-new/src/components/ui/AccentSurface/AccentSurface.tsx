@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import type { CardProps } from '@mantine/core';
-import { AppCard } from '../AppCard';
+import { AppCard, type AppCardProps } from '../AppCard';
 
-type AccentSurfaceProps = CardProps & {
+type AccentSurfaceProps = Omit<AppCardProps, 'children'> & {
   children: ReactNode;
 };
 
