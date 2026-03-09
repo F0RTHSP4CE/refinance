@@ -823,7 +823,7 @@
   font-weight: 900;
   line-height: 0.86;
   letter-spacing: 1px;
-  color: #f1f1f1;
+  color: rgba(0, 0, 0, 0.033);
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
