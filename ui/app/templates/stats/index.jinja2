@@ -56,49 +56,53 @@
     const residentFeeData = {{ resident_fee_sum | tojson }};
 
     const residentFeeLabels = residentFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
-    const residentFeeDatasets = {};
-
-    residentFeeData.forEach(item => {
-        for (const currency in item.amounts) {
-            if (!residentFeeDatasets[currency]) {
-                residentFeeDatasets[currency] = {
-                    label: currency,
-                    data: [],
-                    borderWidth: 1,
-                    type: 'bar'
-                };
-            }
-        }
-    });
-
-    // Total USD line dataset
-    residentFeeDatasets['total_usd'] = {
-        label: 'total_usd',
-        data: [],
-        borderWidth: 2,
-        type: 'line',
-        tension: 0.2,
-        yAxisID: 'y'
-    };
-
-    residentFeeData.forEach(item => {
-        for (const key in residentFeeDatasets) {
-            if (key === 'total_usd') continue; // handle after loop
-            residentFeeDatasets[key].data.push(item.amounts[key] || 0);
-        }
-        residentFeeDatasets['total_usd'].data.push(item.total_usd || 0);
-    });
+    
+    // Paid total USD (solid line)
+    const paidData = residentFeeData.map(item => item.total_usd || 0);
+    
+    // Expected total USD (dashed line - ceiling)
+    const expectedData = residentFeeData.map(item => item.expected_total_usd || 0);
 
     new Chart(document.getElementById('resident-fee-chart'), {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: residentFeeLabels,
-            datasets: Object.values(residentFeeDatasets)
+            datasets: [
+                {
+                    label: 'Paid Fees (USD)',
+                    data: paidData,
+                    borderWidth: 3,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.2,
+                    fill: true
+                },
+                {
+                    label: 'Expected Fees (USD)',
+                    data: expectedData,
+                    borderWidth: 2,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.05)',
+                    borderDash: [5, 5],
+                    tension: 0.2,
+                    fill: false
+                }
+            ]
         },
         options: {
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Amount (USD)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
                 }
             }
         }

@@ -192,7 +192,9 @@ class StatsService(BaseService):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
         hackerspace = self._entity_service.get(f0_entity.id)
-        invoices = (
+
+        # Query paid invoices
+        paid_invoices = (
             self.db.query(Invoice)
             .filter(
                 Invoice.to_entity_id == hackerspace.id,
@@ -203,10 +205,24 @@ class StatsService(BaseService):
             .all()
         )
 
-        monthly_totals = defaultdict(lambda: defaultdict(Decimal))
+        # Query unpaid invoices
+        unpaid_invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PENDING,
+            )
+            .all()
+        )
+
+        monthly_paid_totals = defaultdict(lambda: defaultdict(Decimal))
+        monthly_unpaid_totals = defaultdict(lambda: defaultdict(Decimal))
         today = date.today()
 
-        for invoice in invoices:
+        # Process paid invoices
+        for invoice in paid_invoices:
             if invoice.billing_period is None:
                 continue
             if invoice.transaction is None:
@@ -228,20 +244,62 @@ class StatsService(BaseService):
             if not (start_month <= fee_date <= end_month):
                 continue
 
-            monthly_totals[(year, month)][
+            monthly_paid_totals[(year, month)][
                 invoice.transaction.currency.lower()
             ] += invoice.transaction.amount
 
+        # Process unpaid invoices
+        for invoice in unpaid_invoices:
+            if invoice.billing_period is None:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+
+            # Skip future months
+            if year > today.year or (year == today.year and month > today.month):
+                continue
+
+            # Check if the month is within the requested timeframe
+            fee_date = date(year, month, 1)
+            start_month = timeframe_from.replace(day=1)
+            end_month = timeframe_to.replace(day=1)
+
+            if not (start_month <= fee_date <= end_month):
+                continue
+
+            # For unpaid invoices, only count the first amount entry (primary payment option)
+            # Fee invoices have multiple payment options (e.g., pay in GEL or USD), but only
+            # one will actually be paid, so we shouldn't sum all options.
+            if invoice.amounts and len(invoice.amounts) > 0:
+                amount_entry = invoice.amounts[0]
+                currency = amount_entry.get("currency", "").lower()
+                amount = amount_entry.get("amount", 0)
+                if currency and amount:
+                    monthly_unpaid_totals[(year, month)][currency] += Decimal(
+                        str(amount)
+                    )
+
+        # Combine all months from both paid and unpaid
+        all_months = set(monthly_paid_totals.keys()) | set(monthly_unpaid_totals.keys())
+
         result = []
-        for (year, month), amounts in sorted(monthly_totals.items()):
-            amounts_float = {k: float(v) for k, v in amounts.items()}
-            total_usd = self._sum_amounts_usd(amounts)
+        for year, month in sorted(all_months):
+            paid_amounts = monthly_paid_totals.get((year, month), {})
+            unpaid_amounts = monthly_unpaid_totals.get((year, month), {})
+
+            paid_amounts_float = {k: float(v) for k, v in paid_amounts.items()}
+
+            paid_total_usd = self._sum_amounts_usd(paid_amounts)
+            unpaid_total_usd = self._sum_amounts_usd(unpaid_amounts)
+            expected_total_usd = paid_total_usd + unpaid_total_usd
+
             result.append(
                 {
                     "year": year,
                     "month": month,
-                    "amounts": amounts_float,
-                    "total_usd": total_usd,
+                    "amounts": paid_amounts_float,
+                    "total_usd": paid_total_usd,
+                    "expected_total_usd": expected_total_usd,
                 }
             )
         return result
