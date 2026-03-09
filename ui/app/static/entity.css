@@ -801,7 +801,11 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #ffffff 0%, #fafaf7 100%);
+  background: linear-gradient(
+    135deg,
+    var(--entity-card-tint, #ffffff) 0%,
+    var(--entity-card-tint-strong, #fafaf7) 100%
+  );
   z-index: -2;
 }
 

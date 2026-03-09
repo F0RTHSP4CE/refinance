@@ -62,7 +62,15 @@
         <div class="entities-grid">
             {% for entity in entities %}
             {% set balance = balances.get(entity.id) %}
+            {% if entity.tags %}
+            {%- set card_hue = (entity.tags[0].id * 41.9) % 360 -%}
+            {%- set card_tint = "hsl(" + card_hue|string + ", 28%, 96%)" -%}
+            {%- set card_tint_strong = "hsl(" + card_hue|string + ", 34%, 92%)" -%}
+            <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}"
+                style="--entity-card-tint: {{ card_tint }}; --entity-card-tint-strong: {{ card_tint_strong }};">
+            {% else %}
             <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}">
+            {% endif %}
                 <span class="entity-list-card-id-bg" aria-hidden="true">#{{ entity.id }}</span>
                 <div class="entity-list-card-header">
                     <h2 class="entity-list-card-title">
