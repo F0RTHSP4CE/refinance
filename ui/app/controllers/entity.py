@@ -344,7 +344,7 @@ def detail(id):
         params={
             "skip": invoice_skip,
             "limit": invoice_limit,
-            "entity_id": id,
+            "from_entity_id": id,
         },
     ).json()
     invoices_total = invoices_page["total"]
