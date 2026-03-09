@@ -58,6 +58,24 @@ class TopTagStatSchema(BaseModel):
     total_usd: float
 
 
+class ActivityByMonthItemSchema(BaseModel):
+    year: int
+    month: int
+    total_usd: float
+
+
+class TopEntityByMonthSchema(BaseModel):
+    entity_id: int
+    entity_name: str
+    by_month: list[ActivityByMonthItemSchema]
+
+
+class TopTagByMonthSchema(BaseModel):
+    tag_id: int
+    tag_name: str
+    by_month: list[ActivityByMonthItemSchema]
+
+
 class EntityStatsBundleSchema(BaseModel):
     cached: bool = True
     balance_changes: list[EntityBalanceChangeByDaySchema] = Field(default_factory=list)
@@ -69,3 +87,11 @@ class EntityStatsBundleSchema(BaseModel):
     top_outgoing: list[TopEntityStatSchema] = Field(default_factory=list)
     top_incoming_tags: list[TopTagStatSchema] = Field(default_factory=list)
     top_outgoing_tags: list[TopTagStatSchema] = Field(default_factory=list)
+    incoming_by_entity_by_month: list[TopEntityByMonthSchema] = Field(
+        default_factory=list
+    )
+    outgoing_by_entity_by_month: list[TopEntityByMonthSchema] = Field(
+        default_factory=list
+    )
+    incoming_by_tag_by_month: list[TopTagByMonthSchema] = Field(default_factory=list)
+    outgoing_by_tag_by_month: list[TopTagByMonthSchema] = Field(default_factory=list)

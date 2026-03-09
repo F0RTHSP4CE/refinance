@@ -367,7 +367,7 @@ def detail(id):
 
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:
-            return False, [], [], [], [], [], [], []
+            return False, [], [], [], [], [], [], [], [], [], [], []
         return (
             True,
             bundle.get("balance_changes", []),
@@ -377,6 +377,10 @@ def detail(id):
             bundle.get("top_outgoing", []),
             bundle.get("top_incoming_tags", []),
             bundle.get("top_outgoing_tags", []),
+            bundle.get("incoming_by_entity_by_month", []),
+            bundle.get("outgoing_by_entity_by_month", []),
+            bundle.get("incoming_by_tag_by_month", []),
+            bundle.get("outgoing_by_tag_by_month", []),
         )
 
     stats_loaded = False
@@ -387,6 +391,10 @@ def detail(id):
     top_outgoing = []
     top_incoming_tags = []
     top_outgoing_tags = []
+    incoming_by_entity_by_month = []
+    outgoing_by_entity_by_month = []
+    incoming_by_tag_by_month = []
+    outgoing_by_tag_by_month = []
 
     # Always try to preload from cache (fast on hit, no DB work on miss).
     cached_bundle = api.http(
@@ -409,6 +417,10 @@ def detail(id):
         top_outgoing,
         top_incoming_tags,
         top_outgoing_tags,
+        incoming_by_entity_by_month,
+        outgoing_by_entity_by_month,
+        incoming_by_tag_by_month,
+        outgoing_by_tag_by_month,
     ) = _apply_stats_bundle(cached_bundle)
 
     if not stats_loaded and stats_requested:
@@ -432,6 +444,10 @@ def detail(id):
             top_outgoing,
             top_incoming_tags,
             top_outgoing_tags,
+            incoming_by_entity_by_month,
+            outgoing_by_entity_by_month,
+            incoming_by_tag_by_month,
+            outgoing_by_tag_by_month,
         ) = _apply_stats_bundle(stats_bundle)
 
     return render_template(
@@ -453,6 +469,10 @@ def detail(id):
         top_outgoing=top_outgoing,
         top_incoming_tags=top_incoming_tags,
         top_outgoing_tags=top_outgoing_tags,
+        incoming_by_entity_by_month=incoming_by_entity_by_month,
+        outgoing_by_entity_by_month=outgoing_by_entity_by_month,
+        incoming_by_tag_by_month=incoming_by_tag_by_month,
+        outgoing_by_tag_by_month=outgoing_by_tag_by_month,
         stats_loaded=stats_loaded,
         stats_months=stats_months,
         stats_limit=stats_limit,

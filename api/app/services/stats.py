@@ -911,3 +911,282 @@ class StatsService(BaseService):
                 }
             )
         return result
+
+    # --- activity-by-month helpers ----------------------------------------
+
+    def _build_months_list(
+        self, start_dt: datetime, timeframe_to: date | None
+    ) -> list[tuple[int, int]]:
+        """Build ordered list of (year, month) tuples from start_dt through timeframe_to."""
+        start_month = start_dt.date().replace(day=1)
+        end_month = (timeframe_to or date.today()).replace(day=1)
+        month_list: list[tuple[int, int]] = []
+        cur = start_month
+        while cur <= end_month:
+            month_list.append((cur.year, cur.month))
+            if cur.month == 12:
+                cur = cur.replace(year=cur.year + 1, month=1)
+            else:
+                cur = cur.replace(month=cur.month + 1)
+        return month_list
+
+    def _get_activity_by_entity_by_month(
+        self,
+        entity_column,
+        filter_condition,
+        limit: int,
+        months: int,
+        timeframe_to: date | None,
+    ) -> list[dict[str, Any]]:
+        """Return top-N entities with their USD totals per month."""
+        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        month_list = self._build_months_list(start_dt, timeframe_to)
+
+        rows = (
+            self.db.query(
+                func.extract("year", Transaction.created_at).label("yr"),
+                func.extract("month", Transaction.created_at).label("mo"),
+                entity_column.label("other_entity_id"),
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_amount"),
+            )
+            .filter(
+                Transaction.created_at >= start_dt,
+                Transaction.created_at <= end_dt,
+                filter_condition,
+            )
+            .group_by("yr", "mo", entity_column, Transaction.currency)
+            .all()
+        )
+
+        totals_by_entity: dict[int, dict[tuple[int, int], dict[str, Decimal]]] = (
+            defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
+        )
+        for row in rows:
+            ym = (int(row.yr), int(row.mo))
+            totals_by_entity[int(row.other_entity_id)][ym][
+                row.currency
+            ] += row.total_amount
+
+        entity_period_totals: dict[int, float] = {}
+        for eid, ym_data in totals_by_entity.items():
+            combined: dict[str, Decimal] = defaultdict(Decimal)
+            for currency_map in ym_data.values():
+                for cur, amt in currency_map.items():
+                    combined[cur] += amt
+            entity_period_totals[eid] = float(self._sum_amounts_usd(combined))
+
+        top_entity_ids = sorted(
+            entity_period_totals, key=entity_period_totals.__getitem__, reverse=True
+        )[:limit]
+
+        entity_names: dict[int, str] = {}
+        if top_entity_ids:
+            for eid, name in (
+                self.db.query(Entity.id, Entity.name)
+                .filter(Entity.id.in_(top_entity_ids))
+                .all()
+            ):
+                entity_names[int(eid)] = name
+
+        result: list[dict[str, Any]] = []
+        for eid in top_entity_ids:
+            by_month = []
+            ym_data = totals_by_entity[eid]
+            for ym in month_list:
+                currency_map = ym_data.get(ym, {})
+                total_usd = (
+                    float(self._sum_amounts_usd(currency_map)) if currency_map else 0.0
+                )
+                by_month.append({"year": ym[0], "month": ym[1], "total_usd": total_usd})
+            result.append(
+                {
+                    "entity_id": eid,
+                    "entity_name": entity_names.get(eid, "Unknown"),
+                    "by_month": by_month,
+                }
+            )
+        return result
+
+    def _get_activity_by_tag_by_month(
+        self,
+        entity_filter,
+        fallback_entity_attr: str,
+        limit: int,
+        months: int,
+        timeframe_to: date | None,
+    ) -> list[dict[str, Any]]:
+        """Return top-N tags with their USD totals per month."""
+        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        month_list = self._build_months_list(start_dt, timeframe_to)
+
+        transactions = (
+            self.db.query(Transaction)
+            .options(
+                selectinload(Transaction.tags),
+                selectinload(Transaction.from_entity).selectinload(Entity.tags),
+                selectinload(Transaction.to_entity).selectinload(Entity.tags),
+            )
+            .filter(
+                Transaction.created_at >= start_dt,
+                Transaction.created_at <= end_dt,
+                entity_filter,
+            )
+            .all()
+        )
+
+        totals_by_tag: dict[int, dict[tuple[int, int], dict[str, Decimal]]] = (
+            defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
+        )
+        tag_names: dict[int, str] = {}
+
+        for tx in transactions:
+            tags = tx.tags if tx.tags else []
+            if not tags:
+                fallback_entity = getattr(tx, fallback_entity_attr, None)
+                if fallback_entity:
+                    tags = fallback_entity.tags
+
+            if not tags:
+                continue
+
+            unique_tags: dict[int, Tag] = {}
+            for tag in tags:
+                if tag and tag.id is not None:
+                    unique_tags[int(tag.id)] = tag
+
+            if not unique_tags:
+                continue
+
+            t_date = tx.created_at.date()
+            ym = (t_date.year, t_date.month)
+            for tag_id, tag in unique_tags.items():
+                totals_by_tag[tag_id][ym][tx.currency] += tx.amount
+                tag_names[tag_id] = tag.name
+
+        tag_period_totals: dict[int, float] = {}
+        for tid, ym_data in totals_by_tag.items():
+            combined: dict[str, Decimal] = defaultdict(Decimal)
+            for currency_map in ym_data.values():
+                for cur, amt in currency_map.items():
+                    combined[cur] += amt
+            tag_period_totals[tid] = float(self._sum_amounts_usd(combined))
+
+        top_tag_ids = sorted(
+            tag_period_totals, key=tag_period_totals.__getitem__, reverse=True
+        )[:limit]
+
+        result: list[dict[str, Any]] = []
+        for tid in top_tag_ids:
+            by_month = []
+            ym_data = totals_by_tag[tid]
+            for ym in month_list:
+                currency_map = ym_data.get(ym, {})
+                total_usd = (
+                    float(self._sum_amounts_usd(currency_map)) if currency_map else 0.0
+                )
+                by_month.append({"year": ym[0], "month": ym[1], "total_usd": total_usd})
+            result.append(
+                {
+                    "tag_id": tid,
+                    "tag_name": tag_names.get(tid, "Unknown"),
+                    "by_month": by_month,
+                }
+            )
+        return result
+
+    def get_outgoing_by_entity_by_month(
+        self,
+        entity_id: int | None = None,
+        limit: int = 5,
+        months: int = 6,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Top-N expense destinations with monthly USD totals."""
+        entity_id = entity_id or f0_entity.id
+        cache_args = (int(entity_id), limit, months, timeframe_to)
+        return self._cached_result(
+            "get_outgoing_by_entity_by_month",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_activity_by_entity_by_month(
+                Transaction.to_entity_id,
+                Transaction.from_entity_id == entity_id,
+                limit,
+                months,
+                timeframe_to,
+            ),
+        )
+
+    def get_incoming_by_entity_by_month(
+        self,
+        entity_id: int | None = None,
+        limit: int = 5,
+        months: int = 6,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Top-N income sources with monthly USD totals."""
+        entity_id = entity_id or f0_entity.id
+        cache_args = (int(entity_id), limit, months, timeframe_to)
+        return self._cached_result(
+            "get_incoming_by_entity_by_month",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_activity_by_entity_by_month(
+                Transaction.from_entity_id,
+                Transaction.to_entity_id == entity_id,
+                limit,
+                months,
+                timeframe_to,
+            ),
+        )
+
+    def get_outgoing_by_tag_by_month(
+        self,
+        entity_id: int | None = None,
+        limit: int = 5,
+        months: int = 6,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Top-N outgoing tags with monthly USD totals."""
+        entity_id = entity_id or f0_entity.id
+        cache_args = (int(entity_id), limit, months, timeframe_to)
+        return self._cached_result(
+            "get_outgoing_by_tag_by_month",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_activity_by_tag_by_month(
+                Transaction.from_entity_id == entity_id,
+                "to_entity",
+                limit,
+                months,
+                timeframe_to,
+            ),
+        )
+
+    def get_incoming_by_tag_by_month(
+        self,
+        entity_id: int | None = None,
+        limit: int = 5,
+        months: int = 6,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Top-N incoming tags with monthly USD totals."""
+        entity_id = entity_id or f0_entity.id
+        cache_args = (int(entity_id), limit, months, timeframe_to)
+        return self._cached_result(
+            "get_incoming_by_tag_by_month",
+            [entity_id],
+            cache_args,
+            {},
+            lambda: self._get_activity_by_tag_by_month(
+                Transaction.to_entity_id == entity_id,
+                "from_entity",
+                limit,
+                months,
+                timeframe_to,
+            ),
+        )

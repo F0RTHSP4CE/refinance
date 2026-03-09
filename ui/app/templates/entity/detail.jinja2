@@ -198,46 +198,20 @@
                     </div>
                 </div>
                 <div class="chart-cell">
-                    <h2>Incoming Activity (last {{ stats_months }} months)</h2>
-                    <div class="activity-charts">
-                        <div class="bar-chart">
-                            <h3>Top Income Sources</h3>
-                            {% if top_incoming %}
-                            <canvas id="top-incoming-chart"></canvas>
-                            {% else %}
-                            <p class="chart-placeholder">No incoming transactions in the selected timeframe.</p>
-                            {% endif %}
-                        </div>
-                        <div class="pie-chart">
-                            <h3>Top Incoming Tags</h3>
-                            {% if top_incoming_tags %}
-                            <canvas id="top-incoming-tags-chart"></canvas>
-                            {% else %}
-                            <p class="chart-placeholder">No tagged incoming activity in the selected timeframe.</p>
-                            {% endif %}
-                        </div>
-                    </div>
+                    <h2>Activity Flow: Top Entities (last {{ stats_months }} months)</h2>
+                    {% if top_incoming or top_outgoing %}
+                    <div id="entity-sankey-chart" style="min-height:380px;"></div>
+                    {% else %}
+                    <p class="chart-placeholder">No entity activity in the selected timeframe.</p>
+                    {% endif %}
                 </div>
                 <div class="chart-cell">
-                    <h2>Outgoing Activity (last {{ stats_months }} months)</h2>
-                    <div class="activity-charts">
-                        <div class="bar-chart">
-                            <h3>Top Expense Destinations</h3>
-                            {% if top_outgoing %}
-                            <canvas id="top-outgoing-chart"></canvas>
-                            {% else %}
-                            <p class="chart-placeholder">No outgoing transactions in the selected timeframe.</p>
-                            {% endif %}
-                        </div>
-                        <div class="pie-chart">
-                            <h3>Top Outgoing Tags</h3>
-                            {% if top_outgoing_tags %}
-                            <canvas id="top-outgoing-tags-chart"></canvas>
-                            {% else %}
-                            <p class="chart-placeholder">No tagged outgoing activity in the selected timeframe.</p>
-                            {% endif %}
-                        </div>
-                    </div>
+                    <h2>Activity Flow: Top Tags (last {{ stats_months }} months)</h2>
+                    {% if top_incoming_tags or top_outgoing_tags %}
+                    <div id="tag-sankey-chart" style="min-height:380px;"></div>
+                    {% else %}
+                    <p class="chart-placeholder">No tagged activity in the selected timeframe.</p>
+                    {% endif %}
                 </div>
             </div>
             <script>
@@ -248,6 +222,8 @@
             const topOutgoing = {{ top_outgoing | tojson }};
             const topIncomingTags = {{ top_incoming_tags | tojson }};
             const topOutgoingTags = {{ top_outgoing_tags | tojson }};
+            const entityName = {{ entity.name | tojson }};
+
 
             const formatUSD = (value) => {
                 if (!Number.isFinite(value)) {
@@ -269,11 +245,12 @@
             const colorFromIdentifier = (identifier, fallbackIndex) => {
                 const key = identifier ?? `fallback-${fallbackIndex}`;
                 const hash = Math.abs(hashString(String(key)));
+                // Brutalist palette: high saturation (88-100%), bold mid lightness (38-52%)
                 const hue = (hash * 137.508) % 360;
-                const saturation = 55 + (hash % 30); // 55% - 84%
-                const lightness = 42 + ((hash >> 3) % 28); // 42% - 69%
-                const hoverLightness = Math.min(92, lightness + 30);
-                const hoverSaturation = Math.min(50, saturation + 6);
+                const saturation = 88 + (hash % 13);   // 88% - 100%
+                const lightness = 38 + ((hash >> 3) % 15); // 38% - 52%
+                const hoverLightness = Math.min(88, lightness + 28);
+                const hoverSaturation = saturation;
 
                 return {
                     base: `hsl(${hue.toFixed(1)}, ${saturation}%, ${lightness}%)`,
@@ -548,7 +525,12 @@
                     }
 
                     requestAnimationFrame(() => {
-                        Plotly.Plots.resize(chartContainer);
+                        // Resize all Plotly charts in the grid.
+                        [
+                            chartContainer,
+                            document.getElementById('entity-sankey-chart'),
+                            document.getElementById('tag-sankey-chart'),
+                        ].forEach(el => { if (el) Plotly.Plots.resize(el); });
                         // Resize all Chart.js instances so they fill new container sizes.
                         Chart.instances && Object.values(Chart.instances).forEach(c => c.resize());
                     });
@@ -562,7 +544,11 @@
                 }
 
                 const handleResize = () => {
-                    Plotly.Plots.resize(chartContainer);
+                    [
+                        chartContainer,
+                        document.getElementById('entity-sankey-chart'),
+                        document.getElementById('tag-sankey-chart'),
+                    ].forEach(el => { if (el) Plotly.Plots.resize(el); });
                 };
 
                 window.addEventListener('resize', handleResize);
@@ -739,77 +725,102 @@
                 new Chart(moneyFlowCanvas, flowChartConfig);
             }
 
-            if (topIncoming.length) {
-                const incomeLabels = topIncoming.map(item => item.entity_name || `Entity #${item.entity_id}`);
-                const incomeValues = topIncoming.map(item => item.total_usd);
-                const incomeColors = buildEntityColors(topIncoming);
+            // --- sankey activity flow charts ---
+            // Layout: sources (left) → this entity (center) → destinations (right)
 
-                createVerticalBarChart(
-                    'top-incoming-chart',
-                    incomeLabels,
-                    incomeValues,
-                    incomeColors,
-                );
-            }
+            const buildSankeyChart = (containerId, incomingData, outgoingData, nameKey, idKey, centerLabel) => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                if (!incomingData.length && !outgoingData.length) return;
 
-            if (topOutgoing.length) {
-                const expenseLabels = topOutgoing.map(item => item.entity_name || `Entity #${item.entity_id}`);
-                const expenseValues = topOutgoing.map(item => item.total_usd);
-                const expenseColors = buildEntityColors(topOutgoing);
+                const nodeLabels = [centerLabel.toUpperCase()];
+                const nodeColors = ['#ffffff'];
 
-                createVerticalBarChart(
-                    'top-outgoing-chart',
-                    expenseLabels,
-                    expenseValues,
-                    expenseColors,
-                );
-            }
-
-            if (topIncomingTags.length) {
-                const incomingTagLabels = topIncomingTags.map(item => item.tag_name || `Tag #${item.tag_id}`);
-                const incomingTagValues = topIncomingTags.map(item => item.total_usd);
-                const incomingTagColors = buildTagColors(topIncomingTags);
-
-                new Chart(
-                    document.getElementById('top-incoming-tags-chart'),
-                    {
-                        type: 'doughnut',
-                        data: {
-                            labels: incomingTagLabels,
-                            datasets: [
-                                buildDoughnutDataset(
-                                    incomingTagValues,
-                                    incomingTagColors.bases,
-                                    incomingTagColors.hovers,
-                                ),
-                            ],
-                        },
-                        options: buildDoughnutOptions(incomingTagValues),
+                const sourceIdx = {};
+                incomingData.forEach((item, idx) => {
+                    const name = (item[nameKey] || `#${item[idKey]}`).toUpperCase();
+                    if (!(name in sourceIdx)) {
+                        sourceIdx[name] = nodeLabels.length;
+                        nodeLabels.push(name);
+                        const { base } = colorFromIdentifier(item[idKey] ?? `in-${idx}`, idx);
+                        nodeColors.push(base);
                     }
-                );
-            }
+                });
 
-            if (topOutgoingTags.length) {
-                const outgoingTagLabels = topOutgoingTags.map(item => item.tag_name || `Tag #${item.tag_id}`);
-                const outgoingTagValues = topOutgoingTags.map(item => item.total_usd);
-                const outgoingTagColors = buildTagColors(topOutgoingTags);
-
-                new Chart(
-                    document.getElementById('top-outgoing-tags-chart'),
-                    {
-                        type: 'doughnut',
-                        data: {
-                            labels: outgoingTagLabels,
-                            datasets: [
-                                buildDoughnutDataset(
-                                    outgoingTagValues,
-                                    outgoingTagColors.bases,
-                                    outgoingTagColors.hovers,
-                                ),
-                            ],
-                        },
-                        options: buildDoughnutOptions(outgoingTagValues),
+                const destIdx = {};
+                outgoingData.forEach((item, idx) => {
+                    const name = (item[nameKey] || `#${item[idKey]}`).toUpperCase();
+                    if (!(name in destIdx)) {
+                        destIdx[name] = nodeLabels.length;
+                        nodeLabels.push(name);
+                        const { base } = colorFromIdentifier(item[idKey] ?? `out-${idx}`, idx);
+                        nodeColors.push(base);
                     }
+                });
+
+                const linkSource = [], linkTarget = [], linkValue = [], linkColor = [];
+
+                // Helper: turn an hsl/rgba color string into a transparent version for links
+                const toLinkColor = (nodeColor) => {
+                    // nodeColor is hsl(...) — convert to hsla with 0.35 alpha
+                    if (nodeColor.startsWith('hsl(')) {
+                        return nodeColor.replace('hsl(', 'hsla(').replace(')', ', 0.38)');
+                    }
+                    return nodeColor.replace(/[\d.]+\)$/, '0.38)');
+                };
+
+                incomingData.forEach(item => {
+                    const name = (item[nameKey] || `#${item[idKey]}`).toUpperCase();
+                    const ni = sourceIdx[name];
+                    linkSource.push(ni);
+                    linkTarget.push(0);
+                    linkValue.push(item.total_usd);
+                    linkColor.push(toLinkColor(nodeColors[ni]));
+                });
+
+                outgoingData.forEach(item => {
+                    const name = (item[nameKey] || `#${item[idKey]}`).toUpperCase();
+                    const ni = destIdx[name];
+                    linkSource.push(0);
+                    linkTarget.push(ni);
+                    linkValue.push(item.total_usd);
+                    linkColor.push(toLinkColor(nodeColors[ni]));
+                });
+
+                Plotly.newPlot(container, [{
+                    type: 'sankey',
+                    orientation: 'h',
+                    node: {
+                        pad: 18,
+                        thickness: 22,
+                        line: { color: 'rgba(0,0,0,0.08)', width: 0.5 },
+                        label: nodeLabels,
+                        color: nodeColors,
+                    },
+                    link: {
+                        source: linkSource,
+                        target: linkTarget,
+                        value: linkValue,
+                        color: linkColor,
+                        hovertemplate: '%{source.label} → %{target.label}: $%{value:,.2f}<extra></extra>',
+                    },
+                }], {
+                    margin: { l: 16, r: 16, t: 16, b: 16 },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    font: { size: 16, family: 'monospace', color: '#000000' },
+                }, { responsive: true, displaylogo: false });
+            };
+
+            if (typeof Plotly !== 'undefined') {
+                buildSankeyChart(
+                    'entity-sankey-chart',
+                    topIncoming, topOutgoing,
+                    'entity_name', 'entity_id', entityName,
+                );
+                buildSankeyChart(
+                    'tag-sankey-chart',
+                    topIncomingTags, topOutgoingTags,
+                    'tag_name', 'tag_id', entityName,
                 );
             }
         </script>

@@ -440,6 +440,10 @@
   font-size: 1rem;
 }
 
+.chart-cell.chart-cell-full-width {
+  grid-column: 1 / -1;
+}
+
 .money-flow-chart-container {
   position: relative;
   width: 100%;

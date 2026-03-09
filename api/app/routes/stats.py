@@ -10,7 +10,9 @@ from app.schemas.stats import (
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
+    TopEntityByMonthSchema,
     TopEntityStatSchema,
+    TopTagByMonthSchema,
     TopTagStatSchema,
     TransactionsSumByTagByMonthSchema,
     TransactionsSumByWeekSchema,
@@ -167,6 +169,70 @@ def get_top_outgoing_tags(
     )
 
 
+@router.get("/outgoing-by-entity-by-month", response_model=List[TopEntityByMonthSchema])
+def get_outgoing_by_entity_by_month(
+    limit: int = 5,
+    months: int = 6,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_outgoing_by_entity_by_month(
+        entity_id=entity_id,
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+    )
+
+
+@router.get("/incoming-by-entity-by-month", response_model=List[TopEntityByMonthSchema])
+def get_incoming_by_entity_by_month(
+    limit: int = 5,
+    months: int = 6,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_incoming_by_entity_by_month(
+        entity_id=entity_id,
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+    )
+
+
+@router.get("/outgoing-by-tag-by-month", response_model=List[TopTagByMonthSchema])
+def get_outgoing_by_tag_by_month(
+    limit: int = 5,
+    months: int = 6,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_outgoing_by_tag_by_month(
+        entity_id=entity_id,
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+    )
+
+
+@router.get("/incoming-by-tag-by-month", response_model=List[TopTagByMonthSchema])
+def get_incoming_by_tag_by_month(
+    limit: int = 5,
+    months: int = 6,
+    timeframe_to: Optional[date] = None,
+    entity_id: Optional[int] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_incoming_by_tag_by_month(
+        entity_id=entity_id,
+        limit=limit,
+        months=months,
+        timeframe_to=timeframe_to,
+    )
+
+
 @router.get("/entity/{entity_id}", response_model=EntityStatsBundleSchema)
 def get_entity_stats_bundle(
     entity_id: int,
@@ -235,6 +301,18 @@ def get_entity_stats_bundle(
         top_outgoing_tags = StatsService._get_cached_value(
             "get_top_outgoing_tags", top_args, {}
         )
+        incoming_by_entity_by_month = StatsService._get_cached_value(
+            "get_incoming_by_entity_by_month", top_args, {}
+        )
+        outgoing_by_entity_by_month = StatsService._get_cached_value(
+            "get_outgoing_by_entity_by_month", top_args, {}
+        )
+        incoming_by_tag_by_month = StatsService._get_cached_value(
+            "get_incoming_by_tag_by_month", top_args, {}
+        )
+        outgoing_by_tag_by_month = StatsService._get_cached_value(
+            "get_outgoing_by_tag_by_month", top_args, {}
+        )
 
         all_present = all(
             x is not None
@@ -246,6 +324,10 @@ def get_entity_stats_bundle(
                 top_outgoing,
                 top_incoming_tags,
                 top_outgoing_tags,
+                incoming_by_entity_by_month,
+                outgoing_by_entity_by_month,
+                incoming_by_tag_by_month,
+                outgoing_by_tag_by_month,
             )
         )
 
@@ -261,6 +343,10 @@ def get_entity_stats_bundle(
             "top_outgoing": top_outgoing,
             "top_incoming_tags": top_incoming_tags,
             "top_outgoing_tags": top_outgoing_tags,
+            "incoming_by_entity_by_month": incoming_by_entity_by_month,
+            "outgoing_by_entity_by_month": outgoing_by_entity_by_month,
+            "incoming_by_tag_by_month": incoming_by_tag_by_month,
+            "outgoing_by_tag_by_month": outgoing_by_tag_by_month,
         }
 
     normalized_timeframe_to = timeframe_to or date.today()
@@ -318,6 +404,30 @@ def get_entity_stats_bundle(
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
+    incoming_by_entity_by_month = stats_service.get_incoming_by_entity_by_month(
+        entity_id=entity_id,
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+    )
+    outgoing_by_entity_by_month = stats_service.get_outgoing_by_entity_by_month(
+        entity_id=entity_id,
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+    )
+    incoming_by_tag_by_month = stats_service.get_incoming_by_tag_by_month(
+        entity_id=entity_id,
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+    )
+    outgoing_by_tag_by_month = stats_service.get_outgoing_by_tag_by_month(
+        entity_id=entity_id,
+        limit=normalized_limit,
+        months=normalized_months,
+        timeframe_to=normalized_timeframe_to,
+    )
 
     return {
         "cached": True,
@@ -328,4 +438,8 @@ def get_entity_stats_bundle(
         "top_outgoing": top_outgoing,
         "top_incoming_tags": top_incoming_tags,
         "top_outgoing_tags": top_outgoing_tags,
+        "incoming_by_entity_by_month": incoming_by_entity_by_month,
+        "outgoing_by_entity_by_month": outgoing_by_entity_by_month,
+        "incoming_by_tag_by_month": incoming_by_tag_by_month,
+        "outgoing_by_tag_by_month": outgoing_by_tag_by_month,
     }
