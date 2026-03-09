@@ -518,15 +518,15 @@ class FeeService(BaseService):
         invoice_ids: list[int] = []
         created_count = 0
         skipped_count = 0
-        for resident in targets:
-            if not resident.active:
+        for entity in targets:
+            if not entity.active:
                 skipped_count += 1
                 continue
-            if (resident.id, period) in existing:
+            if (entity.id, period) in existing:
                 skipped_count += 1
                 continue
 
-            entity_tag_ids = {tag.id for tag in (resident.tags or [])}
+            entity_tag_ids = {tag.id for tag in (entity.tags or [])}
             fee_tag_id = self._select_fee_tag_id(entity_tag_ids, fee_amounts_by_tag)
             if fee_tag_id is None:
                 skipped_count += 1
@@ -545,7 +545,7 @@ class FeeService(BaseService):
 
             invoice = self._invoice_service.create(
                 InvoiceCreateSchema(
-                    from_entity_id=resident.id,
+                    from_entity_id=entity.id,
                     to_entity_id=hackerspace.id,
                     amounts=amounts,
                     billing_period=period,
