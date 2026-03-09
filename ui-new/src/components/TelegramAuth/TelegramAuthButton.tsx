@@ -24,6 +24,7 @@ declare global {
   }
 }
 
+// Legacy Telegram website-login widget used by the current hash-verification flow.
 const TELEGRAM_WIDGET_SRC = 'https://telegram.org/js/telegram-widget.js?22';
 
 const getUnavailableMessage = (
@@ -150,10 +151,10 @@ export const TelegramAuthButton = ({
         {isLocalOrigin
           ? mode === 'connect'
             ? `Telegram linking needs the widget to run on a public URL registered for the ${APP_BRAND.shortName} bot.`
-            : `For local development, use username recovery below or open ${APP_BRAND.shortName} through a public URL registered for this bot.`
+            : `On localhost, request a Telegram-delivered sign-in link below or open ${APP_BRAND.shortName} through a public URL registered for this bot.`
           : mode === 'connect'
             ? 'Authorize once in Telegram to link this account to your member profile.'
-            : 'Use the Telegram widget above, or open the bot manually if the widget is blocked.'}
+            : 'Use the Telegram widget above, or request a Telegram-delivered sign-in link below if the widget is blocked.'}
       </Text>
 
       {!enabled && !loading ? (
@@ -166,7 +167,7 @@ export const TelegramAuthButton = ({
         <Alert color="yellow" title="Bot domain invalid on localhost">
           {mode === 'connect'
             ? 'Telegram rejects the website login widget on local origins. Open this app through a public HTTPS URL and register that URL for the bot in BotFather Web Login before linking Telegram.'
-            : 'Telegram rejects the website login widget on local origins. Use username recovery below for local testing, or open this app through a public HTTPS URL and register that URL for the bot in BotFather Web Login.'}
+            : 'Telegram rejects the website login widget on local origins. Use username recovery below to request a Telegram-delivered sign-in link, or open this app through a public HTTPS URL and register that URL for the bot in BotFather Web Login.'}
         </Alert>
       ) : null}
 

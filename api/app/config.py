@@ -19,6 +19,7 @@ class Config:
     telegram_bot_api_token: str | None = field(
         default=getenv("REFINANCE_TELEGRAM_BOT_API_TOKEN", "")
     )
+    # Required by the web Telegram widget/deep-link flow, not by token signing itself.
     telegram_bot_username: str | None = field(
         default=getenv("REFINANCE_TELEGRAM_BOT_USERNAME", "")
     )
@@ -47,10 +48,6 @@ class Config:
     keepz_poll_interval_seconds: int = field(
         default=int(getenv("REFINANCE_KEEPZ_POLL_INTERVAL_SECONDS", "60"))
     )
-    keepz_dev_mode: bool = field(
-        default=getenv("REFINANCE_KEEPZ_DEV_MODE", "").lower()
-        in ("1", "true", "yes"),
-    )
     csrf_disabled: bool = field(
         default=getenv("REFINANCE_CSRF_DISABLED", "").lower()
         in ("1", "true", "yes"),
@@ -64,7 +61,7 @@ class Config:
         # Use provided DATABASE_URL if available, else fall back to Postgres service
         if self.database_url_env:
             return self.database_url_env
-        return "postgresql://postgres:postgres@db:5432/refinance"
+        return "postgresql://postgres@db:5432/refinance"
 
     @property
     def fee_presets(self) -> list[dict[str, str | int]]:

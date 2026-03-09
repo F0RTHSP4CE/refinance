@@ -19,7 +19,7 @@ describe('Navbar active-link behavior', () => {
 
 describe('Navbar active text props', () => {
   it('uses burger-style active appearance', () => {
-    expect(getActiveLinkTextProps(true)).toEqual({ c: 'var(--app-accent)', fw: 700 });
+    expect(getActiveLinkTextProps(true)).toEqual({ c: 'var(--app-accent)', fw: 500 });
     expect(getActiveLinkTextProps(false)).toEqual({ c: 'var(--app-text-secondary)', fw: 500 });
   });
 });

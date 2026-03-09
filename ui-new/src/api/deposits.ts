@@ -55,16 +55,3 @@ export const getPaymentUrl = (deposit: Deposit): string | null => {
   const keepz = deposit.details?.keepz;
   return keepz?.payment_url ?? keepz?.payment_short_url ?? null;
 };
-
-const DEV_MODE_PAYMENT_URL = 'https://example.com/keepz-dev-payment-placeholder';
-
-export const isDevModeDeposit = (deposit: Deposit): boolean => {
-  const url = getPaymentUrl(deposit);
-  return url === DEV_MODE_PAYMENT_URL;
-};
-
-export const completeDepositDev = async (depositId: number): Promise<Deposit> => {
-  return apiRequest<Deposit>(`deposits/${depositId}/complete-dev`, {
-    method: 'POST',
-  });
-};

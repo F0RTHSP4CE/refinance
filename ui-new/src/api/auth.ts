@@ -8,7 +8,6 @@ export type TokenSendReport = {
   entity_found: boolean;
   token_generated: boolean;
   message_sent: boolean;
-  login_link?: string | null;
 };
 
 export type TelegramAuthPayload = {

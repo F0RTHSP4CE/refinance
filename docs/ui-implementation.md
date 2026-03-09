@@ -114,7 +114,7 @@ All API routes require the `X-Token` header (except token request and token auth
 ## Authentication Flow
 
 1. **Login page** (`/auth/login`): User enters entity name → `POST /tokens/send` to API.
-2. **Token delivery**: API sends login link via Telegram, or returns `login_link` in dev mode.
+2. **Token delivery**: API sends the login link via Telegram.
 3. **Token auth** (`/auth/token/<token>`): UI stores token in Flask session, redirects to home.
 4. **Before each request** (`app.before_request`):
    - Skips auth for `/auth`, `/static`.

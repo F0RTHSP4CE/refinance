@@ -5,7 +5,6 @@ import string
 from decimal import Decimal
 from typing import Any
 
-from app.config import Config, get_config
 from app.dependencies.services import get_deposit_service, get_keepz_service
 from app.errors.keepz import KeepzAuthRequired
 from app.models.deposit import Deposit, DepositStatus
@@ -24,8 +23,6 @@ from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
-DEV_MODE_PAYMENT_URL = "https://example.com/keepz-dev-payment-placeholder"
-
 
 class KeepzDepositProviderService(BaseService[Entity]):
     def __init__(
@@ -33,12 +30,10 @@ class KeepzDepositProviderService(BaseService[Entity]):
         db: Session = Depends(get_uow),
         deposit_service: DepositService = Depends(get_deposit_service),
         keepz_service: KeepzService = Depends(get_keepz_service),
-        config: Config = Depends(get_config),
     ):
         self.db = db
         self.deposit_service = deposit_service
         self.keepz_service = keepz_service
-        self.config = config
 
     def create_deposit(
         self, schema: KeepzDepositCreateSchema, actor_entity: Entity
@@ -71,21 +66,15 @@ class KeepzDepositProviderService(BaseService[Entity]):
                     or payload.get("url")
                 )
         except KeepzAuthRequired:
-            if self.config.keepz_dev_mode:
-                short_url = DEV_MODE_PAYMENT_URL
-            else:
-                raise
+            raise
         if short_url:
             details["keepz"]["payment_short_url"] = short_url
-            if short_url == DEV_MODE_PAYMENT_URL:
+            try:
+                details["keepz"]["payment_url"] = (
+                    self.keepz_service.resolve_payment_url(short_url)
+                )
+            except Exception:
                 details["keepz"]["payment_url"] = short_url
-            else:
-                try:
-                    details["keepz"]["payment_url"] = (
-                        self.keepz_service.resolve_payment_url(short_url)
-                    )
-                except Exception:
-                    details["keepz"]["payment_url"] = short_url
         if isinstance(payload, dict):
             details["keepz"]["create_response"] = payload
 

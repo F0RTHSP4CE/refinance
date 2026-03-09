@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+# This bootstraps dependencies into the dev-only node_modules volume and
+# re-runs npm ci when the lockfile or container platform changes.
 STAMP_DIR="node_modules/.dev-container"
 STAMP_FILE="$STAMP_DIR/install-state"
 PLATFORM="$(uname -s)-$(uname -m)"

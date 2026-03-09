@@ -24,6 +24,8 @@ services:
   ui-new:
     build:
       target: dev
+    # The bind mount hides image-baked node_modules, so the entrypoint restores
+    # dependencies into the named volume and refreshes them on lockfile changes.
     command: ["sh", "/opt/ui-new/docker/dev-entrypoint.sh"]
     environment:
       VITE_API_PROXY_TARGET: http://api:8000
@@ -36,6 +38,8 @@ services:
       - "5173:5173"
 
   db:
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - db-dev-data:/var/lib/postgresql/data
 

@@ -2,7 +2,17 @@ import { create } from 'zustand';
 import { ApiError, apiRequest } from '@/api/client';
 import type { ActorEntity } from '@/types/api';
 
-const TOKEN_KEY = 'refinance_v2_token';
+const TOKEN_KEY = 'refinance_token';
+
+const setStoredToken = (token: string) => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(TOKEN_KEY, token);
+};
+
+const clearStoredToken = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(TOKEN_KEY);
+};
 
 const getInitialToken = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -27,11 +37,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   authError: null,
   setToken: (token: string) => {
-    window.localStorage.setItem(TOKEN_KEY, token);
+    setStoredToken(token);
     set({ token, authError: null, isInitialized: false });
   },
   clearSession: () => {
-    window.localStorage.removeItem(TOKEN_KEY);
+    clearStoredToken();
     set({ token: null, actorEntity: null, authError: null, isLoading: false, isInitialized: true });
   },
   loadActor: async () => {
@@ -44,10 +54,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, authError: null });
     try {
       const actorEntity = await apiRequest<ActorEntity>('entities/me', { token });
+      setStoredToken(token);
       set({ actorEntity, isLoading: false, isInitialized: true });
     } catch (error) {
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-        window.localStorage.removeItem(TOKEN_KEY);
+        clearStoredToken();
         set({
           token: null,
           actorEntity: null,

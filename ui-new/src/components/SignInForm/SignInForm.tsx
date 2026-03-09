@@ -17,7 +17,7 @@ type SignInFormValues = z.infer<typeof signInSchema>;
 
 export const SignInForm = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loginLink, setLoginLink] = useState<string | null>(null);
+  const [deliveryIssue, setDeliveryIssue] = useState<string | null>(null);
   const telegramConfigQuery = useTelegramAuthConfig();
   const telegramEnabled = telegramConfigQuery.data?.enabled ?? false;
   const usernameAccordionDefault = useMemo(
@@ -36,33 +36,24 @@ export const SignInForm = () => {
   const mutation = useMutation({
     mutationFn: (username: string) => requestToken(username),
     onSuccess: (data) => {
+      setSuccessMessage(null);
+      setDeliveryIssue(null);
+
       if (data.entity_found && data.token_generated) {
         if (data.message_sent) {
           setSuccessMessage('Check Telegram for your sign-in link.');
-          setLoginLink(null);
-        } else if (data.login_link) {
-          setSuccessMessage('Local sign-in link generated below.');
-          try {
-            const url = new URL(data.login_link);
-            const path = url.pathname;
-            setLoginLink(path);
-          } catch {
-            setLoginLink(null);
-          }
         } else {
-          setSuccessMessage('The sign-in link was generated, but Telegram delivery failed.');
-          setLoginLink(null);
+          setDeliveryIssue(
+            'The sign-in link was generated, but Telegram delivery failed. Make sure the bot can message this account and try again.'
+          );
         }
-      } else {
-        setSuccessMessage(null);
-        setLoginLink(null);
       }
     },
   });
 
   const onSubmit = (values: SignInFormValues) => {
     setSuccessMessage(null);
-    setLoginLink(null);
+    setDeliveryIssue(null);
     mutation.mutate(values.username);
   };
 
@@ -100,8 +91,8 @@ export const SignInForm = () => {
             <Stack gap={2}>
               <Text fw={700}>Use username recovery</Text>
               <Text size="sm" className="app-muted-copy">
-                Use this for local development, blocked widgets, or accounts that still need their
-                Telegram link set up.
+                Request the Telegram-delivered sign-in link by username if the widget is blocked
+                or you prefer opening the login from Telegram directly.
               </Text>
             </Stack>
           </Accordion.Control>
@@ -115,7 +106,7 @@ export const SignInForm = () => {
                   {...register('username')}
                 />
                 <Button type="submit" loading={mutation.isPending} fullWidth>
-                  Generate sign-in link
+                  Request Telegram sign-in link
                 </Button>
               </Stack>
             </form>
@@ -135,25 +126,17 @@ export const SignInForm = () => {
         </Alert>
       )}
 
-      {successMessage && (
-        <Alert color={loginLink ? 'blue' : 'green'} title="Login link ready">
-          {successMessage}
-          {loginLink && (
-            <div className="mt-3">
-              <Text size="xs" mb={8} className="app-muted-copy">
-                Local development only.
-              </Text>
-              <Button component="a" href={loginLink} variant="outline" color="gray" size="xs">
-                Open generated link
-              </Button>
-            </div>
-          )}
+      {successMessage && <Alert color="green" title="Login link ready">{successMessage}</Alert>}
+
+      {deliveryIssue && (
+        <Alert color="yellow" title="Telegram delivery failed">
+          {deliveryIssue}
         </Alert>
       )}
 
       <Text size="sm" className="app-muted-copy">
-        If Telegram says your account is not linked yet, use username recovery once and connect
-        Telegram from your profile.
+        If Telegram says your account is not linked yet, connect Telegram from Profile after
+        signing in through an existing session.
       </Text>
     </Stack>
   );

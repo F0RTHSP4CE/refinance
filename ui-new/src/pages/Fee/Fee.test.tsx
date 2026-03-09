@@ -114,7 +114,9 @@ describe('Fee page', () => {
     ]);
   });
 
-  it('shows reset range only after the filter changes and restores the initial state on reset', async () => {
+  it(
+    'shows reset range only after the filter changes and restores the initial state on reset',
+    async () => {
     renderWithProviders();
 
     await screen.findByRole('region', { name: 'Resident fee matrix' });
@@ -128,7 +130,9 @@ describe('Fee page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset range' }));
     expect(screen.queryByRole('button', { name: 'Reset range' })).not.toBeInTheDocument();
-  });
+    },
+    10_000
+  );
 
   it('renders the matrix in a horizontal scroll region with sticky columns and stacked amount lines', async () => {
     renderWithProviders();

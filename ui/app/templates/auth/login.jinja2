@@ -50,14 +50,9 @@
             <div class="success-message">
                 <p><strong>Success!</strong> Check your Telegram for the login link.</p>
             </div>
-            {% elif report.login_link %}
-            <div class="success-message">
-                <p><strong>Dev mode:</strong> Telegram is not configured. Click below to log in:</p>
-                <a href="{{ report.login_link }}" class="login-button" style="display: inline-block; margin-top: 1rem;">Log in</a>
-            </div>
             {% else %}
             <div class="error-message">
-                <p>Authentication request failed. Please check your information and try again.</p>
+                <p>Authentication request failed. Make sure the bot can message your account and try again.</p>
             </div>
             {% endif %}
 

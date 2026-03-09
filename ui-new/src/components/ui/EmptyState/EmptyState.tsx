@@ -2,6 +2,8 @@ import { Stack, Text, ThemeIcon } from '@mantine/core';
 import { IconInbox } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 
+const DEFAULT_EMPTY_STATE_DESCRIPTION = 'Nothing to show here yet.';
+
 type EmptyStateProps = {
   title: string;
   description?: ReactNode;
@@ -17,6 +19,8 @@ export const EmptyState = ({
   icon,
   compact = false,
 }: EmptyStateProps) => {
+  const resolvedDescription = description ?? DEFAULT_EMPTY_STATE_DESCRIPTION;
+
   return (
     <Stack
       align={compact ? 'flex-start' : 'center'}
@@ -39,11 +43,9 @@ export const EmptyState = ({
       </ThemeIcon>
       <Stack gap={4} align={compact ? 'flex-start' : 'center'}>
         <Text fw={700}>{title}</Text>
-        {description ? (
-          <Text size="sm" ta={compact ? 'left' : 'center'} className="app-muted-copy">
-            {description}
-          </Text>
-        ) : null}
+        <Text size="sm" ta={compact ? 'left' : 'center'} className="app-muted-copy">
+          {resolvedDescription}
+        </Text>
       </Stack>
       {action}
     </Stack>

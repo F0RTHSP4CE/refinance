@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { completeDepositDev, getDeposit, getPaymentUrl, isDevModeDeposit } from '@/api/deposits';
+import { getDeposit, getPaymentUrl } from '@/api/deposits';
 import { getBalances } from '@/api/balance';
 import { useAuthStore } from '@/stores/auth';
 import { formatRelativeTime } from '@/utils/formatRelativeTime';
@@ -94,17 +94,7 @@ export const DepositDetail = () => {
   const depositId = useMemo(() => validateDepositId(id), [id]);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
-  const [successVisible, setSuccessVisible] = useState(false);
-  const [oldBalance, setOldBalance] = useState<string | null>(null);
-  const [devCompleteError, setDevCompleteError] = useState<string | null>(null);
-  const [devCompleteLoading, setDevCompleteLoading] = useState(false);
-
-  // Use reducer pattern for complex state management instead of multiple refs
-  const devCompleteState = useRef<{
-    triggered: boolean;
-    inFlight: boolean;
-    successShown: boolean;
-  }>({ triggered: false, inFlight: false, successShown: false });
+  const successShownRef = useRef(false);
 
   const actorEntity = useAuthStore((state) => state.actorEntity);
 
@@ -125,58 +115,17 @@ export const DepositDetail = () => {
     queryKey: ['balances', actorEntity?.id],
     queryFn: ({ signal }) =>
       actorEntity ? getBalances(actorEntity.id, signal) : Promise.resolve(null),
-    enabled: !!actorEntity && successVisible,
+    enabled: !!actorEntity && deposit?.status === 'completed',
   });
 
   const paymentUrl = deposit ? getPaymentUrl(deposit) : null;
-  const isDevDeposit = deposit ? isDevModeDeposit(deposit) : false;
-
-  const handleCompleteDev = useCallback(async () => {
-    if (!deposit || devCompleteState.current.inFlight) return;
-    devCompleteState.current.inFlight = true;
-    setDevCompleteError(null);
-    setDevCompleteLoading(true);
-    try {
-      await completeDepositDev(deposit.id);
-      await queryClient.invalidateQueries({ queryKey: ['deposit', depositId] });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to complete deposit';
-      setDevCompleteError(message);
-      // Reset state to allow retry
-      devCompleteState.current.triggered = false;
-    } finally {
-      setDevCompleteLoading(false);
-      devCompleteState.current.inFlight = false;
-    }
-  }, [deposit, depositId, queryClient]);
-
-  // Auto-complete dev deposits after delay
-  useEffect(() => {
-    if (
-      !isDevDeposit ||
-      !deposit ||
-      deposit.status !== 'pending' ||
-      devCompleteState.current.triggered ||
-      devCompleteState.current.inFlight
-    ) {
-      return;
-    }
-
-    devCompleteState.current.triggered = true;
-    const timer = setTimeout(() => {
-      void handleCompleteDev();
-    }, 10_000);
-
-    return () => clearTimeout(timer);
-  }, [isDevDeposit, deposit, handleCompleteDev]);
 
   // Handle successful deposit completion
   useEffect(() => {
-    if (deposit?.status !== 'completed' || devCompleteState.current.successShown) return;
+    if (deposit?.status !== 'completed' || successShownRef.current) return;
 
-    devCompleteState.current.successShown = true;
+    successShownRef.current = true;
     fireConfetti();
-    setSuccessVisible(true);
 
     if (actorEntity) {
       void queryClient.invalidateQueries({
@@ -185,18 +134,19 @@ export const DepositDetail = () => {
     }
   }, [deposit?.status, actorEntity, queryClient]);
 
-  useEffect(() => {
-    if (!successVisible || !deposit || !balances) return;
+  const oldBalance = useMemo(() => {
+    if (deposit?.status !== 'completed' || !deposit || !balances) return null;
+
     const currency = deposit.currency.toLowerCase();
     const newVal = balances.completed?.[currency];
-    if (newVal !== undefined) {
-      const newNum = parseFloat(newVal);
-      const added = parseFloat(String(deposit.amount));
-      setOldBalance((newNum - added).toFixed(2));
-    } else {
-      setOldBalance('0.00');
+    if (newVal === undefined) {
+      return '0.00';
     }
-  }, [successVisible, deposit, balances]);
+
+    const newNum = parseFloat(newVal);
+    const added = parseFloat(String(deposit.amount));
+    return (newNum - added).toFixed(2);
+  }, [balances, deposit]);
 
   const handleCopy = useCallback(async () => {
     if (!paymentUrl) return;
@@ -213,7 +163,6 @@ export const DepositDetail = () => {
   }, [paymentUrl]);
 
   const handleSuccessDone = useCallback(() => {
-    setSuccessVisible(false);
     navigate('/');
   }, [navigate]);
 
@@ -236,7 +185,7 @@ export const DepositDetail = () => {
   const newBalanceStr = balances?.completed?.[currency];
   const newBalance = newBalanceStr ?? deposit.amount;
   const isCompleted = deposit.status === 'completed';
-  const showSuccessPanel = successVisible || isCompleted;
+  const showSuccessPanel = isCompleted;
 
   return (
     <Stack gap="lg">
@@ -326,45 +275,6 @@ export const DepositDetail = () => {
                 {copyError ? (
                   <Alert color="red" variant="light" p="xs">
                     <Text size="xs">{copyError}</Text>
-                  </Alert>
-                ) : null}
-
-                {isDevDeposit ? (
-                  <SectionCard title="Local dev">
-                    <Stack gap="xs">
-                      <Text size="sm" className="app-muted-copy">
-                        This dev top-up auto-completes in about 10 seconds.
-                      </Text>
-                      <Button
-                        variant="subtle"
-                        size="xs"
-                        w="fit-content"
-                        onClick={() => {
-                          devCompleteState.current.triggered = true;
-                          void handleCompleteDev();
-                        }}
-                        loading={devCompleteLoading}
-                      >
-                        Complete now
-                      </Button>
-                    </Stack>
-                  </SectionCard>
-                ) : null}
-
-                {devCompleteError ? (
-                  <Alert color="gray" title="Dev completion failed">
-                    <Stack gap="xs">
-                      <Text size="sm">{devCompleteError}</Text>
-                      <Button
-                        variant="subtle"
-                        size="xs"
-                        w="fit-content"
-                        onClick={() => void handleCompleteDev()}
-                        loading={devCompleteLoading}
-                      >
-                        Retry
-                      </Button>
-                    </Stack>
                   </Alert>
                 ) : null}
               </>
