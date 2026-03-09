@@ -8,7 +8,6 @@ from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
     FormField,
-    SelectField,
     SelectMultipleField,
     StringField,
     SubmitField,
@@ -47,24 +46,6 @@ class AuthForm(FlaskForm):
     submit = SubmitField("Submit")
 
 
-class EntityFilterForm(FlaskForm):
-    name = StringField("Name")
-    comment = StringField("Comment")
-    active = SelectField(
-        "Active", choices=[("", ""), ("true", "Active"), ("false", "Inactive")]
-    )
-    balance_currency = StringField("Balance Currency")
-    balance_status = SelectField(
-        "Balance Status",
-        choices=[("", ""), ("completed", "Completed"), ("draft", "Draft")],
-    )
-    balance_order = SelectField(
-        "Balance Order",
-        choices=[("", ""), ("desc", "Highest first"), ("asc", "Lowest first")],
-    )
-    submit = SubmitField("Search")
-
-
 @entity_bp.route("/")
 @token_required
 def list():
@@ -73,20 +54,114 @@ def list():
     limit = request.args.get("limit", 50, type=int)
     skip = (page - 1) * limit
 
-    filter_form = EntityFilterForm(request.args)
-    # leave only non-empty filters
-    filters = {
-        key: value
-        for (key, value) in filter_form.data.items()
-        if value not in (None, "")
-    }
+    search_query = request.args.get("q", "", type=str).strip()
+    requested_tag_id = request.args.get("tags_ids", type=int)
+    # Keep search global across all entities, regardless of selected tag.
+    selected_tag_id = None if search_query else requested_tag_id
+
+    current_query = request.args.to_dict(flat=True)
+    if search_query:
+        current_query.pop("tags_ids", None)
+
+    def _build_tag_tab_url(tag_id: int | None) -> str:
+        params = current_query.copy()
+        params.pop("page", None)
+        params.pop("skip", None)
+        params.pop("q", None)
+        if tag_id is None:
+            params.pop("tags_ids", None)
+        else:
+            params["tags_ids"] = str(tag_id)
+        return url_for("entity.list", **params)
+
+    filters = {}
+    if selected_tag_id is not None:
+        filters["tags_ids"] = selected_tag_id
 
     api = get_refinance_api_client()
-    response = api.http(
-        "GET", "entities", params={"skip": skip, "limit": limit, **filters}
-    ).json()
-    entities = [Entity(**x) for x in response["items"]]
-    total = response["total"]
+    if search_query:
+        normalized_search = search_query.lower()
+        matched_entities: list[Entity] = []
+        scan_limit = 200
+        scan_skip = 0
+
+        while True:
+            scan_response = api.http(
+                "GET",
+                "entities",
+                params={"skip": scan_skip, "limit": scan_limit},
+            ).json()
+            scan_items = scan_response.get("items", [])
+            if not scan_items:
+                break
+
+            page_entities = [Entity(**item) for item in scan_items]
+            for entity in page_entities:
+                name_text = (entity.name or "").lower()
+                comment_text = (entity.comment or "").lower()
+                if normalized_search in name_text or normalized_search in comment_text:
+                    matched_entities.append(entity)
+
+            scan_skip += len(scan_items)
+            if scan_skip >= scan_response.get("total", 0):
+                break
+
+        total = len(matched_entities)
+        entities = matched_entities[skip : skip + limit]
+    else:
+        response = api.http(
+            "GET", "entities", params={"skip": skip, "limit": limit, **filters}
+        ).json()
+        entities = [Entity(**x) for x in response["items"]]
+        total = response["total"]
+
+    tags_response = api.http("GET", "tags", params={"skip": 0, "limit": 200}).json()
+    all_tags = [Tag(**x) for x in tags_response["items"]]
+
+    all_tag_ids = {tag.id for tag in all_tags}
+
+    def _tag_id(tag: Tag | dict) -> int | None:
+        if isinstance(tag, dict):
+            return tag.get("id")
+        return getattr(tag, "id", None)
+
+    used_tag_ids: set[int] = set()
+    tag_entity_counts: dict[int, int] = {}
+
+    # Avoid per-tag API calls (N+1): walk entities in pages and collect tag usage stats.
+    scan_limit = 200
+    scan_skip = 0
+    while used_tag_ids != all_tag_ids:
+        scan_response = api.http(
+            "GET",
+            "entities",
+            params={"skip": scan_skip, "limit": scan_limit},
+        ).json()
+        scan_items = scan_response.get("items", [])
+        if not scan_items:
+            break
+
+        for item in scan_items:
+            entity_tag_ids = set()
+            for tag in item.get("tags", []):
+                tag_id = _tag_id(tag)
+                if tag_id is not None:
+                    entity_tag_ids.add(tag_id)
+                    used_tag_ids.add(tag_id)
+            for tag_id in entity_tag_ids:
+                tag_entity_counts[tag_id] = tag_entity_counts.get(tag_id, 0) + 1
+
+        scan_skip += len(scan_items)
+        if scan_skip >= scan_response.get("total", 0):
+            break
+
+    tags_with_entities = sorted(
+        (tag for tag in all_tags if tag.id in used_tag_ids),
+        key=lambda tag: (-tag_entity_counts.get(tag.id, 0), tag.name.lower()),
+    )
+
+    tag_tab_urls = {tag.id: _build_tag_tab_url(tag.id) for tag in tags_with_entities}
+    clear_tag_url = _build_tag_tab_url(None)
 
     entity_ids = [entity.id for entity in entities]
     balances_response = api.http(
@@ -107,6 +182,18 @@ def list():
         currencies.update(balance.draft.keys())
     currency_columns = sorted(currencies)
 
+    # Sort entities by balance when a tag is selected
+    if selected_tag_id is not None:
+
+        def _calculate_total_balance(entity: Entity) -> float:
+            balance = balances.get(entity.id)
+            if not balance or not balance.completed:
+                return 0.0
+            # Sum actual values of all completed balances across currencies
+            return sum(float(amount) for amount in balance.completed.values())
+
+        entities = sorted(entities, key=_calculate_total_balance, reverse=True)
+
     return render_template(
         "entity/list.jinja2",
         entities=entities,
@@ -115,7 +202,11 @@ def list():
         total=total,
         page=page,
         limit=limit,
-        filter_form=filter_form,
+        search_query=search_query,
+        all_tags=tags_with_entities,
+        selected_tag_id=selected_tag_id,
+        tag_tab_urls=tag_tab_urls,
+        clear_tag_url=clear_tag_url,
     )
 
 

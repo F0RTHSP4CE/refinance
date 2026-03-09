@@ -598,6 +598,503 @@
   box-shadow: 6px 6px 0 #111;
 }
 
+/* ENTITIES LIST PAGE - BRUTALIST GRID LAYOUT */
+
+.entities-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.8rem;
+  margin-top: 0;
+  padding-top: 0.25rem;
+}
+
+.entities-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.2rem;
+  margin-bottom: 0;
+}
+
+.entities-title {
+  margin: 0;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  line-height: 1.08;
+  color: black;
+}
+
+.entities-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  background: black;
+  color: white;
+  border: 3px solid black;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 7px 7px 0 black;
+  white-space: nowrap;
+}
+
+.entities-add-button:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 11px 11px 0 black;
+}
+
+.entities-add-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
+}
+
+.entities-search-form-single {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.entities-search-input {
+  flex: 1 1 360px;
+  min-width: 240px;
+  border: 0;
+  border-radius: 0;
+  padding: 1.3rem 1.5rem;
+  font-size: 1.14rem;
+  font-weight: 700;
+  background: #f7f8fa;
+  color: #111;
+  transition: background 0.18s ease;
+}
+
+.entities-search-input:focus {
+  outline: none;
+  background: #f3f5f8;
+}
+
+.entities-search-input::placeholder {
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  color: #6f7a87;
+  opacity: 1;
+}
+
+.entities-search-input:focus::placeholder {
+  color: #b0b8c1;
+}
+
+.entities-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #c9ced6;
+  border-radius: 10px;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-decoration: none;
+}
+
+.entities-search-clear {
+  background: #f3f5f8;
+  color: #1e2935;
+}
+
+.entities-tag-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.entities-tag-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.52rem 0.95rem;
+  border: 3px solid #222;
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  line-height: 1;
+  -webkit-text-stroke: 1px #111;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease,
+    color 0.14s ease;
+  box-shadow: none;
+}
+
+.entities-tag-tab--color {
+  border-color: var(--tab-color);
+  color: var(--tab-color);
+  -webkit-text-stroke: 1px var(--tab-color);
+}
+
+.entities-tag-tab:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: none;
+}
+
+.entities-tag-tab--active {
+  background: var(--tab-color, #111);
+  border-color: var(--tab-color, #111);
+  color: #fff;
+  -webkit-text-stroke: 0;
+}
+
+.entities-total-amount {
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #111;
+}
+
+.entities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.8rem;
+  margin: 1.25rem 0;
+}
+
+@media (max-width: 768px) {
+  .entities-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.entity-list-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  border: 3px solid black;
+  background: transparent;
+  box-shadow: 7px 7px 0 black;
+  padding: 1.4rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-height: 100%;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.entity-list-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #ffffff 0%, #fafaf7 100%);
+  z-index: -2;
+}
+
+.entity-list-card > *:not(.entity-list-card-id-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.entity-list-card-id-bg {
+  position: absolute;
+  left: 0.45rem;
+  bottom: 0.1rem;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: clamp(2.7rem, 7.8vw, 5.3rem);
+  font-weight: 900;
+  line-height: 0.86;
+  letter-spacing: 1px;
+  color: #f1f1f1;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+  z-index: -1;
+}
+
+.entity-list-card:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 11px 11px 0 black;
+}
+
+.entity-list-card--inactive {
+  opacity: 0.25;
+}
+
+.entity-list-card--inactive::before {
+  background: repeating-linear-gradient(
+    45deg,
+    #ffffff,
+    #ffffff 11px,
+    #f1f1ee 11px,
+    #f1f1ee 22px
+  );
+}
+
+.entity-list-card-header {
+  padding-bottom: 0.15rem;
+  margin-bottom: 0;
+}
+
+.entity-list-card-title {
+  margin: 0;
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1.08;
+  letter-spacing: 0.8px;
+  word-break: break-word;
+  color: black;
+}
+
+.entity-list-card-title > span {
+  display: inline-block;
+  position: relative;
+  left: -0.06em;
+  top: -0.02em;
+}
+
+.entity-list-card-title > span .tag-badge {
+  display: inline-block;
+  vertical-align: baseline;
+  position: relative;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: 1;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin-left: 0;
+  background: transparent;
+  text-shadow:
+    2px 2px 0 var(--tag-color),
+    3px 3px 0 var(--tag-color);
+}
+
+.entity-list-card-title > span .tag-badge + .tag-badge {
+  margin-left: 0.25ch;
+}
+
+.entity-list-card-title > span .tag-badge a,
+.entity-list-card-title > span .tag-badge span {
+  display: inline-block;
+  position: relative;
+  top: -0.01em;
+  color: #fff !important;
+  vertical-align: baseline;
+}
+
+.entity-list-card-link {
+  color: black;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: inline;
+}
+
+.entity-list-card-link:hover {
+  color: #333;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.entity-list-card--inactive .entity-list-card-link {
+  text-decoration: line-through;
+  color: #666;
+}
+
+.entity-list-card-balances {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding-top: 0.18rem;
+  border-bottom: 0;
+  margin-top: auto;
+}
+
+.balance-row-list {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  padding-bottom: 0.05rem;
+}
+
+.balance-row-list:last-child {
+  padding-bottom: 0;
+}
+
+.balance-row-list-empty {
+  opacity: 0.8;
+}
+
+.balance-currency-label {
+  font-weight: 900;
+  font-size: clamp(1.3rem, 2.8vw, 1.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #111;
+  flex-shrink: 0;
+  min-width: 72px;
+  line-height: 1.05;
+}
+
+.balance-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.04rem;
+}
+
+.balance-row-list .balance-value,
+.balance-row-list .balance-draft {
+  font-size: clamp(1.45rem, 3.1vw, 2.05rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.5px;
+}
+
+.balance-row-list .balance-draft {
+  opacity: 0.6;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.balance-row-list-empty .balance-currency-label,
+.balance-row-list-empty .balance-draft {
+  font-size: 1.05rem;
+  line-height: 1.2;
+  letter-spacing: 0.4px;
+  color: #444;
+}
+
+@media (max-width: 768px) {
+  .balance-row-list {
+    justify-content: flex-start;
+    align-items: center;
+    padding-bottom: 0;
+  }
+
+  .balance-amounts {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 0.45rem;
+  }
+
+  .balance-row-list .balance-value,
+  .balance-row-list .balance-draft {
+    white-space: nowrap;
+  }
+}
+
+.amount-negative {
+  color: #fff;
+  background: #ff0000;
+  display: inline-block;
+  padding: 0.06em 0.3em;
+  line-height: 1;
+}
+
+.balance-draft.amount-negative {
+  color: #ff0000;
+  background: transparent;
+  display: inline;
+  padding: 0;
+  line-height: 1.1;
+}
+
+.entity-list-card-comment {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #444;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  text-transform: uppercase;
+  margin-top: 0;
+  padding-top: 0.12rem;
+}
+
+.entity-list-card-comment p {
+  margin: 0;
+  word-break: break-word;
+}
+
+.entities-empty {
+  padding: 3.5rem 2rem;
+  text-align: center;
+  border: 3px dashed #666;
+  background: #fafaf7;
+}
+
+.entities-empty p {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+.entities-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.35rem 0 1rem 0;
+  margin-top: 0.9rem;
+}
+
+.entities-pagination .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.entities-pagination .pagination a {
+  display: inline-block;
+  padding: 0.38rem 0.74rem;
+  background: black;
+  color: white;
+  border: 2px solid black;
+  text-decoration: none;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.entities-pagination .pagination a:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 black;
+}
+
+.entities-pagination .pagination span {
+  display: inline-block;
+  margin: 0 0.3rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
 .entity-invoice-compact-amount {
   display: block;
   font-size: 0.98rem;

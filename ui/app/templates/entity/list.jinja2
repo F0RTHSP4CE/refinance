@@ -1,75 +1,152 @@
 {% extends "base.jinja2" %}
 {% from 'widgets/tag_inline.jinja2' import tag_inline %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
-{% from 'form.jinja2' import render_form %}
 
 {% block title %}Entities{% endblock %}
+{% block heading %}{% endblock %}
 {% block content %}
-<p><a href="{{ url_for('entity.add') }}">Add</a></p>
+<div class="entities-page">
+    <div class="entities-header">
+        <h1 class="entities-title">Entities</h1>
+        <a href="{{ url_for('entity.add') }}" class="entities-add-button">+ Add</a>
+    </div>
 
-<p>
-<details>
-    <summary>search</summary>
-    <p>
-    <form method="get">
-        {{ render_form(filter_form, except=('csrf_token')) }}
+    {% if all_tags %}
+    <div class="entities-tag-tabs" role="tablist" aria-label="Filter entities by tag">
+        <a href="{{ clear_tag_url }}"
+            class="entities-tag-tab {% if selected_tag_id is none %}entities-tag-tab--active{% endif %}">
+            All
+        </a>
+        {% for tag in all_tags %}
+        {%- set hue = (tag.id * 41.9) % 360 -%}
+        {%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
+        {%- set split_color = "hsl(" + hue|string + ", 100%, 55%)" -%}
+        <a href="{{ tag_tab_urls.get(tag.id) }}"
+            class="entities-tag-tab entities-tag-tab--color {% if selected_tag_id == tag.id %}entities-tag-tab--active{% endif %}"
+            style="--tab-color: {{ color }}; --tab-split-color: {{ split_color }};">
+            {{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="get"
+        class="entities-search-form-single"
+        id="entities-search-form"
+        hx-get="{{ url_for('entity.list') }}"
+        hx-target="#entities-results"
+        hx-select="#entities-results"
+        hx-swap="outerHTML"
+        hx-push-url="true">
+        <input
+            type="search"
+            name="q"
+            value="{{ search_query }}"
+            id="entities-search-input"
+            class="entities-search-input"
+            placeholder="SEARCH ALL"
+            aria-label="Search entities by name or comment"
+            autofocus>
+        {% if search_query %}
+        <a href="{{ url_for('entity.list') }}"
+            class="entities-search-clear">
+            Clear
+        </a>
+        {% endif %}
     </form>
-    </p>
-</details>
-</p>
 
-{% if entities %}
-<div class="wide-table-wrapper">
-    <table>
-        <thead>
-            <tr>
-                <td>Name</td>
-                <td>Tags</td>
-                {% for currency in currency_columns %}
-                <td class="right-align">{{ currency | upper }}</td>
-                {% endfor %}
-                <td>Comment</td>
-            </tr>
-        </thead>
-        <tbody>
+    <div id="entities-results">
+        <div class="entities-total-amount">Total: {{ total }}</div>
+
+        {% if entities %}
+        <div class="entities-grid">
             {% for entity in entities %}
             {% set balance = balances.get(entity.id) %}
-            <tr>
-                <td>
-                    <a href="{{ url_for('entity.detail', id=entity.id) }}"
-                        class="{% if not entity.active %}secondary inactive{% endif %}">
-                        {{ entity.name }}
-                    </a>
-                </td>
-                <td>
-                    {% for tag in entity.tags %}
-                    {{ tag_inline(tag) }}
+            <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}">
+                <span class="entity-list-card-id-bg" aria-hidden="true">#{{ entity.id }}</span>
+                <div class="entity-list-card-header">
+                    <h2 class="entity-list-card-title">
+                        <a href="{{ url_for('entity.detail', id=entity.id) }}"
+                            class="entity-list-card-link">
+                            {{ entity.name }}
+                        </a>{% if entity.tags %}<span>
+                            {% for tag in entity.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </span>{% endif %}
+                    </h2>
+                </div>
+
+                {% if entity.comment %}
+                <div class="entity-list-card-comment">
+                    <p>{{ entity.comment }}</p>
+                </div>
+                {% endif %}
+
+                {% if currency_columns and balance %}
+                {% set ns = namespace(has_values=false) %}
+                <div class="entity-list-card-balances">
+                    {% for currency in currency_columns %}
+                    {% set completed_amount = balance.completed.get(currency) if balance else None %}
+                    {% set draft_amount = balance.draft.get(currency) if balance else None %}
+                    {% set has_completed = completed_amount is not none and completed_amount|float != 0 %}
+                    {% set has_draft = draft_amount is not none and draft_amount|float != 0 %}
+                    {% if has_completed or has_draft %}
+                    {% set ns.has_values = true %}
+                    <div class="balance-row-list">
+                        <div class="balance-amounts">
+                            {% if has_completed %}
+                            <div class="balance-value {% if completed_amount|float < 0 %}amount-negative{% endif %}">
+                                {{ '%.2f' | format(completed_amount | float) }} {{ currency | upper }}
+                            </div>
+                            {% endif %}
+                            {% if has_draft %}
+                            <div class="balance-draft {% if draft_amount|float < 0 %}amount-negative{% endif %}">
+                                {{ '%.2f' | format(draft_amount | float) }} {{ currency | upper }}*
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                     {% endfor %}
-                </td>
-                {% for currency in currency_columns %}
-                {% set completed_amount = balance.completed.get(currency) if balance else None %}
-                {% set draft_amount = balance.draft.get(currency) if balance else None %}
-                <td class="balance-cell right-align">
-                    {% if completed_amount is not none and completed_amount|float != 0 %}
-                    <div class="balance-value {% if completed_amount|float < 0 %}amount-negative{% endif %}">
-                        {{ completed_amount }}
+                    {% if not ns.has_values %}
+                    <div class="balance-row-list balance-row-list-empty">
+                        <span class="balance-currency-label">ZERO BALANCE</span>
                     </div>
                     {% endif %}
-                    {% if draft_amount is not none and draft_amount|float != 0 %}
-                    <div class="balance-draft {% if draft_amount|float < 0 %}amount-negative{% endif %}">
-                        {{ draft_amount }}*
-                    </div>
-                    {% endif %}
-                </td>
-                {% endfor %}
-                <td>{{ entity.comment or ""}}</td>
-            </tr>
+                </div>
+                {% endif %}
+            </article>
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+        {% else %}
+        <div class="entities-empty">
+            <p>No entities.</p>
+        </div>
+        {% endif %}
+
+        <div class="entities-pagination">
+            {{ pagination_control(page, total, limit, 'entity.list') }}
+        </div>
+    </div>
 </div>
-{% else %}
-<p>No entities.</p>
-{% endif %}
-{{ pagination_control(page, total, limit, 'entity.list') }}
+<script>
+    (function () {
+        const form = document.getElementById('entities-search-form');
+        const input = document.getElementById('entities-search-input');
+        if (!form || !input) {
+            return;
+        }
+
+        let debounceTimer = null;
+        input.addEventListener('input', function () {
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            debounceTimer = setTimeout(function () {
+                form.requestSubmit();
+            }, 300);
+        });
+    })();
+</script>
 {% endblock %}
