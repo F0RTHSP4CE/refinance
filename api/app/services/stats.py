@@ -8,7 +8,7 @@ from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from threading import Lock
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Callable, Iterable, Literal, Mapping
 
 from app.dependencies.services import (
     get_balance_service,
@@ -20,7 +20,14 @@ from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.tag import Tag
 from app.models.transaction import Transaction, TransactionStatus
-from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
+from app.seeding import (
+    currency_exchange_tag,
+    ex_resident_tag,
+    f0_entity,
+    fee_tag,
+    member_tag,
+    resident_tag,
+)
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
@@ -28,7 +35,7 @@ from app.services.entity import EntityService
 from app.services.fee import FeeService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import and_, extract, func, or_
+from sqlalchemy import and_, case, extract, func, or_
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -186,6 +193,177 @@ class StatsService(BaseService):
                 continue
         return float(total)
 
+    def _normalize_timeframe(
+        self,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> tuple[date, date]:
+        normalized_timeframe_to = timeframe_to or date.today()
+        normalized_timeframe_from = (
+            timeframe_from or normalized_timeframe_to - timedelta(days=365)
+        )
+
+        if normalized_timeframe_from > normalized_timeframe_to:
+            normalized_timeframe_from = normalized_timeframe_to
+
+        return normalized_timeframe_from, normalized_timeframe_to
+
+    def _coerce_to_date(self, value: Any) -> date:
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        if isinstance(value, str):
+            return date.fromisoformat(value)
+        raise ValueError(f"Unsupported date value type: {type(value)!r}")
+
+    def _get_bucket_start(
+        self, dt: date, grain: Literal["week", "month"]
+    ) -> date:
+        if grain == "week":
+            return dt - timedelta(days=dt.weekday())
+        return dt.replace(day=1)
+
+    def _get_bucket_end(
+        self, bucket_start: date, grain: Literal["week", "month"]
+    ) -> date:
+        if grain == "week":
+            return bucket_start + timedelta(days=6)
+
+        if bucket_start.month == 12:
+            next_month_start = date(bucket_start.year + 1, 1, 1)
+        else:
+            next_month_start = date(bucket_start.year, bucket_start.month + 1, 1)
+        return next_month_start - timedelta(days=1)
+
+    def _format_bucket_totals(
+        self,
+        bucket_totals: Mapping[date, Mapping[str, Decimal]],
+        grain: Literal["week", "month"],
+    ) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for bucket_start in sorted(bucket_totals.keys()):
+            amounts = bucket_totals[bucket_start]
+            amounts_float = {
+                currency: float(amount) for currency, amount in amounts.items()
+            }
+            result.append(
+                {
+                    "bucket_start": bucket_start,
+                    "bucket_end": self._get_bucket_end(bucket_start, grain),
+                    "grain": grain,
+                    "amounts": amounts_float,
+                    "total_usd": self._sum_amounts_usd(amounts),
+                }
+            )
+        return result
+
+    def get_resident_fee_sum(
+        self,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+        grain: Literal["week", "month"] = "month",
+    ) -> list[dict[str, Any]]:
+        timeframe_from, timeframe_to = self._normalize_timeframe(
+            timeframe_from, timeframe_to
+        )
+        start_month = timeframe_from.replace(day=1)
+        end_month = timeframe_to.replace(day=1)
+
+        hackerspace = self._entity_service.get(f0_entity.id)
+        invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PAID,
+            )
+            .all()
+        )
+
+        bucket_totals: defaultdict[date, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        today = date.today()
+
+        for invoice in invoices:
+            transaction = invoice.transaction
+            if transaction is None:
+                continue
+            if transaction.status != TransactionStatus.COMPLETED:
+                continue
+
+            if grain == "month":
+                if invoice.billing_period is None:
+                    continue
+
+                bucket_start = invoice.billing_period.replace(day=1)
+                if not (start_month <= bucket_start <= end_month):
+                    continue
+
+                if (
+                    bucket_start.year > today.year
+                    or (
+                        bucket_start.year == today.year
+                        and bucket_start.month > today.month
+                    )
+                ):
+                    continue
+            else:
+                transaction_day = transaction.created_at.date()
+                if not (timeframe_from <= transaction_day <= timeframe_to):
+                    continue
+                bucket_start = self._get_bucket_start(transaction_day, grain)
+
+            currency = transaction.currency.lower()
+            bucket_totals[bucket_start][currency] += transaction.amount
+
+        return self._format_bucket_totals(bucket_totals, grain)
+
+    def get_transactions_sum(
+        self,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+        grain: Literal["week", "month"] = "month",
+    ) -> list[dict[str, Any]]:
+        timeframe_from, timeframe_to = self._normalize_timeframe(
+            timeframe_from, timeframe_to
+        )
+        day_col = func.date(Transaction.created_at)
+
+        rows = (
+            self.db.query(
+                day_col.label("day"),
+                Transaction.currency.label("currency"),
+                func.sum(Transaction.amount).label("total_amount"),
+            )
+            .filter(
+                and_(
+                    day_col >= timeframe_from,
+                    day_col <= timeframe_to,
+                    ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
+                )
+            )
+            .group_by("day", "currency")
+            .order_by("day")
+            .all()
+        )
+
+        bucket_totals: defaultdict[date, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        for row in rows:
+            if row.total_amount is None:
+                continue
+
+            day = self._coerce_to_date(row.day)
+            bucket_start = self._get_bucket_start(day, grain)
+            currency = str(row.currency).lower()
+            bucket_totals[bucket_start][currency] += row.total_amount
+
+        return self._format_bucket_totals(bucket_totals, grain)
+
     def get_resident_fee_sum_by_month(
         self, timeframe_from: date | None = None, timeframe_to: date | None = None
     ):
@@ -228,9 +406,9 @@ class StatsService(BaseService):
             if not (start_month <= fee_date <= end_month):
                 continue
 
-            monthly_totals[(year, month)][
-                invoice.transaction.currency.lower()
-            ] += invoice.transaction.amount
+            monthly_totals[(year, month)][invoice.transaction.currency.lower()] += (
+                invoice.transaction.amount
+            )
 
         result = []
         for (year, month), amounts in sorted(monthly_totals.items()):
@@ -268,6 +446,7 @@ class StatsService(BaseService):
                         Transaction.created_at <= timeframe_to,
                         (Transaction.from_entity_id == entity_id)
                         | (Transaction.to_entity_id == entity_id),
+                        ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
                     )
                 )
                 .group_by("day")
@@ -287,6 +466,91 @@ class StatsService(BaseService):
             builder,
         )
 
+    def get_entity_money_flow_by_day(
+        self,
+        entity_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return incoming vs outgoing totals (USD) per day.
+
+        Both totals are always positive and represent the sum of transactions where
+        the entity is the receiver (incoming) or sender (outgoing), converted to USD.
+        """
+
+        timeframe_to = timeframe_to or date.today()
+        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        cache_args = (int(entity_id), timeframe_from, timeframe_to)
+
+        def builder() -> list[dict[str, Any]]:
+            day_col = func.date(Transaction.created_at)
+            direction = case(
+                (Transaction.to_entity_id == entity_id, "incoming"),
+                (Transaction.from_entity_id == entity_id, "outgoing"),
+                else_="other",
+            ).label("direction")
+
+            rows = (
+                self.db.query(
+                    day_col.label("day"),
+                    direction,
+                    Transaction.currency.label("currency"),
+                    func.sum(Transaction.amount).label("total_amount"),
+                )
+                .filter(
+                    and_(
+                        day_col >= timeframe_from,
+                        day_col <= timeframe_to,
+                        (Transaction.from_entity_id == entity_id)
+                        | (Transaction.to_entity_id == entity_id),
+                        ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
+                    )
+                )
+                .group_by("day", "direction", "currency")
+                .order_by("day")
+                .all()
+            )
+
+            totals_by_day: defaultdict[date, dict[str, defaultdict[str, Decimal]]] = (
+                defaultdict(
+                    lambda: {
+                        "incoming": defaultdict(Decimal),
+                        "outgoing": defaultdict(Decimal),
+                    }
+                )
+            )
+
+            for row in rows:
+                if row.direction not in ("incoming", "outgoing"):
+                    continue
+                if row.total_amount is None:
+                    continue
+                totals_by_day[row.day][row.direction][row.currency] += row.total_amount
+
+            result: list[dict[str, Any]] = []
+            for day in sorted(totals_by_day.keys()):
+                incoming_amounts = totals_by_day[day]["incoming"]
+                outgoing_amounts = totals_by_day[day]["outgoing"]
+                result.append(
+                    {
+                        "day": day,
+                        "incoming_total_usd": float(
+                            self._sum_amounts_usd(incoming_amounts)
+                        ),
+                        "outgoing_total_usd": float(
+                            self._sum_amounts_usd(outgoing_amounts)
+                        ),
+                    }
+                )
+            return result
+
+        return self._cached_result(
+            "get_entity_money_flow_by_day",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
+        )
     def get_transactions_sum_by_week(
         self, timeframe_from: date | None = None, timeframe_to: date | None = None
     ):
@@ -304,6 +568,7 @@ class StatsService(BaseService):
                 and_(
                     Transaction.created_at >= timeframe_from,
                     Transaction.created_at <= timeframe_to,
+                    ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
                 )
             )
             .group_by("year", "week", "currency")
@@ -436,17 +701,25 @@ class StatsService(BaseService):
         return normalized
 
     def _calculate_timeframe_bounds(
-        self, months: int, timeframe_to: date | None
+        self,
+        months: int,
+        timeframe_to: date | None,
+        timeframe_from: date | None = None,
     ) -> tuple[datetime, datetime]:
         """Return datetime bounds spanning the last ``months`` months up to ``timeframe_to``."""
 
         timeframe_to = timeframe_to or date.today()
-        months = max(1, months)
-        start_month = timeframe_to.replace(day=1)
-        if months > 1:
-            start_month = self._subtract_months(start_month, months - 1)
+        if timeframe_from is not None:
+            if timeframe_from > timeframe_to:
+                timeframe_from = timeframe_to
+            start_dt = datetime.combine(timeframe_from, time.min)
+        else:
+            months = max(1, months)
+            start_month = timeframe_to.replace(day=1)
+            if months > 1:
+                start_month = self._subtract_months(start_month, months - 1)
+            start_dt = datetime.combine(start_month, time.min)
 
-        start_dt = datetime.combine(start_month, time.min)
         end_dt = datetime.combine(timeframe_to, time.max)
         return start_dt, end_dt
 
@@ -456,12 +729,15 @@ class StatsService(BaseService):
         limit: int,
         months: int,
         timeframe_to: date | None,
+        timeframe_from: date | None,
         *additional_filters,
     ) -> list[dict[str, Any]]:
         if limit <= 0:
             return []
 
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        start_dt, end_dt = self._calculate_timeframe_bounds(
+            months, timeframe_to, timeframe_from
+        )
 
         labeled_entity_col = entity_column.label("entity_id")
         rows = (
@@ -473,6 +749,7 @@ class StatsService(BaseService):
             .filter(
                 Transaction.created_at >= start_dt,
                 Transaction.created_at <= end_dt,
+                ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
                 *additional_filters,
             )
             .group_by(labeled_entity_col, Transaction.currency)
@@ -521,13 +798,16 @@ class StatsService(BaseService):
         limit: int,
         months: int,
         timeframe_to: date | None,
+        timeframe_from: date | None,
         entity_filter,
         fallback_entity_attr: str,
     ) -> list[dict[str, Any]]:
         if limit <= 0:
             return []
 
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        start_dt, end_dt = self._calculate_timeframe_bounds(
+            months, timeframe_to, timeframe_from
+        )
 
         transactions = (
             self.db.query(Transaction)
@@ -540,6 +820,7 @@ class StatsService(BaseService):
                 Transaction.created_at >= start_dt,
                 Transaction.created_at <= end_dt,
                 entity_filter,
+                ~Transaction.tags.any(Tag.id == currency_exchange_tag.id),
             )
             .all()
         )
@@ -599,13 +880,14 @@ class StatsService(BaseService):
         self,
         limit: int = 5,
         months: int = 3,
+        timeframe_from: date | None = None,
         timeframe_to: date | None = None,
         entity_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return the top entities receiving funds within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        cache_args = (entity_id, limit, months, timeframe_to)
+        cache_args = (entity_id, limit, months, timeframe_from, timeframe_to)
 
         return self._cached_result(
             "get_top_incoming_entities",
@@ -617,6 +899,7 @@ class StatsService(BaseService):
                 limit,
                 months,
                 timeframe_to,
+                timeframe_from,
                 Transaction.to_entity_id == entity_id,
             ),
         )
@@ -625,13 +908,14 @@ class StatsService(BaseService):
         self,
         limit: int = 5,
         months: int = 3,
+        timeframe_from: date | None = None,
         timeframe_to: date | None = None,
         entity_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return the top entities sending funds within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        cache_args = (entity_id, limit, months, timeframe_to)
+        cache_args = (entity_id, limit, months, timeframe_from, timeframe_to)
 
         return self._cached_result(
             "get_top_outgoing_entities",
@@ -643,6 +927,7 @@ class StatsService(BaseService):
                 limit,
                 months,
                 timeframe_to,
+                timeframe_from,
                 Transaction.from_entity_id == entity_id,
             ),
         )
@@ -651,13 +936,14 @@ class StatsService(BaseService):
         self,
         limit: int = 5,
         months: int = 3,
+        timeframe_from: date | None = None,
         timeframe_to: date | None = None,
         entity_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return the top tags for incoming transactions within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        cache_args = (entity_id, limit, months, timeframe_to)
+        cache_args = (entity_id, limit, months, timeframe_from, timeframe_to)
 
         return self._cached_result(
             "get_top_incoming_tags",
@@ -668,6 +954,7 @@ class StatsService(BaseService):
                 limit,
                 months,
                 timeframe_to,
+                timeframe_from,
                 Transaction.to_entity_id == entity_id,
                 "from_entity",
             ),
@@ -677,13 +964,14 @@ class StatsService(BaseService):
         self,
         limit: int = 5,
         months: int = 3,
+        timeframe_from: date | None = None,
         timeframe_to: date | None = None,
         entity_id: int | None = None,
     ) -> list[dict[str, Any]]:
         """Return the top tags for outgoing transactions within the timeframe."""
 
         entity_id = entity_id or f0_entity.id
-        cache_args = (entity_id, limit, months, timeframe_to)
+        cache_args = (entity_id, limit, months, timeframe_from, timeframe_to)
 
         return self._cached_result(
             "get_top_outgoing_tags",
@@ -694,6 +982,7 @@ class StatsService(BaseService):
                 limit,
                 months,
                 timeframe_to,
+                timeframe_from,
                 Transaction.from_entity_id == entity_id,
                 "to_entity",
             ),

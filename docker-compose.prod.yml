@@ -11,6 +11,11 @@ services:
       - secrets.prod.env
     ports:
       - "127.0.0.1:9000:9000"
+  ui-new:
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:5173:5173"
   db:
     volumes:
       - db-data:/var/lib/postgresql/data

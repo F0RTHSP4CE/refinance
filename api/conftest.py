@@ -1,6 +1,9 @@
 """Test configuration and shared fixtures"""
 
 import os
+
+# Disable CSRF for tests (TestClient does not send cookies)
+os.environ["REFINANCE_CSRF_DISABLED"] = "1"
 import sys
 import traceback
 import uuid
@@ -45,11 +48,30 @@ def logging_request(self, *args, **kwargs):
 TestClient.request = logging_request
 
 
-DEFAULT_TEST_DATABASE_URL = "postgresql://postgres:postgres@db:5432/refinance_test"
+DEFAULT_TEST_DATABASE_URL = "postgresql://postgres@db:5432/refinance_test"
+
+
+def _get_test_database_url() -> str:
+    explicit_test_url = os.getenv("REFINANCE_TEST_DATABASE_URL")
+    if explicit_test_url:
+        return explicit_test_url
+
+    runtime_database_url = os.getenv("REFINANCE_DATABASE_URL")
+    if not runtime_database_url:
+        return DEFAULT_TEST_DATABASE_URL
+
+    # Reuse the runtime DB credentials so Docker-backed tests keep working
+    # against existing local volumes that were initialized with password auth.
+    url = make_url(runtime_database_url)
+    database_name = url.database or "refinance"
+    if not database_name.endswith("_test"):
+        database_name = f"{database_name}_test"
+    return url.set(database=database_name).render_as_string(hide_password=False)
 
 
 def _quote_database(name: str) -> str:
-    return f'"{name.replace("\"", "\"\"")}"'
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
 
 
 @contextmanager
@@ -80,7 +102,7 @@ def _temporary_database(base_dsn: str):
 # each test class has its own isolated database
 @pytest.fixture(scope="class")
 def test_app():
-    base_dsn = os.getenv("REFINANCE_TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
+    base_dsn = _get_test_database_url()
     with _temporary_database(base_dsn) as database_url:
         test_config = Config(
             app_name="refinance-test",

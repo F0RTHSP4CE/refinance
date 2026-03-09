@@ -1,7 +1,6 @@
 import re
 from datetime import datetime, timedelta, timezone
 from os import getenv
-from secrets import token_hex
 from urllib.parse import urlencode
 
 from app.controllers.auth import auth_bp
@@ -35,7 +34,6 @@ from markupsafe import Markup, escape
 
 app = Flask(__name__)
 app.secret_key = getenv("REFINANCE_UI_SECRET_KEY", "supersecret")
-app.config["CSS_CACHE_BUSTER"] = token_hex(8)
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 CORS(app)
@@ -96,14 +94,6 @@ def hx_entity_name(id):
         return jsonify(r.json()), 200
     else:
         return jsonify({}), 404
-
-
-@app.route("/style.css")
-def serve_style():
-    response = render_template(
-        "style.css.jinja2", css_cache_buster=app.config["CSS_CACHE_BUSTER"]
-    )
-    return response, 200, {"Content-Type": "text/css; charset=utf-8"}
 
 
 def update_query_params(**kwargs):
@@ -201,7 +191,6 @@ def human_readable_date(date_string):
 
 app.jinja_env.globals["update_query_params"] = update_query_params
 app.jinja_env.globals["human_readable_date"] = human_readable_date
-app.jinja_env.globals["css_cache_buster"] = app.config["CSS_CACHE_BUSTER"]
 
 
 # dev

@@ -157,7 +157,6 @@ class ServiceContainer:
                 db=self.db,
                 deposit_service=self.deposit_service,
                 keepz_service=self.keepz_service,
-                config=self.config,
             )
         return self._keepz_deposit_provider_service
 

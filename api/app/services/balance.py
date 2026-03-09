@@ -5,11 +5,7 @@ from datetime import date, datetime, time
 from app.dependencies.services import get_entity_service
 from app.models.transaction import TransactionStatus
 from app.schemas.balance import BalanceSchema
-from app.services.balance_queries import (
-    sum_entity_balances,
-    sum_entity_balances_many,
-    sum_treasury_balances,
-)
+from app.services.balance_queries import sum_entity_balances, sum_treasury_balances
 from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
@@ -78,56 +74,6 @@ class BalanceService:
         )
         self._treasury_cache[treasury_id] = result
         return result
-
-    def get_balances_many(self, entity_ids: list[int]) -> dict[int, BalanceSchema]:
-        if not entity_ids:
-            return {}
-
-        unique_entity_ids = list(dict.fromkeys(entity_ids))
-        balances_by_entity: dict[int, BalanceSchema] = {}
-        missing_ids: list[int] = []
-
-        for entity_id in unique_entity_ids:
-            cached = self._cache.get(entity_id)
-            if cached is not None:
-                balances_by_entity[entity_id] = cached
-            else:
-                missing_ids.append(entity_id)
-
-        if missing_ids:
-            existing_entity_ids = {
-                row[0]
-                for row in self.db.query(self.entity_service.model.id)
-                .filter(self.entity_service.model.id.in_(missing_ids))
-                .all()
-            }
-            unknown_ids = sorted(set(missing_ids) - existing_entity_ids)
-            if unknown_ids:
-                # Reuse existing error semantics for missing entity ids.
-                self.entity_service.get(unknown_ids[0])
-
-            completed_by_entity = sum_entity_balances_many(
-                db=self.db,
-                entity_ids=missing_ids,
-                status=TransactionStatus.COMPLETED,
-            )
-            draft_by_entity = sum_entity_balances_many(
-                db=self.db,
-                entity_ids=missing_ids,
-                status=TransactionStatus.DRAFT,
-            )
-
-            for entity_id in missing_ids:
-                result = BalanceSchema(
-                    completed=completed_by_entity.get(entity_id, {}),
-                    draft=draft_by_entity.get(entity_id, {}),
-                )
-                self._cache[entity_id] = result
-                balances_by_entity[entity_id] = result
-
-        return {
-            entity_id: balances_by_entity[entity_id] for entity_id in unique_entity_ids
-        }
 
     def _get_balances(
         self, entity_id: int, end_date: date | None = None

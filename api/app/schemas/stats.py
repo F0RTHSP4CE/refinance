@@ -1,8 +1,11 @@
 """Schemas for stats"""
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+StatsGrain = Literal["week", "month"]
 
 
 class ResidentFeeSumByMonthSchema(BaseModel):
@@ -17,9 +20,23 @@ class EntityTransactionsByDaySchema(BaseModel):
     transaction_count: int
 
 
+class EntityMoneyFlowByDaySchema(BaseModel):
+    day: date
+    incoming_total_usd: float
+    outgoing_total_usd: float
+
+
 class TransactionsSumByWeekSchema(BaseModel):
     year: int
     week: int
+    amounts: dict[str, float]
+    total_usd: float
+
+
+class StatsBucketSumSchema(BaseModel):
+    bucket_start: date
+    bucket_end: date
+    grain: StatsGrain
     amounts: dict[str, float]
     total_usd: float
 
@@ -57,6 +74,7 @@ class EntityStatsBundleSchema(BaseModel):
     transactions_by_day: list[EntityTransactionsByDaySchema] = Field(
         default_factory=list
     )
+    money_flow_by_day: list[EntityMoneyFlowByDaySchema] = Field(default_factory=list)
     top_incoming: list[TopEntityStatSchema] = Field(default_factory=list)
     top_outgoing: list[TopEntityStatSchema] = Field(default_factory=list)
     top_incoming_tags: list[TopTagStatSchema] = Field(default_factory=list)
