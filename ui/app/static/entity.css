@@ -826,11 +826,6 @@
   z-index: -1;
 }
 
-.entity-list-card:hover {
-  transform: translate(-4px, -4px);
-  box-shadow: 11px 11px 0 black;
-}
-
 .entity-list-card--inactive {
   opacity: 0.25;
 }
@@ -1020,6 +1015,13 @@
   display: inline;
   padding: 0;
   line-height: 1.1;
+}
+
+.entity-balance-row-draft .amount-negative {
+  color: #ff0000;
+  background: transparent;
+  display: inline;
+  padding: 0;
 }
 
 .entity-list-card-comment {
