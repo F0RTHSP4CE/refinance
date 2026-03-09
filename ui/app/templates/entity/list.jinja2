@@ -11,12 +11,12 @@
         <a href="{{ url_for('entity.add') }}" class="entities-add-button">+ Add</a>
     </div>
 
-    {% if all_tags %}
     <div class="entities-tag-tabs" role="tablist" aria-label="Filter entities by tag">
         <a href="{{ clear_tag_url }}"
-            class="entities-tag-tab {% if selected_tag_id is none %}entities-tag-tab--active{% endif %}">
+            class="entities-tag-tab {% if selected_tag_id is none and not show_inactive %}entities-tag-tab--active{% endif %}">
             All
         </a>
+        {% if all_tags %}
         {% for tag in all_tags %}
         {%- set hue = (tag.id * 41.9) % 360 -%}
         {%- set color = "hsl(" + hue|string + ", 66%, 44%)" -%}
@@ -27,8 +27,12 @@
             {{ tag.name }}
         </a>
         {% endfor %}
+        {% endif %}
+        <a href="{{ url_for('entity.list', inactive='1') }}"
+            class="entities-tag-tab entities-tag-tab--inactive {% if show_inactive %}entities-tag-tab--active{% endif %}">
+            Inactive
+        </a>
     </div>
-    {% endif %}
 
     <form method="get"
         class="entities-search-form-single"
@@ -38,6 +42,9 @@
         hx-select="#entities-results"
         hx-swap="outerHTML"
         hx-push-url="true">
+        {% if show_inactive %}
+        <input type="hidden" name="inactive" value="1">
+        {% endif %}
         <input
             type="search"
             name="q"
@@ -48,10 +55,17 @@
             aria-label="Search entities by name or comment"
             autofocus>
         {% if search_query %}
+        {% if show_inactive %}
+        <a href="{{ url_for('entity.list', inactive='1') }}"
+            class="entities-search-clear">
+            Clear
+        </a>
+        {% else %}
         <a href="{{ url_for('entity.list') }}"
             class="entities-search-clear">
             Clear
         </a>
+        {% endif %}
         {% endif %}
     </form>
 

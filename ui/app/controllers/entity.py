@@ -56,6 +56,12 @@ def list():
 
     search_query = request.args.get("q", "", type=str).strip()
     requested_tag_id = request.args.get("tags_ids", type=int)
+    show_inactive = request.args.get("inactive", "0", type=str) in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
     # Keep search global across all entities, regardless of selected tag.
     selected_tag_id = None if search_query else requested_tag_id
 
@@ -63,11 +69,13 @@ def list():
     if search_query:
         current_query.pop("tags_ids", None)
 
-    def _build_tag_tab_url(tag_id: int | None) -> str:
+    def _build_tag_tab_url(tag_id: int | None, *, include_inactive: bool = True) -> str:
         params = current_query.copy()
         params.pop("page", None)
         params.pop("skip", None)
         params.pop("q", None)
+        if not include_inactive:
+            params.pop("inactive", None)
         if tag_id is None:
             params.pop("tags_ids", None)
         else:
@@ -77,6 +85,7 @@ def list():
     filters = {}
     if selected_tag_id is not None:
         filters["tags_ids"] = selected_tag_id
+    filters["active"] = "false" if show_inactive else "true"
 
     api = get_refinance_api_client()
     if search_query:
@@ -89,7 +98,11 @@ def list():
             scan_response = api.http(
                 "GET",
                 "entities",
-                params={"skip": scan_skip, "limit": scan_limit},
+                params={
+                    "skip": scan_skip,
+                    "limit": scan_limit,
+                    "active": filters["active"],
+                },
             ).json()
             scan_items = scan_response.get("items", [])
             if not scan_items:
@@ -135,7 +148,11 @@ def list():
         scan_response = api.http(
             "GET",
             "entities",
-            params={"skip": scan_skip, "limit": scan_limit},
+            params={
+                "skip": scan_skip,
+                "limit": scan_limit,
+                "active": filters["active"],
+            },
         ).json()
         scan_items = scan_response.get("items", [])
         if not scan_items:
@@ -161,7 +178,7 @@ def list():
     )
 
     tag_tab_urls = {tag.id: _build_tag_tab_url(tag.id) for tag in tags_with_entities}
-    clear_tag_url = _build_tag_tab_url(None)
+    clear_tag_url = _build_tag_tab_url(None, include_inactive=False)
 
     entity_ids = [entity.id for entity in entities]
     balances_response = api.http(
@@ -204,6 +221,7 @@ def list():
         limit=limit,
         search_query=search_query,
         all_tags=tags_with_entities,
+        show_inactive=show_inactive,
         selected_tag_id=selected_tag_id,
         tag_tab_urls=tag_tab_urls,
         clear_tag_url=clear_tag_url,

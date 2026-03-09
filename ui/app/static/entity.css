@@ -747,6 +747,12 @@
   -webkit-text-stroke: 1px var(--tab-color);
 }
 
+.entities-tag-tab--inactive {
+  border-color: #555;
+  color: #333;
+  -webkit-text-stroke: 1px #333;
+}
+
 .entities-tag-tab:hover {
   transform: translate(-2px, -2px);
   box-shadow: none;
