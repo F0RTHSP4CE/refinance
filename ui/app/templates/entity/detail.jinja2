@@ -182,13 +182,19 @@
             <span class="divider">|</span>
             <span>Width:</span>
             <button id="balance-width-one" type="button" class="active">1 Column</button>
-            <button id="balance-width-full" type="button">Full Width</button>
+            <button id="balance-width-full" type="button">Full Size</button>
             </div>
             <div id="entity-stats-charts-grid" class="charts-grid balance-width-one">
                 <div class="chart-cell">
                     <h2>Balance Change by Day</h2>
                     <div id="balance-chart-container" class="balance-chart-container">
                         <div id="balance-change-chart"></div>
+                    </div>
+                </div>
+                <div class="chart-cell">
+                    <h2>Income / Spending (USD) by Day / Month</h2>
+                    <div class="money-flow-chart-container">
+                        <canvas id="money-flow-day-chart"></canvas>
                     </div>
                 </div>
                 <div class="chart-cell">
@@ -237,6 +243,7 @@
             <script>
             const balanceData = {{ balance_changes | tojson }};
             const txDayData = {{ transactions_by_day | tojson }};
+            const moneyFlowDayData = {{ money_flow_by_day | tojson }};
             const topIncoming = {{ top_incoming | tojson }};
             const topOutgoing = {{ top_outgoing | tojson }};
             const topIncomingTags = {{ top_incoming_tags | tojson }};
@@ -542,6 +549,8 @@
 
                     requestAnimationFrame(() => {
                         Plotly.Plots.resize(chartContainer);
+                        // Resize all Chart.js instances so they fill new container sizes.
+                        Chart.instances && Object.values(Chart.instances).forEach(c => c.resize());
                     });
                 };
 
@@ -591,6 +600,143 @@
             const txCanvas = document.getElementById('transactions-day-chart');
             if (txCanvas) {
                 new Chart(txCanvas, txChartConfig);
+            }
+
+            const incomePoints = moneyFlowDayData.map(item => ({ x: item.day, y: Number(item.incoming_total_usd || 0) }));
+            const spendingPoints = moneyFlowDayData.map(item => ({ x: item.day, y: Number(item.outgoing_total_usd || 0) }));
+
+            const aggregateMonthlyTotals = (dailyRows) => {
+                const monthly = new Map();
+                let firstVisibleDay = null;
+                dailyRows.forEach((row) => {
+                    const day = String(row.day || "");
+                    if (!day) return;
+                    if (!firstVisibleDay || day < firstVisibleDay) firstVisibleDay = day;
+                    const monthKey = day.slice(0, 7); // YYYY-MM
+                    const incoming = Number(row.incoming_total_usd || 0);
+                    const outgoing = Number(row.outgoing_total_usd || 0);
+                    const current = monthly.get(monthKey) || {
+                        incoming: 0,
+                        outgoing: 0,
+                        firstDay: day,
+                        lastDay: day,
+                    };
+                    current.incoming += incoming;
+                    current.outgoing += outgoing;
+                    if (!current.firstDay || day < current.firstDay) current.firstDay = day;
+                    if (!current.lastDay || day > current.lastDay) current.lastDay = day;
+                    monthly.set(monthKey, current);
+                });
+                const keys = Array.from(monthly.keys()).sort();
+
+                const buildSeries = (selector) => {
+                    if (!keys.length) return [];
+
+                    const points = keys.map((k) => {
+                        const bucket = monthly.get(k);
+                        return { x: bucket.lastDay, y: bucket[selector], marker: true };
+                    });
+
+                    // Add a single hidden point at the start of the visible range so
+                    // the monthly line doesn't start "late" (looks empty at the left).
+                    // Keep markers only on month-end points.
+                    if (firstVisibleDay) {
+                        const firstMonthBucket = monthly.get(keys[0]);
+                        points.unshift({
+                            x: firstVisibleDay,
+                            y: firstMonthBucket[selector],
+                            marker: false,
+                        });
+                    }
+
+                    return points;
+                };
+
+                return {
+                    months: keys,
+                    incoming: buildSeries('incoming'),
+                    outgoing: buildSeries('outgoing'),
+                };
+            };
+
+            const monthlyFlow = aggregateMonthlyTotals(moneyFlowDayData);
+            const flowChartConfig = {
+                type: 'bar',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Income (USD)',
+                            data: incomePoints,
+                            backgroundColor: 'rgba(34, 197, 94, 0.75)',
+                            borderColor: 'rgba(22, 163, 74, 0.9)',
+                            borderWidth: 1,
+                        },
+                        {
+                            label: 'Spending (USD)',
+                            data: spendingPoints,
+                            backgroundColor: 'rgba(239, 68, 68, 0.70)',
+                            borderColor: 'rgba(220, 38, 38, 0.9)',
+                            borderWidth: 1,
+                        },
+                        {
+                            type: 'line',
+                            label: 'Monthly Income (USD)',
+                            data: monthlyFlow.incoming,
+                            borderColor: 'rgba(22, 163, 74, 0.95)',
+                            backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                            borderWidth: 2,
+                            tension: 0.15,
+                            pointRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 3 : 0),
+                            pointHoverRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 4 : 0),
+                        },
+                        {
+                            type: 'line',
+                            label: 'Monthly Spending (USD)',
+                            data: monthlyFlow.outgoing,
+                            borderColor: 'rgba(220, 38, 38, 0.95)',
+                            backgroundColor: 'rgba(220, 38, 38, 0.10)',
+                            borderWidth: 2,
+                            tension: 0.15,
+                            pointRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 3 : 0),
+                            pointHoverRadius: (ctx) => (ctx.raw && ctx.raw.marker ? 4 : 0),
+                        }
+                    ]
+                },
+                options: {
+                    parsing: { xAxisKey: 'x', yAxisKey: 'y' },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { parser: 'yyyy-MM-dd', unit: 'day', tooltipFormat: 'PP' },
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => formatUSD(Number(value)),
+                            },
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.parsed.y ?? context.parsed;
+                                    return `${context.dataset.label}: ${formatUSD(Number(value))}`;
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            const moneyFlowCanvas = document.getElementById('money-flow-day-chart');
+            if (moneyFlowCanvas) {
+                new Chart(moneyFlowCanvas, flowChartConfig);
             }
 
             if (topIncoming.length) {

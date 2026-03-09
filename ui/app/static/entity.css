@@ -421,22 +421,29 @@
   box-shadow: 4px 4px 0 black;
 }
 
-.charts-grid > .chart-cell:first-child {
-  grid-column: 1 / -1;
-  justify-self: start;
+.charts-grid.balance-width-one > .chart-cell:first-child {
+  grid-column: auto;
+  width: 100%;
 }
 
-.charts-grid.balance-width-one > .chart-cell:first-child {
-  width: calc((100% - 16px) / 2);
+.charts-grid.balance-width-full {
+  grid-template-columns: 1fr;
 }
 
 .charts-grid.balance-width-full > .chart-cell:first-child {
+  grid-column: auto;
   width: 100%;
 }
 
 .chart-cell h2 {
   margin: 0;
   font-size: 1rem;
+}
+
+.money-flow-chart-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
 }
 
 .balance-chart-container {
@@ -451,6 +458,25 @@
   min-height: 730px;
   height: 900px;
   max-height: none;
+}
+
+.charts-grid.balance-width-full .money-flow-chart-container {
+  height: 700px;
+}
+
+.charts-grid.balance-width-full .bar-chart {
+  height: 560px;
+  flex: 1 1 400px;
+  max-width: none;
+}
+
+.charts-grid.balance-width-full .pie-chart {
+  flex: 1 1 400px;
+  max-width: none;
+}
+
+.charts-grid.balance-width-full .pie-chart canvas {
+  max-width: 480px;
 }
 
 #balance-change-chart {
@@ -501,6 +527,12 @@
 .pie-chart canvas {
   width: 100% !important;
   max-width: 300px;
+}
+
+@media (max-width: 900px) {
+  .money-flow-chart-container {
+    height: 320px;
+  }
 }
 
 .chart-placeholder {
