@@ -37,6 +37,7 @@ class DatabaseConnection:
         # Seed bootstrap data only once per process.
         if db_url not in self.__class__._bootstrapped_urls:
             self.create_tables()
+            self.ensure_schema_compatibility()
             self.seed_bootstrap_data()
             self.__class__._bootstrapped_urls.add(db_url)
 
@@ -55,6 +56,93 @@ class DatabaseConnection:
     def get_session(self) -> Session:
         """Return a new SQLAlchemy session."""
         return self.session_local()
+
+    def ensure_schema_compatibility(self) -> None:
+        """
+        Apply idempotent, additive schema patches for existing databases.
+
+        This project does not use Alembic migrations, and create_all() does not
+        add new columns to existing tables. Keep these patches minimal and safe.
+        """
+        with self.get_session() as session:
+            db_engine = session.get_bind()
+            dialect = db_engine.dialect.name.lower()
+
+            if dialect == "postgresql":
+                self._ensure_treasury_author_column_postgresql(session)
+            elif dialect == "sqlite":
+                self._ensure_treasury_author_column_sqlite(session)
+            else:
+                logger.debug(
+                    "Skipping schema compatibility patches for dialect '%s'", dialect
+                )
+
+            session.commit()
+
+    def _ensure_treasury_author_column_postgresql(self, session: Session) -> None:
+        """Ensure treasuries.author_entity_id and its FK exist in Postgres."""
+        column_exists = session.execute(
+            text(
+                """
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = 'treasuries'
+                  AND column_name = 'author_entity_id'
+                """
+            )
+        ).first()
+
+        if not column_exists:
+            logger.info("Adding missing column treasuries.author_entity_id")
+            session.execute(
+                text(
+                    """
+                    ALTER TABLE treasuries
+                    ADD COLUMN author_entity_id INTEGER NULL
+                    """
+                )
+            )
+
+        fk_exists = session.execute(
+            text(
+                """
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname = 'treasuries_author_entity_id_fkey'
+                  AND conrelid = 'treasuries'::regclass
+                """
+            )
+        ).first()
+
+        if not fk_exists:
+            logger.info("Adding missing FK constraint treasuries_author_entity_id_fkey")
+            session.execute(
+                text(
+                    """
+                    ALTER TABLE treasuries
+                    ADD CONSTRAINT treasuries_author_entity_id_fkey
+                    FOREIGN KEY (author_entity_id)
+                    REFERENCES entities(id)
+                    """
+                )
+            )
+
+    def _ensure_treasury_author_column_sqlite(self, session: Session) -> None:
+        """Ensure treasuries.author_entity_id exists in SQLite."""
+        rows = session.execute(text("PRAGMA table_info(treasuries)")).fetchall()
+        columns = {row[1] for row in rows}
+
+        if "author_entity_id" not in columns:
+            logger.info("Adding missing column treasuries.author_entity_id (sqlite)")
+            session.execute(
+                text(
+                    """
+                    ALTER TABLE treasuries
+                    ADD COLUMN author_entity_id INTEGER NULL
+                    """
+                )
+            )
 
     def seed_bootstrap_data(self) -> None:
         """

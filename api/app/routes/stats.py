@@ -1,14 +1,17 @@
 """Routes for stats"""
 
-from datetime import date, timedelta
+from datetime import date
 from typing import List, Optional
 
 from app.dependencies.services import get_stats_service
 from app.schemas.stats import (
     EntityBalanceChangeByDaySchema,
+    EntityMoneyFlowByDaySchema,
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     ResidentFeeSumByMonthSchema,
+    StatsBucketSumSchema,
+    StatsGrain,
     TopEntityStatSchema,
     TopTagStatSchema,
     TransactionsSumByTagByMonthSchema,
@@ -42,6 +45,34 @@ def get_transactions_sum_by_week(
     return stats_service.get_transactions_sum_by_week(timeframe_from, timeframe_to)
 
 
+@router.get("/resident-fee-sum", response_model=List[StatsBucketSumSchema])
+def get_resident_fee_sum(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    grain: StatsGrain = "month",
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_resident_fee_sum(
+        timeframe_from=timeframe_from,
+        timeframe_to=timeframe_to,
+        grain=grain,
+    )
+
+
+@router.get("/transactions-sum", response_model=List[StatsBucketSumSchema])
+def get_transactions_sum(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    grain: StatsGrain = "month",
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_transactions_sum(
+        timeframe_from=timeframe_from,
+        timeframe_to=timeframe_to,
+        grain=grain,
+    )
+
+
 @router.get(
     "/entity/{entity_id}/balance-change-by-day",
     response_model=List[EntityBalanceChangeByDaySchema],
@@ -73,6 +104,21 @@ def get_entity_transactions_by_day(
 
 
 @router.get(
+    "/entity/{entity_id}/money-flow-by-day/",
+    response_model=List[EntityMoneyFlowByDaySchema],
+)
+def get_entity_money_flow_by_day(
+    entity_id: int,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_entity_money_flow_by_day(
+        entity_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get(
     "/transactions-sum-by-tag-by-month",
     response_model=List[TransactionsSumByTagByMonthSchema],
 )
@@ -91,6 +137,7 @@ def get_transactions_sum_by_tag_by_month(
 def get_top_incoming_entities(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -98,6 +145,7 @@ def get_top_incoming_entities(
     return stats_service.get_top_incoming_entities(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -107,6 +155,7 @@ def get_top_incoming_entities(
 def get_top_outgoing_entities(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -114,6 +163,7 @@ def get_top_outgoing_entities(
     return stats_service.get_top_outgoing_entities(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -123,6 +173,7 @@ def get_top_outgoing_entities(
 def get_top_incoming_tags(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -130,6 +181,7 @@ def get_top_incoming_tags(
     return stats_service.get_top_incoming_tags(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -139,6 +191,7 @@ def get_top_incoming_tags(
 def get_top_outgoing_tags(
     limit: int = 5,
     months: int = 3,
+    timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     entity_id: Optional[int] = None,
     stats_service: StatsService = Depends(get_stats_service),
@@ -146,6 +199,7 @@ def get_top_outgoing_tags(
     return stats_service.get_top_outgoing_tags(
         limit=limit,
         months=months,
+        timeframe_from=timeframe_from,
         timeframe_to=timeframe_to,
         entity_id=entity_id,
     )
@@ -190,10 +244,12 @@ def get_entity_stats_bundle(
         # Keep cache args consistent with the non-cached path below.
         balance_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
         tx_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
+        flow_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
         top_args = (
             int(entity_id),
             int(normalized_limit),
             int(normalized_months),
+            bundle_timeframe_from,
             normalized_timeframe_to,
         )
 
@@ -202,6 +258,9 @@ def get_entity_stats_bundle(
         )
         transactions_by_day = StatsService._get_cached_value(
             "get_entity_transactions_by_day", tx_args, {}
+        )
+        money_flow_by_day = StatsService._get_cached_value(
+            "get_entity_money_flow_by_day", flow_args, {}
         )
         top_incoming = StatsService._get_cached_value(
             "get_top_incoming_entities", top_args, {}
@@ -221,6 +280,7 @@ def get_entity_stats_bundle(
             for x in (
                 balance_changes,
                 transactions_by_day,
+                money_flow_by_day,
                 top_incoming,
                 top_outgoing,
                 top_incoming_tags,
@@ -235,6 +295,7 @@ def get_entity_stats_bundle(
             "cached": True,
             "balance_changes": balance_changes,
             "transactions_by_day": transactions_by_day,
+            "money_flow_by_day": money_flow_by_day,
             "top_incoming": top_incoming,
             "top_outgoing": top_outgoing,
             "top_incoming_tags": top_incoming_tags,
@@ -266,27 +327,36 @@ def get_entity_stats_bundle(
         bundle_timeframe_from,
         normalized_timeframe_to,
     )
+    money_flow_by_day = stats_service.get_entity_money_flow_by_day(
+        entity_id,
+        bundle_timeframe_from,
+        normalized_timeframe_to,
+    )
     top_incoming = stats_service.get_top_incoming_entities(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_outgoing = stats_service.get_top_outgoing_entities(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_incoming_tags = stats_service.get_top_incoming_tags(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
     top_outgoing_tags = stats_service.get_top_outgoing_tags(
         limit=normalized_limit,
         months=normalized_months,
+        timeframe_from=bundle_timeframe_from,
         timeframe_to=normalized_timeframe_to,
         entity_id=entity_id,
     )
@@ -295,6 +365,7 @@ def get_entity_stats_bundle(
         "cached": True,
         "balance_changes": balance_changes,
         "transactions_by_day": transactions_by_day,
+        "money_flow_by_day": money_flow_by_day,
         "top_incoming": top_incoming,
         "top_outgoing": top_outgoing,
         "top_incoming_tags": top_incoming_tags,

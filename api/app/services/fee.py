@@ -243,14 +243,8 @@ class FeeService(BaseService):
             .all()
         )
 
-        # Base window: last N months up to today
         today = date.today()
-        today_year, today_month = today.year, today.month
-        today_idx = today_year * 12 + today_month
-        # limit future extension to 12 months ahead of today
-        max_future_idx = today_idx + 12
-        # number of past months to include
-        months = min(filters.months, 12)
+        current_period = date(today.year, today.month, 1)
 
         def subtract_months(base: date, months_back: int) -> date:
             year = base.year
@@ -268,9 +262,20 @@ class FeeService(BaseService):
                 year += 1
             return date(year, month, 1)
 
+        def month_index(value: date) -> int:
+            return value.year * 12 + value.month
+
+        if filters.from_period or filters.to_period:
+            end_period = filters.to_period or current_period
+            start_period = filters.from_period or end_period
+        else:
+            months = max(1, min(filters.months, 12))
+            end_period = current_period
+            start_period = subtract_months(end_period, months - 1)
+
         resident_ids = [r.id for r in residents]
-        start_period = subtract_months(date(today_year, today_month, 1), months - 1)
-        max_future_period = add_months(date(today_year, today_month, 1), 12)
+        start_idx = month_index(start_period)
+        end_idx = month_index(end_period)
 
         invoices = (
             self.db.query(Invoice)
@@ -279,7 +284,7 @@ class FeeService(BaseService):
                 Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
                 Invoice.billing_period >= start_period,
-                Invoice.billing_period <= max_future_period,
+                Invoice.billing_period <= end_period,
                 Invoice.tags.contains(fee_tag),
                 Invoice.from_entity_id.in_(resident_ids),
             )
@@ -340,75 +345,102 @@ class FeeService(BaseService):
         # Build the final response structure
         results: list[FeeRecord] = []
         for r in residents:
-            # Past months window
+            resident_months = set(fees_by_resident_by_month[r.id].keys())
+            resident_months.update(unpaid_invoice_by_resident_by_month[r.id].keys())
+            resident_months.update(paid_invoice_by_resident_by_month[r.id].keys())
+
             monthly_fees: list[MonthlyFee] = []
-            for i in range(months):
-                year = today_year
-                month = today_month - i
-                while month <= 0:
-                    month += 12
-                    year -= 1
-                monthly_fees.append(
+            if filters.include_empty_months:
+                cursor = start_period
+                while cursor <= end_period:
+                    monthly_fees.append(
+                        self._build_monthly_fee(
+                            cursor.year,
+                            cursor.month,
+                            fees_by_resident_by_month[r.id].get(
+                                (cursor.year, cursor.month), {}
+                            ),
+                            unpaid_invoice_by_resident_by_month[r.id].get(
+                                (cursor.year, cursor.month)
+                            ),
+                            paid_invoice_by_resident_by_month[r.id].get(
+                                (cursor.year, cursor.month)
+                            ),
+                            unpaid_amounts_by_resident_by_month[r.id].get(
+                                (cursor.year, cursor.month), {}
+                            ),
+                        )
+                    )
+                    cursor = add_months(cursor, 1)
+            else:
+                visible_months = sorted(
+                    (year, month)
+                    for year, month in resident_months
+                    if start_idx <= (year * 12 + month) <= end_idx
+                )
+                for year, month in visible_months:
+                    monthly_fees.append(
+                        self._build_monthly_fee(
+                            year,
+                            month,
+                            fees_by_resident_by_month[r.id].get((year, month), {}),
+                            unpaid_invoice_by_resident_by_month[r.id].get(
+                                (year, month)
+                            ),
+                            paid_invoice_by_resident_by_month[r.id].get((year, month)),
+                            unpaid_amounts_by_resident_by_month[r.id].get(
+                                (year, month), {}
+                            ),
+                        )
+                    )
+
+            all_fees = monthly_fees
+            all_fees.sort(key=lambda x: (x.year, x.month))
+
+            if not filters.include_empty_entities and not all_fees:
+                continue
+
+            if filters.include_empty_months and not filters.include_empty_entities:
+                has_meaningful_fee = any(
+                    fee.unpaid_invoice_id is not None
+                    or bool(fee.unpaid_invoice_amounts)
+                    or fee.paid_invoice_id is not None
+                    or bool(fee.amounts)
+                    for fee in all_fees
+                )
+                if not has_meaningful_fee:
+                    continue
+
+            results.append(FeeRecord(entity=r, fees=all_fees))
+
+        if not filters.include_empty_months and results:
+            visible_months = sorted(
+                {
+                    (fee.year, fee.month)
+                    for record in results
+                    for fee in record.fees
+                }
+            )
+            for record in results:
+                fee_map = {(fee.year, fee.month): fee for fee in record.fees}
+                record.fees = [
                     self._build_monthly_fee(
                         year,
                         month,
-                        fees_by_resident_by_month[r.id].get((year, month), {}),
-                        unpaid_invoice_by_resident_by_month[r.id].get((year, month)),
-                        paid_invoice_by_resident_by_month[r.id].get((year, month)),
-                        unpaid_amounts_by_resident_by_month[r.id].get(
-                            (year, month), {}
-                        ),
+                        fee_map[(year, month)].amounts if (year, month) in fee_map else {},
+                        fee_map[(year, month)].unpaid_invoice_id
+                        if (year, month) in fee_map
+                        else None,
+                        fee_map[(year, month)].paid_invoice_id
+                        if (year, month) in fee_map
+                        else None,
+                        fee_map[(year, month)].unpaid_invoice_amounts
+                        if (year, month) in fee_map
+                        else {},
                     )
-                )
-
-            # Trim trailing empty months (which correspond to the earliest months in the window)
-            # Keep at least the current month so UI has an anchor row.
-            while len(monthly_fees) > 1:
-                last = monthly_fees[-1]
-                has_unpaid = last.unpaid_invoice_id is not None or bool(
-                    last.unpaid_invoice_amounts
-                )
-                has_paid = last.paid_invoice_id is not None
-                if last.amounts in ({}, None) and not has_unpaid and not has_paid:
-                    monthly_fees.pop()
-                    continue
-                break
-            # Future months with payments (up to 12 months ahead)
-            future_fees: list[MonthlyFee] = []
-            for (y, m), currs in fees_by_resident_by_month[r.id].items():
-                idx = y * 12 + m
-                if idx > today_idx and idx <= max_future_idx:
-                    future_fees.append(
-                        self._build_monthly_fee(
-                            y,
-                            m,
-                            currs,
-                            unpaid_invoice_by_resident_by_month[r.id].get((y, m)),
-                            paid_invoice_by_resident_by_month[r.id].get((y, m)),
-                            unpaid_amounts_by_resident_by_month[r.id].get((y, m), {}),
-                        )
-                    )
-            for (y, m), invoice_id in unpaid_invoice_by_resident_by_month[r.id].items():
-                idx = y * 12 + m
-                if idx <= today_idx or idx > max_future_idx:
-                    continue
-                if any(fee.year == y and fee.month == m for fee in future_fees):
-                    continue
-                future_fees.append(
-                    self._build_monthly_fee(
-                        y,
-                        m,
-                        {},
-                        invoice_id,
-                        paid_invoice_by_resident_by_month[r.id].get((y, m)),
-                        unpaid_amounts_by_resident_by_month[r.id].get((y, m), {}),
-                    )
-                )
-            # Combine and sort chronologically
-            all_fees = monthly_fees + future_fees
-            all_fees.sort(key=lambda x: (x.year, x.month))
-
-            results.append(FeeRecord(entity=r, fees=all_fees))
+                    for year, month in visible_months
+                    if (year, month) in fee_map
+                ]
 
         return [record.to_schema() for record in results]
 

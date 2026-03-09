@@ -5,8 +5,8 @@ import string
 from decimal import Decimal
 from typing import Any
 
-from app.config import Config, get_config
 from app.dependencies.services import get_deposit_service, get_keepz_service
+from app.errors.keepz import KeepzAuthRequired
 from app.models.deposit import Deposit, DepositStatus
 from app.models.entity import Entity
 from app.schemas.deposit import (
@@ -30,12 +30,10 @@ class KeepzDepositProviderService(BaseService[Entity]):
         db: Session = Depends(get_uow),
         deposit_service: DepositService = Depends(get_deposit_service),
         keepz_service: KeepzService = Depends(get_keepz_service),
-        config: Config = Depends(get_config),
     ):
         self.db = db
         self.deposit_service = deposit_service
         self.keepz_service = keepz_service
-        self.config = config
 
     def create_deposit(
         self, schema: KeepzDepositCreateSchema, actor_entity: Entity
@@ -50,21 +48,25 @@ class KeepzDepositProviderService(BaseService[Entity]):
                 "amount_requested": str(schema.amount),
             }
         }
-        payload = self.keepz_service.create_payment_link(
-            amount=float(schema.amount),
-            currency=schema.currency,
-            commission_type=schema.commission_type,
-            note=note,
-        )
         short_url = None
-        if isinstance(payload, str):
-            short_url = payload
-        elif isinstance(payload, dict):
-            short_url = (
-                payload.get("shortUrl")
-                or payload.get("short_url")
-                or payload.get("url")
+        payload = None
+        try:
+            payload = self.keepz_service.create_payment_link(
+                amount=float(schema.amount),
+                currency=schema.currency,
+                commission_type=schema.commission_type,
+                note=note,
             )
+            if isinstance(payload, str):
+                short_url = payload
+            elif isinstance(payload, dict):
+                short_url = (
+                    payload.get("shortUrl")
+                    or payload.get("short_url")
+                    or payload.get("url")
+                )
+        except KeepzAuthRequired:
+            raise
         if short_url:
             details["keepz"]["payment_short_url"] = short_url
             try:

@@ -65,6 +65,67 @@ class TestEntityEndpoints:
         assert data["error_code"] == 1404
         assert "not found" in data["error"].lower()
 
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("telegram_id", 123456789),
+            ("signal_id", "sig-duplicate"),
+        ],
+    )
+    def test_create_entity_rejects_duplicate_auth_identifier(
+        self, test_app: TestClient, token: str, field: str, value: int | str
+    ):
+        first = test_app.post(
+            "/entities",
+            json={"name": f"First {field}", "auth": {field: value}},
+            headers={"x-token": token},
+        )
+        assert first.status_code == 200
+
+        duplicate = test_app.post(
+            "/entities",
+            json={"name": f"Second {field}", "auth": {field: value}},
+            headers={"x-token": token},
+        )
+        assert duplicate.status_code == 409
+        data = duplicate.json()
+        assert data["error_code"] == 4001
+        assert field in data["error"]
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("telegram_id", 987654321),
+            ("signal_id", "sig-update-duplicate"),
+        ],
+    )
+    def test_patch_entity_rejects_duplicate_auth_identifier(
+        self, test_app: TestClient, token: str, field: str, value: int | str
+    ):
+        first = test_app.post(
+            "/entities",
+            json={"name": f"Original {field}", "auth": {field: value}},
+            headers={"x-token": token},
+        )
+        assert first.status_code == 200
+
+        second = test_app.post(
+            "/entities",
+            json={"name": f"Target {field}"},
+            headers={"x-token": token},
+        )
+        assert second.status_code == 200
+
+        duplicate = test_app.patch(
+            f"/entities/{second.json()['id']}",
+            json={"auth": {field: value}},
+            headers={"x-token": token},
+        )
+        assert duplicate.status_code == 409
+        data = duplicate.json()
+        assert data["error_code"] == 4001
+        assert field in data["error"]
+
 
 class TestEntityFilters:
     """Test filter logic for entities, accounting for the preloaded entity"""

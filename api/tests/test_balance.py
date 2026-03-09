@@ -9,44 +9,6 @@ from fastapi.testclient import TestClient
 class TestBalanceEndpoints:
     """Test API endpoints for Balance"""
 
-    def test_entity_transactions_balance_batch(
-        self, test_app: TestClient, token_factory, token
-    ):
-        response = test_app.post(
-            "/entities", json={"name": "Batch Entity A"}, headers={"x-token": token}
-        )
-        entity_a_id = response.json()["id"]
-        token_a = token_factory(entity_a_id)
-
-        response = test_app.post(
-            "/entities", json={"name": "Batch Entity B"}, headers={"x-token": token}
-        )
-        entity_b_id = response.json()["id"]
-
-        response = test_app.post(
-            "/transactions/",
-            json={
-                "from_entity_id": entity_a_id,
-                "to_entity_id": entity_b_id,
-                "amount": "15.00",
-                "currency": "eur",
-                "status": "completed",
-            },
-            headers={"x-token": token_a},
-        )
-        assert response.status_code == status.HTTP_200_OK
-
-        response = test_app.get(
-            "/balances",
-            params=[("entity_ids", entity_a_id), ("entity_ids", entity_b_id)],
-            headers={"x-token": token},
-        )
-        assert response.status_code == status.HTTP_200_OK
-
-        data = response.json()
-        assert data[str(entity_a_id)]["completed"]["eur"] == "-15.00"
-        assert data[str(entity_b_id)]["completed"]["eur"] == "15.00"
-
     def test_entity_transactions_balance(
         self, test_app: TestClient, token_factory, token
     ):

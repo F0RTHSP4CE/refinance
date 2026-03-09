@@ -59,6 +59,23 @@ class TestTreasuryEndpoints:
         data = response.json()
         assert data["name"] == "New Treasury"
         assert "balances" in data
+        assert data["author_entity_id"] is None
+        assert data["author_entity"] is None
+
+    def test_create_treasury_with_author(self, test_app: TestClient, token, entity_one):
+        response = test_app.post(
+            "/treasuries",
+            json={
+                "name": "Author Treasury",
+                "author_entity_id": entity_one["id"],
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["author_entity_id"] == entity_one["id"]
+        assert data["author_entity"] is not None
+        assert data["author_entity"]["id"] == entity_one["id"]
 
     def test_get_treasury(self, test_app: TestClient, token, treasury_one):
         treasury_id = treasury_one["id"]
@@ -71,6 +88,8 @@ class TestTreasuryEndpoints:
         assert "balances" in data
         assert "completed" in data["balances"]
         assert "draft" in data["balances"]
+        assert "author_entity_id" in data
+        assert "author_entity" in data
 
     def test_get_all_treasuries(
         self, test_app: TestClient, token, treasury_one, treasury_two
@@ -101,6 +120,31 @@ class TestTreasuryEndpoints:
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Updated Treasury Name"
+
+    def test_update_treasury_author(
+        self, test_app: TestClient, token, entity_one, entity_two
+    ):
+        response = test_app.post(
+            "/treasuries",
+            json={
+                "name": "Author Updatable Treasury",
+                "author_entity_id": entity_one["id"],
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        treasury_id = response.json()["id"]
+
+        response = test_app.patch(
+            f"/treasuries/{treasury_id}",
+            json={"author_entity_id": entity_two["id"]},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["author_entity_id"] == entity_two["id"]
+        assert data["author_entity"] is not None
+        assert data["author_entity"]["id"] == entity_two["id"]
 
     def test_delete_treasury(self, test_app: TestClient, token):
         # Create a treasury to be deleted

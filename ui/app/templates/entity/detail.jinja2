@@ -68,10 +68,10 @@
                 <div class="entity-balance-list">
                     {% for currency,amount in balance.completed.items() %}
                     <div class="entity-balance-row">
+                        <span class="entity-balance-currency">{{ currency | upper }}</span>
                         <strong class="entity-balance-amount right-align {% if amount|float < 0 %}amount-negative{% endif %}">
                             {{ amount }}
                         </strong>
-                        <span class="entity-balance-currency">{{ currency | upper }}</span>
                     </div>
                     {% endfor %}
                     {% if balance.draft %}
@@ -84,10 +84,10 @@
                     </div>
                     {% for currency,amount in balance.draft.items() %}
                     <div class="entity-balance-row entity-balance-row-draft">
+                        <span class="entity-balance-currency">{{ currency | upper }}</span>
                         <strong class="entity-balance-amount right-align {% if amount|float < 0 %}amount-negative{% endif %}">
                             {{ amount }}
                         </strong>
-                        <span class="entity-balance-currency">{{ currency | upper }}</span>
                     </div>
                     {% endfor %}
                     {% endif %}

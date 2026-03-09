@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Sequence
 
 from app.models.transaction import Transaction, TransactionStatus
 from sqlalchemy import func, select
@@ -84,34 +83,6 @@ def build_treasury_balance_subqueries(
     return credit_subq, debit_subq, balance_expr
 
 
-def _merge_currency_totals(
-    credit_rows: Sequence[Any],
-    debit_rows: Sequence[Any],
-) -> dict[str, Decimal]:
-    totals_by_currency: dict[str, Decimal] = {}
-
-    for row in credit_rows:
-        current = totals_by_currency.get(row.currency, Decimal(0))
-        totals_by_currency[row.currency] = current + row.total_credit
-
-    for row in debit_rows:
-        current = totals_by_currency.get(row.currency, Decimal(0))
-        totals_by_currency[row.currency] = current - row.total_debit
-
-    return totals_by_currency
-
-
-def _execute_and_merge_currency_totals(
-    *,
-    db: Session,
-    credit_query,
-    debit_query,
-) -> dict[str, Decimal]:
-    credits = db.execute(credit_query).all()
-    debits = db.execute(debit_query).all()
-    return _merge_currency_totals(credits, debits)
-
-
 def sum_entity_balances(
     *,
     db: Session,
@@ -141,73 +112,24 @@ def sum_entity_balances(
         debit_query = debit_query.where(Transaction.created_at <= end_datetime)
     debit_query = debit_query.group_by(Transaction.currency)
 
-    return _execute_and_merge_currency_totals(
-        db=db,
-        credit_query=credit_query,
-        debit_query=debit_query,
-    )
-
-
-def sum_entity_balances_many(
-    *,
-    db: Session,
-    entity_ids: list[int],
-    status: TransactionStatus,
-    end_datetime: datetime | None = None,
-) -> dict[int, dict[str, Decimal]]:
-    if not entity_ids:
-        return {}
-
-    unique_entity_ids = list(dict.fromkeys(entity_ids))
-
-    credit_query = select(
-        Transaction.to_entity_id.label("entity_id"),
-        Transaction.currency,
-        func.sum(Transaction.amount).label("total_credit"),
-    ).where(
-        Transaction.to_entity_id.in_(unique_entity_ids),
-        Transaction.status == status,
-    )
-    if end_datetime is not None:
-        credit_query = credit_query.where(Transaction.created_at <= end_datetime)
-    credit_query = credit_query.group_by(
-        Transaction.to_entity_id,
-        Transaction.currency,
-    )
-
-    debit_query = select(
-        Transaction.from_entity_id.label("entity_id"),
-        Transaction.currency,
-        func.sum(Transaction.amount).label("total_debit"),
-    ).where(
-        Transaction.from_entity_id.in_(unique_entity_ids),
-        Transaction.status == status,
-    )
-    if end_datetime is not None:
-        debit_query = debit_query.where(Transaction.created_at <= end_datetime)
-    debit_query = debit_query.group_by(
-        Transaction.from_entity_id,
-        Transaction.currency,
-    )
-
     credits = db.execute(credit_query).all()
     debits = db.execute(debit_query).all()
 
-    totals_by_entity: dict[int, dict[str, Decimal]] = {
-        entity_id: {} for entity_id in unique_entity_ids
+    credit_dict: dict[str, Decimal] = {
+        result.currency: result.total_credit for result in credits
+    }
+    debit_dict: dict[str, Decimal] = {
+        result.currency: result.total_debit for result in debits
     }
 
-    for row in credits:
-        entity_totals = totals_by_entity[row.entity_id]
-        current = entity_totals.get(row.currency, Decimal(0))
-        entity_totals[row.currency] = current + row.total_credit
+    total_by_currency: dict[str, Decimal] = {}
+    all_currencies = set(credit_dict.keys()).union(set(debit_dict.keys()))
+    for currency in all_currencies:
+        credit = credit_dict.get(currency, Decimal(0))
+        debit = debit_dict.get(currency, Decimal(0))
+        total_by_currency[currency] = credit - debit
 
-    for row in debits:
-        entity_totals = totals_by_entity[row.entity_id]
-        current = entity_totals.get(row.currency, Decimal(0))
-        entity_totals[row.currency] = current - row.total_debit
-
-    return totals_by_entity
+    return total_by_currency
 
 
 def sum_treasury_balances(
@@ -239,8 +161,20 @@ def sum_treasury_balances(
         .group_by(Transaction.currency)
     )
 
-    return _execute_and_merge_currency_totals(
-        db=db,
-        credit_query=credit_query,
-        debit_query=debit_query,
-    )
+    credits = db.execute(credit_query).all()
+    debits = db.execute(debit_query).all()
+
+    credit_dict: dict[str, Decimal] = {
+        result.currency: result.total_credit for result in credits
+    }
+    debit_dict: dict[str, Decimal] = {
+        result.currency: result.total_debit for result in debits
+    }
+
+    total_by_currency: dict[str, Decimal] = {}
+    for currency in set(credit_dict.keys()) | set(debit_dict.keys()):
+        credit = credit_dict.get(currency, Decimal(0))
+        debit = debit_dict.get(currency, Decimal(0))
+        total_by_currency[currency] = credit - debit
+
+    return total_by_currency

@@ -1,13 +1,10 @@
 """API routes for deposit providers"""
 
-from typing import Annotated
-
 from app.dependencies.services import (
     get_cryptapi_deposit_provider_service,
     get_deposit_service,
     get_keepz_deposit_provider_service,
 )
-from app.errors.common import NotFoundError
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
@@ -20,7 +17,7 @@ from app.schemas.deposit_providers.keepz import KeepzDepositCreateSchema
 from app.services.deposit import DepositService
 from app.services.deposit_providers.cryptapi import CryptAPIDepositProviderService
 from app.services.deposit_providers.keepz import KeepzDepositProviderService
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends
 
 deposits_router = APIRouter(prefix="/deposits", tags=["DepositProviders"])
 

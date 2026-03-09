@@ -28,7 +28,7 @@
 		<div class="home-card-summary">
 			{% if unpaid_fee_count > 0 %}
 			{% if unpaid_invoice_cards %}
-			<p class="home-card-value home-card-value-total">Total unpaid: <span class="home-card-total">{% if
+			<p class="home-card-value home-card-value-total">Total: <span class="home-card-total">{% if
 					unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span
 						class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{
 					unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
