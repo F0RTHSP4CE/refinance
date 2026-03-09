@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MantineProvider } from '@mantine/core';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ProfileStatistics } from './ProfileStatistics';
 
 const apiMocks = vi.hoisted(() => ({
@@ -28,6 +28,11 @@ vi.mock('echarts', () => ({
     dispose: chartMocks.dispose,
   })),
 }));
+
+const LocationDisplay = () => {
+  const location = useLocation();
+  return <output data-testid="location-search">{location.search}</output>;
+};
 
 const bundle = {
   cached: true,
@@ -62,7 +67,15 @@ const renderWithProviders = (initialEntry: string) => {
       <MantineProvider>
         <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
-            <Route path="/profile/:id" element={<ProfileStatistics profileId={1} />} />
+            <Route
+              path="/profile/:id"
+              element={
+                <>
+                  <ProfileStatistics profileId={1} />
+                  <LocationDisplay />
+                </>
+              }
+            />
           </Routes>
         </MemoryRouter>
       </MantineProvider>
@@ -76,14 +89,14 @@ describe('ProfileStatistics filters', () => {
     apiMocks.getEntityStatsBundle.mockResolvedValue(bundle);
   });
 
-  it('keeps draft changes local until Apply is clicked', async () => {
+  it('keeps date changes local until Apply is clicked', async () => {
     const user = userEvent.setup();
 
     renderWithProviders(
       '/profile/1?tab=statistics&from=2026-01-01&to=2026-02-22&grain=month&limit=8&preset=custom'
     );
 
-    await screen.findByText('Statistics Filters');
+    await screen.findByRole('button', { name: 'Apply' });
     expect(apiMocks.getEntityStatsBundle).toHaveBeenCalled();
     const initialCallCount = apiMocks.getEntityStatsBundle.mock.calls.length;
 
@@ -115,7 +128,7 @@ describe('ProfileStatistics filters', () => {
       '/profile/1?tab=statistics&from=2026-01-01&to=2026-02-22&grain=month&limit=8&preset=custom'
     );
 
-    await screen.findByText('Statistics Filters');
+    await screen.findByRole('button', { name: 'Apply' });
 
     expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
 
@@ -131,12 +144,38 @@ describe('ProfileStatistics filters', () => {
     });
   });
 
+  it('keeps grain changes local until Apply updates the URL', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      '/profile/1?tab=statistics&from=2026-01-01&to=2026-02-22&grain=month&limit=8&preset=custom'
+    );
+
+    await screen.findByRole('button', { name: 'Apply' });
+    const initialCallCount = apiMocks.getEntityStatsBundle.mock.calls.length;
+
+    await user.click(screen.getByRole('radio', { name: 'Week' }));
+
+    expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(initialCallCount);
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    expect(screen.getByTestId('location-search')).toHaveTextContent('grain=month');
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent('grain=week');
+      expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    });
+
+    expect(apiMocks.getEntityStatsBundle.mock.calls.length).toBe(initialCallCount);
+  });
+
   it('renders money flow chart with bars plus monthly overlay lines', async () => {
     renderWithProviders(
       '/profile/1?tab=statistics&from=2026-01-01&to=2026-02-22&grain=week&limit=8&preset=custom'
     );
 
-    await screen.findByText('Income / Spending (USD)');
+    await screen.findByText('Income and spending');
 
     await waitFor(() => {
       expect(chartMocks.setOption).toHaveBeenCalled();

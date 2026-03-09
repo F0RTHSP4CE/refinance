@@ -7,7 +7,7 @@ import {
   Text,
 } from '@mantine/core';
 import * as echarts from 'echarts';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getExchangeRates, type ExchangeRateCurrency } from '@/api/currency-exchange';
 import {
@@ -35,11 +35,23 @@ import {
 } from '@/constants/chartTheme';
 import { APP_CHART_COLORS } from '@/constants/uiPalette';
 import { useAuthStore } from '@/stores/auth';
+import {
+  DEFAULT_STATS_GRAIN,
+  DEFAULT_STATS_PRESET,
+  STATS_PRESET_OPTIONS,
+  areStatsFiltersEqual,
+  formatDateInput,
+  getPresetRange,
+  isStatsFilterPreset,
+  isStatsGrain,
+  normalizeRange,
+  parseDateInput,
+  type StatsFilterPreset,
+  type StatsFiltersValue,
+} from '@/components/ui/statsFilterUtils';
 
-type PresetKey = 'last4w' | 'last3m' | 'last6m' | 'ytd' | 'custom';
-
-const DEFAULT_GRAIN: StatsGrain = 'month';
-const DEFAULT_PRESET: PresetKey = 'last3m';
+const DEFAULT_GRAIN = DEFAULT_STATS_GRAIN;
+const DEFAULT_PRESET = DEFAULT_STATS_PRESET;
 const FALLBACK_CURRENCIES = ['usd', 'gel', 'eur'];
 const TRACKED_BALANCE_CURRENCIES = ['GEL', 'USD', 'EUR'] as const;
 
@@ -49,68 +61,7 @@ const CURRENCY_COLORS = [
   APP_CHART_COLORS.amber,
 ];
 const TOTAL_USD_LINE_COLOR = APP_CHART_COLORS.coral;
-
 const pad = (value: number): string => String(value).padStart(2, '0');
-
-const formatDateInput = (dt: Date): string =>
-  `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-
-const parseDateInput = (value: string | null): Date | null => {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const [year, month, day] = value.split('-').map(Number);
-  if (!year || !month || !day) return null;
-  const parsed = new Date(year, month - 1, day);
-  if (
-    parsed.getFullYear() !== year ||
-    parsed.getMonth() !== month - 1 ||
-    parsed.getDate() !== day
-  ) {
-    return null;
-  }
-  return parsed;
-};
-
-const subtractMonths = (dt: Date, months: number): Date => {
-  const shifted = new Date(dt);
-  const dayOfMonth = shifted.getDate();
-  shifted.setDate(1);
-  shifted.setMonth(shifted.getMonth() - months);
-  const maxDay = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
-  shifted.setDate(Math.min(dayOfMonth, maxDay));
-  return shifted;
-};
-
-const getPresetRange = (
-  preset: Exclude<PresetKey, 'custom'>,
-  now: Date
-): { from: string; to: string } => {
-  const end = formatDateInput(now);
-  if (preset === 'last4w') {
-    const fromDate = new Date(now);
-    fromDate.setDate(fromDate.getDate() - 27);
-    return { from: formatDateInput(fromDate), to: end };
-  }
-
-  if (preset === 'last6m') {
-    return { from: formatDateInput(subtractMonths(now, 6)), to: end };
-  }
-
-  if (preset === 'ytd') {
-    return { from: `${now.getFullYear()}-01-01`, to: end };
-  }
-
-  return { from: formatDateInput(subtractMonths(now, 3)), to: end };
-};
-
-const isStatsGrain = (value: string | null): value is StatsGrain =>
-  value === 'week' || value === 'month';
-
-const isPresetKey = (value: string | null): value is PresetKey =>
-  value === 'last4w' ||
-  value === 'last3m' ||
-  value === 'last6m' ||
-  value === 'ytd' ||
-  value === 'custom';
 
 const getIsoWeek = (dt: Date): { year: number; week: number } => {
   const utcDate = new Date(Date.UTC(dt.getFullYear(), dt.getMonth(), dt.getDate()));
@@ -329,125 +280,142 @@ export const Stats = () => {
   const actorEntity = useAuthStore((state) => state.actorEntity);
   const [searchParams, setSearchParams] = useSearchParams();
   const now = useMemo(() => new Date(), []);
-  const defaultRange = useMemo(() => getPresetRange(DEFAULT_PRESET, now), [now]);
-
-  const grainParam = searchParams.get('grain');
-  const grain: StatsGrain = isStatsGrain(grainParam) ? grainParam : DEFAULT_GRAIN;
-
-  const presetParam = searchParams.get('preset');
-  const selectedPreset: PresetKey = isPresetKey(presetParam) ? presetParam : DEFAULT_PRESET;
-
-  let timeframeFrom = parseDateInput(searchParams.get('from'))
-    ? searchParams.get('from')!
-    : defaultRange.from;
-  const timeframeTo = parseDateInput(searchParams.get('to'))
-    ? searchParams.get('to')!
-    : defaultRange.to;
-
-  if (timeframeFrom > timeframeTo) {
-    timeframeFrom = timeframeTo;
-  }
-
-  const commitFilters = useCallback(
-    (next: { from: string; to: string; grain: StatsGrain; preset: PresetKey }) => {
-      setSearchParams((prev) => {
-        const params = new URLSearchParams(prev);
-        params.set('from', next.from);
-        params.set('to', next.to);
-        params.set('grain', next.grain);
-        params.set('preset', next.preset);
-        return params;
-      });
-    },
-    [setSearchParams]
-  );
-
-  const applyPreset = useCallback(
-    (preset: Exclude<PresetKey, 'custom'>) => {
-      const range = getPresetRange(preset, now);
-      commitFilters({
-        from: range.from,
-        to: range.to,
-        grain,
-        preset,
-      });
-    },
-    [commitFilters, grain, now]
-  );
-
-  const handleFromChange = useCallback(
-    (value: string) => {
-      const parsed = parseDateInput(value);
-      if (!parsed) return;
-      const nextFrom = formatDateInput(parsed);
-      const nextTo = nextFrom > timeframeTo ? nextFrom : timeframeTo;
-      commitFilters({
-        from: nextFrom,
-        to: nextTo,
-        grain,
-        preset: 'custom',
-      });
-    },
-    [commitFilters, grain, timeframeTo]
-  );
-
-  const handleToChange = useCallback(
-    (value: string) => {
-      const parsed = parseDateInput(value);
-      if (!parsed) return;
-      const nextTo = formatDateInput(parsed);
-      const nextFrom = timeframeFrom > nextTo ? nextTo : timeframeFrom;
-      commitFilters({
-        from: nextFrom,
-        to: nextTo,
-        grain,
-        preset: 'custom',
-      });
-    },
-    [commitFilters, grain, timeframeFrom]
-  );
-
-  const handleGrainChange = useCallback(
-    (value: string) => {
-      const nextGrain: StatsGrain = value === 'week' ? 'week' : 'month';
-      commitFilters({
-        from: timeframeFrom,
-        to: timeframeTo,
-        grain: nextGrain,
-        preset: selectedPreset,
-      });
-    },
-    [commitFilters, selectedPreset, timeframeFrom, timeframeTo]
-  );
-
-  const resetFilters = useCallback(() => {
-    const range = getPresetRange(DEFAULT_PRESET, now);
-    commitFilters({
-      from: range.from,
-      to: range.to,
+  const defaultFilters = useMemo<StatsFiltersValue>(
+    () => ({
+      ...getPresetRange(DEFAULT_PRESET, now),
       grain: DEFAULT_GRAIN,
       preset: DEFAULT_PRESET,
+    }),
+    [now]
+  );
+  const appliedFilters = useMemo<StatsFiltersValue>(() => {
+    const presetParam = searchParams.get('preset');
+    const parsedPreset = isStatsFilterPreset(presetParam) ? presetParam : DEFAULT_PRESET;
+    const fallbackPreset = parsedPreset === 'custom' ? DEFAULT_PRESET : parsedPreset;
+    const fallbackRange = getPresetRange(fallbackPreset, now);
+    const parsedFrom = parseDateInput(searchParams.get('from'));
+    const parsedTo = parseDateInput(searchParams.get('to'));
+    const grainParam = searchParams.get('grain');
+
+    const range =
+      parsedFrom && parsedTo
+        ? normalizeRange(formatDateInput(parsedFrom), formatDateInput(parsedTo))
+        : fallbackRange;
+
+    return {
+      ...range,
+      grain: isStatsGrain(grainParam) ? grainParam : DEFAULT_GRAIN,
+      preset: parsedFrom && parsedTo ? parsedPreset : fallbackPreset,
+    };
+  }, [now, searchParams]);
+  const [draftFilters, setDraftFilters] = useState<StatsFiltersValue>(appliedFilters);
+
+  useEffect(() => {
+    setDraftFilters(appliedFilters);
+  }, [appliedFilters]);
+
+  const isDirtyVsApplied = useMemo(
+    () => !areStatsFiltersEqual(draftFilters, appliedFilters),
+    [appliedFilters, draftFilters]
+  );
+  const isAtDefaults = useMemo(
+    () => areStatsFiltersEqual(draftFilters, defaultFilters),
+    [defaultFilters, draftFilters]
+  );
+
+  const applyFilters = useCallback(() => {
+    const nextRange = normalizeRange(draftFilters.from, draftFilters.to);
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev);
+      params.set('from', nextRange.from);
+      params.set('to', nextRange.to);
+      params.set('grain', draftFilters.grain);
+      params.set('preset', draftFilters.preset);
+      return params;
     });
-  }, [commitFilters, now]);
+  }, [draftFilters, setSearchParams]);
+
+  const applyPreset = useCallback(
+    (preset: Exclude<StatsFilterPreset, 'custom'>) => {
+      const range = getPresetRange(preset, now);
+      setDraftFilters((prev) => ({
+        ...prev,
+        ...normalizeRange(range.from, range.to),
+        preset,
+      }));
+    },
+    [now]
+  );
+
+  const handleFromChange = useCallback((value: string) => {
+    const parsed = parseDateInput(value);
+    if (!parsed) return;
+
+    setDraftFilters((prev) => {
+      const nextRange = normalizeRange(formatDateInput(parsed), prev.to);
+      return {
+        ...prev,
+        ...nextRange,
+        preset: 'custom',
+      };
+    });
+  }, []);
+
+  const handleToChange = useCallback((value: string) => {
+    const parsed = parseDateInput(value);
+    if (!parsed) return;
+
+    setDraftFilters((prev) => {
+      const nextRange = normalizeRange(prev.from, formatDateInput(parsed));
+      return {
+        ...prev,
+        ...nextRange,
+        preset: 'custom',
+      };
+    });
+  }, []);
+
+  const handleGrainChange = useCallback((value: string) => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      grain: value === 'week' ? 'week' : 'month',
+    }));
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setDraftFilters(defaultFilters);
+  }, [defaultFilters]);
 
   const residentFeeQuery = useQuery({
-    queryKey: ['stats', 'residentFee', timeframeFrom, timeframeTo, grain],
+    queryKey: [
+      'stats',
+      'residentFee',
+      appliedFilters.from,
+      appliedFilters.to,
+      appliedFilters.grain,
+    ],
     queryFn: ({ signal }) =>
       getResidentFeeSum({
-        timeframe_from: timeframeFrom,
-        timeframe_to: timeframeTo,
-        grain,
+        timeframe_from: appliedFilters.from,
+        timeframe_to: appliedFilters.to,
+        grain: appliedFilters.grain,
         signal,
       }),
   });
 
   const transactionsQuery = useQuery({
-    queryKey: ['stats', 'transactions', timeframeFrom, timeframeTo, grain],
+    queryKey: [
+      'stats',
+      'transactions',
+      appliedFilters.from,
+      appliedFilters.to,
+      appliedFilters.grain,
+    ],
     queryFn: ({ signal }) =>
       getTransactionsSum({
-        timeframe_from: timeframeFrom,
-        timeframe_to: timeframeTo,
-        grain,
+        timeframe_from: appliedFilters.from,
+        timeframe_to: appliedFilters.to,
+        grain: appliedFilters.grain,
         signal,
       }),
   });
@@ -475,12 +443,12 @@ export const Stats = () => {
   );
 
   const residentFeeOption = useMemo(
-    () => buildChartOption(residentFeeData, grain, selectedCurrencies),
-    [grain, residentFeeData, selectedCurrencies]
+    () => buildChartOption(residentFeeData, appliedFilters.grain, selectedCurrencies),
+    [appliedFilters.grain, residentFeeData, selectedCurrencies]
   );
   const transactionsOption = useMemo(
-    () => buildChartOption(transactionsData, grain, selectedCurrencies),
-    [grain, selectedCurrencies, transactionsData]
+    () => buildChartOption(transactionsData, appliedFilters.grain, selectedCurrencies),
+    [appliedFilters.grain, selectedCurrencies, transactionsData]
   );
   const residentFeeTotal = residentFeeData.reduce(
     (sum, bucket) => sum + (bucket.total_usd || 0),
@@ -595,17 +563,27 @@ export const Stats = () => {
         tone="accent"
         title="Filters"
         description="Set the reporting window and aggregation grain for dues and movement."
+        action={
+          <Group gap="xs">
+            <Button variant="subtle" color="gray" disabled={isAtDefaults} onClick={resetFilters}>
+              Reset
+            </Button>
+            <Button variant="default" disabled={!isDirtyVsApplied} onClick={applyFilters}>
+              Apply
+            </Button>
+          </Group>
+        }
       >
         <Stack gap="md">
           <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
             <AppDateField
               label="From"
-              value={timeframeFrom}
+              value={draftFilters.from}
               onChange={handleFromChange}
             />
             <AppDateField
               label="To"
-              value={timeframeTo}
+              value={draftFilters.to}
               onChange={handleToChange}
             />
             <div>
@@ -614,7 +592,7 @@ export const Stats = () => {
               </Text>
               <AppSegmentedControl
                 fullWidth
-                value={grain}
+                value={draftFilters.grain}
                 onChange={handleGrainChange}
                 data={[
                   { label: 'Week', value: 'week' },
@@ -625,37 +603,16 @@ export const Stats = () => {
           </SimpleGrid>
 
           <Group gap="xs" wrap="wrap">
-            <Button
-              variant={selectedPreset === 'last4w' ? 'filled' : 'light'}
-              size="xs"
-              onClick={() => applyPreset('last4w')}
-            >
-              Last 4 weeks
-            </Button>
-            <Button
-              variant={selectedPreset === 'last3m' ? 'filled' : 'light'}
-              size="xs"
-              onClick={() => applyPreset('last3m')}
-            >
-              Last 3 months
-            </Button>
-            <Button
-              variant={selectedPreset === 'last6m' ? 'filled' : 'light'}
-              size="xs"
-              onClick={() => applyPreset('last6m')}
-            >
-              Last 6 months
-            </Button>
-            <Button
-              variant={selectedPreset === 'ytd' ? 'filled' : 'light'}
-              size="xs"
-              onClick={() => applyPreset('ytd')}
-            >
-              Year to date
-            </Button>
-            <Button variant="subtle" size="xs" color="gray" onClick={resetFilters}>
-              Reset
-            </Button>
+            {STATS_PRESET_OPTIONS.map((preset) => (
+              <Button
+                key={preset.key}
+                variant={draftFilters.preset === preset.key ? 'filled' : 'light'}
+                size="xs"
+                onClick={() => applyPreset(preset.key)}
+              >
+                {preset.label}
+              </Button>
+            ))}
           </Group>
         </Stack>
       </FilterBar>

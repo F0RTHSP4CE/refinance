@@ -24,14 +24,14 @@ services:
   ui-new:
     build:
       target: dev
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+    command: ["sh", "/opt/ui-new/docker/dev-entrypoint.sh"]
     environment:
       VITE_API_PROXY_TARGET: http://api:8000
     depends_on:
       - api
     volumes:
       - ./ui-new:/opt/ui-new
-      - /opt/ui-new/node_modules
+      - ui-new-node_modules:/opt/ui-new/node_modules
     ports:
       - "5173:5173"
 
@@ -41,3 +41,4 @@ services:
 
 volumes:
   db-dev-data:
+  ui-new-node_modules:

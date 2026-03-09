@@ -11,6 +11,7 @@ export const FridgeCoffeeCard = () => {
   return (
     <>
       <SectionCard
+        style={{ height: '100%' }}
         title="Shared supplies"
         description="Low-friction flows for kitchen stash top-ups and shared restocks."
       >

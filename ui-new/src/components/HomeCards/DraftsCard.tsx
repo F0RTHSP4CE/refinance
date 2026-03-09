@@ -52,6 +52,7 @@ export const DraftsCard = () => {
   return (
     <>
       <SectionCard
+        style={{ height: '100%' }}
         title="Draft activity"
         description="Finish outgoing drafts and respond to incoming requests before they go stale."
         action={

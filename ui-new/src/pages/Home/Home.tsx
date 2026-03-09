@@ -1,4 +1,4 @@
-import { Stack } from '@mantine/core';
+import { SimpleGrid, Stack } from '@mantine/core';
 import {
   BalanceCard,
   DraftsCard,
@@ -24,14 +24,19 @@ export const Home = () => {
         variant="hero"
       />
 
-      <div className="app-page-grid lg:grid-cols-[minmax(0,1.42fr)_minmax(18.5rem,0.84fr)] lg:items-start">
-        <BalanceCard />
-        <Stack gap="md">
+      <BalanceCard />
+
+      <SimpleGrid cols={{ base: 1, md: 2, xl: 3 }} spacing="md" data-testid="home-secondary-grid">
+        <div className="h-full">
           <FeeInvoicesStatusCard />
+        </div>
+        <div className="h-full">
           <DraftsCard />
+        </div>
+        <div className="h-full">
           <FridgeCoffeeCard />
-        </Stack>
-      </div>
+        </div>
+      </SimpleGrid>
 
       <HomeTransactionsTableSection />
     </Stack>

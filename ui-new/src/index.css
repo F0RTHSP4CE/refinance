@@ -307,6 +307,9 @@ select {
 }
 
 .app-segmented-control .app-segmented-control-label {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   color: rgba(174, 185, 200, 0.68) !important;
   opacity: 0.82;
   font-weight: 700;
@@ -329,6 +332,10 @@ select {
 }
 
 .app-segmented-control .app-segmented-control-inner-label {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
   color: inherit !important;
 }
 

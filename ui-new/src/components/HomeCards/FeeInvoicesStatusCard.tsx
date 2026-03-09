@@ -40,6 +40,7 @@ export const FeeInvoicesStatusCard = () => {
 
   return (
     <SectionCard
+      style={{ height: '100%' }}
       title="Dues to settle"
       description="Keep an eye on the next unpaid invoice so auto-settlement does not bounce."
       action={
