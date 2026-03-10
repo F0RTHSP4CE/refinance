@@ -1,312 +1,627 @@
-/* Shared transaction table styles for all pages using transaction/macro_list.jinja2 */
-
-.wide-table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+/* ─── SEARCH FORM ────────────────────────────────────────────────────── */
+.tx-search-form {
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 2px solid #000;
+  background: #fff;
 }
 
-.wide-table-wrapper > .transaction-table {
-  display: table;
-  width: 100%;
-  table-layout: auto;
-  white-space: normal;
-  border-collapse: collapse;
-  font-family: "Noto Sans", "Segoe UI", sans-serif;
-  font-size: 0.92rem;
-  line-height: 1.12;
-}
-
-.transaction-table thead td {
-  border-bottom: 2px solid #111;
-  padding-bottom: 0.33rem;
-  font-size: 0.82rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.42px;
-}
-
-.transaction-table td {
-  padding: 0.24rem 0.28rem;
-  vertical-align: top;
-}
-
-.transaction-table .tx-col-id,
-.transaction-table .tx-col-amount,
-.transaction-table .tx-col-currency,
-.transaction-table .tx-col-invoice,
-.transaction-table .tx-col-actor {
-  white-space: nowrap;
-}
-
-.transaction-table .tx-col-comment {
-  word-break: break-word;
-  max-width: 22ch;
-}
-
-.transaction-table tbody tr {
-  border-bottom: 1px solid #d6d6d6;
-}
-
-.transaction-table tbody tr:last-child {
-  border-bottom: 0;
-}
-
-.transaction-table tbody tr:nth-child(even):not(.secondary) {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.transaction-table .tx-col-amount {
-  text-align: right;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-variant-numeric: tabular-nums lining-nums;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.transaction-table .tx-col-from,
-.transaction-table .tx-col-to,
-.transaction-table .tx-col-tags {
-  line-height: 1.18;
-}
-
-.transaction-table .tx-col-from > a,
-.transaction-table .tx-col-to > a,
-.transaction-table .tx-col-from .tx-primary > a,
-.transaction-table .tx-col-to .tx-primary > a {
-  font-weight: 700;
-}
-
-.transaction-table .tx-col-id a {
-  font-size: 0.95rem;
-  font-weight: 400;
-}
-
-.transaction-table .tx-col-invoice a,
-.transaction-table .tx-col-actor a {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.transaction-table .tx-col-comment {
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.15;
-}
-
-.transaction-table .tx-col-treasury {
-  font-size: 0.92rem;
-  font-weight: 500;
-  line-height: 1.15;
-}
-
-.transaction-table .tx-col-id {
-  min-width: 5.2rem;
-}
-
-.transaction-table .tx-col-from,
-.transaction-table .tx-col-to {
-  min-width: 7rem;
-}
-
-.transaction-table .tx-col-amount {
-  min-width: 5.2rem;
-}
-
-.transaction-table .tx-col-currency {
-  min-width: 3.8rem;
-}
-
-.transaction-table .tx-col-treasury {
-  min-width: 6rem;
-}
-
-.transaction-table .tx-col-invoice {
-  min-width: 6.4rem;
-}
-
-.transaction-table .tx-col-actor {
-  min-width: 6.2rem;
-}
-
-.transaction-table .tag-badge {
-  font-family: "Noto Sans", "Segoe UI", sans-serif;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.16px;
-  line-height: 1;
-  text-transform: uppercase;
-  padding: 0;
-  border: 0 !important;
-  border-radius: 0;
-  opacity: 1;
-  vertical-align: middle;
-  margin-top: 0.08rem;
-  margin-right: 0.08rem;
-}
-
-.transaction-table .tag-badge a {
-  font-weight: 700;
-}
-
-.transaction-table .treasury-badge {
-  font-family: "Noto Sans", "Segoe UI", sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  border-radius: 0;
-  padding: 0.06rem 0.18rem;
-  opacity: 1;
-}
-
-.transaction-table-compact td {
-  padding-top: 0.28rem;
-  padding-bottom: 0.28rem;
-  vertical-align: middle;
-}
-
-.transaction-table-compact .tx-primary,
-.transaction-table-compact .tx-secondary {
-  display: block;
-  line-height: 1.08;
-}
-
-.transaction-table-compact .tx-primary {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
-.transaction-table-compact .tx-col-from > a,
-.transaction-table-compact .tx-col-to > a,
-.transaction-table-compact .tx-col-from .tx-primary > a,
-.transaction-table-compact .tx-col-to .tx-primary > a {
-  font-size: 1.04rem;
-  line-height: 1.05;
-  font-weight: 700;
-}
-
-.transaction-table-compact .tx-col-id .tx-primary {
-  font-weight: 400;
-}
-
-.transaction-table-compact .tx-secondary {
-  margin-top: 0.1rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  opacity: 0.78;
-  text-transform: uppercase;
-  letter-spacing: 0.22px;
-}
-
-.transaction-table-compact .tx-col-amount,
-.transaction-table-compact .tx-col-currency {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-size: 1.12rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
-.transaction-table-compact .tx-entity-tags {
-  display: block;
-  margin-top: 0.12rem;
-}
-
-.transaction-table-compact .tx-inline-tags {
-  display: inline;
-  margin-top: 0;
-  margin-left: 0.2rem;
-}
-
-.transaction-table-compact .tx-nextline-tags {
-  display: block;
-  margin-top: 0.12rem;
-  margin-left: 0;
-}
-
-.transaction-table-compact .tx-tags-grid {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(2, max-content);
-  gap: 0.08rem 0.18rem;
+.tx-search-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem 1rem;
   align-items: start;
 }
 
-.wide-table-wrapper + .pagination a {
-  display: inline-block;
-  padding: 0.4rem 0.7rem;
-  background: black;
-  color: white;
-  border: 2px solid black;
-  text-decoration: none;
+.tx-search-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0;
+}
+
+.tx-search-form .form-label {
+  font-size: 0.62rem;
+  font-weight: 900;
   text-transform: uppercase;
-  font-weight: 700;
-  font-size: 0.85rem;
-  letter-spacing: 0.5px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.14em;
+  color: #000;
 }
 
-.wide-table-wrapper + .pagination a:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 black;
-}
-
-.wide-table-wrapper + .pagination span {
-  display: inline-block;
-  margin: 0 0.6rem;
+.tx-search-form .form-input,
+.tx-search-form select,
+.tx-search-form input[type="text"],
+.tx-search-form input[type="number"],
+.tx-search-form input[type="search"] {
+  width: 100%;
+  border: 2px solid #000;
+  border-radius: 0;
+  padding: 0.4rem 0.6rem;
+  font-size: 1rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  background: #fff;
+  box-sizing: border-box;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-@media (max-width: 900px) and (orientation: portrait) {
-  .transaction-table-compact {
-    font-size: 0.86rem;
-    line-height: 1.08;
+.tx-search-form .form-input:focus,
+.tx-search-form select:focus,
+.tx-search-form input:focus {
+  outline: 2px solid #000;
+  outline-offset: 1px;
+}
+
+/* entity selector inside search form */
+.tx-search-form .entity-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tx-search-form .entity-selector input[type="search"] {
+  height: auto;
+  min-height: 0;
+}
+
+.tx-search-form .entity-selector .entity-selector-id-block {
+  display: none;
+}
+
+.tx-search-form .entity-selector .entity-search-results {
+  border: 2px solid #000;
+  border-top: none;
+  background: white;
+  max-height: 180px;
+  overflow: auto;
+  z-index: 10;
+  position: relative;
+}
+
+.tx-search-form .entity-selector .entity-search-results:empty {
+  display: none;
+}
+
+.tx-search-form .entity-selector .search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: black;
+  text-decoration: none;
+  border-bottom: 1px solid #ddd;
+}
+
+.tx-search-form .entity-selector .search-result-item:last-child {
+  border-bottom: none;
+}
+
+.tx-search-form .entity-selector .search-result-item:hover,
+.tx-search-form .entity-selector .search-result-item:focus {
+  background: #000;
+  color: #fff;
+  outline: none;
+}
+
+.tx-search-form .entity-selector .search-result-item:hover .tag-badge,
+.tx-search-form .entity-selector .search-result-item:focus .tag-badge {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+.tx-search-form .entity-selector .entity-search-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tx-search-actions {
+  margin-top: 1rem;
+}
+
+.tx-search-actions input[type="submit"],
+.tx-search-actions button {
+  display: inline-block;
+  padding: 0.35rem 1.1rem;
+  background: #000;
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 0.08s, color 0.08s;
+}
+
+.tx-search-actions input[type="submit"]:hover,
+.tx-search-actions button:hover {
+  background: #fff;
+  color: #000;
+  outline: 2px solid #000;
+}
+
+
+
+.tx-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.tx-add-btn {
+  display: inline-block;
+  padding: 0.35rem 1.1rem;
+  background: #000;
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background 0.08s, color 0.08s;
+}
+
+.tx-add-btn:hover {
+  background: #fff;
+  color: #000;
+  outline: 2px solid #000;
+}
+
+.tx-search-details {
+  margin-bottom: 1.2rem;
+}
+
+.tx-search-details > summary {
+  font-weight: 900;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.4rem 0;
+  color: #000;
+  list-style: none;
+}
+
+.tx-search-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.tx-search-details > summary::before {
+  content: '▶ ';
+  font-size: 0.6em;
+  vertical-align: middle;
+}
+
+.tx-search-details[open] > summary::before {
+  content: '▼ ';
+}
+
+.tx-search-details > summary:hover {
+  text-decoration: underline;
+}
+
+/* ─── TRANSACTION TABLE — BRUTALIST ─────────────────────────────────── */
+
+.transaction-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────────── */
+.transaction-table thead tr {
+  border-bottom: 3px solid #000;
+}
+
+.transaction-table thead td {
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  padding: 1rem 0.6rem 0.6rem;
+  color: #000;
+  white-space: nowrap;
+}
+
+/* ── ROWS ────────────────────────────────────────────────────────────── */
+.transaction-table tbody tr {
+  border-bottom: 1px solid #d0d0d0;
+  transition: background 0.06s ease, color 0.06s ease;
+  cursor: pointer;
+}
+
+.transaction-table tbody tr:hover {
+  background: #000;
+  color: #fff;
+}
+
+.transaction-table tbody tr:hover a {
+  color: #fff;
+}
+
+.transaction-table tbody tr:hover .tx-secondary {
+  color: #aaa;
+}
+
+/* ── DRAFT rows ──────────────────────────────────────────────────────── */
+.transaction-table tr.secondary {
+  opacity: 0.38;
+}
+
+.transaction-table tr.secondary:hover {
+  opacity: 1;
+}
+
+/* ── CELLS — shared ──────────────────────────────────────────────────── */
+.transaction-table td {
+  padding: 0.55rem 0.6rem;
+  vertical-align: middle;
+}
+
+/* ── AMOUNT — SCREAMING ─────────────────────────────────────────────── */
+.tx-col-amount,
+.tx-head-amount {
+  text-align: right;
+}
+
+.tx-col-amount {
+  font-size: 2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: #000;
+  padding-right: 0.3rem;
+}
+
+.transaction-table tbody tr:hover .tx-col-amount {
+  color: #fff;
+}
+
+/* ── CURRENCY — SCREAMING ────────────────────────────────────────────── */
+.tx-col-currency,
+.tx-head-currency {
+  text-align: left;
+}
+
+.tx-col-currency {
+  font-size: 1.4rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #000;
+  padding-left: 0.4rem;
+}
+
+.transaction-table tbody tr:hover .tx-col-currency {
+  color: #fff;
+}
+
+/* ── ID column ───────────────────────────────────────────────────────── */
+.tx-col-id {
+  white-space: nowrap;
+}
+
+.tx-col-id .tx-primary {
+  display: block;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.tx-col-id .tx-primary a {
+  color: #000;
+}
+
+.tx-col-id .tx-secondary {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-top: 0.1rem;
+}
+
+/* ── FROM / TO entities ──────────────────────────────────────────────── */
+.tx-col-from,
+.tx-col-to {
+  white-space: nowrap;
+}
+
+.tx-col-from > a,
+.tx-col-to > a {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #000;
+}
+
+.tx-entity-tags {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+/* ── ACTOR / STATUS ──────────────────────────────────────────────────── */
+.tx-col-actor {
+  white-space: nowrap;
+}
+
+.tx-col-actor .tx-primary {
+  display: block;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.tx-col-actor .tx-primary a {
+  color: #000;
+}
+
+.tx-col-actor .tx-secondary {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #555;
+  margin-top: 0.1rem;
+}
+
+.transaction-table tbody tr:hover .tx-col-actor .tx-secondary {
+  color: #aaa;
+}
+
+/* ── link underlines inside table ────────────────────────────────────── */
+.transaction-table a {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* ── TAGS ────────────────────────────────────────────────────────────── */
+.tx-tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: flex-start;
+  margin-top: 0.3rem;
+}
+
+/* on row hover: invert to white pill */
+.transaction-table tbody tr:hover .tag-badge {
+  background: #fff;
+  border-color: #fff;
+  color: #000;
+}
+
+.transaction-table tbody tr:hover .tag-badge a,
+.transaction-table tbody tr:hover .tag-badge span {
+  color: #000;
+}
+
+/* ── TREASURY badges ────────────────────────────────────────────────── */
+.tx-col-treasury {
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.tx-treasury-arrow {
+  font-size: 1rem;
+  font-weight: 900;
+  padding: 0 0.2rem;
+  vertical-align: middle;
+}
+
+.tx-treasury-none {
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  opacity: 0.45;
+  vertical-align: middle;
+}
+
+.transaction-table tbody tr:hover .treasury-badge {
+  background: #fff;
+}
+
+.transaction-table tbody tr:hover .treasury-badge a {
+  color: #000;
+}
+
+/* ── INVOICE ────────────────────────────────────────────────────────── */
+.tx-col-invoice .tx-primary {
+  font-weight: 700;
+}
+
+.tx-col-invoice a {
+  color: #000;
+  font-weight: 700;
+}
+
+/* ── COMMENT + TAGS (combined column) ───────────────────────────────── */
+.tx-col-comment {
+  max-width: 16rem;
+  white-space: normal;
+  vertical-align: middle;
+}
+
+.tx-comment-text {
+  display: block;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #444;
+}
+
+.transaction-table tbody tr:hover .tx-comment-text {
+  color: #ccc;
+}
+
+
+/* ─── TREASURY LIST TABLE — BRUTALIST ───────────────────────────────── */
+
+.treasury-table {
+  width: min(100%, 56rem);
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.treasury-table thead th {
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  padding: 0.8rem 0.8rem 0.5rem;
+  text-align: left;
+  border-bottom: 3px solid #000;
+  white-space: nowrap;
+}
+
+.treasury-table thead th.treasury-col-balance {
+  text-align: right;
+  padding-left: 3rem;
+  padding-right: 1.5rem;
+}
+
+.treasury-table tbody tr {
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.treasury-table td {
+  padding: 0.55rem 0.8rem;
+  vertical-align: middle;
+}
+
+/* ── inactive row — 45° stripe ──────────────────────────────────────── */
+.treasury-table tr.secondary td {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent 0px,
+    transparent 5px,
+    rgba(0, 0, 0, 0.07) 5px,
+    rgba(0, 0, 0, 0.07) 10px
+  );
+  color: #888;
+}
+
+.treasury-table tbody tr.secondary:hover td {
+  background-image: none;
+}
+
+/* ── NAME ────────────────────────────────────────────────────────────── */
+.treasury-col-name {
+  white-space: nowrap;
+  width: 1px; /* shrink to badge content */
+  padding-left: 0;
+}
+
+/* ── BALANCE ─────────────────────────────────────────────────────────── */
+.treasury-col-balance {
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+  width: 1px; /* shrink to content */
+  padding-left: 3rem; /* separates from name */
+  padding-right: 1.5rem;
+}
+
+.treasury-balance-row {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: flex-end;
+  align-items: baseline;
+  line-height: 1.1;
+  margin-bottom: 0.1rem;
+}
+
+.treasury-balance-amount {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.treasury-balance-currency {
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.treasury-balance-draft {
+  opacity: 0.45;
+}
+
+.treasury-balance-draft .treasury-balance-amount {
+  font-size: 1.1rem;
+}
+
+/* ── COMMENT ─────────────────────────────────────────────────────────── */
+.treasury-col-comment {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #555;
+  max-width: 16rem;
+  white-space: normal;
+}
+
+/* ── treasury badge on hover ─────────────────────────────────────────── */
+
+/* ─── MOBILE — compact transaction list ─────────────────────────────── */
+@media (max-width: 640px) {
+  .transaction-table {
+    font-size: 0.9rem;
   }
 
-  .transaction-table-compact .tx-col-from > a,
-  .transaction-table-compact .tx-col-to > a,
-  .transaction-table-compact .tx-col-from .tx-primary > a,
-  .transaction-table-compact .tx-col-to .tx-primary > a {
-    font-size: 0.96rem;
-    max-width: 10.5ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: inline-block;
-    vertical-align: bottom;
+  /* undo wide-table-wrapper nowrap so reduced columns can reflow */
+  .wide-table-wrapper > .transaction-table {
+    white-space: normal;
   }
 
-  .transaction-table-compact .tx-col-amount,
-  .transaction-table-compact .tx-col-currency {
+  /* hide all columns except from / to / amount / currency */
+  .tx-col-id,      .tx-head-id,
+  .tx-col-comment, .tx-head-comment,
+  .tx-col-treasury,.tx-head-treasury,
+  .tx-col-invoice, .tx-head-invoice,
+  .tx-col-actor,   .tx-head-actor {
+    display: none;
+  }
+
+  /* tighten remaining cells */
+  .transaction-table td {
+    padding: 0.5rem 0.35rem;
+  }
+
+  /* keep amount readable but smaller */
+  .tx-col-amount {
+    font-size: 1.45rem;
+  }
+
+  .tx-col-currency {
     font-size: 1rem;
+    padding-left: 0.2rem;
   }
 
-  .transaction-table-compact .tx-col-id {
-    min-width: 4.4rem;
+  /* entity names — slightly smaller, allow wrap */
+  .tx-col-from > a,
+  .tx-col-to > a {
+    font-size: 0.95rem;
+    white-space: normal;
+    word-break: break-word;
   }
 
-  .transaction-table-compact .tx-col-from,
-  .transaction-table-compact .tx-col-to {
-    min-width: 6rem;
-  }
-
-  .transaction-table-compact .tx-inline-tags {
-    display: block;
-    margin-top: 0.12rem;
-    margin-left: 0;
-  }
-
-  .transaction-table-compact .tx-head-tags,
-  .transaction-table-compact .tx-head-comment,
-  .transaction-table-compact .tx-head-treasury,
-  .transaction-table-compact .tx-head-invoice,
-  .transaction-table-compact .tx-head-actor,
-  .transaction-table-compact .tx-col-tags,
-  .transaction-table-compact .tx-col-comment,
-  .transaction-table-compact .tx-col-treasury,
-  .transaction-table-compact .tx-col-invoice,
-  .transaction-table-compact .tx-col-actor {
+  /* hide entity tag chips on mobile */
+  .tx-entity-tags {
     display: none;
   }
 }
+

@@ -16,12 +16,10 @@
                 <td class="tx-head-amount">Amount</td>
                 <td class="tx-head-currency">Currency</td>
                 {% if compact %}
-                <td class="tx-head-tags">Tags</td>
                 <td class="tx-head-comment">Comment</td>
                 <td class="tx-head-treasury">Treasury</td>
                 {% else %}
                 <td class="tx-head-treasury">Treasury</td>
-                <td class="tx-head-tags">Tags</td>
                 <td class="tx-head-comment">Comment</td>
                 {% endif %}
                 <td class="tx-head-invoice">Invoice</td>
@@ -32,7 +30,7 @@
             </tr>
         </thead>
         {% for transaction in transactions %}
-        <tr {% if transaction.status=="draft" %} class="secondary" {%endif%}>
+        <tr data-href="{{ url_for('transaction.detail', id=transaction.id) }}" {% if transaction.status=="draft" %} class="secondary" {%endif%}>
             <td class="tx-col-id">
                 {% if compact %}
                 <span class="tx-primary"><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></span>
@@ -106,60 +104,54 @@
             </td>
 
             {% if compact %}
-            <td class="tx-col-tags">
+            <td class="tx-col-comment">
+                {% if transaction.comment %}<span class="tx-comment-text">{{ transaction.comment }}</span>{% endif %}
+                {% if transaction.tags %}
                 <span class="tx-tags-grid">
-                {% for tag in transaction.tags %}
-                {{ tag_inline(tag) }}
-                {% endfor %}
+                {% for tag in transaction.tags %}{{ tag_inline(tag) }}{% endfor %}
                 </span>
+                {% endif %}
             </td>
-            <td class="tx-col-comment">{{ transaction.comment or '' }}</td>
             <td class="tx-col-treasury">
                 {% if transaction.from_treasury_id or transaction.to_treasury_id %}
-
                 {% if transaction.from_treasury_id %}
                 {{ treasury_inline(transaction.from_treasury) }}
                 {% else %}
-                x
+                <span class="tx-treasury-none">&#x2205;</span>
                 {% endif %}
-                →
+                <span class="tx-treasury-arrow">&rarr;</span>
                 {% if transaction.to_treasury_id %}
                 {{ treasury_inline(transaction.to_treasury) }}
                 {% else %}
-                x
+                <span class="tx-treasury-none">&#x2205;</span>
                 {% endif %}
-
                 {% endif %}
-
             </td>
             {% else %}
             <td class="tx-col-treasury">
                 {% if transaction.from_treasury_id or transaction.to_treasury_id %}
-
                 {% if transaction.from_treasury_id %}
                 {{ treasury_inline(transaction.from_treasury) }}
                 {% else %}
-                x
+                <span class="tx-treasury-none">&#x2205;</span>
                 {% endif %}
-                →
+                <span class="tx-treasury-arrow">&rarr;</span>
                 {% if transaction.to_treasury_id %}
                 {{ treasury_inline(transaction.to_treasury) }}
                 {% else %}
-                x
+                <span class="tx-treasury-none">&#x2205;</span>
                 {% endif %}
-
                 {% endif %}
-
             </td>
 
-            <td class="tx-col-tags">
+            <td class="tx-col-comment">
+                {% if transaction.comment %}<span class="tx-comment-text">{{ transaction.comment }}</span>{% endif %}
+                {% if transaction.tags %}
                 <span class="tx-tags-grid">
-                {% for tag in transaction.tags %}
-                {{ tag_inline(tag) }}
-                {% endfor %}
+                {% for tag in transaction.tags %}{{ tag_inline(tag) }}{% endfor %}
                 </span>
+                {% endif %}
             </td>
-            <td class="tx-col-comment">{{ transaction.comment or '' }}</td>
             {% endif %}
 
 

@@ -3,6 +3,16 @@ a {
   text-decoration: none;
 }
 
+h1 {
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 1.2rem;
+  color: #000;
+}
+
 .button-group {
   display: flex;
   flex-wrap: wrap;
@@ -90,12 +100,49 @@ td {
 }
 
 .wide-table-wrapper {
-  max-width: 100%;
+  width: 100%;
 }
 
 .wide-table-wrapper>table {
-  display: block;
+  width: 100%;
   overflow-x: auto;
   white-space: nowrap;
+}
+
+/* ── PAGINATION ──────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.pagination a {
+  display: inline-block;
+  padding: 0.3rem 0.9rem;
+  background: #000;
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.08s, color 0.08s;
+}
+
+.pagination a:hover {
+  background: #fff;
+  color: #000;
+  outline: 2px solid #000;
+  text-decoration: none;
+}
+
+.pagination span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
 }
 

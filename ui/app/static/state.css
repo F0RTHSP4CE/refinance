@@ -1,6 +1,15 @@
 /* SHARED STATE AND COLOR RULES */
 a {
-  color: #007bff;
+  color: #000;
+  text-decoration: underline;
+}
+
+nav a,
+.tag-badge a,
+.treasury-badge a,
+.button,
+.tx-add-btn {
+  text-decoration: none;
 }
 
 nav {
@@ -12,9 +21,7 @@ nav a {
   color: lightgray;
 }
 
-table tr:not(:has(input[type="submit"])):nth-child(even) {
-  background-color: #f8f8f8;
-}
+/* zebra stripes removed */
 
 .amount-negative {
   color: red;

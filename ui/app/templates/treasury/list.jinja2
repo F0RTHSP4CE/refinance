@@ -6,46 +6,37 @@
 {% block content %}
 <p><a href="{{ url_for('treasury.add') }}">Add Treasury</a></p>
 {% if treasuries %}
-<div class="wide-table-wrapper">
-    <table>
-        <thead>
-            <tr>
-                <td>Name</td>
-                <td>Balance</td>
-                <td>Comment</td>
-                <td>Active</td>
-            </tr>
-        </thead>
-        <tbody>
-            {% for t in treasuries %}
-            <tr{% if not t.active %} class="secondary" {% endif %}>
-                <td>{{ treasury_inline(t) }}</td>
-                <td>
-                    {% if t.balances.completed %}
-                    {% for currency, amount in t.balances.completed.items() %}
-                    {% if amount | float != 0 %}
-                    <div class="right-align">{{ amount }} {{ currency|upper }}</div>
-                    {% endif %}
-                    {% endfor %}
-                    {% else %}
-                    {% endif %}
-                    {% if t.balances.draft %}
-                    {% for currency, amount in t.balances.draft.items() %}
-                    {% if amount | float != 0 %}
-                    <div class="right-align secondary">{{ amount }} {{ currency|upper }}</div>
-                    {% endif %}
-                    {% endfor %}
-                    {% else %}
-                    {% endif %}
-                </td>
-                <td>{{ t.comment or '' }}</td>
-                <td>{{ 'Yes' if t.active else 'No' }}</td>
-
-                </tr>
+<table class="treasury-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th class="treasury-col-balance">Balance</th>
+            <th>Comment</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for t in treasuries %}
+        <tr{% if not t.active %} class="secondary" {% endif %}>
+            <td class="treasury-col-name">{{ treasury_inline(t) }}</td>
+            <td class="treasury-col-balance">
+                {% for currency, amount in t.balances.completed.items() if amount | float != 0 %}
+                <div class="treasury-balance-row">
+                    <span class="treasury-balance-amount">{{ amount }}</span>
+                    <span class="treasury-balance-currency">{{ currency|upper }}</span>
+                </div>
                 {% endfor %}
-        </tbody>
-    </table>
-</div>
+                {% for currency, amount in t.balances.draft.items() if amount | float != 0 %}
+                <div class="treasury-balance-row treasury-balance-draft">
+                    <span class="treasury-balance-amount">{{ amount }}</span>
+                    <span class="treasury-balance-currency">{{ currency|upper }}</span>
+                </div>
+                {% endfor %}
+            </td>
+            <td class="treasury-col-comment">{{ t.comment or '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
 <p>No treasuries.</p>
 {% endif %}

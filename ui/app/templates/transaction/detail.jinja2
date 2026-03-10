@@ -45,12 +45,30 @@
                     </div>
                 </div>
 
-                {% if transaction.comment %}
+                {% if transaction.comment or transaction.tags or transaction.invoice_id %}
                 <table>
+                    {% if transaction.comment %}
                     <tr>
                         <td>Comment</td>
-                        <td>{{ transaction.comment }}</td>
+                        <td class="tx-detail-comment">{{ transaction.comment }}</td>
                     </tr>
+                    {% endif %}
+                    {% if transaction.tags %}
+                    <tr>
+                        <td>Tags</td>
+                        <td class="tx-detail-tags">
+                            {% for tag in transaction.tags %}
+                            {{ tag_inline(tag) }}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% if transaction.invoice_id %}
+                    <tr>
+                        <td>Invoice</td>
+                        <td><a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a></td>
+                    </tr>
+                    {% endif %}
                 </table>
                 {% endif %}
             </div>
@@ -65,22 +83,6 @@
                     <tr>
                         <td>Modified</td>
                         <td>{{ human_readable_date(transaction.modified_at) }}</td>
-                    </tr>
-                    {% endif %}
-                    {% if transaction.tags %}
-                    <tr>
-                        <td>Tags</td>
-                        <td>
-                            {% for tag in transaction.tags %}
-                            {{ tag_inline(tag) }}
-                            {% endfor %}
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% if transaction.invoice_id %}
-                    <tr>
-                        <td>Invoice</td>
-                        <td><a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a></td>
                     </tr>
                     {% endif %}
                     {% if transaction.from_treasury_id or transaction.to_treasury_id %}

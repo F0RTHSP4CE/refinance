@@ -32,6 +32,12 @@ def list():
     api = get_refinance_api_client()
     resp = api.http("GET", "treasuries", params={"skip": skip, "limit": limit}).json()
     treasuries = [Treasury(**x) for x in resp["items"]]
+    treasuries.sort(
+        key=lambda t: sum(
+            abs(float(v)) for v in (t.balances.get("completed") or {}).values()
+        ),
+        reverse=True,
+    )
     total = resp.get("total", 0)
     return render_template(
         "treasury/list.jinja2",
