@@ -63,6 +63,9 @@
     // Expected total USD (dashed line - ceiling)
     const expectedData = residentFeeData.map(item => item.expected_total_usd || 0);
 
+    // F0 expenses: rent + utilities (dashed line)
+    const expensesData = residentFeeData.map(item => item.expenses_usd || 0);
+
     new Chart(document.getElementById('resident-fee-chart'), {
         type: 'line',
         data: {
@@ -84,6 +87,15 @@
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.05)',
                     borderDash: [5, 5],
+                    tension: 0.2,
+                    fill: false
+                },
+                {
+                    label: 'F0 Expenses: rent + utilities (USD)',
+                    data: expensesData,
+                    borderWidth: 2,
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.05)',
                     tension: 0.2,
                     fill: false
                 }

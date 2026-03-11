@@ -11,6 +11,7 @@ class ResidentFeeSumByMonthSchema(BaseModel):
     amounts: dict[str, float]
     total_usd: float
     expected_total_usd: float = 0.0
+    expenses_usd: float = 0.0
 
 
 class EntityTransactionsByDaySchema(BaseModel):

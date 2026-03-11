@@ -20,7 +20,15 @@ from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.tag import Tag
 from app.models.transaction import Transaction, TransactionStatus
-from app.seeding import ex_resident_tag, f0_entity, fee_tag, member_tag, resident_tag
+from app.seeding import (
+    ex_resident_tag,
+    f0_entity,
+    fee_tag,
+    member_tag,
+    rent_tag,
+    resident_tag,
+    utilities_tag,
+)
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
@@ -279,19 +287,59 @@ class StatsService(BaseService):
                         str(amount)
                     )
 
+        # Query F0 outgoing expenses tagged with rent or utilities
+        # (match on transaction tags OR destination entity tags)
+        _expense_tag_ids = (rent_tag.id, utilities_tag.id)
+        expense_transactions = (
+            self.db.query(Transaction)
+            .filter(
+                Transaction.from_entity_id == hackerspace.id,
+                Transaction.status == TransactionStatus.COMPLETED,
+                or_(
+                    Transaction.tags.any(Tag.id.in_(_expense_tag_ids)),
+                    Transaction.to_entity.has(
+                        Entity.tags.any(Tag.id.in_(_expense_tag_ids))
+                    ),
+                ),
+            )
+            .all()
+        )
+
+        monthly_expense_totals: dict[tuple[int, int], dict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+
+        start_month = timeframe_from.replace(day=1)
+        end_month = timeframe_to.replace(day=1)
+
+        for txn in expense_transactions:
+            t_date = txn.created_at.date()
+            fee_date = t_date.replace(day=1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+            monthly_expense_totals[(t_date.year, t_date.month)][
+                txn.currency.lower()
+            ] += txn.amount
+
         # Combine all months from both paid and unpaid
-        all_months = set(monthly_paid_totals.keys()) | set(monthly_unpaid_totals.keys())
+        all_months = (
+            set(monthly_paid_totals.keys())
+            | set(monthly_unpaid_totals.keys())
+            | set(monthly_expense_totals.keys())
+        )
 
         result = []
         for year, month in sorted(all_months):
             paid_amounts = monthly_paid_totals.get((year, month), {})
             unpaid_amounts = monthly_unpaid_totals.get((year, month), {})
+            expense_amounts = monthly_expense_totals.get((year, month), {})
 
             paid_amounts_float = {k: float(v) for k, v in paid_amounts.items()}
 
             paid_total_usd = self._sum_amounts_usd(paid_amounts)
             unpaid_total_usd = self._sum_amounts_usd(unpaid_amounts)
             expected_total_usd = paid_total_usd + unpaid_total_usd
+            expenses_usd = self._sum_amounts_usd(expense_amounts)
 
             result.append(
                 {
@@ -300,6 +348,7 @@ class StatsService(BaseService):
                     "amounts": paid_amounts_float,
                     "total_usd": paid_total_usd,
                     "expected_total_usd": expected_total_usd,
+                    "expenses_usd": expenses_usd,
                 }
             )
         return result
