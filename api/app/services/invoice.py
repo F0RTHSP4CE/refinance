@@ -1,6 +1,7 @@
 """Invoice service"""
 
 import datetime
+from datetime import date
 from decimal import Decimal
 
 from app.dependencies.services import (
@@ -23,6 +24,8 @@ from app.errors.invoice import (
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.transaction import TransactionStatus
 from app.schemas.invoice import (
+    InvoiceBulkCreateReportSchema,
+    InvoiceBulkCreateSchema,
     InvoiceCreateSchema,
     InvoiceFiltersSchema,
     InvoiceUpdateSchema,
@@ -329,3 +332,57 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             invoice.status = InvoiceStatus.PAID
             invoice.modified_at = datetime.datetime.now()
             self.db.flush()
+
+    def bulk_create(
+        self, schema: InvoiceBulkCreateSchema, actor_entity_id: int
+    ) -> InvoiceBulkCreateReportSchema:
+        from app.models.entity import Entity
+        from app.models.tag import Tag
+
+        billing_period = schema.billing_period
+        if billing_period is None:
+            today = date.today()
+            billing_period = date(today.year, today.month, 1)
+        else:
+            billing_period = date(billing_period.year, billing_period.month, 1)
+
+        entity_ids: set[int] = set(schema.from_entity_ids)
+
+        if schema.from_tag_ids:
+            tags = self.db.query(Tag).filter(Tag.id.in_(schema.from_tag_ids)).all()
+            tag_filters = [Entity.tags.contains(tag) for tag in tags]
+            if tag_filters:
+                tag_entities = self.db.query(Entity).filter(or_(*tag_filters)).all()
+                for e in tag_entities:
+                    entity_ids.add(e.id)
+
+        invoice_ids: list[int] = []
+        created_count = 0
+        skipped_count = 0
+
+        for entity_id in sorted(entity_ids):
+            entity = self.db.query(Entity).filter(Entity.id == entity_id).first()
+            if entity is None or not entity.active:
+                skipped_count += 1
+                continue
+
+            invoice = self.create(
+                InvoiceCreateSchema(
+                    from_entity_id=entity_id,
+                    to_entity_id=schema.to_entity_id,
+                    amounts=schema.amounts,
+                    billing_period=billing_period,
+                    tag_ids=schema.tag_ids,
+                    comment=schema.comment,
+                ),
+                overrides={"actor_entity_id": actor_entity_id},
+            )
+            invoice_ids.append(invoice.id)
+            created_count += 1
+
+        return InvoiceBulkCreateReportSchema(
+            billing_period=billing_period,
+            created_count=created_count,
+            skipped_count=skipped_count,
+            invoice_ids=invoice_ids,
+        )

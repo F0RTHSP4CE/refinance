@@ -597,7 +597,7 @@ class TestInvoiceAutoPayTask:
         assert clear_response.status_code == 418
 
     def test_issue_fee_invoices_auto_pay(self, test_app: TestClient, token):
-        from app.seeding import fee_tag, resident_tag
+        from app.seeding import f0_entity, fee_tag, resident_tag
 
         funding_entity = test_app.post(
             "/entities", json={"name": "Fee Funding"}, headers={"x-token": token}
@@ -623,8 +623,14 @@ class TestInvoiceAutoPayTask:
 
         period = date.today().replace(day=1).isoformat()
         issue_response = test_app.post(
-            "/fees/issue-invoices",
-            json={"billing_period": period},
+            "/invoices/bulk",
+            json={
+                "from_tag_ids": [resident_tag.id],
+                "to_entity_id": f0_entity.id,
+                "billing_period": period,
+                "amounts": [{"currency": "usd", "amount": "42"}],
+                "tag_ids": [fee_tag.id],
+            },
             headers={"x-token": token},
         )
         assert issue_response.status_code == 200

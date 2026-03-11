@@ -1,9 +1,11 @@
+from datetime import date
 from decimal import Decimal
 
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Balance, Invoice, InvoiceStatus, Tag, Transaction
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     FloatField,
@@ -99,7 +101,73 @@ class DeleteForm(FlaskForm):
     delete = SubmitField("Delete")
 
 
+class InvoiceBulkForm(FlaskForm):
+    from_tag_ids = SelectMultipleField(
+        "From Tags (entities with tag)", coerce=int, choices=[], validators=[Optional()]
+    )
+    to_entity_name = StringField("To")
+    to_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
+    comment = StringField("Comment")
+    billing_period = StringField(
+        "Billing period",
+        validators=[Optional()],
+        render_kw={"type": "month", "class": "small"},
+    )
+
+    amount_1 = FloatField(
+        "Amount 1",
+        validators=[DataRequired(), NumberRange(min=0.01)],
+        render_kw={"placeholder": "10.00", "class": "small"},
+    )
+    currency_1 = SelectField(
+        "Currency 1",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        validators=[DataRequired()],
+    )
+    amount_2 = FloatField(
+        "Amount 2",
+        validators=[Optional(), NumberRange(min=0.01)],
+        render_kw={"placeholder": "27.00", "class": "small"},
+    )
+    currency_2 = SelectField(
+        "Currency 2",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR"), ("", "")],
+        validators=[Optional()],
+    )
+    amount_3 = FloatField(
+        "Amount 3",
+        validators=[Optional(), NumberRange(min=0.01)],
+        render_kw={"placeholder": "5.00", "class": "small"},
+    )
+    currency_3 = SelectField(
+        "Currency 3",
+        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR"), ("", "")],
+        validators=[Optional()],
+    )
+
+    tag_ids = SelectMultipleField("Tags", coerce=int, choices=[])
+    submit = SubmitField("Create Invoices")
+
+
 def _build_amounts_from_form(form: InvoiceForm) -> list[dict[str, str]]:
+    amounts = []
+    for amount_field, currency_field in (
+        (form.amount_1, form.currency_1),
+        (form.amount_2, form.currency_2),
+        (form.amount_3, form.currency_3),
+    ):
+        amount = amount_field.data
+        currency = currency_field.data
+        if amount is None:
+            continue
+        if not currency:
+            continue
+        value = Decimal(str(amount)).quantize(Decimal("0.01"))
+        amounts.append({"currency": currency.lower(), "amount": format(value, "f")})
+    return amounts
+
+
+def _build_amounts_from_bulk_form(form: InvoiceBulkForm) -> list[dict[str, str]]:
     amounts = []
     for amount_field, currency_field in (
         (form.amount_1, form.currency_1),
@@ -303,4 +371,121 @@ def pay(id):
         form=form,
         amounts=amounts,
         from_entity_balance=from_entity_balance,
+    )
+
+
+@invoice_bp.route("/bulk-add", methods=["GET", "POST"])
+@token_required
+def bulk_add():
+    api = get_refinance_api_client()
+    form = InvoiceBulkForm()
+
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    tag_name_by_id = {tag.id: tag.name for tag in all_tags}
+
+    fee_config = api.http("GET", "fees/config").json()
+    fee_preset_groups: list[dict] = []
+    _groups: dict[int, list[dict]] = {}
+    for item in fee_config:
+        tag_id = item["tag_id"]
+        _groups.setdefault(tag_id, []).append(
+            {"currency": item["currency"], "amount": item["amount"]}
+        )
+    for tag_id, amounts in _groups.items():
+        fee_preset_groups.append(
+            {
+                "tag_id": tag_id,
+                "tag_name": tag_name_by_id.get(tag_id, f"tag {tag_id}"),
+                "amounts": sorted(amounts, key=lambda x: x["currency"]),
+            }
+        )
+
+    form.from_tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
+    if request.method == "GET":
+        form.billing_period.data = date.today().strftime("%Y-%m")
+
+    def _render():
+        return render_template(
+            "invoice/bulk_add.jinja2",
+            form=form,
+            fee_preset_groups=fee_preset_groups,
+            f0_entity_id=Config.ENTITY_IDS["f0"],
+            fee_tag_id=Config.TAG_IDS["fee"],
+        )
+
+    if form.validate_on_submit():
+        amounts = _build_amounts_from_bulk_form(form)
+        if not amounts or not form.from_tag_ids.data:
+            flash("Preset selection required.")
+            return _render()
+        data = {
+            "from_tag_ids": form.from_tag_ids.data,
+            "to_entity_id": form.to_entity_id.data,
+            "comment": form.comment.data or None,
+            "amounts": amounts,
+            "tag_ids": form.tag_ids.data or [],
+            "billing_period": _normalize_billing_period(form.billing_period.data),
+        }
+        result = api.http("POST", "invoices/bulk", data=data).json()
+        invoice_ids = result.get("invoice_ids", [])
+        invoices = [
+            Invoice(**api.http("GET", f"invoices/{iid}").json()) for iid in invoice_ids
+        ]
+        return render_template(
+            "invoice/bulk_add_result.jinja2",
+            result=result,
+            invoices=invoices,
+        )
+
+    return _render()
+
+
+@invoice_bp.route("/bulk-add/manual", methods=["GET", "POST"])
+@token_required
+def bulk_add_manual():
+    api = get_refinance_api_client()
+    form = InvoiceBulkForm()
+
+    all_tags = [Tag(**x) for x in api.http("GET", "tags").json()["items"]]
+    form.from_tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+    form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
+
+    if request.method == "GET":
+        form.billing_period.data = date.today().strftime("%Y-%m")
+
+    if form.validate_on_submit():
+        amounts = _build_amounts_from_bulk_form(form)
+        if not amounts:
+            flash("At least one amount is required.")
+            return render_template(
+                "invoice/bulk_add_manual.jinja2", form=form, all_tags=all_tags
+            )
+        if not form.from_tag_ids.data:
+            flash("Select at least one From tag.")
+            return render_template(
+                "invoice/bulk_add_manual.jinja2", form=form, all_tags=all_tags
+            )
+        data = {
+            "from_tag_ids": form.from_tag_ids.data,
+            "to_entity_id": form.to_entity_id.data,
+            "comment": form.comment.data or None,
+            "amounts": amounts,
+            "tag_ids": form.tag_ids.data or [],
+            "billing_period": _normalize_billing_period(form.billing_period.data),
+        }
+        result = api.http("POST", "invoices/bulk", data=data).json()
+        invoice_ids = result.get("invoice_ids", [])
+        invoices = [
+            Invoice(**api.http("GET", f"invoices/{iid}").json()) for iid in invoice_ids
+        ]
+        return render_template(
+            "invoice/bulk_add_result.jinja2",
+            result=result,
+            invoices=invoices,
+        )
+
+    return render_template(
+        "invoice/bulk_add_manual.jinja2", form=form, all_tags=all_tags
     )

@@ -6,8 +6,6 @@ from app.models.entity import Entity
 from app.schemas.fee import (
     FeeAmountSchema,
     FeeFiltersSchema,
-    FeeInvoiceIssueReportSchema,
-    FeeInvoiceIssueSchema,
     FeeSchema,
 )
 from app.services.fee import FeeService
@@ -30,15 +28,3 @@ def get_fee_config(
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return service.get_fee_amounts()
-
-
-@router.post("/issue-invoices", response_model=FeeInvoiceIssueReportSchema)
-def issue_fee_invoices(
-    payload: FeeInvoiceIssueSchema,
-    service: FeeService = Depends(get_fee_service),
-    actor_entity: Entity = Depends(get_entity_from_token),
-):
-    return service.issue_fee_invoices(
-        billing_period=payload.billing_period,
-        actor_entity_id=actor_entity.id,
-    )

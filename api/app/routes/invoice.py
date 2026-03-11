@@ -6,6 +6,8 @@ from app.models.entity import Entity
 from app.schemas.base import PaginationSchema
 from app.schemas.invoice import (
     InvoiceAutoPayReportSchema,
+    InvoiceBulkCreateReportSchema,
+    InvoiceBulkCreateSchema,
     InvoiceCreateSchema,
     InvoiceFiltersSchema,
     InvoiceSchema,
@@ -15,6 +17,15 @@ from app.services.invoice import InvoiceService
 from fastapi import APIRouter, Depends
 
 invoice_router = APIRouter(prefix="/invoices", tags=["Invoices"])
+
+
+@invoice_router.post("/bulk", response_model=InvoiceBulkCreateReportSchema)
+def bulk_create_invoices(
+    payload: InvoiceBulkCreateSchema,
+    invoice_service: InvoiceService = Depends(get_invoice_service),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    return invoice_service.bulk_create(payload, actor_entity_id=actor_entity.id)
 
 
 @invoice_router.post("", response_model=InvoiceSchema)

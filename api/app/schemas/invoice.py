@@ -96,3 +96,30 @@ class InvoiceFiltersSchema(TagsFilterSchemaMixin, BaseFilterSchema):
 
 class InvoiceAutoPayReportSchema(BaseSchema):
     paid: int
+
+
+class InvoiceBulkCreateSchema(BaseUpdateSchema):
+    from_entity_ids: list[int] = Field(default_factory=list)
+    from_tag_ids: list[int] = Field(default_factory=list)
+    to_entity_id: int
+    amounts: list[InvoiceAmountCreateSchema] = Field(default_factory=list)
+    billing_period: date | None = None
+    tag_ids: list[int] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_schema(self) -> "InvoiceBulkCreateSchema":
+        if not self.from_tag_ids:
+            raise ValueError("Must provide from_tag_ids")
+        if not self.amounts:
+            raise ValueError("At least one amount must be provided")
+        currencies = [item.currency for item in self.amounts]
+        if len(currencies) != len(set(currencies)):
+            raise ValueError("Amounts must use unique currencies")
+        return self
+
+
+class InvoiceBulkCreateReportSchema(BaseSchema):
+    billing_period: date
+    created_count: int
+    skipped_count: int
+    invoice_ids: list[int]

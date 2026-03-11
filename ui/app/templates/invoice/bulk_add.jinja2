@@ -1,0 +1,89 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Issue Fee Invoices{% endblock %}
+
+{% block content %}
+<div class="invoice-form-layout shortcut-form-container">
+    <section class="entry-form-card">
+        <form method="post" id="bulk-invoice-form" class="entry-form">
+            {{ form.hidden_tag() }}
+            {# Hidden fields — defaults pre-filled; JS overwrites from/preset amounts on selection #}
+            <input type="hidden" name="to_entity_id" value="{{ f0_entity_id }}">
+            <input type="hidden" name="tag_ids" value="{{ fee_tag_id }}">
+            <input type="hidden" name="from_tag_ids" id="preset-from-tag-id" value="">
+            <input type="hidden" name="amount_1" id="preset-amount-1" value="">
+            <input type="hidden" name="currency_1" id="preset-currency-1" value="GEL">
+            <input type="hidden" name="amount_2" id="preset-amount-2" value="">
+            <input type="hidden" name="currency_2" id="preset-currency-2" value="">
+            <input type="hidden" name="amount_3" id="preset-amount-3" value="">
+            <input type="hidden" name="currency_3" id="preset-currency-3" value="">
+
+            {% if fee_preset_groups %}
+            <div class="form-group">
+                <label class="form-label">Preset</label>
+                <div class="invoice-amount-choices" id="fee-preset-choices">
+                    {% for group in fee_preset_groups %}
+                    <button
+                        type="button"
+                        class="invoice-amount-choice"
+                        data-tag-id="{{ group.tag_id }}"
+                        data-preset='{{ group.amounts | tojson }}'
+                    >
+                        {{ group.tag_name }}:
+                        {% for a in group.amounts %}{{ a.amount }} {{ a.currency | upper }}{% if not loop.last %} OR {% endif %}{% endfor %}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-group invoice-short-input">
+                <label class="form-label" for="billing_period">Billing period</label>
+                {{ form.billing_period(class_='form-input') }}
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="big-button" id="preset-submit-btn" disabled>Create Invoices</button>
+            </div>
+        </form>
+
+        <p class="secondary"><a href="{{ url_for('invoice.bulk_add_manual') }}">Custom bulk creation →</a></p>
+    </section>
+</div>
+
+<script>
+(function () {
+    const fromTagInput = document.getElementById('preset-from-tag-id');
+    const amountSlots = [
+        { amount: document.getElementById('preset-amount-1'), currency: document.getElementById('preset-currency-1') },
+        { amount: document.getElementById('preset-amount-2'), currency: document.getElementById('preset-currency-2') },
+        { amount: document.getElementById('preset-amount-3'), currency: document.getElementById('preset-currency-3') },
+    ];
+    const submitBtn = document.getElementById('preset-submit-btn');
+    const buttons = Array.from(document.querySelectorAll('#fee-preset-choices .invoice-amount-choice'));
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            buttons.forEach(function (b) { b.classList.remove('is-active'); });
+            btn.classList.add('is-active');
+            submitBtn.disabled = false;
+
+            fromTagInput.value = btn.getAttribute('data-tag-id');
+
+            const preset = JSON.parse(btn.getAttribute('data-preset'));
+
+            amountSlots.forEach(function (slot) {
+                slot.amount.value = '';
+                slot.currency.value = '';
+            });
+
+            preset.forEach(function (entry, i) {
+                if (i >= amountSlots.length) return;
+                amountSlots[i].amount.value = entry.amount;
+                amountSlots[i].currency.value = entry.currency.toUpperCase();
+            });
+        });
+    });
+}());
+</script>
+{% endblock %}

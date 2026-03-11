@@ -1,0 +1,17 @@
+{% extends 'base.jinja2' %}
+{% from "invoice/macro_list.jinja2" import invoice_list with context %}
+
+{% block title %}Invoices Created{% endblock %}
+
+{% block content %}
+<p class="secondary">
+    Billing period {{ (result.billing_period | string)[:7] }} &mdash;
+    {{ result.created_count }} created{% if result.skipped_count %}, {{ result.skipped_count }} skipped{% endif %}
+</p>
+
+{{ invoice_list(invoices) }}
+
+<div class="tx-page-actions" style="margin-top:1.5rem;">
+    <a href="{{ url_for('invoice.bulk_add') }}" class="tx-add-btn">Create more</a>
+</div>
+{% endblock %}
