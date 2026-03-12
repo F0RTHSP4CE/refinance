@@ -62,18 +62,19 @@ def handle_foo_exception(error):
 
 @app.before_request
 def load_current_user_and_balance():
-    if re.match(r"^/auth|^/static", request.path):
+    if re.match(r"^/auth|^/static|^/style\.css", request.path):
         return
     if "token" in session:
         api = get_refinance_api_client()
-        r = api.http("GET", "entities/me")
-        if r.status_code == 200:
-            g.actor_entity = r.json()
-            b = api.http("GET", "balances/%s" % g.actor_entity["id"])
-            g.actor_entity_balance = b.json()
-            return
-        else:
+        try:
+            r = api.http("GET", "entities/me")
+        except ApplicationError:
             session.pop("token")
+            return redirect(url_for("auth.login"))
+        g.actor_entity = r.json()
+        b = api.http("GET", "balances/%s" % g.actor_entity["id"])
+        g.actor_entity_balance = b.json()
+        return
     return redirect(url_for("auth.login"))
 
 
