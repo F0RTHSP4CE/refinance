@@ -204,6 +204,37 @@ app.jinja_env.globals["human_readable_date"] = human_readable_date
 app.jinja_env.globals["css_cache_buster"] = app.config["CSS_CACHE_BUSTER"]
 
 
+def format_billing_period(bp) -> str:
+    """Format a billing_period (date object or ISO string) as '2026 MAR'."""
+    if not bp:
+        return ""
+    if isinstance(bp, str):
+        parts = bp[:7].split("-")
+        if len(parts) < 2:
+            return bp
+        year, month = parts[0], int(parts[1])
+    else:
+        year, month = bp.year, bp.month
+    months = [
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC",
+    ]
+    return f"{year} {months[month - 1]}"
+
+
+app.jinja_env.globals["format_billing_period"] = format_billing_period
+
+
 # dev
 app.jinja_env.auto_reload = True
 app.config["TEMPLATES_AUTO_RELOAD"] = True

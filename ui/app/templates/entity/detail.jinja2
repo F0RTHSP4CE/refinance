@@ -65,12 +65,20 @@
                     </a>
                 </div>
                 {% if balance.completed or balance.draft %}
+                {%- set ns = namespace(completed_has_neg=false, draft_has_neg=false) -%}
+                {%- for currency, amount in balance.completed.items() -%}
+                    {%- if amount|float < 0 -%}{%- set ns.completed_has_neg = true -%}{%- endif -%}
+                {%- endfor -%}
+                {%- if balance.draft -%}
+                {%- for currency, amount in balance.draft.items() -%}
+                    {%- if amount|float < 0 -%}{%- set ns.draft_has_neg = true -%}{%- endif -%}
+                {%- endfor -%}
+                {%- endif -%}
                 <div class="entity-balance-list">
                     {% for currency,amount in balance.completed.items() %}
                     <div class="entity-balance-row">
-                        <strong class="entity-balance-amount right-align {% if amount|float < 0 %}amount-negative{% endif %}">
-                            {{ amount }}
-                        </strong>
+                        {% if ns.completed_has_neg %}<span class="entity-balance-warning">{% if amount|float < 0 %}⚠️{% endif %}</span>{% endif %}
+                        <strong class="entity-balance-amount right-align">{{ amount }}</strong>
                         <span class="entity-balance-currency">{{ currency | upper }}</span>
                     </div>
                     {% endfor %}
@@ -84,9 +92,7 @@
                     </div>
                     {% for currency,amount in balance.draft.items() %}
                     <div class="entity-balance-row entity-balance-row-draft">
-                        <strong class="entity-balance-amount right-align {% if amount|float < 0 %}amount-negative{% endif %}">
-                            {{ amount }}
-                        </strong>
+                        <strong class="entity-balance-amount right-align">{{ amount }}</strong>
                         <span class="entity-balance-currency">{{ currency | upper }}</span>
                     </div>
                     {% endfor %}
@@ -98,7 +104,7 @@
             </section>
 
             <section class="entity-card">
-                <h3 class="entity-card-title">Invoices <span class="entity-invoice-count">({{ invoices_total }})</span></h3>
+                <h3 class="entity-card-title">Invoices{% if invoices_unpaid_count > 0 %} <span class="entity-invoice-count">({{ invoices_unpaid_count }} unpaid)</span>{% endif %}</h3>
                 {% if invoices %}
                 <ul class="entity-invoice-compact-list">
                     {% for invoice in invoices[:6] %}
@@ -111,12 +117,12 @@
                                 {{ invoice.paid_amount }} {{ invoice.paid_currency }}
                                 {% else %}
                                 {% for item in invoice.amounts %}
-                                {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} or {% endif %}
+                                {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} / {% endif %}
                                 {% endfor %}
                                 {% endif %}
                             </span>
                             <span class="entity-invoice-compact-meta">
-                                #{{ invoice.id }} • {{ human_readable_date(invoice.created_at) }} • {{ invoice.status }}
+                                #{{ invoice.id }} • {% if invoice.billing_period %}{{ format_billing_period(invoice.billing_period) }}{% else %}{{ human_readable_date(invoice.created_at) }}{% endif %} • {{ invoice.status }}
                             </span>
                         </a>
                     </li>

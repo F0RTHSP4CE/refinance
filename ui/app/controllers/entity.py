@@ -350,6 +350,16 @@ def detail(id):
     invoices_total = invoices_page["total"]
     invoices = [Invoice(**item) for item in invoices_page["items"]]
 
+    invoices_unpaid_count = (
+        api.http(
+            "GET",
+            "invoices",
+            params={"from_entity_id": id, "status": "pending", "skip": 0, "limit": 1},
+        )
+        .json()
+        .get("total", 0)
+    )
+
     # For paid invoices, prefer the settled transaction amount/currency in compact UI.
     for invoice in invoices[:6]:
         status = (
@@ -460,6 +470,7 @@ def detail(id):
         limit=limit,
         invoices=invoices,
         invoices_total=invoices_total,
+        invoices_unpaid_count=invoices_unpaid_count,
         invoice_page=invoice_page,
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,

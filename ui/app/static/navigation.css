@@ -104,12 +104,12 @@ nav>ul>li>a {
 }
 
 .mobile-menu a.amount-negative {
-  color: red;
+  color: black;
 }
 
 .mobile-menu a.amount-negative:hover {
-  background: red;
-  color: white;
+  background: transparent;
+  color: black;
 }
 
 .mobile-menu-header {

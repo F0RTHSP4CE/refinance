@@ -1,4 +1,15 @@
 /* HOME PAGE */
+.home-title {
+  font-family: 'Unbounded', Arial, sans-serif;
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  line-height: 1;
+  margin: 0 0 1.5rem 0;
+  color: black;
+}
+
 .home-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -16,7 +27,7 @@
 
 .home-card h2 {
   margin: 0;
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 900;
   letter-spacing: 0.2px;
 }
@@ -89,8 +100,8 @@
   display: block;
   width: 100%;
   padding: 0.5rem 0.65rem;
-  background: red;
-  color: white;
+  background: white;
+  color: red;
   border: 2px solid red;
   border-radius: 0;
   text-decoration: none;
@@ -104,15 +115,15 @@
 }
 
 .home-unpaid-invoice:hover {
-  background: white;
-  color: red;
+  background: red;
+  color: white;
   box-shadow: 4px 4px 0px red;
   transform: translate(-2px, -2px);
 }
 
 .home-unpaid-invoice:active {
-  background: white;
-  color: red;
+  background: red;
+  color: white;
   transform: translate(4px, 4px);
   box-shadow: none;
 }
@@ -150,16 +161,27 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  text-decoration: none;
+  box-shadow: 5px 5px 0 black;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .home-card-button:hover {
   background: white;
   color: black;
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 black;
+}
+
+.home-card-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
 }
 
 .home-card-button-secondary {
   background: white;
   color: black;
+  box-shadow: 5px 5px 0 black;
 }
 
 .home-card-button-secondary:hover {
@@ -170,6 +192,7 @@
 .home-card-button-outline {
   background: transparent;
   color: black;
+  box-shadow: 5px 5px 0 black;
 }
 
 .home-card-button-outline:hover {
@@ -177,9 +200,23 @@
   color: white;
 }
 
+.home-card .entity-invoice-compact-list {
+  margin: 0;
+}
+
 @media (max-width: 680px) {
   .home-card {
     box-shadow: none;
+  }
+
+  .home-card .entity-balance-currency,
+  .home-card .entity-balance-amount,
+  .home-card .entity-balance-warning {
+    font-size: clamp(2rem, 7vw, 2.8rem);
+  }
+
+  .home-card .entity-balance-list {
+    width: 100%;
   }
 }
 

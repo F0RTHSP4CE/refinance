@@ -254,8 +254,8 @@
 .entity-balance-row {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
+  justify-content: flex-end;
+  gap: 0.6rem;
   border-top: 1px solid #ddd;
   padding: 0.65rem 0;
   background: transparent;
@@ -267,6 +267,24 @@
 .entity-balance-row:first-child {
   border-top: 0;
   padding-top: 0;
+}
+
+.entity-balance-warning {
+  margin-right: auto;
+  width: 2.4rem;
+  flex-shrink: 0;
+  text-align: center;
+  font-style: normal;
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+  line-height: 1;
+}
+
+.entity-balance-currency {
+  margin-left: 0;
+}
+
+.entity-balance-row .amount-negative::before {
+  content: none;
 }
 
 .entity-balance-row-draft {
@@ -828,9 +846,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  border: 3px solid black;
+  border: 3px solid var(--entity-card-color, black);
   background: transparent;
-  box-shadow: 7px 7px 0 black;
+  box-shadow: 7px 7px 0 var(--entity-card-color, black);
   padding: 1.4rem;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   min-height: 100%;
@@ -843,11 +861,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    135deg,
-    var(--entity-card-tint, #ffffff) 0%,
-    var(--entity-card-tint-strong, #fafaf7) 100%
-  );
+  background: #ffffff;
   z-index: -2;
 }
 
@@ -1048,27 +1062,19 @@
 }
 
 .amount-negative {
-  color: #fff;
-  background: #ff0000;
-  display: inline-block;
-  padding: 0.06em 0.3em;
-  line-height: 1;
+  color: black;
 }
 
-.balance-draft.amount-negative {
-  color: #ff0000;
-  background: transparent;
-  display: inline;
-  padding: 0;
-  line-height: 1.1;
+.amount-negative::before {
+  content: '⚠️ ';
 }
 
-.entity-balance-row-draft .amount-negative {
-  color: #ff0000;
-  background: transparent;
-  display: inline;
-  padding: 0;
+.balance-draft.amount-negative::before,
+.entity-balance-row-draft .amount-negative::before {
+  content: none;
 }
+
+
 
 .entity-list-card-comment {
   font-size: 0.95rem;

@@ -24,12 +24,16 @@ nav a {
 /* zebra stripes removed */
 
 .amount-negative {
-  color: red;
+  color: black;
+}
+
+.amount-negative::before {
+  content: '⚠️ ';
 }
 
 .user .amount-negative {
-  background: red;
-  color: white;
+  color: black;
+  background: transparent;
 }
 
 .fee-paid {

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
+from app.schemas import Invoice
 from flask import Blueprint, g, render_template
 
 index_bp = Blueprint("index", __name__)
@@ -26,6 +27,16 @@ def index():
     ).json()
 
     unpaid_invoices = unpaid_response.get("items", [])
+
+    recent_invoices_resp = api.http(
+        "GET",
+        "invoices",
+        params={"from_entity_id": actor_entity_id, "skip": 0, "limit": 6},
+    ).json()
+    recent_invoices = [
+        Invoice(**item) for item in recent_invoices_resp.get("items", [])
+    ]
+
     unpaid_totals = defaultdict(Decimal)
     unpaid_invoice_cards: list[dict[str, object]] = []
     for invoice in unpaid_invoices:
@@ -59,4 +70,5 @@ def index():
         unpaid_fee_count=len(unpaid_invoices),
         unpaid_fee_summary=unpaid_fee_summary,
         unpaid_invoice_cards=unpaid_invoice_cards,
+        recent_invoices=recent_invoices,
     )

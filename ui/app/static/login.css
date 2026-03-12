@@ -119,31 +119,33 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-sizing: border-box;
   display: block;
   text-align: center;
+  box-shadow: 5px 5px 0 black;
 }
 
 .login-button:hover,
 .big-button:hover {
   background: white;
   color: black;
-  box-shadow: 4px 4px 0px black;
+  box-shadow: 7px 7px 0px black;
   transform: translate(-2px, -2px);
 }
 
 .login-button:active,
 .big-button:active {
-  transform: translate(4px, 4px);
-  box-shadow: none;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
 }
 
 .big-button.big-button-outline {
   background: white;
   color: black;
+  box-shadow: 5px 5px 0 black;
 }
 
 .big-button.big-button-outline:hover {
@@ -154,12 +156,14 @@
 .big-button.big-button-danger-outline {
   border-color: #ff0000;
   color: #ff0000;
+  box-shadow: 5px 5px 0 #ff0000;
 }
 
 .big-button.big-button-danger-outline:hover {
   background: #ff0000;
   border-color: #ff0000;
   color: white;
+  box-shadow: 7px 7px 0 #ff0000;
 }
 
 .big-button.big-button-inline {

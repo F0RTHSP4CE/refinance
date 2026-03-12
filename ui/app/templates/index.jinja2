@@ -1,23 +1,40 @@
 {% extends "base.jinja2" %}
 {% block content %}
+<h1 class="home-title">REFINANCE</h1>
 <section class="home-cards" aria-label="Main actions">
 	<article class="home-card">
 		<h2>Balance</h2>
-		<div class="home-card-summary">
-			{% if g.actor_entity_balance and g.actor_entity_balance["completed"] %}
-			<div class="home-balance-grid" aria-label="Balances">
-				{% for currency, value in g.actor_entity_balance["completed"].items() %}
-				<div class="home-balance-mini">
-					<div class="home-balance-mini-currency">{{ currency | upper }}</div>
-					<div class="home-balance-mini-amount {% if value | float < 0 %}amount-negative{% endif %}">{{ value
-						}}</div>
-				</div>
-				{% endfor %}
+		{% if g.actor_entity_balance and g.actor_entity_balance["completed"] %}
+		{%- set bal_completed = g.actor_entity_balance["completed"] -%}
+		{%- set bal_draft = g.actor_entity_balance.get("draft", {}) -%}
+		{%- set ns = namespace(completed_has_neg=false, draft_has_neg=false) -%}
+		{%- for currency, amount in bal_completed.items() -%}
+			{%- if amount|float < 0 -%}{%- set ns.completed_has_neg = true -%}{%- endif -%}
+		{%- endfor -%}
+		{%- for currency, amount in bal_draft.items() -%}
+			{%- if amount|float < 0 -%}{%- set ns.draft_has_neg = true -%}{%- endif -%}
+		{%- endfor -%}
+		<div class="entity-balance-list">
+			{% for currency, value in bal_completed.items() %}
+			<div class="entity-balance-row">
+				{% if ns.completed_has_neg %}<span class="entity-balance-warning">{% if value|float < 0 %}⚠️{% endif %}</span>{% endif %}
+				<strong class="entity-balance-amount right-align">{{ value }}</strong>
+				<span class="entity-balance-currency">{{ currency | upper }}</span>
 			</div>
-			{% else %}
-			<p class="home-card-note">No balance yet.</p>
+			{% endfor %}
+			{% if bal_draft %}
+			<div class="entity-balance-separator"><span>Draft</span></div>
+			{% for currency, value in bal_draft.items() %}
+			<div class="entity-balance-row entity-balance-row-draft">
+				<strong class="entity-balance-amount right-align">{{ value }}</strong>
+				<span class="entity-balance-currency">{{ currency | upper }}</span>
+			</div>
+			{% endfor %}
 			{% endif %}
 		</div>
+		{% else %}
+		<p class="home-card-note">No balance yet.</p>
+		{% endif %}
 		<a class="home-card-button" href="{{ url_for('deposit.add_keepz') }}">💰 Top up by card</a>
 		<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
 			crypto</a>
@@ -25,40 +42,34 @@
 
 	<article class="home-card">
 		<h2>Fee / Invoices{% if unpaid_fee_count > 0 %} <span class="home-card-title-count">({{ unpaid_fee_count }})</span>{% endif %}</h2>
-		<div class="home-card-summary">
-			{% if unpaid_fee_count > 0 %}
-			{% if unpaid_invoice_cards %}
-			<p class="home-card-value home-card-value-total">Total unpaid: <span class="home-card-total">{% if
-					unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span
-						class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{
-					unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
-			{% endif %}
-			{% else %}
-			<p class="home-card-value">✔️ No unpaid invoices</p>
-			{% endif %}
-		</div>
-		{% if unpaid_invoice_cards %}
-					<div class="home-unpaid-grid" aria-label="Unpaid invoices">
-				{% for invoice in unpaid_invoice_cards %}
-				<a class="home-unpaid-invoice" href="{{ url_for('invoice.detail', id=invoice.id) }}">
-					<div class="home-unpaid-invoice-amount">
-						{% for amount in invoice.amounts %}{{ amount }}{% if not loop.last %} <span class="home-approx"
-							aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}
-					</div>
+		{% if unpaid_fee_count == 0 %}
+		<p class="home-card-value">✔️ Everything is paid</p>
+		{% endif %}
+		{% if recent_invoices %}
+		<ul class="entity-invoice-compact-list">
+			{% for invoice in recent_invoices %}
+			<li class="entity-invoice-compact-item">
+				<a href="{{ url_for('invoice.detail', id=invoice.id) }}"
+					class="entity-invoice-compact-link {% if invoice.status == 'paid' %}entity-invoice-compact-link-paid{% endif %}">
+					<span class="entity-invoice-compact-amount">
+						{% for item in invoice.amounts %}{{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} / {% endif %}{% endfor %}
+					</span>
+					<span class="entity-invoice-compact-meta">
+						#{{ invoice.id }} • {% if invoice.billing_period %}{{ format_billing_period(invoice.billing_period) }}{% else %}{{ human_readable_date(invoice.created_at) }}{% endif %} • {{ invoice.status }}
+					</span>
 				</a>
-				{% endfor %}
-			</div>
-						<p class="home-card-note"><strong>Top up your balance!</strong> Invoices will be paid automatically.</p>
-		{% else %}
-			<p class="home-card-note">Top up your balance so they are paid automatically.</p>
+			</li>
+			{% endfor %}
+		</ul>
+		{% if unpaid_fee_count > 0 %}
+		<p class="home-card-value home-card-value-total">Total unpaid: <span class="home-card-total">{% if unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{ unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
+		<p class="home-card-note"><strong>Top up your balance!</strong> Invoices will be paid automatically.</p>
+		{% endif %}
 		{% endif %}
 	</article>
 
 	<article class="home-card">
-		<h2>Fridge &amp; Coffee Machine</h2>
-		<div class="home-card-summary">
-			<p class="home-card-note">Pay for drinks, snacks and coffee.<br>Get paid when you refill them.</p>
-		</div>
+		<h2>Fridge &amp; Coffee</h2>
 		<div class="home-card-actions">
 			<a class="home-card-button" href="{{ url_for('transaction.shortcut_fridge') }}">🍾
 				Pay fridge</a>
@@ -71,10 +82,7 @@
 	</article>
 
 	<article class="home-card">
-		<h2>Transfer</h2>
-		<div class="home-card-summary">
-			<p class="home-card-note">Send money between residents/members.</p>
-		</div>
+		<h2>Send &amp; Receive</h2>
 		<div class="home-card-actions">
 			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_pay') }}">💸
 				Transfer</a>
