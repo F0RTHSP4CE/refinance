@@ -23,6 +23,7 @@ from app.routes.pos import pos_router
 from app.routes.split import split_router
 from app.routes.stats import router as stats_router
 from app.routes.tag import tag_router
+from app.routes.tasks import tasks_router
 from app.routes.token import token_router
 from app.routes.transaction import transaction_router
 from app.routes.treasury import treasury_router
@@ -133,6 +134,7 @@ app.include_router(deposits_router)
 app.include_router(deposit_provider_callbacks_router)
 app.include_router(keepz_router)
 app.include_router(notification_router)
+app.include_router(tasks_router)
 app.include_router(fee_router)
 app.include_router(stats_router)
 app.include_router(treasury_router)
