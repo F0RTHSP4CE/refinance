@@ -28,6 +28,7 @@ class ServiceContainer:
         self._fee_service = None
         self._stats_service = None
         self._token_service = None
+        self._notification_service = None
 
     @property
     def tag_service(self):
@@ -221,9 +222,18 @@ class ServiceContainer:
             self._token_service = TokenService(
                 db=self.db,
                 entity_service=self.entity_service,
+                notification_service=self.notification_service,
                 config=self.config,
             )
         return self._token_service
+
+    @property
+    def notification_service(self):
+        if self._notification_service is None:
+            from app.services.notification import NotificationService
+
+            self._notification_service = NotificationService(config=self.config)
+        return self._notification_service
 
 
 def get_container(
@@ -299,3 +309,7 @@ def get_stats_service(container: ServiceContainer = Depends(get_container)):
 
 def get_token_service(container: ServiceContainer = Depends(get_container)):
     return container.token_service
+
+
+def get_notification_service(container: ServiceContainer = Depends(get_container)):
+    return container.notification_service

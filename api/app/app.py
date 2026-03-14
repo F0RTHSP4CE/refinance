@@ -18,6 +18,7 @@ from app.routes.entity import entity_router
 from app.routes.fee import router as fee_router
 from app.routes.invoice import invoice_router
 from app.routes.keepz import keepz_router
+from app.routes.notification import notification_router
 from app.routes.pos import pos_router
 from app.routes.split import split_router
 from app.routes.stats import router as stats_router
@@ -27,6 +28,7 @@ from app.routes.transaction import transaction_router
 from app.routes.treasury import treasury_router
 from app.services.token import TokenService
 from app.tasks.auto_exchange import schedule_auto_exchange
+from app.tasks.balance_reminder import schedule_balance_reminders
 from app.tasks.invoice_auto_pay import schedule_invoice_auto_pay
 from app.tasks.keepz_payments_poll import schedule_keepz_poll
 from fastapi import FastAPI, Request
@@ -47,6 +49,7 @@ async def lifespan(app: FastAPI):
     app.state.invoice_auto_pay_task = asyncio.create_task(schedule_invoice_auto_pay())
     app.state.keepz_poll_task = asyncio.create_task(schedule_keepz_poll())
     app.state.auto_exchange_task = asyncio.create_task(schedule_auto_exchange())
+    app.state.balance_reminder_task = asyncio.create_task(schedule_balance_reminders())
     try:
         yield
     finally:
@@ -54,6 +57,7 @@ async def lifespan(app: FastAPI):
             "invoice_auto_pay_task",
             "keepz_poll_task",
             "auto_exchange_task",
+            "balance_reminder_task",
         ):
             task = getattr(app.state, task_name, None)
             if task is not None:
@@ -128,6 +132,7 @@ app.include_router(pos_router)
 app.include_router(deposits_router)
 app.include_router(deposit_provider_callbacks_router)
 app.include_router(keepz_router)
+app.include_router(notification_router)
 app.include_router(fee_router)
 app.include_router(stats_router)
 app.include_router(treasury_router)
