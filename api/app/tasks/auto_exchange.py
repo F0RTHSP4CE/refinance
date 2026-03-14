@@ -7,44 +7,26 @@ currencies to cover negative-balance currencies for all eligible entities
 
 from __future__ import annotations
 
-import asyncio
 import datetime
-import logging
 
-from app.config import get_config
-from app.db import DatabaseConnection
+from app.config import Config
 from app.dependencies.services import ServiceContainer
-from app.uow import UnitOfWork
-
-logger = logging.getLogger(__name__)
+from app.tasks import PeriodicTask
 
 
-def run_auto_exchange() -> int:
-    """Execute auto-balance for all eligible entities. Returns the number of exchanges made."""
-    config = get_config()
-    db_conn = DatabaseConnection(config)
-    session = db_conn.get_session()
-    with UnitOfWork(session) as uow:
-        container = ServiceContainer(uow, config)
+class AutoExchangeTask(PeriodicTask):
+    def next_delay(self) -> float:
+        now = datetime.datetime.now()
+        target = datetime.datetime.combine(now.date(), datetime.time(11, 58))
+        if now >= target:
+            target += datetime.timedelta(days=1)
+        return (target - now).total_seconds()
+
+    def execute(self, container: ServiceContainer, config: Config) -> int:
         actor = container.entity_service.get(1)  # f0 / hackerspace entity
         result = container.currency_exchange_service.run_auto_balance_for_all(actor)
-    total = sum(len(r.receipts) for r in result.results)
-    return total
-
-
-def _seconds_until_next_1158(now: datetime.datetime) -> float:
-    target = datetime.datetime.combine(now.date(), datetime.time(11, 58))
-    if now >= target:
-        target = target + datetime.timedelta(days=1)
-    return (target - now).total_seconds()
+        return sum(len(r.receipts) for r in result.results)
 
 
 async def schedule_auto_exchange() -> None:
-    while True:
-        delay = _seconds_until_next_1158(datetime.datetime.now())
-        await asyncio.sleep(delay)
-        try:
-            exchange_count = await asyncio.to_thread(run_auto_exchange)
-            logger.info("Auto-exchange completed. exchanges=%s", exchange_count)
-        except Exception:
-            logger.exception("Auto-exchange failed", exc_info=True)
+    await AutoExchangeTask().schedule()

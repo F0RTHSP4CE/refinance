@@ -11,20 +11,18 @@ Entities with a non-negative balance *and* no unpaid invoices are silently skipp
 
 from __future__ import annotations
 
-import asyncio
 import datetime
 import logging
 import random
 from decimal import ROUND_UP, Decimal
 from typing import TYPE_CHECKING
 
-from app.config import get_config
-from app.db import DatabaseConnection
+from app.config import Config
 from app.dependencies.services import ServiceContainer
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
 from app.services.notification import NotificationService
-from app.uow import UnitOfWork
+from app.tasks import PeriodicTask
 from sqlalchemy import nullslast
 
 if TYPE_CHECKING:
@@ -217,21 +215,6 @@ def send_reminders_to_all(
     return sent_count
 
 
-def run_balance_reminders() -> int:
-    """Entry point for the background task. Returns number of reminders sent."""
-    config = get_config()
-    db_conn = DatabaseConnection(config)
-    session = db_conn.get_session()
-
-    with UnitOfWork(session) as uow:
-        container = ServiceContainer(uow.db, config)
-        return send_reminders_to_all(
-            db=uow.db,
-            balance_service=container.balance_service,
-            notification_service=NotificationService(config),
-        )
-
-
 # ---------------------------------------------------------------------------
 # Scheduler
 # ---------------------------------------------------------------------------
@@ -239,7 +222,6 @@ def run_balance_reminders() -> int:
 
 def _seconds_until_next_monday_10am(now: datetime.datetime) -> float:
     """Return seconds until the next Monday at 10:00 (local time)."""
-    # weekday() == 0 → Monday
     days_ahead = (7 - now.weekday()) % 7
     target = datetime.datetime.combine(
         now.date() + datetime.timedelta(days=days_ahead),
@@ -250,16 +232,21 @@ def _seconds_until_next_monday_10am(now: datetime.datetime) -> float:
     return (target - now).total_seconds()
 
 
-async def schedule_balance_reminders() -> None:
-    while True:
-        delay = _seconds_until_next_monday_10am(datetime.datetime.now())
-        logger.info(
-            "Balance reminder scheduler: next run in %.0f s (Monday 10:00)",
-            delay,
+class BalanceReminderTask(PeriodicTask):
+    def next_delay(self) -> float:
+        return _seconds_until_next_monday_10am(datetime.datetime.now())
+
+    def execute(self, container: ServiceContainer, config: Config) -> int:
+        return send_reminders_to_all(
+            db=container.db,
+            balance_service=container.balance_service,
+            notification_service=NotificationService(config),
         )
-        await asyncio.sleep(delay)
-        try:
-            sent = await asyncio.to_thread(run_balance_reminders)
-            logger.info("Balance reminders completed. sent=%s", sent)
-        except Exception:
-            logger.exception("Balance reminder task failed")
+
+
+def run_balance_reminders() -> int:
+    return BalanceReminderTask().run()
+
+
+async def schedule_balance_reminders() -> None:
+    await BalanceReminderTask().schedule()
