@@ -1,9 +1,13 @@
-import json
 from os import getenv
 
 
 class Config:
     REFINANCE_API_BASE_URL = getenv("REFINANCE_API_BASE_URL", "http://api:8000")
+
+    UI_CURRENCIES = ["GEL", "USD", "EUR"]
+    PREFERRED_CURRENCY = "GEL"
+    CURRENCY_CHOICES = [(currency, currency) for currency in UI_CURRENCIES]
+
     FRIDGE_PRESETS = [
         {"amount": 5, "currency": "GEL", "label": "5 GEL"},
         {"amount": 10, "currency": "GEL", "label": "10 GEL"},

@@ -1,3 +1,4 @@
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Balance, Entity, Split, Tag, Transaction
@@ -17,6 +18,10 @@ from wtforms.validators import DataRequired, NumberRange, Optional
 split_bp = Blueprint("split", __name__)
 
 
+def _normalize_currency(value: str | None) -> str:
+    return str(value or "").strip().upper()
+
+
 class SplitForm(FlaskForm):
     recipient_entity_name = StringField("Recipient")
     recipient_entity_id = IntegerField(
@@ -33,8 +38,9 @@ class SplitForm(FlaskForm):
     )
     currency = SelectField(
         "Currency",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
-        default="GEL",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     tag_ids = SelectMultipleField(
@@ -107,7 +113,7 @@ class SplitFilterForm(FlaskForm):
     )
     currency = SelectField(
         "Currency",
-        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=[("", "")] + Config.CURRENCY_CHOICES,
     )
     comment = StringField("Comment")
     performed = SelectField(
@@ -162,6 +168,7 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        data["currency"] = _normalize_currency(data.get("currency"))
         api.http("POST", "splits", data=data)
         return redirect(url_for("split.list"))
     return render_template("split/add.jinja2", form=form, all_tags=all_tags)
@@ -186,6 +193,7 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        data["currency"] = _normalize_currency(data.get("currency"))
         api.http("PATCH", f"splits/{id}", data=data)
         return redirect(url_for("split.detail", id=id))
 

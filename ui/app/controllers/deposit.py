@@ -1,3 +1,4 @@
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Deposit, DepositStatus, Treasury
@@ -24,6 +25,10 @@ from wtforms import (
 from wtforms.validators import DataRequired, NumberRange, Optional
 
 deposit_bp = Blueprint("deposit", __name__)
+
+
+def _normalize_currency(value: str | None) -> str:
+    return str(value or "").strip().upper()
 
 
 class CryptAPIDepositForm(FlaskForm):
@@ -54,7 +59,9 @@ class KeepzDepositForm(FlaskForm):
 
     currency = SelectField(
         "Currency",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     amount = FloatField(
@@ -121,7 +128,7 @@ class DepositFilterForm(FlaskForm):
     )
     currency = SelectField(
         "Currency",
-        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=[("", "")] + Config.CURRENCY_CHOICES,
     )
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in DepositStatus]
@@ -208,7 +215,7 @@ def add_keepz():
             params = {
                 "to_entity_id": int(form.to_entity_id.data),
                 "amount": form.amount.data,
-                "currency": form.currency.data,
+                "currency": _normalize_currency(form.currency.data),
             }
             if form.note.data:
                 params["note"] = form.note.data

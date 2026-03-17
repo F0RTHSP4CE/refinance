@@ -25,6 +25,80 @@
   font-size: 1.125rem;
 }
 
+.currency-picker {
+  position: relative;
+}
+
+.currency-picker .form-input {
+  width: 100%;
+  padding-right: 2.3rem;
+}
+
+.currency-picker-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.1rem;
+  height: 100%;
+  border: none;
+  border-left: 1px solid #bbb;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.currency-picker-chevron {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #222;
+}
+
+.currency-picker-toggle.is-open .currency-picker-chevron {
+  border-top: none;
+  border-bottom: 6px solid #222;
+}
+
+.currency-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  border: 2px solid black;
+  background: white;
+  max-height: 200px;
+  overflow: auto;
+  box-shadow: 3px 3px 0 black;
+}
+
+.currency-picker-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid #ddd;
+  background: white;
+  color: black;
+  font: inherit;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+}
+
+.currency-picker-option:last-child {
+  border-bottom: none;
+}
+
+.currency-picker-option:hover,
+.currency-picker-option:focus {
+  background: black;
+  color: white;
+  outline: none;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);

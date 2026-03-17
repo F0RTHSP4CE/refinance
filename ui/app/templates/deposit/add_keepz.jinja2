@@ -1,4 +1,5 @@
 {% extends "base.jinja2" %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
 
 {% block title %}Top up with Keepz{% endblock %}
 
@@ -20,7 +21,7 @@
 
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="currency">Currency</label>
-                    {{ form.currency(class_='form-input') }}
+                    {{ currency_selector('currency', form.currency.choices, form.currency.data, id='currency') }}
                     {% if form.currency.errors %}
                     <div class="form-error">{{ form.currency.errors[0] }}</div>
                     {% endif %}

@@ -1,3 +1,4 @@
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import (
@@ -18,12 +19,17 @@ from wtforms.widgets import HiddenInput
 exchange_bp = Blueprint("exchange", __name__)
 
 
+def _normalize_currency(value: str | None) -> str:
+    return str(value or "").strip().upper()
+
+
 class CurrencyExchangeForm(FlaskForm):
     entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
     source_currency = SelectField(
         "Source Currency ←",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
-        default="GEL",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     source_amount = FloatField(
@@ -37,8 +43,9 @@ class CurrencyExchangeForm(FlaskForm):
     )
     target_currency = SelectField(
         "Target Currency →",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
-        default="GEL",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     target_amount = FloatField(
@@ -60,7 +67,10 @@ def index():
     form = CurrencyExchangeForm()
     if form.validate_on_submit():
         api = get_refinance_api_client()
-        r = api.http("POST", "currency_exchange/preview", data=form.data)
+        payload = form.data.copy()
+        payload["source_currency"] = _normalize_currency(payload.get("source_currency"))
+        payload["target_currency"] = _normalize_currency(payload.get("target_currency"))
+        r = api.http("POST", "currency_exchange/preview", data=payload)
         preview = CurrencyExchangePreviewResponse(**r.json())
         return render_template("exchange/preview.jinja2", preview=preview, form=form)
     else:
@@ -73,7 +83,10 @@ def exchange():
     form = CurrencyExchangeForm()
     form.validate_on_submit()
     api = get_refinance_api_client()
-    r = api.http("POST", "currency_exchange/exchange", data=form.data)
+    payload = form.data.copy()
+    payload["source_currency"] = _normalize_currency(payload.get("source_currency"))
+    payload["target_currency"] = _normalize_currency(payload.get("target_currency"))
+    r = api.http("POST", "currency_exchange/exchange", data=payload)
     receipt = CurrencyExchangeReceipt(**r.json())
     return render_template("exchange/receipt.jinja2", receipt=receipt)
 

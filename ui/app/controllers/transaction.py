@@ -37,8 +37,9 @@ class TransactionForm(FlaskForm):
     )
     currency = SelectField(
         "Currency",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
-        default="GEL",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     status = SelectField(
@@ -103,7 +104,7 @@ class TransactionFilterForm(FlaskForm):
     )
     currency = SelectField(
         "Currency",
-        choices=[("", ""), ("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=[("", "")] + Config.CURRENCY_CHOICES,
     )
     status = SelectField(
         "Status", choices=[("", "")] + [(e.value, e.value) for e in TransactionStatus]
@@ -128,6 +129,10 @@ def _get_treasury_choices():
 DEPOSIT_TAG_ID = Config.TAG_IDS["deposit"]
 WITHDRAWAL_TAG_ID = Config.TAG_IDS["withdrawal"]
 FEE_TAG_ID = Config.TAG_IDS["fee"]
+
+
+def _normalize_currency(value: str | None) -> str:
+    return str(value or "").strip().upper()
 
 
 def _get_active_treasuries(api):
@@ -219,6 +224,7 @@ def add():
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        data["currency"] = _normalize_currency(data.get("currency"))
         if not data.get("invoice_id"):
             data["invoice_id"] = None
         if not data.get("from_treasury_id"):
@@ -244,7 +250,7 @@ def shortcut_deposit():
             "from_entity_id": int(request.form["from_entity_id"]),
             "to_entity_id": int(request.form["to_entity_id"]),
             "amount": float(request.form["amount"]),
-            "currency": request.form["currency"],
+            "currency": _normalize_currency(request.form.get("currency")),
             "comment": request.form.get("comment", ""),
             "status": "draft",
             "tag_ids": [DEPOSIT_TAG_ID],
@@ -257,6 +263,8 @@ def shortcut_deposit():
         "transaction/shortcuts_deposit.jinja2",
         deposit_entities=deposit_entities,
         treasuries=treasuries,
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )
 
 
@@ -269,7 +277,7 @@ def shortcut_pay():
             "from_entity_id": int(request.form["from_entity_id"]),
             "to_entity_id": int(request.form["to_entity_id"]),
             "amount": float(request.form["amount"]),
-            "currency": request.form["currency"],
+            "currency": _normalize_currency(request.form.get("currency")),
             "comment": request.form.get("comment", ""),
             "status": "draft",
             "tag_ids": [],
@@ -277,7 +285,11 @@ def shortcut_pay():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
-    return render_template("transaction/shortcuts_pay.jinja2")
+    return render_template(
+        "transaction/shortcuts_pay.jinja2",
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
+    )
 
 
 @transaction_bp.route("/shortcuts/request", methods=["GET", "POST"])
@@ -289,7 +301,7 @@ def shortcut_request():
             "from_entity_id": int(request.form["from_entity_id"]),
             "to_entity_id": int(request.form["to_entity_id"]),
             "amount": float(request.form["amount"]),
-            "currency": request.form["currency"],
+            "currency": _normalize_currency(request.form.get("currency")),
             "comment": request.form.get("comment", ""),
             "status": "draft",
             "tag_ids": [],
@@ -297,7 +309,11 @@ def shortcut_request():
         tx = api.http("POST", "transactions", data=data)
         return redirect(url_for("transaction.detail", id=tx.json()["id"]))
 
-    return render_template("transaction/shortcuts_request.jinja2")
+    return render_template(
+        "transaction/shortcuts_request.jinja2",
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
+    )
 
 
 @transaction_bp.route("/shortcuts/withdraw", methods=["GET", "POST"])
@@ -313,7 +329,7 @@ def shortcut_withdraw():
             "from_entity_id": int(request.form["from_entity_id"]),
             "to_entity_id": int(request.form["to_entity_id"]),
             "amount": float(request.form["amount"]),
-            "currency": request.form["currency"],
+            "currency": _normalize_currency(request.form.get("currency")),
             "comment": request.form.get("comment", ""),
             "status": "draft",
             "tag_ids": [WITHDRAWAL_TAG_ID],
@@ -326,6 +342,8 @@ def shortcut_withdraw():
         "transaction/shortcuts_withdraw.jinja2",
         withdrawal_entities=withdrawal_entities,
         treasuries=treasuries,
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )
 
 
@@ -355,7 +373,7 @@ def shortcut_fridge():
         preset = request.form.get("fee_preset", "5_GEL")
         if preset == "custom":
             amount = float(request.form["custom_amount"])
-            currency = request.form["custom_currency"]
+            currency = _normalize_currency(request.form.get("custom_currency"))
         else:
             amount, currency = preset_map[preset]
 
@@ -375,6 +393,8 @@ def shortcut_fridge():
         "transaction/shortcuts_fridge.jinja2",
         fridge_entity_id=Config.ENTITY_IDS["fridge"],
         preset_options=preset_options,
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )
 
 
@@ -404,7 +424,7 @@ def shortcut_coffee():
         preset = request.form.get("fee_preset", "5_GEL")
         if preset == "custom":
             amount = float(request.form["custom_amount"])
-            currency = request.form["custom_currency"]
+            currency = _normalize_currency(request.form.get("custom_currency"))
         else:
             amount, currency = preset_map[preset]
 
@@ -424,6 +444,8 @@ def shortcut_coffee():
         "transaction/shortcuts_coffee.jinja2",
         coffee_entity_id=Config.ENTITY_IDS["coffee"],
         preset_options=preset_options,
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )
 
 
@@ -450,7 +472,7 @@ def shortcut_reimburse():
             "from_entity_id": int(request.form["from_entity_id"]),
             "to_entity_id": int(request.form["to_entity_id"]),
             "amount": float(request.form["amount"]),
-            "currency": request.form["currency"],
+            "currency": _normalize_currency(request.form.get("currency")),
             "comment": request.form.get("comment", ""),
             "status": "draft",
             "tag_ids": [],
@@ -464,6 +486,8 @@ def shortcut_reimburse():
         coffee_entity_id=coffee_entity_id,
         fridge_balance_label=_format_balance_label(fridge_entity_id),
         coffee_balance_label=_format_balance_label(coffee_entity_id),
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )
 
 
@@ -501,6 +525,7 @@ def edit(id):
     if form.validate_on_submit():
         data = form.data.copy()
         data.pop("csrf_token", None)
+        data["currency"] = _normalize_currency(data.get("currency"))
         if not data.get("invoice_id"):
             data["invoice_id"] = None
         if not data.get("from_treasury_id"):

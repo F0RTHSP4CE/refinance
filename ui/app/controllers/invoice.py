@@ -21,6 +21,10 @@ from wtforms.validators import DataRequired, NumberRange, Optional
 invoice_bp = Blueprint("invoice", __name__)
 
 
+def _normalize_currency(value: str | None) -> str:
+    return str(value or "").strip().upper()
+
+
 class InvoiceForm(FlaskForm):
     from_entity_name = StringField("From")
     from_entity_id = IntegerField("", validators=[DataRequired(), NumberRange(min=1)])
@@ -40,7 +44,9 @@ class InvoiceForm(FlaskForm):
     )
     currency_1 = SelectField(
         "Currency 1",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     amount_2 = FloatField(
@@ -50,7 +56,9 @@ class InvoiceForm(FlaskForm):
     )
     currency_2 = SelectField(
         "Currency 2",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[Optional()],
     )
     amount_3 = FloatField(
@@ -60,7 +68,9 @@ class InvoiceForm(FlaskForm):
     )
     currency_3 = SelectField(
         "Currency 3",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[Optional()],
     )
 
@@ -121,7 +131,9 @@ class InvoiceBulkForm(FlaskForm):
     )
     currency_1 = SelectField(
         "Currency 1",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR")],
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[DataRequired()],
     )
     amount_2 = FloatField(
@@ -131,7 +143,9 @@ class InvoiceBulkForm(FlaskForm):
     )
     currency_2 = SelectField(
         "Currency 2",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR"), ("", "")],
+        choices=Config.CURRENCY_CHOICES + [("", "")],
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[Optional()],
     )
     amount_3 = FloatField(
@@ -141,7 +155,9 @@ class InvoiceBulkForm(FlaskForm):
     )
     currency_3 = SelectField(
         "Currency 3",
-        choices=[("GEL", "GEL"), ("USD", "USD"), ("EUR", "EUR"), ("", "")],
+        choices=Config.CURRENCY_CHOICES + [("", "")],
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
         validators=[Optional()],
     )
 
@@ -157,7 +173,7 @@ def _build_amounts_from_form(form: InvoiceForm) -> list[dict[str, str]]:
         (form.amount_3, form.currency_3),
     ):
         amount = amount_field.data
-        currency = currency_field.data
+        currency = _normalize_currency(currency_field.data)
         if amount is None:
             continue
         if not currency:
@@ -175,7 +191,7 @@ def _build_amounts_from_bulk_form(form: InvoiceBulkForm) -> list[dict[str, str]]
         (form.amount_3, form.currency_3),
     ):
         amount = amount_field.data
-        currency = currency_field.data
+        currency = _normalize_currency(currency_field.data)
         if amount is None:
             continue
         if not currency:

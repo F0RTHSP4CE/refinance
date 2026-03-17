@@ -1,0 +1,118 @@
+{% macro currency_selector(name, choices, selected='', id='currency', required=True, input_class='form-input', placeholder='Currency') %}
+<div class="currency-picker" id="{{ id }}_picker">
+    <input
+        type="text"
+        id="{{ id }}"
+        name="{{ name }}"
+        class="{{ input_class }}"
+        value="{{ selected or '' }}"
+        placeholder="{{ placeholder }}"
+        autocapitalize="characters"
+        autocomplete="off"
+        spellcheck="false"
+        aria-autocomplete="list"
+        aria-controls="{{ id }}_menu"
+        aria-expanded="false"
+        {% if required %}required{% endif %}
+    >
+
+    <button type="button" class="currency-picker-toggle" id="{{ id }}_toggle" aria-label="Toggle currency list" tabindex="-1">
+        <span class="currency-picker-chevron" aria-hidden="true"></span>
+    </button>
+
+    <div class="currency-picker-menu" id="{{ id }}_menu" hidden>
+        {% for value, label in choices if value %}
+        <button type="button" class="currency-picker-option" data-currency-value="{{ value }}">{{ label }}</button>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+(function () {
+    var inputEl = document.getElementById('{{ id }}');
+    var menuEl = document.getElementById('{{ id }}_menu');
+    var pickerEl = document.getElementById('{{ id }}_picker');
+    var toggleEl = document.getElementById('{{ id }}_toggle');
+    if (!inputEl || !menuEl || !pickerEl || !toggleEl) return;
+    var optionEls = menuEl.querySelectorAll('.currency-picker-option');
+    var skipNextFocusOpen = false;
+
+    var openMenu = function () {
+        menuEl.hidden = false;
+        inputEl.setAttribute('aria-expanded', 'true');
+        toggleEl.classList.add('is-open');
+    };
+
+    var closeMenu = function () {
+        menuEl.hidden = true;
+        inputEl.setAttribute('aria-expanded', 'false');
+        toggleEl.classList.remove('is-open');
+    };
+
+    var filterOptions = function () {
+        var typed = (inputEl.value || '').trim().toUpperCase();
+        var visibleCount = 0;
+        for (var i = 0; i < optionEls.length; i++) {
+            var option = optionEls[i];
+            var value = (option.getAttribute('data-currency-value') || '').toUpperCase();
+            var show = !typed || value.indexOf(typed) !== -1;
+            option.hidden = !show;
+            if (show) visibleCount += 1;
+        }
+        if (visibleCount > 0) openMenu(); else closeMenu();
+    };
+
+    inputEl.addEventListener('focus', function () {
+        if (skipNextFocusOpen) {
+            skipNextFocusOpen = false;
+            return;
+        }
+        filterOptions();
+    });
+
+    inputEl.addEventListener('input', function () {
+        inputEl.value = inputEl.value.toUpperCase();
+        filterOptions();
+    });
+
+    inputEl.addEventListener('keydown', function (event) {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            filterOptions();
+            for (var i = 0; i < optionEls.length; i++) {
+                if (!optionEls[i].hidden) {
+                    optionEls[i].focus();
+                    break;
+                }
+            }
+        } else if (event.key === 'Escape') {
+            closeMenu();
+        }
+    });
+
+    toggleEl.addEventListener('click', function () {
+        if (menuEl.hidden) {
+            filterOptions();
+        } else {
+            closeMenu();
+        }
+        inputEl.focus();
+    });
+
+    for (var i = 0; i < optionEls.length; i++) {
+        optionEls[i].addEventListener('click', function () {
+            var value = this.getAttribute('data-currency-value') || '';
+            inputEl.value = value.toUpperCase();
+            skipNextFocusOpen = true;
+            closeMenu();
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!pickerEl.contains(event.target)) {
+            closeMenu();
+        }
+    });
+})();
+</script>
+{% endmacro %}

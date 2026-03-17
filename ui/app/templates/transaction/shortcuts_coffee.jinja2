@@ -1,4 +1,5 @@
 {% extends 'base.jinja2' %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
 
 {% block title %}Pay for Coffee{% endblock %}
 
@@ -28,11 +29,7 @@
 
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="custom_currency">Custom Currency</label>
-                    <select id="custom_currency" name="custom_currency" class="form-input">
-                        <option value="GEL" selected>GEL</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                    </select>
+                    {{ currency_selector('custom_currency', currency_choices, preferred_currency, id='custom_currency') }}
                 </div>
             </div>
 

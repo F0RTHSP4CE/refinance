@@ -1,5 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/entity_selector.jinja2' import entity_selector %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
 
 {% block title %}Currency exchange{% endblock %}
 
@@ -13,12 +14,12 @@
     <div class="xform-currencies">
       <div class="xform-currency-slot">
         <span class="xform-panel-role">SELL</span>
-        {{ form.source_currency(class="xform-currency", id="source_currency") }}
+        {{ currency_selector('source_currency', form.source_currency.choices, form.source_currency.data, id='source_currency', input_class='xform-currency') }}
       </div>
       <div class="xform-currency-arrow" aria-hidden="true">→</div>
       <div class="xform-currency-slot">
         <span class="xform-panel-role">GET</span>
-        {{ form.target_currency(class="xform-currency", id="target_currency") }}
+        {{ currency_selector('target_currency', form.target_currency.choices, form.target_currency.data, id='target_currency', input_class='xform-currency') }}
       </div>
     </div>
 

@@ -91,6 +91,15 @@
   appearance: auto;
 }
 
+.xform-currency-slot .currency-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.xform-currency-slot .currency-picker .xform-currency {
+  width: 100%;
+}
+
 .xform-currency:focus {
   outline: 2px solid black;
   outline-offset: 2px;

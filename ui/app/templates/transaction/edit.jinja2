@@ -1,5 +1,6 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/tag_selector.jinja2' import tag_selector %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
 
 {% block title %}Edit transaction {{ transaction.id }}{% endblock %}
 
@@ -20,7 +21,7 @@
                 </div>
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="currency">Currency</label>
-                    {{ form.currency(class_='form-input') }}
+                    {{ currency_selector('currency', form.currency.choices, form.currency.data, id='currency') }}
                 </div>
             </div>
 
