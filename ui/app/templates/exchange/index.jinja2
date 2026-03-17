@@ -14,12 +14,12 @@
     <div class="xform-currencies">
       <div class="xform-currency-slot">
         <span class="xform-panel-role">SELL</span>
-        {{ currency_selector('source_currency', form.source_currency.choices, form.source_currency.data, id='source_currency', input_class='xform-currency') }}
+        {{ currency_selector('source_currency', form.source_currency.choices, form.source_currency.data, id='source_currency', input_class='form-input') }}
       </div>
       <div class="xform-currency-arrow" aria-hidden="true">→</div>
       <div class="xform-currency-slot">
         <span class="xform-panel-role">GET</span>
-        {{ currency_selector('target_currency', form.target_currency.choices, form.target_currency.data, id='target_currency', input_class='xform-currency') }}
+        {{ currency_selector('target_currency', form.target_currency.choices, form.target_currency.data, id='target_currency', input_class='form-input') }}
       </div>
     </div>
 

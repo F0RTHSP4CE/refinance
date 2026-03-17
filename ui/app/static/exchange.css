@@ -78,31 +78,33 @@
   color: #555;
 }
 
-.xform-currency {
-  font-size: 1.5rem;
-  font-weight: 900;
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  color: inherit;
-  flex: 1;
-  min-width: 0;
-  appearance: auto;
-}
-
 .xform-currency-slot .currency-picker {
   flex: 1;
   min-width: 0;
 }
 
-.xform-currency-slot .currency-picker .xform-currency {
+.xform-currency-slot .currency-picker .form-input {
   width: 100%;
+  height: auto;
+  min-height: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+  border: none;
+  background: transparent;
+  padding: 0;
+  padding-right: 2.1rem;
+  cursor: text;
+  color: inherit;
+  box-shadow: none;
 }
 
-.xform-currency:focus {
+.xform-currency-slot .currency-picker .form-input:focus {
   outline: 2px solid black;
   outline-offset: 2px;
+}
+
+.xform-currency-slot .currency-picker .currency-picker-toggle {
+  border-left: none;
 }
 
 .xform-amount {
