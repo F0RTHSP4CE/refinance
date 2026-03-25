@@ -8,3 +8,9 @@ secrets.prod.env
 secrets.dev.env
 secrets.env
 backups/
+
+Makefile.local
+
+# AISlop
+.claude
+CLAUDE.md
