@@ -262,6 +262,20 @@ nav>ul>li>a {
   color: black;
 }
 
+.nav-separator {
+  width: 2px;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0.25rem 0.25rem;
+}
+
+.mobile-menu-items .nav-separator {
+  width: auto;
+  height: 2px;
+  align-self: auto;
+  margin: 0.5rem 0;
+}
+
 .desktop-nav-user {
   display: flex;
   align-items: center;
@@ -325,4 +339,3 @@ nav.site-nav {
     display: none;
   }
 }
-
