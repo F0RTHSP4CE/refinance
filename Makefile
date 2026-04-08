@@ -56,11 +56,15 @@ db-backup:
 	$(COMPOSE) exec -T db pg_dump -U $(DB_USER) -d $(DB_NAME) > $(BACKUP_FILE)
 
 db-restore:
+	@set -e
 	@if [ -z "$(BACKUP_FILE)" ]; then echo "Usage: make db-restore ENV=<dev|prod|ci> BACKUP_FILE=<path-to-backup.sql>"; exit 1; fi
 	@if [ ! -f "$(BACKUP_FILE)" ]; then echo "Backup file $(BACKUP_FILE) not found"; exit 1; fi
 	@echo "Dropping existing $(ENV) database $(DB_NAME)"
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$(DB_NAME)' AND pid <> pg_backend_pid();"
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "DROP DATABASE IF EXISTS \"$(DB_NAME)\";"
+	@echo "Refreshing collation metadata for template1 and postgres"
+	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "ALTER DATABASE template1 REFRESH COLLATION VERSION;"
+	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "ALTER DATABASE postgres REFRESH COLLATION VERSION;"
 	@echo "Creating fresh $(ENV) database $(DB_NAME)"
 	$(COMPOSE) exec -T db psql -U $(DB_USER) -d postgres -c "CREATE DATABASE \"$(DB_NAME)\";"
 	@echo "Restoring $(ENV) database from $(BACKUP_FILE)"
