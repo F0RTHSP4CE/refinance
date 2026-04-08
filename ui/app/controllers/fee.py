@@ -3,9 +3,32 @@ from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
 from app.schemas import Fee, MonthlyFee
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template
 
 fee_bp = Blueprint("fee", __name__)
+
+
+FEE_GROUP_BY_TAG_ID = {
+    2: "resident",
+    14: "member",
+    13: "ex-resident",
+    18: "ex-member",
+}
+
+
+def _fee_group(entity) -> str:
+    tags = entity.get("tags", []) if isinstance(entity, dict) else entity.tags
+    tag_ids = {tag.get("id") if isinstance(tag, dict) else tag.id for tag in tags}
+    for tag_id in FEE_GROUP_BY_TAG_ID:
+        if tag_id in tag_ids:
+            return FEE_GROUP_BY_TAG_ID[tag_id]
+    return "other"
+
+
+def _entity_name(entity) -> str:
+    if isinstance(entity, dict):
+        return str(entity.get("name", "")).lower()
+    return entity.name.lower()
 
 
 @fee_bp.route("/")
@@ -27,14 +50,11 @@ def index():
                 currency: Decimal(str(value))
                 for currency, value in raw_unpaid_amounts.items()
             }
-            total_usd_raw = f.get("total_usd", 0)
-            total_usd = Decimal(str(total_usd_raw or 0))
             converted.append(
                 MonthlyFee(
                     year=f["year"],
                     month=f["month"],
                     amounts=amounts,
-                    total_usd=total_usd,
                     unpaid_invoice_id=f.get("unpaid_invoice_id"),
                     paid_invoice_id=f.get("paid_invoice_id"),
                     unpaid_invoice_amounts=unpaid_amounts,
@@ -63,69 +83,66 @@ def index():
                         year=y,
                         month=m,
                         amounts={},
-                        total_usd=Decimal("0"),
                         unpaid_invoice_id=None,
                         paid_invoice_id=None,
                         unpaid_invoice_amounts=None,
                     )
                 )
 
-        rf.total_usd_series = [fee.total_usd for fee in rf.fees]
-        max_total = max(rf.total_usd_series, default=Decimal("0"))
-        rf.max_total_usd = max_total
-        width = Decimal("90")
-        height = Decimal("24")
-        padding_x = Decimal("2")
-        padding_y = Decimal("2")
-        usable_width = width - padding_x * 2
-        usable_height = height - padding_y * 2
-        if usable_width <= 0:
-            usable_width = width
-            padding_x = Decimal("0")
-        if usable_height <= 0:
-            usable_height = height
-            padding_y = Decimal("0")
-        scale = max_total if max_total > 0 else Decimal("1")
-        count = len(rf.total_usd_series)
-        dot_points: list[tuple[float, float]] = []
-        segments: list[list[tuple[float, float]]] = []
-        current_segment: list[tuple[float, float]] = []
+    group_order = {
+        "resident": 0,
+        "member": 1,
+        "ex-resident": 2,
+        "ex-member": 3,
+        "other": 4,
+    }
 
-        for idx, value in enumerate(rf.total_usd_series):
-            if count <= 1:
-                x = width / Decimal("2")
-            else:
-                x = padding_x + (Decimal(idx) / Decimal(count - 1)) * usable_width
-            try:
-                ratio = (Decimal(value) / scale) if scale > 0 else Decimal("0")
-            except Exception:
-                ratio = Decimal("0")
-            if ratio < 0:
-                ratio = Decimal("0")
-            if ratio > 1:
-                ratio = Decimal("1")
-            y = padding_y + (Decimal("1") - ratio) * usable_height
-            point = (float(x), float(y))
+    def _has_unpaid(fee: Fee) -> bool:
+        return any(f.unpaid_invoice_id for f in fee.fees)
 
-            if value > 0:
-                dot_points.append(point)
-                current_segment.append(point)
-            else:
-                if len(current_segment) >= 1:
-                    segments.append(current_segment)
-                    current_segment = []
+    def _unpaid_count(fee: Fee) -> int:
+        return sum(1 for f in fee.fees if f.unpaid_invoice_id)
 
-        if current_segment:
-            segments.append(current_segment)
+    grouped_fees = [(fee, _fee_group(fee.entity)) for fee in fees]
+    grouped_fees.sort(
+        key=lambda row: (
+            group_order[row[1]],
+            _has_unpaid(row[0]),
+            _unpaid_count(row[0]) if _has_unpaid(row[0]) else 0,
+            _entity_name(row[0].entity),
+        )
+    )
+    group_indexes = {key: 0 for key in group_order}
+    fee_rows = []
+    fees = []
+    for fee, group in grouped_fees:
+        unpaid_total: dict[str, Decimal] = {}
+        for f in fee.fees:
+            if f.unpaid_invoice_id and f.unpaid_invoice_amounts:
+                for currency, amount in f.unpaid_invoice_amounts.items():
+                    unpaid_total[currency] = (
+                        unpaid_total.get(currency, Decimal(0)) + amount
+                    )
+        fees.append(fee)
+        fee_rows.append(
+            {
+                "fee": fee,
+                "group": group,
+                "index": group_indexes[group],
+                "unpaid_total": unpaid_total,
+            }
+        )
+        group_indexes[group] += 1
 
-        rf.sparkline_points = ""
-        rf.sparkline_segments = [
-            " ".join(f"{x:.2f},{y:.2f}" for x, y in segment)
-            for segment in segments
-            if len(segment) >= 2
-        ]
-        rf.sparkline_dots = dot_points
-        rf.sparkline_last_point = dot_points[-1] if dot_points else None
+    group_unpaid_totals: dict[str, dict[str, Decimal]] = {}
+    for row in fee_rows:
+        g = row["group"]
+        for currency, amount in row["unpaid_total"].items():
+            if g not in group_unpaid_totals:
+                group_unpaid_totals[g] = {}
+            group_unpaid_totals[g][currency] = (
+                group_unpaid_totals[g].get(currency, Decimal(0)) + amount
+            )
 
     current_date = datetime.utcnow()
     current_month = current_date.month
@@ -133,6 +150,8 @@ def index():
     return render_template(
         "fee/index.jinja2",
         fees=fees,
+        fee_rows=fee_rows,
+        group_unpaid_totals=group_unpaid_totals,
         current_month=current_month,
         current_year=current_year,
     )

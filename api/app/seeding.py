@@ -15,6 +15,7 @@ utilities_tag = Tag(
 resident_tag = Tag(id=2, name="resident", comment="hackerspace residents")
 ex_resident_tag = Tag(id=13, name="ex-resident", comment="former hackerspace resident")
 member_tag = Tag(id=14, name="member", comment="hackerspace members")
+ex_member_tag = Tag(id=18, name="ex-member", comment="former hackerspace member")
 guest_tag = Tag(id=15, name="guest", comment="hackerspace guests")
 pos_tag = Tag(id=16, name="pos", comment="point of sale (card payments)")
 rent_tag = Tag(id=7, name="rent", comment="monthly rent for the physical place")
@@ -79,6 +80,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         currency_exchange_tag,
         ex_resident_tag,
         member_tag,
+        ex_member_tag,
         guest_tag,
         pos_tag,
         automatic_tag,

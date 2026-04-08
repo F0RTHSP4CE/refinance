@@ -195,7 +195,6 @@ class ServiceContainer:
             self._fee_service = FeeService(
                 db=self.db,
                 entity_service=self.entity_service,
-                currency_exchange_service=self.currency_exchange_service,
                 config=self.config,
             )
         return self._fee_service

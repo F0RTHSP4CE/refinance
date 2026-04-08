@@ -10,11 +10,10 @@ from typing import Any, Mapping
 
 from app.config import Config, get_config
 from app.dependencies.services import (
-    get_currency_exchange_service,
     get_entity_service,
 )
-from app.models.entity import Entity
-from app.models.invoice import Invoice, InvoiceStatus
+from app.models.entity import Entity, entities_tags
+from app.models.invoice import Invoice, InvoiceStatus, invoices_tags
 from app.models.tag import Tag
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
@@ -25,13 +24,19 @@ from app.schemas.fee import (
     FeeSchema,
     MonthlyFeeSchema,
 )
-from app.seeding import f0_entity, fee_tag, member_tag, resident_tag
+from app.seeding import (
+    ex_member_tag,
+    ex_resident_tag,
+    f0_entity,
+    fee_tag,
+    member_tag,
+    resident_tag,
+)
 from app.services.base import BaseService
-from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import or_
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -40,7 +45,6 @@ class MonthlyFee:
     year: int
     month: int
     amounts: dict[str, Decimal]
-    total_usd: float
     unpaid_invoice_id: int | None = None
     paid_invoice_id: int | None = None
     unpaid_invoice_amounts: dict[str, Decimal] | None = None
@@ -53,7 +57,6 @@ class MonthlyFee:
                 currency: CurrencyDecimal(amount)
                 for currency, amount in self.amounts.items()
             },
-            total_usd=self.total_usd,
             unpaid_invoice_id=self.unpaid_invoice_id,
             paid_invoice_id=self.paid_invoice_id,
             unpaid_invoice_amounts=(
@@ -84,14 +87,10 @@ class FeeService(BaseService):
         self,
         db: Session = Depends(get_uow),
         entity_service: EntityService = Depends(get_entity_service),
-        currency_exchange_service: CurrencyExchangeService = Depends(
-            get_currency_exchange_service
-        ),
         config: Config = Depends(get_config),
     ):
         self.db = db
         self._entity_service = entity_service
-        self._currency_exchange_service = currency_exchange_service
         self._config = config
 
     def _parse_comment_for_date(self, comment: str | None) -> tuple[int, int] | None:
@@ -123,39 +122,6 @@ class FeeService(BaseService):
             return year, month_names[month_key]
 
         return None
-
-    def _amount_to_usd(self, currency: str, amount: Decimal) -> Decimal:
-        if amount is None:
-            return Decimal("0")
-        if currency.lower() == "usd":
-            return amount
-
-        try:
-            _, usd_amount, _ = self._currency_exchange_service.calculate_conversion(
-                source_amount=amount,
-                target_amount=None,
-                source_currency=currency,
-                target_currency="usd",
-            )
-            return usd_amount
-        except Exception:
-            return Decimal("0")
-
-    def _sum_amounts_usd(self, amounts: Mapping[str, Decimal]) -> float:
-        total = Decimal("0")
-        for currency, raw_amount in amounts.items():
-            if raw_amount in (None, ""):
-                continue
-            try:
-                amount = (
-                    raw_amount
-                    if isinstance(raw_amount, Decimal)
-                    else Decimal(str(raw_amount))
-                )
-            except Exception:
-                continue
-            total += self._amount_to_usd(currency, amount)
-        return float(total)
 
     def _normalize_amounts(
         self, raw_amounts: Mapping[str, Any] | None
@@ -212,29 +178,56 @@ class FeeService(BaseService):
     ) -> MonthlyFee:
         amounts = self._normalize_amounts(raw_amounts)
         unpaid_amounts = self._normalize_amounts(unpaid_invoice_amounts)
-        total_usd = self._sum_amounts_usd(amounts)
         return MonthlyFee(
             year=year,
             month=month,
             amounts=amounts,
-            total_usd=total_usd,
             unpaid_invoice_id=unpaid_invoice_id,
             paid_invoice_id=paid_invoice_id,
             unpaid_invoice_amounts=unpaid_amounts,
         )
 
+    @staticmethod
+    def _has_tag(entity: Entity, tag: Tag) -> bool:
+        return any(existing.id == tag.id for existing in entity.tags)
+
+    def _fee_group_rank(self, entity: Entity) -> int:
+        if self._has_tag(entity, resident_tag):
+            return 0
+        if self._has_tag(entity, member_tag):
+            return 1
+        if self._has_tag(entity, ex_resident_tag):
+            return 2
+        if self._has_tag(entity, ex_member_tag):
+            return 3
+        return 4
+
     def get_fees(self, filters: FeeFiltersSchema) -> list[FeeSchema]:
         hackerspace = self._entity_service.get(f0_entity.id)
+        fee_resident_tag_ids = (
+            resident_tag.id,
+            member_tag.id,
+            ex_resident_tag.id,
+            ex_member_tag.id,
+        )
+        resident_ids_subquery = (
+            self.db.query(entities_tags.c.entity_id)
+            .filter(entities_tags.c.tag_id.in_(fee_resident_tag_ids))
+            .distinct()
+            .subquery()
+        )
         residents = (
             self.db.query(Entity)
-            .filter(
-                or_(
-                    Entity.tags.contains(resident_tag),
-                    Entity.tags.contains(member_tag),
-                )
-            )
-            .order_by(Entity.active.desc(), Entity.name)
+            .filter(Entity.id.in_(select(resident_ids_subquery.c.entity_id)))
+            .options(selectinload(Entity.tags))
             .all()
+        )
+        residents.sort(
+            key=lambda entity: (
+                self._fee_group_rank(entity),
+                not entity.active,
+                entity.name.lower(),
+            )
         )
 
         # Base window: last N months up to today
@@ -268,13 +261,19 @@ class FeeService(BaseService):
 
         invoices = (
             self.db.query(Invoice)
+            .join(
+                invoices_tags,
+                and_(
+                    invoices_tags.c.invoice_id == Invoice.id,
+                    invoices_tags.c.tag_id == fee_tag.id,
+                ),
+            )
             .options(selectinload(Invoice.transaction))
             .filter(
                 Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
                 Invoice.billing_period >= start_period,
                 Invoice.billing_period <= max_future_period,
-                Invoice.tags.contains(fee_tag),
                 Invoice.from_entity_id.in_(resident_ids),
             )
             .all()

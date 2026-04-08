@@ -2,7 +2,6 @@
 
 from datetime import date
 
-import pytest
 from app.seeding import fee_tag, resident_tag
 from fastapi.testclient import TestClient
 
@@ -10,25 +9,7 @@ from fastapi.testclient import TestClient
 class TestFeeService:
     """Test FeeService logic through its API endpoint"""
 
-    def test_get_fees(self, test_app: TestClient, token, monkeypatch):
-        from app.services.currency_exchange import CurrencyExchangeService
-
-        monkeypatch.setattr(
-            CurrencyExchangeService,
-            "_raw_rates",
-            property(
-                lambda self: [
-                    {
-                        "currencies": [
-                            {"code": "usd", "rate": "3.00", "quantity": "1"},
-                            {"code": "eur", "rate": "3.50", "quantity": "1"},
-                            {"code": "gel", "rate": "1", "quantity": "1"},
-                        ]
-                    }
-                ]
-            ),
-        )
-
+    def test_get_fees(self, test_app: TestClient, token):
         # The DB is pre-populated with a "resident" tag (id=2) and a hackerspace entity (id=1)
         hackerspace_id = 1
 
@@ -136,19 +117,16 @@ class TestFeeService:
         assert fees1[0]["year"] == prev_year
         assert fees1[0]["month"] == prev_month
         assert fees1[0]["amounts"] == {"usd": "100.00"}
-        assert fees1[0]["total_usd"] == pytest.approx(100.0)
 
         # Current month
         assert fees1[1]["year"] == current_year
         assert fees1[1]["month"] == current_month
         assert fees1[1]["amounts"] == {"usd": "100.00"}
-        assert fees1[1]["total_usd"] == pytest.approx(100.0)
 
         # Next month (future payment)
         assert fees1[2]["year"] == next_year
         assert fees1[2]["month"] == next_month
         assert fees1[2]["amounts"] == {"usd": "100.00"}
-        assert fees1[2]["total_usd"] == pytest.approx(100.0)
 
         # --- Assertions for Resident Two ---
         fees2 = sorted(resident2_data["fees"], key=lambda x: (x["year"], x["month"]))
@@ -157,4 +135,3 @@ class TestFeeService:
         assert fees2[0]["year"] == current_year
         assert fees2[0]["month"] == current_month
         assert fees2[0]["amounts"] == {}
-        assert fees2[0]["total_usd"] == pytest.approx(0.0)

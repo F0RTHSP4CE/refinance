@@ -1,0 +1,185 @@
+/* Fee table: brutalist */
+
+.fee-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    font-size: 0.92rem;
+}
+
+.fee-table {
+    width: auto;
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 6px 6px;
+}
+
+.fee-table th,
+.fee-table td {
+    padding: 0.22rem 0.38rem;
+    white-space: nowrap;
+    vertical-align: middle;
+    line-height: 1.1;
+}
+
+.fee-table th {
+    background: transparent;
+}
+
+.fee-table td {
+    font-size: inherit;
+}
+
+.fee-table th {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 900;
+}
+
+.fee-category-row td,
+.fee-category-gap-row td {
+    padding: 0;
+    background: transparent;
+}
+
+.fee-category-header th {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 900;
+    background: transparent;
+}
+
+.fee-category-title {
+    margin: 0;
+    padding: 1.2rem 0 0.34rem 0;
+    font-size: 1.28rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.05;
+}
+
+.fee-category-gap {
+    height: 6px;
+    display: block;
+}
+
+.fee-index {
+    text-align: right;
+    min-width: 2rem;
+    font-weight: 800;
+    opacity: 0.75;
+    background: transparent;
+}
+
+.fee-entity-cell {
+    min-width: 8.5rem;
+    background: transparent;
+}
+
+.fee-entity-name {
+    font-weight: 900;
+    font-size: 1.1em;
+    line-height: 1.08;
+    margin-right: 0.3rem;
+}
+
+.fee-unpaid-total {
+    color: #d00;
+    font-weight: 800;
+    margin-left: 0.4rem;
+    text-transform: uppercase;
+}
+
+.fee-total-cell {
+    font-weight: 800;
+}
+
+.fee-group-total-row td {
+    background: transparent;
+    padding-top: 0.4rem;
+}
+
+.fee-group-total-label {
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.fee-row:nth-child(even) td.fee-index,
+.fee-row:nth-child(even) td.fee-entity-cell,
+.fee-row:nth-child(even) td.fee-cell:not(.fee-cell--paid):not(.fee-cell--unpaid) {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.fee-cell {
+    text-align: center;
+    background: transparent;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 700;
+}
+
+.fee-cell--paid {
+    color: hsl(83.8, 66%, 44%);
+    border-bottom: 3px solid hsl(83.8, 66%, 44%);
+    background: hsla(83.8, 66%, 44%, 0.1);
+}
+
+.fee-cell--unpaid {
+    color: #d00;
+    border-bottom: 3px solid #d00;
+    background: repeating-linear-gradient(-45deg,
+            transparent,
+            transparent 3px,
+            rgba(221, 0, 0, 0.1) 3px,
+            rgba(221, 0, 0, 0.1) 6px);
+}
+
+.fee-cell-link {
+    text-decoration: none;
+    display: block;
+}
+
+.fee-cell-link--paid {
+    color: hsl(83.8, 66%, 44%);
+}
+
+.fee-cell-link--unpaid {
+    color: #d00;
+}
+
+.fee-row--ex-resident td.fee-cell,
+.fee-row--ex-member td.fee-cell {
+    background: repeating-linear-gradient(-45deg,
+            transparent,
+            transparent 3px,
+            rgba(0, 0, 0, 0.06) 3px,
+            rgba(0, 0, 0, 0.06) 6px);
+    opacity: 0.6;
+}
+
+.fee-row--ex-resident td.fee-index,
+.fee-row--ex-resident td.fee-entity-cell,
+.fee-row--ex-member td.fee-index,
+.fee-row--ex-member td.fee-entity-cell {
+    opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+    .fee-table-wrap {
+        font-size: 0.86rem;
+    }
+
+    .fee-table th,
+    .fee-table td {
+        padding: 0.14rem 0.2rem;
+    }
+
+    .fee-entity-cell {
+        min-width: 7.2rem;
+    }
+
+    .fee-category-title {
+        font-size: 1.04rem;
+    }
+}

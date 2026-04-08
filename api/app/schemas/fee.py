@@ -8,7 +8,6 @@ class MonthlyFeeSchema(BaseSchema):
     year: int
     month: int
     amounts: dict[str, CurrencyDecimal]
-    total_usd: float
     unpaid_invoice_id: int | None = None
     paid_invoice_id: int | None = None
     unpaid_invoice_amounts: dict[str, CurrencyDecimal] | None = None

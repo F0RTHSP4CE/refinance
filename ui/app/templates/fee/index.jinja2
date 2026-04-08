@@ -5,96 +5,143 @@
 {% block title %}Fee{% endblock %}
 {% block content %}
 {% set month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] %}
-<table>
-    <thead>
-        <tr>
-            <th></th>
-            <th></th>
-            {% for month in fees[0].fees %}
-            {% if month.month==current_month and month.year==current_year %}
-            <th class="center-align">▼</th>
-            {% else %}
-            <th></th>
+{% set group_titles = {
+"resident": "Residents",
+"member": "Members",
+"ex-resident": "Ex-residents",
+"ex-member": "Ex-members",
+"other": "Other"
+} %}
+{% set month_count = fees[0].fees|length if fees else 0 %}
+{% set total_columns = 2 + month_count %}
+<div class="fee-table-wrap">
+    <table class="fee-table">
+        <tbody>
+            {% set state = namespace(prev_group=None) %}
+            {% for row in fee_rows %}
+            {% set resident_fee = row.fee %}
+            {% set is_last = loop.last %}
+            {% set next_group = fee_rows[loop.index].group if not loop.last else None %}
+            {% if state.prev_group is not none and state.prev_group != row.group %}
+            {% if state.prev_group in group_unpaid_totals %}
+            <tr class="fee-group-total-row">
+                <td></td>
+                <td class="fee-group-total-label">
+                    Total unpaid:
+                    <span class="fee-unpaid-total">
+                        {% set gt = group_unpaid_totals[state.prev_group] %}
+                        {% set dc = 'usd' if 'usd' in gt else gt.keys()|first %}
+                        {{ "%.2f"|format(gt[dc]|float) }} {{ dc | upper }}
+                    </span>
+                </td>
+                <td colspan="{{ month_count }}"></td>
+            </tr>
             {% endif %}
-            {% endfor %}
-            <th></th>
-        </tr>
-    </thead>
-    <thead>
-        <tr>
-            <th>#</th>
-            <th></th>
-            {% if fees %}
-            {% for month in fees[0].fees %}
-            <th class="center-align">
-                {{ month_names[month.month] }} {{ month.year }}
-            </th>
-            {% endfor %}
+            <tr class="fee-category-gap-row" aria-hidden="true">
+                <td class="fee-category-gap" colspan="{{ total_columns }}"></td>
+            </tr>
             {% endif %}
-            <th class="center-align">Graph</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for resident_fee in fees %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>
-                <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}"
-                    class="{% if not resident_fee.entity.active %}secondary inactive{% endif %}">{{
-                    resident_fee.entity.name
-                    }}</a>
-                {% for tag in resident_fee.entity.tags %}
-                {{ tag_inline(tag) }}
-                {% endfor %}
-            </td>
-
-            {% for fee in resident_fee.fees %}
-            {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month) %}
-            <td{% if not fee.amounts and not is_future %} class="fee-not-paid" {% endif %}>
-                {% if fee.amounts %}
-                {% if fee.paid_invoice_id %}
-                <a class="fee-paid-link" href="{{ url_for('invoice.detail', id=fee.paid_invoice_id) }}"
-                    title="Paid invoice {{ fee.paid_invoice_id }}">
-                    {% for currency, amount in fee.amounts.items() %}
-                    <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
-                    {% endfor %}
-                </a>
+            {% if state.prev_group != row.group %}
+            <tr class="fee-category-row fee-category-row--{{ row.group }}">
+                <td colspan="{{ total_columns }}">
+                    <h2 class="fee-category-title">{{ group_titles.get(row.group, row.group|capitalize) }}</h2>
+                </td>
+            </tr>
+            <tr class="fee-category-arrow fee-category-arrow--{{ row.group }}">
+                <th></th>
+                <th></th>
+                {% if fees %}
+                {% for month in fees[0].fees|reverse %}
+                {% if month.month==current_month and month.year==current_year %}
+                <th class="center-align">▼</th>
                 {% else %}
-                {% for currency, amount in fee.amounts.items() %}
-                <div>{{ " %.2f"|format(amount|float) }} {{ currency | upper }} </div>
+                <th></th>
+                {% endif %}
                 {% endfor %}
                 {% endif %}
+            </tr>
+            <tr class="fee-category-header fee-category-header--{{ row.group }}">
+                <th>#</th>
+                <th>Entity</th>
+                {% if fees %}
+                {% for month in fees[0].fees|reverse %}
+                <th
+                    class="center-align {% if month.month==current_month and month.year==current_year %}fee-current-month{% endif %}">
+                    {{ month_names[month.month] }} {{ month.year }}
+                </th>
+                {% endfor %}
                 {% endif %}
-                {% if fee.unpaid_invoice_id %}
-                <a class="fee-unpaid-link" href="{{ url_for('invoice.detail', id=fee.unpaid_invoice_id) }}"
-                    title="Unpaid invoice {{ fee.unpaid_invoice_id }}">
-                    {% if fee.unpaid_invoice_amounts and fee.unpaid_invoice_amounts.get('usd') is not none %}
-                    <div>{{ " %.2f"|format(fee.unpaid_invoice_amounts.get('usd')|float) }} USD</div>
-                    {% else %}
-                    invoice
+            </tr>
+            {% endif %}
+            <tr class="fee-row fee-row--{{ row.group }}">
+                <td class="fee-index fee-index--{{ row.group }}">{{ row.index + 1 }}</td>
+                <td class="fee-entity-cell">
+                    <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}"
+                        class="fee-entity-name {% if not resident_fee.entity.active %}secondary inactive{% endif %}">{{resident_fee.entity.name}}</a>
+                    {% for tag in resident_fee.entity.tags %}
+                    {{ tag_inline(tag) }}
+                    {% endfor %}
+                    {% if row.unpaid_total %}
+                    <span class="fee-unpaid-total">
+                        {% set dc = 'usd' if 'usd' in row.unpaid_total else row.unpaid_total.keys()|first %}
+                        {{ "%.2f"|format(row.unpaid_total[dc]|float) }} {{ dc | upper }}
+                    </span>
                     {% endif %}
-                </a>
-                {% endif %}
                 </td>
-                {% endfor %}
-                <td class="fee-trend-cell">
-                    {% if resident_fee.sparkline_segments or resident_fee.sparkline_dots %}
-                    <svg class="fee-trend-graph" width="90" height="24" viewBox="0 0 90 24" preserveAspectRatio="none"
-                        aria-hidden="true" focusable="false">
-                        {% if resident_fee.sparkline_last_point %}
-                        <title>Latest total: {{ "%.2f"|format(resident_fee.total_usd_series[-1]|float) }} USD</title>
+
+                {% for fee in resident_fee.fees|reverse %}
+                {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month)
+                %}
+                {% if fee.amounts %}
+                {% set display_currency = 'usd' if 'usd' in fee.amounts else fee.amounts.keys()|first %}
+                <td class="fee-cell fee-cell--paid">
+                    {% if fee.paid_invoice_id %}
+                    <a class="fee-cell-link fee-cell-link--paid"
+                        href="{{ url_for('invoice.detail', id=fee.paid_invoice_id) }}"
+                        title="Paid invoice {{ fee.paid_invoice_id }}">
+                        💰{{ "%.2f"|format(fee.amounts[display_currency]|float) }} {{ display_currency | upper }}
+                    </a>
+                    {% else %}
+                    💰{{ "%.2f"|format(fee.amounts[display_currency]|float) }} {{ display_currency | upper }}
+                    {% endif %}
+                </td>
+                {% elif fee.unpaid_invoice_id %}
+                <td class="fee-cell fee-cell--unpaid">
+                    <a class="fee-cell-link fee-cell-link--unpaid"
+                        href="{{ url_for('invoice.detail', id=fee.unpaid_invoice_id) }}"
+                        title="Unpaid invoice {{ fee.unpaid_invoice_id }}">
+                        {% if fee.unpaid_invoice_amounts and fee.unpaid_invoice_amounts.get('usd') is not none %}
+                        ❌{{ "%.2f"|format(fee.unpaid_invoice_amounts.get('usd')|float) }} USD
+                        {% else %}
+                        ❌invoice
                         {% endif %}
-                        {% for segment in resident_fee.sparkline_segments %}
-                        <polyline points="{{ segment }}" fill="none" stroke="#111" stroke-width="1.5"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                        {% endfor %}
-                    </svg>
-                    {% else %}
-                    <span class="fee-trend-empty"></span>
-                    {% endif %}
+                    </a>
                 </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+                {% else %}
+                <td class="fee-cell">
+                </td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% if is_last or next_group != row.group %}
+            {% if row.group in group_unpaid_totals and is_last %}
+            <tr class="fee-group-total-row">
+                <td></td>
+                <td class="fee-group-total-label">
+                    Total unpaid:
+                    <span class="fee-unpaid-total">
+                        {% set gt = group_unpaid_totals[row.group] %}
+                        {% set dc = 'usd' if 'usd' in gt else gt.keys()|first %}
+                        {{ "%.2f"|format(gt[dc]|float) }} {{ dc | upper }}
+                    </span>
+                </td>
+                <td colspan="{{ month_count }}"></td>
+            </tr>
+            {% endif %}
+            {% endif %}
+            {% set state.prev_group = row.group %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
