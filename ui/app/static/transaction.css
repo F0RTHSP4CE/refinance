@@ -177,7 +177,7 @@
   margin-bottom: 1.2rem;
 }
 
-.tx-search-details > summary {
+.tx-search-details>summary {
   font-weight: 900;
   font-size: 0.72rem;
   letter-spacing: 0.14em;
@@ -189,21 +189,21 @@
   list-style: none;
 }
 
-.tx-search-details > summary::-webkit-details-marker {
+.tx-search-details>summary::-webkit-details-marker {
   display: none;
 }
 
-.tx-search-details > summary::before {
+.tx-search-details>summary::before {
   content: '▶ ';
   font-size: 0.6em;
   vertical-align: middle;
 }
 
-.tx-search-details[open] > summary::before {
+.tx-search-details[open]>summary::before {
   content: '▼ ';
 }
 
-.tx-search-details > summary:hover {
+.tx-search-details>summary:hover {
   text-decoration: underline;
 }
 
@@ -338,8 +338,8 @@
   white-space: nowrap;
 }
 
-.tx-col-from > a,
-.tx-col-to > a {
+.tx-col-from>a,
+.tx-col-to>a {
   font-weight: 700;
   font-size: 1.15rem;
   color: #000;
@@ -459,6 +459,8 @@
   font-size: 1.15rem;
   font-weight: 900;
   color: #444;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .transaction-table tbody tr:hover .tx-comment-text {
@@ -502,13 +504,11 @@
 
 /* ── inactive row — 45° stripe ──────────────────────────────────────── */
 .treasury-table tr.secondary td {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    transparent 0px,
-    transparent 5px,
-    rgba(0, 0, 0, 0.07) 5px,
-    rgba(0, 0, 0, 0.07) 10px
-  );
+  background-image: repeating-linear-gradient(-45deg,
+      transparent 0px,
+      transparent 5px,
+      rgba(0, 0, 0, 0.07) 5px,
+      rgba(0, 0, 0, 0.07) 10px);
   color: #888;
 }
 
@@ -519,7 +519,8 @@
 /* ── NAME ────────────────────────────────────────────────────────────── */
 .treasury-col-name {
   white-space: nowrap;
-  width: 1px; /* shrink to badge content */
+  width: 1px;
+  /* shrink to badge content */
   padding-left: 0;
 }
 
@@ -528,8 +529,10 @@
   text-align: right;
   white-space: nowrap;
   vertical-align: middle;
-  width: 1px; /* shrink to content */
-  padding-left: 3rem; /* separates from name */
+  width: 1px;
+  /* shrink to content */
+  padding-left: 3rem;
+  /* separates from name */
   padding-right: 1.5rem;
 }
 
@@ -583,16 +586,21 @@
   }
 
   /* undo wide-table-wrapper nowrap so reduced columns can reflow */
-  .wide-table-wrapper > .transaction-table {
+  .wide-table-wrapper>.transaction-table {
     white-space: normal;
   }
 
   /* hide all columns except from / to / amount / currency */
-  .tx-col-id,      .tx-head-id,
-  .tx-col-comment, .tx-head-comment,
-  .tx-col-treasury,.tx-head-treasury,
-  .tx-col-invoice, .tx-head-invoice,
-  .tx-col-actor,   .tx-head-actor {
+  .tx-col-id,
+  .tx-head-id,
+  .tx-col-comment,
+  .tx-head-comment,
+  .tx-col-treasury,
+  .tx-head-treasury,
+  .tx-col-invoice,
+  .tx-head-invoice,
+  .tx-col-actor,
+  .tx-head-actor {
     display: none;
   }
 
@@ -612,8 +620,8 @@
   }
 
   /* entity names — slightly smaller, allow wrap */
-  .tx-col-from > a,
-  .tx-col-to > a {
+  .tx-col-from>a,
+  .tx-col-to>a {
     font-size: 0.95rem;
     white-space: normal;
     word-break: break-word;
@@ -624,4 +632,3 @@
     display: none;
   }
 }
-

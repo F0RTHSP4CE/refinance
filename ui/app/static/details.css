@@ -12,11 +12,11 @@
   align-items: start;
 }
 
-.deposit-detail-grid > * {
+.deposit-detail-grid>* {
   min-width: 0;
 }
 
-.deposit-detail-grid > * + * {
+.deposit-detail-grid>*+* {
   padding-top: 1rem;
   border-top: 1px solid #ddd;
 }
@@ -182,6 +182,8 @@
 .tx-detail-comment {
   font-family: 'Courier New', Courier, monospace;
   font-weight: 900;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 
 .tx-detail-tags {
@@ -543,4 +545,3 @@
     max-width: 100%;
   }
 }
-
