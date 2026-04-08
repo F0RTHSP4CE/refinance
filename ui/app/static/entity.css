@@ -166,7 +166,7 @@
   line-height: 1.08;
   text-transform: uppercase;
   letter-spacing: 0;
-  text-shadow: 
+  text-shadow:
     3px 3px 0 var(--tag-color);
 }
 
@@ -289,13 +289,11 @@
 
 .entity-balance-row-draft {
   opacity: 0.65;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(200, 200, 200, 0.15) 10px,
-    rgba(200, 200, 200, 0.15) 20px
-  );
+  background: repeating-linear-gradient(45deg,
+      transparent,
+      transparent 10px,
+      rgba(200, 200, 200, 0.15) 10px,
+      rgba(200, 200, 200, 0.15) 20px);
 }
 
 .entity-balance-separator {
@@ -439,7 +437,7 @@
   box-shadow: 4px 4px 0 black;
 }
 
-.charts-grid.balance-width-one > .chart-cell:first-child {
+.charts-grid.balance-width-one>.chart-cell:first-child {
   grid-column: auto;
   width: 100%;
 }
@@ -448,7 +446,7 @@
   grid-template-columns: 1fr;
 }
 
-.charts-grid.balance-width-full > .chart-cell:first-child {
+.charts-grid.balance-width-full>.chart-cell:first-child {
   grid-column: auto;
   width: 100%;
 }
@@ -865,7 +863,7 @@
   z-index: -2;
 }
 
-.entity-list-card > *:not(.entity-list-card-id-bg) {
+.entity-list-card>*:not(.entity-list-card-id-bg) {
   position: relative;
   z-index: 1;
 }
@@ -891,13 +889,11 @@
 }
 
 .entity-list-card--inactive::before {
-  background: repeating-linear-gradient(
-    45deg,
-    #ffffff,
-    #ffffff 11px,
-    #f1f1ee 11px,
-    #f1f1ee 22px
-  );
+  background: repeating-linear-gradient(45deg,
+      #ffffff,
+      #ffffff 11px,
+      #f1f1ee 11px,
+      #f1f1ee 22px);
 }
 
 .entity-list-card-header {
@@ -917,14 +913,14 @@
   color: black;
 }
 
-.entity-list-card-title > span {
+.entity-list-card-title>span {
   display: inline-block;
   position: relative;
   left: -0.06em;
   top: -0.02em;
 }
 
-.entity-list-card-title > span .tag-badge {
+.entity-list-card-title>span .tag-badge {
   display: inline-block;
   vertical-align: baseline;
   position: relative;
@@ -944,12 +940,12 @@
     3px 3px 0 var(--tag-color);
 }
 
-.entity-list-card-title > span .tag-badge + .tag-badge {
+.entity-list-card-title>span .tag-badge+.tag-badge {
   margin-left: 0.25ch;
 }
 
-.entity-list-card-title > span .tag-badge a,
-.entity-list-card-title > span .tag-badge span {
+.entity-list-card-title>span .tag-badge a,
+.entity-list-card-title>span .tag-badge span {
   display: inline-block;
   position: relative;
   top: -0.01em;
@@ -1180,9 +1176,8 @@
     overflow-x: auto;
   }
 
-  .entity-transactions-card .wide-table-wrapper > table {
-    display: block;
-    white-space: nowrap;
+  .entity-transactions-card .wide-table-wrapper>table {
+    width: 100%;
     font-size: 0.86rem;
   }
 
@@ -1241,9 +1236,9 @@
     grid-template-columns: 1fr;
   }
 
-  .charts-grid > .chart-cell:first-child,
-  .charts-grid.balance-width-one > .chart-cell:first-child,
-  .charts-grid.balance-width-full > .chart-cell:first-child {
+  .charts-grid>.chart-cell:first-child,
+  .charts-grid.balance-width-one>.chart-cell:first-child,
+  .charts-grid.balance-width-full>.chart-cell:first-child {
     width: 100%;
   }
 
@@ -1253,6 +1248,7 @@
 }
 
 @media (max-width: 620px) {
+
   .entity-hero-card,
   .entity-card {
     padding: 1rem;

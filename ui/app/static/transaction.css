@@ -582,7 +582,9 @@
 /* ─── MOBILE — compact transaction list ─────────────────────────────── */
 @media (max-width: 640px) {
   .transaction-table {
-    font-size: 0.9rem;
+    font-size: 1rem;
+    table-layout: fixed;
+    width: 100%;
   }
 
   /* undo wide-table-wrapper nowrap so reduced columns can reflow */
@@ -600,31 +602,51 @@
   .tx-col-invoice,
   .tx-head-invoice,
   .tx-col-actor,
-  .tx-head-actor {
+  .tx-head-actor,
+  .tx-head-currency {
     display: none;
+  }
+
+  /* column sizing: give entity columns room, amount/currency shrink to fit */
+  .tx-col-from,
+  .tx-head-from,
+  .tx-col-to,
+  .tx-head-to {
+    width: 28%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tx-col-amount,
+  .tx-head-amount {
+    width: 30%;
+  }
+
+  .tx-col-currency,
+  .tx-head-currency {
+    width: 14%;
   }
 
   /* tighten remaining cells */
   .transaction-table td {
-    padding: 0.5rem 0.35rem;
+    padding: 0.45rem 0.25rem;
   }
 
-  /* keep amount readable but smaller */
+  /* amount + currency sizing */
   .tx-col-amount {
-    font-size: 1.45rem;
+    font-size: 1.5rem;
   }
 
   .tx-col-currency {
     font-size: 1rem;
-    padding-left: 0.2rem;
+    padding-left: 0.15rem;
   }
 
-  /* entity names — slightly smaller, allow wrap */
+  /* entity names */
   .tx-col-from>a,
   .tx-col-to>a {
-    font-size: 0.95rem;
-    white-space: normal;
-    word-break: break-word;
+    font-size: 1rem;
   }
 
   /* hide entity tag chips on mobile */

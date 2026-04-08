@@ -6,3 +6,9 @@ main {
   margin-bottom: 1rem;
 }
 
+@media (max-width: 640px) {
+  main {
+    margin-left: 0.4rem;
+    margin-right: 0.4rem;
+  }
+}
