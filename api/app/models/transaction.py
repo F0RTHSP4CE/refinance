@@ -44,10 +44,10 @@ class Transaction(BaseModel):
     to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
 
     invoice_id: Mapped[int | None] = mapped_column(
-        ForeignKey("invoices.id"), nullable=True, unique=True
+        ForeignKey("invoices.id"), nullable=True
     )
     invoice: Mapped["Invoice | None"] = relationship(
-        "Invoice", back_populates="transaction"
+        "Invoice", back_populates="transactions"
     )
 
     amount: Mapped[Decimal] = mapped_column(DECIMAL(scale=2), nullable=False)

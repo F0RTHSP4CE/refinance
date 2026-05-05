@@ -1,7 +1,7 @@
 """Base for all ORM models"""
 
 from datetime import datetime
-from typing import Optional
+from typing import ClassVar, Optional
 
 from sqlalchemy import DateTime, Integer
 from sqlalchemy.inspection import inspect
@@ -17,7 +17,9 @@ class BaseModel(Base):
     # do not create separate table for this class
     __abstract__ = True
     # force AUTOINCREMENT statement for sqlite, as this dialect omits it by default, but we do need sqlite_sequence table for correct seeding.
-    __table_args__ = {"sqlite_autoincrement": True}
+    __table_args__: ClassVar[dict[str, bool] | tuple[object, ...]] = {
+        "sqlite_autoincrement": True
+    }
 
     # everything should have an id and a comment
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

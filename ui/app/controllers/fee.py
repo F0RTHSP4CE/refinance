@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
 from app.schemas import Fee, MonthlyFee
-from flask import Blueprint, render_template
+from flask import Blueprint, redirect, render_template, request, url_for
 
 fee_bp = Blueprint("fee", __name__)
 
@@ -154,4 +154,32 @@ def index():
         group_unpaid_totals=group_unpaid_totals,
         current_month=current_month,
         current_year=current_year,
+    )
+
+
+@fee_bp.route("/invoices/<int:id>/selection", methods=["GET", "POST"])
+def invoice_selection(id: int):
+    api = get_refinance_api_client()
+    if request.method == "POST":
+        target = request.form.get("target", "")
+        target_type, _, raw_target_id = target.partition(":")
+        data: dict[str, object] = {"target_type": target_type}
+        if target_type == "entity":
+            data["target_entity_id"] = int(raw_target_id)
+        elif target_type == "split":
+            data["target_split_id"] = int(raw_target_id)
+        extra_amount = request.form.get("extra_amount", "").strip()
+        extra_currency = request.form.get("extra_currency", "").strip()
+        if extra_amount:
+            data["extra_amount"] = extra_amount
+            data["extra_currency"] = extra_currency
+        api.http("PATCH", f"fees/invoices/{id}/directed-allocation", data=data)
+        return redirect(url_for("invoice.detail", id=id))
+
+    selection = api.http("GET", f"fees/invoices/{id}/directed-allocation").json()
+    invoice = api.http("GET", f"invoices/{id}").json()
+    return render_template(
+        "fee/allocation_selection.jinja2",
+        invoice=invoice,
+        selection=selection,
     )

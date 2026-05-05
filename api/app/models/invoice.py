@@ -61,12 +61,16 @@ class Invoice(BaseModel):
 
     tags: Mapped[list[Tag]] = relationship(secondary=invoices_tags)
 
-    transaction: Mapped["Transaction | None"] = relationship(
-        "Transaction", back_populates="invoice", uselist=False
+    transactions: Mapped[list["Transaction"]] = relationship(
+        "Transaction", back_populates="invoice", order_by="Transaction.id"
     )
 
     @property
     def transaction_id(self) -> int | None:
-        if self.transaction is None:
+        if not self.transactions:
             return None
-        return self.transaction.id
+        return self.transactions[0].id
+
+    @property
+    def transaction_ids(self) -> list[int]:
+        return [transaction.id for transaction in self.transactions]

@@ -268,7 +268,7 @@ class FeeService(BaseService):
                     invoices_tags.c.tag_id == fee_tag.id,
                 ),
             )
-            .options(selectinload(Invoice.transaction))
+            .options(selectinload(Invoice.transactions))
             .filter(
                 Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
@@ -281,9 +281,9 @@ class FeeService(BaseService):
 
         # Process transactions into a nested dictionary
         # {resident_id: {(year, month): {currency: amount}}}
-        fees_by_resident_by_month = defaultdict(
-            lambda: defaultdict(lambda: defaultdict(Decimal))
-        )
+        fees_by_resident_by_month: defaultdict[
+            int, defaultdict[tuple[int, int], defaultdict[str, Decimal]]
+        ] = defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
         # Track unpaid invoices
         # {resident_id: {(year, month): invoice_id}}
         unpaid_invoice_by_resident_by_month: dict[int, dict[tuple[int, int], int]] = (
@@ -316,8 +316,12 @@ class FeeService(BaseService):
                 continue
             if invoice.status != InvoiceStatus.PAID:
                 continue
-            tx = invoice.transaction
-            if tx is None or tx.status != TransactionStatus.COMPLETED:
+            completed_transactions = [
+                transaction
+                for transaction in invoice.transactions
+                if transaction.status == TransactionStatus.COMPLETED
+            ]
+            if not completed_transactions:
                 continue
             current_paid = paid_invoice_by_resident_by_month[
                 invoice.from_entity_id
@@ -326,9 +330,10 @@ class FeeService(BaseService):
                 paid_invoice_by_resident_by_month[invoice.from_entity_id][
                     (year, month)
                 ] = invoice.id
-            fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
-                tx.currency.lower()
-            ] += tx.amount
+            for transaction in completed_transactions:
+                fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
+                    transaction.currency.lower()
+                ] += transaction.amount
 
         # Build the final response structure
         results: list[FeeRecord] = []

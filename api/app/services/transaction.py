@@ -12,7 +12,6 @@ from app.errors.transaction import (
     CompletedTransactionNotEditable,
     TransactionWillOverdraftTreasury,
 )
-from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.transaction import (
     TransactionCreateSchema,
@@ -31,7 +30,6 @@ from sqlalchemy.orm import Query, Session
 
 if TYPE_CHECKING:
     from app.services.invoice import InvoiceService
-    from app.services.stats import StatsService
 
 
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):
@@ -129,6 +127,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     def create(  # type: ignore[override]
         self, schema: TransactionCreateSchema, overrides: dict = {}
     ) -> Transaction:
+        skip_invoice_validation = bool(overrides.pop("_skip_invoice_validation", False))
         if (
             schema.status == TransactionStatus.COMPLETED
             and self._treasury_service.transaction_will_overdraft_treasury(
@@ -140,15 +139,16 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             raise TransactionWillOverdraftTreasury
         if schema.invoice_id is not None:
             invoice_service = self._get_invoice_service()
-            invoice_service.validate_transaction_for_invoice(
-                invoice_id=schema.invoice_id,
-                tx_id=None,
-                from_entity_id=schema.from_entity_id,
-                to_entity_id=schema.to_entity_id,
-                amount=schema.amount,
-                currency=schema.currency,
-                status=schema.status or TransactionStatus.DRAFT,
-            )
+            if not skip_invoice_validation:
+                invoice_service.validate_transaction_for_invoice(
+                    invoice_id=schema.invoice_id,
+                    tx_id=None,
+                    from_entity_id=schema.from_entity_id,
+                    to_entity_id=schema.to_entity_id,
+                    amount=schema.amount,
+                    currency=schema.currency,
+                    status=schema.status or TransactionStatus.DRAFT,
+                )
             invoice = invoice_service.get(schema.invoice_id)
             invoice_tag_ids = {tag.id for tag in invoice.tags}
             if invoice_tag_ids:
@@ -163,7 +163,10 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             schema.to_treasury_id,
             invalidate_stats=True,
         )
-        return super().create(schema, overrides)
+        tx = super().create(schema, overrides)
+        if schema.invoice_id is not None:
+            self._get_invoice_service().after_invoice_transaction_saved(tx)
+        return tx
 
     def update(  # type: ignore[override]
         self, obj_id: int, schema: TransactionUpdateSchema, overrides: dict = {}
@@ -228,7 +231,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         )
         updated_tx = super().update(obj_id, schema, overrides)
         if resolved_invoice_id is not None:
-            invoice = self._invoice_service.get(resolved_invoice_id)
+            invoice = self._get_invoice_service().get(resolved_invoice_id)
             invoice_tag_ids = {tag.id for tag in invoice.tags}
             if invoice_tag_ids:
                 current_tag_ids = {tag.id for tag in updated_tx.tags}
@@ -244,6 +247,8 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
                 updated_tx.comment = invoice.comment
                 self.db.flush()
                 self.db.refresh(updated_tx)
+        if resolved_invoice_id is not None:
+            self._get_invoice_service().after_invoice_transaction_saved(updated_tx)
         return updated_tx
 
     def delete(self, obj_id: int) -> int:  # type: ignore[override]

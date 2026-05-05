@@ -93,6 +93,7 @@ class Invoice(Base):
     status: InvoiceStatus
     tags: list[Tag]
     transaction_id: int | None = None
+    transaction_ids: list[int] = field(default_factory=list)
     billing_period: date | None = None
     paid_amount: Decimal | None = None
     paid_currency: str | None = None

@@ -26,6 +26,7 @@ from app.schemas.split import (
     SplitUpdateSchema,
 )
 from app.schemas.transaction import TransactionCreateSchema
+from app.seeding import f0_entity
 from app.services.base import BaseService
 from app.services.entity import EntityService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
@@ -250,6 +251,8 @@ class SplitService(TaggableServiceMixin[Split], BaseService[Split]):
         tx_list: list[Transaction] = []
         for participant_id, participant_amount in shares.items():
             if participant_amount > Decimal("0.00"):
+                if participant_id == f0_entity.id:
+                    continue
                 if (
                     participant_id != db_obj.recipient_entity_id
                 ):  # don't create transaction to self

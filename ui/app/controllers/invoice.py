@@ -2,9 +2,17 @@ from datetime import date
 from decimal import Decimal
 
 from app.config import Config
+from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Invoice, InvoiceStatus, Tag, Transaction
+from app.schemas import (
+    Balance,
+    Invoice,
+    InvoiceStatus,
+    Tag,
+    Transaction,
+    TransactionStatus,
+)
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
@@ -111,6 +119,10 @@ class DeleteForm(FlaskForm):
     delete = SubmitField("Delete")
 
 
+class SettlementCompleteForm(FlaskForm):
+    submit = SubmitField("Complete settlement")
+
+
 class InvoiceBulkForm(FlaskForm):
     from_tag_ids = SelectMultipleField(
         "From Tags (entities with tag)", coerce=int, choices=[], validators=[Optional()]
@@ -166,7 +178,7 @@ class InvoiceBulkForm(FlaskForm):
 
 
 def _build_amounts_from_form(form: InvoiceForm) -> list[dict[str, str]]:
-    amounts = []
+    amounts: list[dict[str, str]] = []
     for amount_field, currency_field in (
         (form.amount_1, form.currency_1),
         (form.amount_2, form.currency_2),
@@ -184,7 +196,7 @@ def _build_amounts_from_form(form: InvoiceForm) -> list[dict[str, str]]:
 
 
 def _build_amounts_from_bulk_form(form: InvoiceBulkForm) -> list[dict[str, str]]:
-    amounts = []
+    amounts: list[dict[str, str]] = []
     for amount_field, currency_field in (
         (form.amount_1, form.currency_1),
         (form.amount_2, form.currency_2),
@@ -209,7 +221,9 @@ def _populate_amount_fields(form: InvoiceForm, amounts: list[dict]) -> None:
     ]
     for slot, entry in zip(slots, amounts):
         amount_field, currency_field = slot
-        amount_field.data = float(entry.get("amount"))
+        raw_amount = entry.get("amount")
+        if raw_amount is not None:
+            amount_field.data = float(raw_amount)
         currency_field.data = str(entry.get("currency", "")).upper()
 
 
@@ -222,9 +236,55 @@ def _normalize_billing_period(value: str | None) -> str | None:
     return trimmed
 
 
-@invoice_bp.route("/")
+def _invoice_transaction_ids(invoice: Invoice) -> list[int]:
+    transaction_ids = invoice.transaction_ids or []
+    if not transaction_ids and invoice.transaction_id:
+        transaction_ids = [invoice.transaction_id]
+    return transaction_ids
+
+
+def _invoice_transactions(api, invoice: Invoice) -> list[Transaction]:
+    return [
+        Transaction(**api.http("GET", f"transactions/{transaction_id}").json())
+        for transaction_id in _invoice_transaction_ids(invoice)
+    ]
+
+
+def _status_value(status: str | TransactionStatus) -> str:
+    return status.value if isinstance(status, TransactionStatus) else str(status)
+
+
+def _has_draft_transactions(transactions: list[Transaction]) -> bool:
+    return any(
+        _status_value(transaction.status) != TransactionStatus.COMPLETED.value
+        for transaction in transactions
+    )
+
+
+def _get_fee_allocation(api, invoice_id: int) -> dict | None:
+    try:
+        allocation_response = api.http(
+            "GET", f"fees/invoices/{invoice_id}/directed-allocation"
+        ).json()
+    except ApplicationError:
+        return None
+    if allocation_response.get("has_allocation"):
+        return allocation_response
+    return None
+
+
+def _first_invoice_currency(invoice: Invoice) -> str:
+    if not invoice.amounts:
+        return ""
+    first_amount = invoice.amounts[0]
+    if isinstance(first_amount, dict):
+        return str(first_amount.get("currency", "")).lower()
+    return str(first_amount.currency).lower()
+
+
+@invoice_bp.route("/", endpoint="list")
 @token_required
-def list():
+def list_invoices():
     page = request.args.get("page", 1, type=int)
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
@@ -280,16 +340,42 @@ def add():
 def detail(id):
     api = get_refinance_api_client()
     invoice = Invoice(**api.http("GET", f"invoices/{id}").json())
-    transaction = None
-    if invoice.transaction_id:
-        transaction = Transaction(
-            **api.http("GET", f"transactions/{invoice.transaction_id}").json()
-        )
+    transactions = _invoice_transactions(api, invoice)
+    fee_allocation = _get_fee_allocation(api, id)
     return render_template(
         "invoice/detail.jinja2",
         invoice=invoice,
-        transaction=transaction,
+        transactions=transactions,
+        fee_allocation=fee_allocation,
+        has_draft_settlement_transactions=_has_draft_transactions(transactions),
+        settlement_complete_form=SettlementCompleteForm(),
     )
+
+
+@invoice_bp.route("/<int:id>/complete-settlement", methods=["POST"])
+@token_required
+def complete_settlement(id):
+    form = SettlementCompleteForm()
+    if not form.validate_on_submit():
+        return redirect(url_for("invoice.detail", id=id))
+    api = get_refinance_api_client()
+    invoice = Invoice(**api.http("GET", f"invoices/{id}").json())
+    fee_allocation = _get_fee_allocation(api, id)
+    if not fee_allocation:
+        return redirect(url_for("invoice.detail", id=id))
+
+    transaction_ids = _invoice_transaction_ids(invoice)
+    if not transaction_ids:
+        return redirect(url_for("invoice.pay", id=id))
+
+    currency = _first_invoice_currency(invoice)
+    if currency:
+        api.http(
+            "POST",
+            f"fees/invoices/{invoice.id}/settlement",
+            data={"currency": currency, "status": TransactionStatus.COMPLETED.value},
+        )
+    return redirect(url_for("invoice.detail", id=id))
 
 
 @invoice_bp.route("/<int:id>/delete", methods=["GET", "POST"])
@@ -350,7 +436,34 @@ def pay(id):
     api = get_refinance_api_client()
     invoice_data = api.http("GET", f"invoices/{id}").json()
     invoice = Invoice(**invoice_data)
+    invoice_status = (
+        invoice.status.value
+        if isinstance(invoice.status, InvoiceStatus)
+        else str(invoice.status)
+    )
+    if invoice_status != InvoiceStatus.PENDING.value:
+        return redirect(url_for("invoice.detail", id=invoice.id))
+    transactions = _invoice_transactions(api, invoice)
     amounts = invoice_data.get("amounts", [])
+    fee_allocation = _get_fee_allocation(api, id)
+    if fee_allocation:
+        directed = fee_allocation.get("directed_allocation") or {}
+        extra_amounts = directed.get("extra_amounts") or {}
+        adjusted_amounts = []
+        for amount in amounts:
+            currency = str(amount.get("currency", "")).lower()
+            extra = extra_amounts.get(currency)
+            if extra is None:
+                adjusted_amounts.append(amount)
+                continue
+            total = Decimal(str(amount["amount"])) + Decimal(str(extra))
+            adjusted_amounts.append(
+                {
+                    **amount,
+                    "amount": format(total.quantize(Decimal("0.01")), "f"),
+                }
+            )
+        amounts = adjusted_amounts
     from_entity_balance = Balance(
         **api.http("GET", f"balances/{invoice.from_entity_id}").json()
     ).completed
@@ -369,6 +482,22 @@ def pay(id):
         form.amount.data = float(amounts[0]["amount"])
 
     if form.validate_on_submit():
+        if fee_allocation:
+            directed = fee_allocation.get("directed_allocation") or {}
+            if directed.get("selected_at") is None:
+                return redirect(url_for("fee.invoice_selection", id=invoice.id))
+            status = (
+                TransactionStatus.COMPLETED.value
+                if transactions
+                else TransactionStatus.DRAFT.value
+            )
+            api.http(
+                "POST",
+                f"fees/invoices/{invoice.id}/settlement",
+                data={"currency": form.currency.data.lower(), "status": status},
+            )
+            return redirect(url_for("invoice.detail", id=invoice.id))
+
         data = {
             "from_entity_id": int(form.from_entity_id.data),
             "to_entity_id": int(form.to_entity_id.data),
@@ -387,6 +516,9 @@ def pay(id):
         form=form,
         amounts=amounts,
         from_entity_balance=from_entity_balance,
+        fee_allocation=fee_allocation,
+        transactions=transactions,
+        has_draft_settlement_transactions=_has_draft_transactions(transactions),
     )
 
 
@@ -401,17 +533,17 @@ def bulk_add():
 
     fee_config = api.http("GET", "fees/config").json()
     fee_preset_groups: list[dict] = []
-    _groups: dict[int, list[dict]] = {}
-    for item in fee_config:
-        tag_id = item["tag_id"]
-        _groups.setdefault(tag_id, []).append(
-            {"currency": item["currency"], "amount": item["amount"]}
-        )
-    for tag_id, amounts in _groups.items():
+    for item in fee_config.get("rules", []):
+        tag_id = item["membership_tag_id"]
+        amounts = [
+            {"currency": currency, "amount": amount}
+            for currency, amount in item.get("invoice_amounts", {}).items()
+        ]
         fee_preset_groups.append(
             {
                 "tag_id": tag_id,
-                "tag_name": tag_name_by_id.get(tag_id, f"tag {tag_id}"),
+                "tag_name": item.get("label")
+                or tag_name_by_id.get(tag_id, f"tag {tag_id}"),
                 "amounts": sorted(amounts, key=lambda x: x["currency"]),
             }
         )
@@ -432,19 +564,14 @@ def bulk_add():
         )
 
     if form.validate_on_submit():
-        amounts = _build_amounts_from_bulk_form(form)
-        if not amounts or not form.from_tag_ids.data:
+        if not form.from_tag_ids.data:
             flash("Preset selection required.")
             return _render()
         data = {
             "from_tag_ids": form.from_tag_ids.data,
-            "to_entity_id": form.to_entity_id.data,
-            "comment": form.comment.data or None,
-            "amounts": amounts,
-            "tag_ids": form.tag_ids.data or [],
             "billing_period": _normalize_billing_period(form.billing_period.data),
         }
-        result = api.http("POST", "invoices/bulk", data=data).json()
+        result = api.http("POST", "fees/invoices/bulk", data=data).json()
         invoice_ids = result.get("invoice_ids", [])
         invoices = [
             Invoice(**api.http("GET", f"invoices/{iid}").json()) for iid in invoice_ids

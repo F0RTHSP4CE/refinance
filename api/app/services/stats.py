@@ -204,6 +204,7 @@ class StatsService(BaseService):
         # Query paid invoices
         paid_invoices = (
             self.db.query(Invoice)
+            .options(selectinload(Invoice.transactions))
             .filter(
                 Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
@@ -225,17 +226,24 @@ class StatsService(BaseService):
             .all()
         )
 
-        monthly_paid_totals = defaultdict(lambda: defaultdict(Decimal))
-        monthly_unpaid_totals = defaultdict(lambda: defaultdict(Decimal))
+        monthly_paid_totals: defaultdict[tuple[int, int], defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
+        )
+        monthly_unpaid_totals: defaultdict[
+            tuple[int, int], defaultdict[str, Decimal]
+        ] = defaultdict(lambda: defaultdict(Decimal))
         today = date.today()
 
         # Process paid invoices
         for invoice in paid_invoices:
             if invoice.billing_period is None:
                 continue
-            if invoice.transaction is None:
-                continue
-            if invoice.transaction.status != TransactionStatus.COMPLETED:
+            completed_transactions = [
+                transaction
+                for transaction in invoice.transactions
+                if transaction.status == TransactionStatus.COMPLETED
+            ]
+            if not completed_transactions:
                 continue
             year = invoice.billing_period.year
             month = invoice.billing_period.month
@@ -252,9 +260,10 @@ class StatsService(BaseService):
             if not (start_month <= fee_date <= end_month):
                 continue
 
-            monthly_paid_totals[(year, month)][
-                invoice.transaction.currency.lower()
-            ] += invoice.transaction.amount
+            for transaction in completed_transactions:
+                monthly_paid_totals[(year, month)][
+                    transaction.currency.lower()
+                ] += transaction.amount
 
         # Process unpaid invoices
         for invoice in unpaid_invoices:
@@ -330,8 +339,12 @@ class StatsService(BaseService):
 
         result = []
         for year, month in sorted(all_months):
-            paid_amounts = monthly_paid_totals.get((year, month), {})
-            unpaid_amounts = monthly_unpaid_totals.get((year, month), {})
+            paid_amounts: Mapping[str, Decimal] = monthly_paid_totals.get(
+                (year, month), {}
+            )
+            unpaid_amounts: Mapping[str, Decimal] = monthly_unpaid_totals.get(
+                (year, month), {}
+            )
             expense_amounts = monthly_expense_totals.get((year, month), {})
 
             paid_amounts_float = {k: float(v) for k, v in paid_amounts.items()}
@@ -503,7 +516,9 @@ class StatsService(BaseService):
             .all()
         )
 
-        weekly_totals = defaultdict(lambda: defaultdict(Decimal))
+        weekly_totals: defaultdict[tuple[int, int], defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
+        )
         for row in query_result:
             weekly_totals[(row.year, row.week)][row.currency] = row.total_amount
 
@@ -690,7 +705,7 @@ class StatsService(BaseService):
             ):
                 entity_names[int(entity_id)] = name
 
-        results = []
+        results: list[dict[str, Any]] = []
         for entity_id, amounts in totals.items():
             amounts_float = {
                 currency: float(amount) for currency, amount in amounts.items()
@@ -705,7 +720,7 @@ class StatsService(BaseService):
                 }
             )
 
-        results.sort(key=lambda item: item["total_usd"], reverse=True)
+        results.sort(key=lambda item: float(item["total_usd"]), reverse=True)
         return results[:limit]
 
     def _get_top_tags(
@@ -769,7 +784,7 @@ class StatsService(BaseService):
         if not totals:
             return []
 
-        results = []
+        results: list[dict[str, Any]] = []
         for tag_id, amounts in totals.items():
             amounts_float = {
                 currency: float(amount) for currency, amount in amounts.items()
@@ -784,7 +799,7 @@ class StatsService(BaseService):
                 }
             )
 
-        results.sort(key=lambda item: item["total_usd"], reverse=True)
+        results.sort(key=lambda item: float(item["total_usd"]), reverse=True)
         return results[:limit]
 
     def get_top_incoming_entities(

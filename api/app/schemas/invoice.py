@@ -49,6 +49,7 @@ class InvoiceSchema(BaseReadSchema):
     status: InvoiceStatus
     tags: list[TagSchema]
     transaction_id: int | None = None
+    transaction_ids: list[int] = Field(default_factory=list)
 
 
 class InvoiceCreateSchema(BaseUpdateSchema):

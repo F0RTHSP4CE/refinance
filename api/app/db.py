@@ -44,7 +44,34 @@ class DatabaseConnection:
         """Create all database tables defined in models."""
         logger.info("Creating database tables...")
         BaseModel.metadata.create_all(bind=self.engine)
+        self._apply_schema_compatibility_fixes()
         logger.info("Database tables created.")
+
+    def _apply_schema_compatibility_fixes(self) -> None:
+        """Apply small schema fixes for deployments without migration tooling."""
+        if self.engine.dialect.name.lower() != "postgresql":
+            return
+        with self.engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE transactions "
+                    "DROP CONSTRAINT IF EXISTS transactions_invoice_id_key"
+                )
+            )
+            existing_constraint = conn.execute(
+                text(
+                    "SELECT 1 FROM pg_constraint "
+                    "WHERE conname = 'fee_allocations_invoice_component_key'"
+                )
+            ).fetchone()
+            if existing_constraint is None:
+                conn.execute(
+                    text(
+                        "ALTER TABLE fee_allocations "
+                        "ADD CONSTRAINT fee_allocations_invoice_component_key "
+                        "UNIQUE (invoice_id, component_key)"
+                    )
+                )
 
     def drop_tables(self) -> None:
         """Drop all database tables."""

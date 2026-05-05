@@ -26,6 +26,7 @@ class ServiceContainer:
         self._pos_service = None
         self._currency_exchange_service = None
         self._fee_service = None
+        self._fee_allocation_service = None
         self._stats_service = None
         self._token_service = None
         self._notification_service = None
@@ -76,6 +77,7 @@ class ServiceContainer:
     @property
     def invoice_service(self):
         self._ensure_invoice_transaction_services()
+        self._ensure_fee_allocation_service()
         return self._invoice_service
 
     def _ensure_invoice_transaction_services(self) -> None:
@@ -99,6 +101,20 @@ class ServiceContainer:
                 transaction_service=self._transaction_service,
             )
         self._transaction_service.set_invoice_service(self._invoice_service)
+
+    def _ensure_fee_allocation_service(self) -> None:
+        self._ensure_invoice_transaction_services()
+        if self._fee_allocation_service is None:
+            from app.services.fee_allocation import FeeAllocationService
+
+            self._fee_allocation_service = FeeAllocationService(
+                db=self.db,
+                config=self.config,
+                transaction_service=self._transaction_service,
+                invoice_service=self._invoice_service,
+                notification_service=self.notification_service,
+            )
+        self._invoice_service.set_fee_allocation_service(self._fee_allocation_service)
 
     @property
     def split_service(self):
@@ -198,6 +214,11 @@ class ServiceContainer:
                 config=self.config,
             )
         return self._fee_service
+
+    @property
+    def fee_allocation_service(self):
+        self._ensure_fee_allocation_service()
+        return self._fee_allocation_service
 
     @property
     def stats_service(self):
@@ -300,6 +321,10 @@ def get_currency_exchange_service(container: ServiceContainer = Depends(get_cont
 
 def get_fee_service(container: ServiceContainer = Depends(get_container)):
     return container.fee_service
+
+
+def get_fee_allocation_service(container: ServiceContainer = Depends(get_container)):
+    return container.fee_allocation_service
 
 
 def get_stats_service(container: ServiceContainer = Depends(get_container)):

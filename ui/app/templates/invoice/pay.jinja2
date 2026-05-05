@@ -55,10 +55,33 @@
                     </button>
                     {% endfor %}
                 </div>
+                {% if fee_allocation %}
+                {% set directed = fee_allocation.directed_allocation %}
+                <p class="secondary">
+                    {% if transactions %}
+                    Settlement transactions already exist. Completing settlement will complete all draft components.
+                    {% else %}
+                    Monthly contribution target:
+                    {% if fee_allocation.selected_target_name %}
+                    {{ fee_allocation.selected_target_name }}
+                    {% else %}
+                    not selected
+                    {% endif %}
+                    · <a href="{{ url_for('fee.invoice_selection', id=invoice.id) }}">change</a>
+                    {% endif %}
+                </p>
+                {% if directed.extra_amounts %}
+                <p class="secondary">The selected extra directed donation is included in the amount above.</p>
+                {% endif %}
+                {% endif %}
             </div>
 
             <div class="form-actions">
-                {{ form.submit(class_='big-button', value='Create transaction') }}
+                {% if fee_allocation and not fee_allocation.selected_target_name %}
+                <a href="{{ url_for('fee.invoice_selection', id=invoice.id) }}" class="big-button">Choose target</a>
+                {% else %}
+                {{ form.submit(class_='big-button', value='Complete settlement' if fee_allocation and has_draft_settlement_transactions else 'Create settlement' if fee_allocation else 'Create transaction') }}
+                {% endif %}
             </div>
         </form>
     </section>
