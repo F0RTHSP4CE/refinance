@@ -63,6 +63,19 @@ open http://localhost:8000/docs and http://localhost:9000
 make test
 ```
 
+### schema migrations
+Schema is managed by Alembic. On `make dev` / `make prod` the API entrypoint runs `alembic upgrade head` and seeds bootstrap data before uvicorn starts — fresh environments come up with the full schema automatically.
+
+Common tasks:
+```console
+make migrate                       # apply pending migrations
+make migration NAME=<short_desc>   # autogenerate a new revision from model changes
+make migrate-down                  # roll back the most recent migration
+make migrate-history               # show revision history
+```
+
+For details (autogenerate caveats, stamping an existing DB, resolving revision conflicts) see [docs/migrations.md](docs/migrations.md).
+
 ## todo release
 - [x] base classes
 - [x] errors
@@ -92,7 +105,7 @@ make test
 - [x] card processing
 
 ## todo techdebt
-- [ ] migrations
+- [x] migrations
 - [x] pass tags as a list, not as add/delete operations
     - [x] fix ui tag management
 - [x] misc validation of amounts (>0.00)

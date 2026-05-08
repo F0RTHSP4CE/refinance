@@ -11,4 +11,5 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --system -r requirements.txt
 
 EXPOSE 8000
-ENTRYPOINT ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8000", "--log-config=uvicorn-log.yml"]
+RUN chmod +x /opt/api/entrypoint.sh
+ENTRYPOINT ["/opt/api/entrypoint.sh"]

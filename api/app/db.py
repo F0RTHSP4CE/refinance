@@ -17,8 +17,6 @@ logger = logging.getLogger(__name__)
 class DatabaseConnection:
     engine: Engine
     session_local: sessionmaker[Session]
-    # Track which database URLs have been bootstrapped to avoid duplicate work per DB.
-    _bootstrapped_urls: set[str] = set()
 
     def __init__(self, config: Config = Depends(get_config)) -> None:
         # Create engine with appropriate connection args for SQLite or other databases
@@ -34,11 +32,6 @@ class DatabaseConnection:
             autoflush=False,
             bind=self.engine,
         )
-        # Seed bootstrap data only once per process.
-        if db_url not in self.__class__._bootstrapped_urls:
-            self.create_tables()
-            self.seed_bootstrap_data()
-            self.__class__._bootstrapped_urls.add(db_url)
 
     def create_tables(self) -> None:
         """Create all database tables defined in models."""
