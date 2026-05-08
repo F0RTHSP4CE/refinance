@@ -92,7 +92,6 @@ make test
 - [x] card processing
 
 ## todo techdebt
-- [ ] migrations
 - [x] pass tags as a list, not as add/delete operations
     - [x] fix ui tag management
 - [x] misc validation of amounts (>0.00)
