@@ -5,6 +5,8 @@ services:
     command: --reload
     env_file:
       - secrets.dev.env
+    depends_on:
+      - db
     ports:
       - "8000:8000"
 

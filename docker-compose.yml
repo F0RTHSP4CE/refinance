@@ -7,9 +7,6 @@ services:
       REFINANCE_DATABASE_URL: postgresql://postgres:postgres@db:5432/refinance
     env_file:
       - secrets.env.example
-    depends_on:
-      db:
-        condition: service_healthy
 
   ui:
     build: 
@@ -25,8 +22,3 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: refinance
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d refinance"]
-      interval: 2s
-      timeout: 3s
-      retries: 30

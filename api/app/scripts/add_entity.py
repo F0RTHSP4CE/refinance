@@ -92,7 +92,7 @@ def main() -> None:
     args = parse_args()
     # Create config explicitly for CLI usage (bypass FastAPI Depends)
     config = get_config()
-    db = DatabaseConnection(config=config)
+    db = DatabaseConnection(config=config)  # creates tables/seed if not exists
     session = db.get_session()
     try:
         upsert_entity(
