@@ -47,6 +47,11 @@ class Config:
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))
+    # Dev-only: when true, /tokens/send returns the freshly minted token in the
+    # response so the UI can log in without a Telegram round-trip.
+    dev_auth_bypass: bool = field(
+        default=getenv("REFINANCE_DEV_AUTH_BYPASS", "").lower() in ("1", "true", "yes")
+    )
 
     @property
     def database_url(self) -> str:

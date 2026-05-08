@@ -35,6 +35,10 @@ def login():
         response = api.http("POST", "tokens/send", data=data)
         report = response.json()
 
+        # Dev-only: API returns the token directly when REFINANCE_DEV_AUTH_BYPASS is on.
+        if report.get("token"):
+            return redirect(url_for("auth.token_auth", token=report["token"]))
+
     return render_template("auth/login.jinja2", form=form, report=report)
 
 

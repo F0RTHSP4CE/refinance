@@ -13,6 +13,25 @@ Environment variables used:
 - `REFINANCE_API_URL`: Used by deposit callbacks.
 - `REFINANCE_TELEGRAM_BOT_API_TOKEN`: Telegram bot token to deliver login links.
 - `REFINANCE_DATABASE_URL`: PostgreSQL connection string (defaults to `postgresql://postgres:postgres@db:5432/refinance` when running via docker compose).
+- `REFINANCE_DEV_AUTH_BYPASS`: dev-only flag — see [auth bypass](#auth-bypass-dev-only) below. **Never set in prod.**
+
+### auth bypass (dev only)
+Local development without a real Telegram bot. Two options.
+
+**Option A — bypass via login form.** Set `REFINANCE_DEV_AUTH_BYPASS=1` in `secrets.dev.env` (already enabled by default in the shipped file). With the flag on, `POST /tokens/send` returns the freshly minted JWT in the response, and the UI redirects to `/auth/token/<token>` immediately, skipping Telegram entirely. The login form behaves as usual — type an existing entity name, hit submit, you're in.
+
+Verify the var is live inside the container:
+```console
+docker compose -f docker-compose.yml -f docker-compose.dev.yml exec api env | grep DEV_AUTH
+```
+
+**Option B — print a login link from the CLI.** Mints a JWT for an existing entity and prints a `…/auth/token/<jwt>` URL you can paste into the browser. Works regardless of `REFINANCE_DEV_AUTH_BYPASS`.
+```console
+make login NAME=skywinder
+# → http://localhost:9000/auth/token/eyJhbGciOi...
+```
+
+Security: the bypass returns a real signed JWT and grants full session access — keep `REFINANCE_DEV_AUTH_BYPASS` unset everywhere except local dev. The `secrets.env.example` template ships with it empty.
 
 Testing locally:
 1) Create `secrets.dev.env`:

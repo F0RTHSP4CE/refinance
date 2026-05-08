@@ -91,10 +91,18 @@ class TokenService:
                     )
                     message_sent = any(results.values())
 
+            exposed_token = token if self.config.dev_auth_bypass else None
+            if exposed_token:
+                logger.warning(
+                    "TokenService: dev auth bypass enabled — returning token in response for entity=%s",
+                    entity.name,
+                )
+
             return TokenSendReportSchema(
                 entity_found=entity_found,
                 token_generated=token_generated,
                 message_sent=message_sent,
+                token=exposed_token,
             )
 
         except Exception:

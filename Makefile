@@ -76,3 +76,10 @@ add-entity:
 	# Example: make add-entity NAME=skywinder TELEGRAM_ID=123456789 ID=201
 	@if [ -z "$(NAME)" ]; then echo "Usage: make add-entity NAME=<name> [TELEGRAM_ID=<id>] [ID=<id>]"; exit 1; fi
 	$(COMPOSE) exec api python -m app.scripts.add_entity --name "$(NAME)" $(if $(ID),--id $(ID),) $(if $(TELEGRAM_ID),--telegram-id $(TELEGRAM_ID),)
+
+.PHONY: login
+login: ENV = dev
+login:
+	# Example: make login NAME=skywinder
+	@if [ -z "$(NAME)" ]; then echo "Usage: make login NAME=<name>"; exit 1; fi
+	@$(COMPOSE) exec -T api python -m app.scripts.login --name "$(NAME)"

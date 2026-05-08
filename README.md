@@ -58,6 +58,15 @@ make dev
 ```
 open http://localhost:8000/docs and http://localhost:9000
 
+### login without telegram
+`secrets.dev.env` ships with `REFINANCE_DEV_AUTH_BYPASS=1`, so the login form logs you in immediately — just type an existing entity name (e.g. `F0`) at http://localhost:9000/auth/login and submit.
+
+Or grab a login link from the CLI:
+```console
+make login NAME=<entity-name>
+# → http://localhost:9000/auth/token/<jwt>
+```
+
 ### tests
 ```console
 make test
