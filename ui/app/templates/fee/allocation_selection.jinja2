@@ -1,0 +1,69 @@
+{% extends "base.jinja2" %}
+
+{% block title %}Monthly contribution{% endblock %}
+
+{% block content %}
+{% set directed = selection.directed_allocation %}
+<div class="entry-form-layout shortcut-form-container">
+    <section class="entry-form-card">
+        <h2>Monthly contribution</h2>
+        {% if directed %}
+        <div class="invoice-amount-list">
+            <div class="invoice-amount-item">
+                {% for currency, amount in directed.amounts.items() %}
+                {{ amount }} {{ currency | upper }}{% if not loop.last %} <span class="invoice-amount-sep">OR</span> {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <p>Choose where this part of your fee goes.</p>
+        <p class="secondary">Deadline: {{ directed.selection_deadline_at[:10] }}</p>
+
+        {% if directed.allocation_transaction_id %}
+        <p class="secondary">This contribution has already been settled.</p>
+        {% else %}
+        <form method="post" class="entry-form">
+            <div class="form-group">
+                <label class="form-label" for="target">Target</label>
+                <select id="target" name="target" class="form-input">
+                    {% for target in selection.budget_targets %}
+                    <option value="entity:{{ target.id }}" {% if directed.target_type == 'entity' and directed.target_entity_id == target.id %}selected{% endif %}>
+                        {{ target.name }}
+                    </option>
+                    {% endfor %}
+                    {% if selection.split_targets %}
+                    {% for target in selection.split_targets %}
+                    <option value="split:{{ target.id }}" {% if directed.target_type == 'split' and directed.target_split_id == target.id %}selected{% endif %}>
+                        {{ target.name }}{% if target.currency %} · {{ target.currency | upper }}{% endif %}
+                    </option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field form-field-amount">
+                    <label class="form-label" for="extra_amount">Extra donation</label>
+                    <input id="extra_amount" name="extra_amount" class="form-input" type="number" step="0.01"
+                        placeholder="0.00">
+                </div>
+                <div class="form-field form-field-currency">
+                    <label class="form-label" for="extra_currency">Currency</label>
+                    <select id="extra_currency" name="extra_currency" class="form-input">
+                        {% for amount in invoice.amounts %}
+                        <option value="{{ amount.currency }}">{{ amount.currency | upper }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="big-button">Save selection</button>
+            </div>
+        </form>
+        {% endif %}
+        {% else %}
+        <p>No monthly contribution selection is required for this invoice.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

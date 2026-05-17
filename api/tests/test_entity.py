@@ -310,9 +310,7 @@ class TestEntityTelegramIdFilter:
     ):
         """Entities with auth.telegram_id == "" must not match any numeric filter
         and must not cause a DB cast error."""
-        self._create_entity_with_telegram_id(
-            test_app, token, "TgFilter EmptyStr", ""
-        )
+        self._create_entity_with_telegram_id(test_app, token, "TgFilter EmptyStr", "")
 
         # Filtering by any numeric telegram_id must not return the empty-string entity
         response = test_app.get(

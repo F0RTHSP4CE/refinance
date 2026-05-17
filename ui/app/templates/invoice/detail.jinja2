@@ -62,6 +62,30 @@
                     </tr>
                 </table>
                 {% endif %}
+
+                {% if fee_allocation %}
+                <h2>Monthly contribution</h2>
+                <div class="invoice-amount-list">
+                    <div class="invoice-amount-item">
+                        {% set directed = fee_allocation.directed_allocation %}
+                        {% for currency, amount in directed.amounts.items() %}
+                        {{ amount }} {{ currency | upper }}{% if not loop.last %} <span class="invoice-amount-sep">OR</span> {% endif %}
+                        {% endfor %}
+                    </div>
+                    <p class="secondary">
+                        Target:
+                        {% if fee_allocation.selected_target_name %}
+                        {{ fee_allocation.selected_target_name }}
+                        {% else %}
+                        not selected
+                        {% endif %}
+                        · Deadline {{ directed.selection_deadline_at[:10] }}
+                    </p>
+                    {% if not directed.allocation_transaction_id %}
+                    <p><a href="{{ url_for('fee.invoice_selection', id=invoice.id) }}">Choose target</a></p>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
 
             <div class="invoice-detail-secondary">
@@ -87,10 +111,18 @@
                                 class="{% if not invoice.actor_entity.active %}secondary inactive{% endif %}">{{ invoice.actor_entity.name }}</a>
                         </td>
                     </tr>
-                    {% if transaction %}
+                    {% if transactions %}
                     <tr>
-                        <td>Transaction</td>
-                        <td><a href="{{ url_for('transaction.detail', id=transaction.id) }}">{{ transaction.id }}</a></td>
+                        <td>Transactions</td>
+                        <td>
+                            {% for transaction in transactions %}
+                            <div>
+                                <a href="{{ url_for('transaction.detail', id=transaction.id) }}">#{{ transaction.id }}</a>
+                                · {{ "%.2f"|format(transaction.amount|float) }} {{ transaction.currency | upper }}
+                                · {{ transaction.status }}
+                            </div>
+                            {% endfor %}
+                        </td>
                     </tr>
                     {% endif %}
                 </table>
@@ -100,10 +132,19 @@
 
     {% if invoice.status == "pending" %}
     <div class="invoice-detail-actions">
-        <a href="{{ url_for('invoice.pay', id=invoice.id) }}" class="big-button">Pay</a>
+        {% if fee_allocation and transactions and has_draft_settlement_transactions %}
+        <form method="post" action="{{ url_for('invoice.complete_settlement', id=invoice.id) }}">
+            {{ settlement_complete_form.hidden_tag() }}
+            <button type="submit" name="submit" value="1" class="big-button">Complete settlement</button>
+        </form>
+        {% elif fee_allocation and transactions %}
+        <p class="invoice-detail-note secondary">Settlement transactions have been created.</p>
+        {% else %}
+            <a href="{{ url_for('invoice.pay', id=invoice.id) }}" class="big-button">Pay</a>
+        {% endif %}
         <div class="invoice-detail-actions-row">
             <a href="{{ url_for('invoice.edit', id=invoice.id) }}" class="big-button big-button-outline">Edit</a>
-            {% if not invoice.transaction_id %}
+            {% if not invoice.transaction_ids %}
             <a href="{{ url_for('invoice.delete', id=invoice.id) }}" class="big-button big-button-outline big-button-danger-outline">Delete</a>
             {% endif %}
         </div>

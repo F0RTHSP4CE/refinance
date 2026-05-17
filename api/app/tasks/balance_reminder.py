@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from app.config import Config
 from app.dependencies.services import ServiceContainer
 from app.models.entity import Entity
+from app.models.fee import FeeAllocation
 from app.models.invoice import Invoice, InvoiceStatus
 from app.services.notification import NotificationService
 from app.tasks import PeriodicTask
@@ -90,8 +91,10 @@ def _calc_recommended_topup(
 def _build_reminder_message(
     negative_balances: dict[str, Decimal],
     pending_invoices: list[Invoice],
+    selectable_fee_invoices: list[Invoice],
     all_balances: dict[str, Decimal],
     entity_name: str,
+    ui_url: str | None,
 ) -> str:
     lines: list[str] = [f"{random.choice(_GREETINGS)}, <b>{entity_name}</b>."]
 
@@ -125,6 +128,13 @@ def _build_reminder_message(
             period = inv.billing_period.strftime("%b %Y") if inv.billing_period else "—"
             amounts_str = _fmt_amounts(inv.amounts or [])
             lines.append(f"  • Invoice #{inv.id} — {period} — {amounts_str}")
+
+    if selectable_fee_invoices:
+        lines.append("\n🎯 Monthly contribution target:")
+        for inv in selectable_fee_invoices:
+            path = f"/fee/invoices/{inv.id}/selection"
+            url = f"{ui_url.rstrip('/')}{path}" if ui_url else path
+            lines.append(f"  • Invoice #{inv.id}: choose target — {url}")
 
     return "\n".join(lines)
 
@@ -167,19 +177,32 @@ def send_balance_reminder(
         )
         .all()
     )
+    selectable_fee_invoices: list[Invoice] = (
+        db.query(Invoice)
+        .join(FeeAllocation, FeeAllocation.invoice_id == Invoice.id)
+        .filter(
+            Invoice.from_entity_id == entity.id,
+            FeeAllocation.component_key == "directed",
+            FeeAllocation.selected_at.is_(None),
+        )
+        .order_by(Invoice.id.asc())
+        .all()
+    )
 
-    if not negative_balances and not pending_invoices:
+    if not negative_balances and not pending_invoices and not selectable_fee_invoices:
         return None
 
     message = _build_reminder_message(
         negative_balances,
         pending_invoices,
+        selectable_fee_invoices,
         all_balances={
             currency: cd.value
             for currency, cd in balance.completed.items()
             if cd.value != Decimal(0)
         },
         entity_name=entity.name,
+        ui_url=notification_service.config.ui_url,
     )
     results = notification_service.send(entity, message)
     logger.info(

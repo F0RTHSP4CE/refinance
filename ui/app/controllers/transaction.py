@@ -3,6 +3,7 @@ from decimal import Decimal
 from typing import Dict, List
 
 from app.config import Config
+from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Tag, Transaction, TransactionStatus
@@ -145,7 +146,7 @@ def _get_active_treasuries(api):
 def _get_entities_by_tag_id(api, tag_id: int | None, active_only: bool = False):
     if not tag_id:
         return []
-    params = {"tags_ids": tag_id, "limit": 500}
+    params: dict[str, int | str] = {"tags_ids": tag_id, "limit": 500}
     if active_only:
         params["active"] = "true"
     return api.http("GET", "entities", params=params).json().get("items", [])
@@ -455,9 +456,23 @@ def shortcut_reimburse():
     api = get_refinance_api_client()
     fridge_entity_id = Config.ENTITY_IDS["fridge"]
     coffee_entity_id = Config.ENTITY_IDS["coffee"]
+    configured_entity_ids = {fridge_entity_id, coffee_entity_id}
+    entities_response = api.http(
+        "GET", "entities", params={"skip": 0, "limit": 1000}
+    ).json()
+    available_entity_ids = {
+        entity["id"]
+        for entity in entities_response.get("items", [])
+        if entity.get("id") in configured_entity_ids
+    }
 
     def _format_balance_label(entity_id: int) -> str:
-        balance = api.http("GET", f"balances/{entity_id}").json()
+        if entity_id not in available_entity_ids:
+            return "unavailable"
+        try:
+            balance = api.http("GET", f"balances/{entity_id}").json()
+        except ApplicationError:
+            return "unavailable"
         completed = balance.get("completed", {}) if isinstance(balance, dict) else {}
         if not completed:
             return "0"

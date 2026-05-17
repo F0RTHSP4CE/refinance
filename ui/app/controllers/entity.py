@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
@@ -360,20 +361,31 @@ def detail(id):
         .get("total", 0)
     )
 
-    # For paid invoices, prefer the settled transaction amount/currency in compact UI.
+    # For paid invoices, prefer settled transaction totals in compact UI.
     for invoice in invoices[:6]:
         status = (
             invoice.status.value
             if isinstance(invoice.status, InvoiceStatus)
             else str(invoice.status).lower()
         )
-        if status != InvoiceStatus.PAID.value or not invoice.transaction_id:
+        transaction_ids = invoice.transaction_ids
+        if not transaction_ids and invoice.transaction_id:
+            transaction_ids = [invoice.transaction_id]
+        if status != InvoiceStatus.PAID.value or not transaction_ids:
             continue
 
-        tx_data = api.http("GET", f"transactions/{invoice.transaction_id}").json()
-        tx = Transaction(**tx_data)
-        invoice.paid_amount = tx.amount
-        invoice.paid_currency = tx.currency.upper()
+        settled_totals: dict[str, Decimal] = {}
+        for transaction_id in transaction_ids:
+            tx_data = api.http("GET", f"transactions/{transaction_id}").json()
+            tx = Transaction(**tx_data)
+            amount = Decimal(str(tx.amount))
+            settled_totals[tx.currency] = (
+                settled_totals.get(tx.currency, Decimal("0")) + amount
+            )
+        if len(settled_totals) == 1:
+            currency, amount = next(iter(settled_totals.items()))
+            invoice.paid_amount = amount
+            invoice.paid_currency = currency.upper()
 
     def _apply_stats_bundle(bundle: dict):
         if not bundle or bundle.get("cached") is False:

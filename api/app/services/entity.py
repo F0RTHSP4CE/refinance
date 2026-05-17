@@ -47,7 +47,10 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
             query = query.filter(self.model.active == filters.active)
         if filters.auth_telegram_id is not None:
             query = query.filter(
-                cast(func.nullif(self.model.auth.op("->>")("telegram_id"), ""), BigInteger)
+                cast(
+                    func.nullif(self.model.auth.op("->>")("telegram_id"), ""),
+                    BigInteger,
+                )
                 == filters.auth_telegram_id
             )
         if filters.tags_ids:
@@ -91,7 +94,11 @@ class EntityService(TaggableServiceMixin[Entity], BaseService[Entity]):
         db_obj = (
             self.db.query(self.model)
             .filter(
-                cast(func.nullif(self.model.auth.op("->>")("telegram_id"), ""), BigInteger) == telegram_id
+                cast(
+                    func.nullif(self.model.auth.op("->>")("telegram_id"), ""),
+                    BigInteger,
+                )
+                == telegram_id
             )
             .first()
         )

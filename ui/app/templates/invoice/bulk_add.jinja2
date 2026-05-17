@@ -3,6 +3,7 @@
 {% block title %}Issue Fee Invoices{% endblock %}
 
 {% block content %}
+{% set default_group = fee_preset_groups[0] if fee_preset_groups else none %}
 <div class="invoice-form-layout shortcut-form-container">
     <section class="entry-form-card">
         <form method="post" id="bulk-invoice-form" class="entry-form">
@@ -10,13 +11,12 @@
             {# Hidden fields — defaults pre-filled; JS overwrites from/preset amounts on selection #}
             <input type="hidden" name="to_entity_id" value="{{ f0_entity_id }}">
             <input type="hidden" name="tag_ids" value="{{ fee_tag_id }}">
-            <input type="hidden" name="from_tag_ids" id="preset-from-tag-id" value="">
-            <input type="hidden" name="amount_1" id="preset-amount-1" value="">
-            <input type="hidden" name="currency_1" id="preset-currency-1" value="GEL">
-            <input type="hidden" name="amount_2" id="preset-amount-2" value="">
-            <input type="hidden" name="currency_2" id="preset-currency-2" value="">
-            <input type="hidden" name="amount_3" id="preset-amount-3" value="">
-            <input type="hidden" name="currency_3" id="preset-currency-3" value="">
+            <input type="hidden" name="from_tag_ids" id="preset-from-tag-id" value="{{ default_group.tag_id if default_group else '' }}">
+            {% for index in range(3) %}
+            {% set amount = default_group.amounts[index] if default_group and default_group.amounts|length > index else none %}
+            <input type="hidden" name="amount_{{ index + 1 }}" id="preset-amount-{{ index + 1 }}" value="{{ amount.amount if amount else '' }}">
+            <input type="hidden" name="currency_{{ index + 1 }}" id="preset-currency-{{ index + 1 }}" value="{{ amount.currency | upper if amount else '' }}">
+            {% endfor %}
 
             {% if fee_preset_groups %}
             <div class="form-group">
@@ -25,7 +25,7 @@
                     {% for group in fee_preset_groups %}
                     <button
                         type="button"
-                        class="invoice-amount-choice"
+                        class="invoice-amount-choice{% if loop.first %} is-active{% endif %}"
                         data-tag-id="{{ group.tag_id }}"
                         data-preset='{{ group.amounts | tojson }}'
                     >
@@ -43,7 +43,7 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="big-button" id="preset-submit-btn" disabled>Create Invoices</button>
+                <button type="submit" class="big-button" id="preset-submit-btn" {% if not fee_preset_groups %}disabled{% endif %}>Create Invoices</button>
             </div>
         </form>
 
