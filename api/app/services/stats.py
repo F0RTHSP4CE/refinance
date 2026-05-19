@@ -353,6 +353,158 @@ class StatsService(BaseService):
             )
         return result
 
+    def get_resident_fee_accumulation_by_month(
+        self, timeframe_from: date | None = None, timeframe_to: date | None = None
+    ):
+        """Return per-month daily cumulative fee data to visualise accumulation speed."""
+        timeframe_to = timeframe_to or date.today()
+        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        hackerspace = self._entity_service.get(f0_entity.id)
+
+        # --- paid invoices with transaction dates ---
+        paid_invoices = (
+            self.db.query(Invoice)
+            .options(selectinload(Invoice.transaction))
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PAID,
+            )
+            .all()
+        )
+
+        # --- unpaid invoices (for expected totals) ---
+        unpaid_invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PENDING,
+            )
+            .all()
+        )
+
+        # --- F0 expenses ---
+        _expense_tag_ids = (rent_tag.id, utilities_tag.id)
+        expense_transactions = (
+            self.db.query(Transaction)
+            .filter(
+                Transaction.from_entity_id == hackerspace.id,
+                Transaction.status == TransactionStatus.COMPLETED,
+                or_(
+                    Transaction.tags.any(Tag.id.in_(_expense_tag_ids)),
+                    Transaction.to_entity.has(
+                        Entity.tags.any(Tag.id.in_(_expense_tag_ids))
+                    ),
+                ),
+            )
+            .all()
+        )
+
+        today = date.today()
+        start_month = timeframe_from.replace(day=1)
+        end_month = timeframe_to.replace(day=1)
+
+        # Collect (year, month) -> list of (day_of_month, usd_amount)
+        monthly_payments: dict[tuple[int, int], list[tuple[int, float]]] = defaultdict(
+            list
+        )
+        monthly_unpaid_totals: dict[tuple[int, int], dict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        monthly_expense_totals: dict[tuple[int, int], dict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+
+        for invoice in paid_invoices:
+            if invoice.billing_period is None or invoice.transaction is None:
+                continue
+            if invoice.transaction.status != TransactionStatus.COMPLETED:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            if year > today.year or (year == today.year and month > today.month):
+                continue
+            fee_date = date(year, month, 1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+            txn = invoice.transaction
+            usd_amount = float(self._amount_to_usd(txn.currency.lower(), txn.amount))
+            payment_day = txn.created_at.day
+            monthly_payments[(year, month)].append((payment_day, usd_amount))
+
+        for invoice in unpaid_invoices:
+            if invoice.billing_period is None:
+                continue
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            if year > today.year or (year == today.year and month > today.month):
+                continue
+            fee_date = date(year, month, 1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+            if invoice.amounts and len(invoice.amounts) > 0:
+                amount_entry = invoice.amounts[0]
+                currency = amount_entry.get("currency", "").lower()
+                amount = amount_entry.get("amount", 0)
+                if currency and amount:
+                    monthly_unpaid_totals[(year, month)][currency] += Decimal(
+                        str(amount)
+                    )
+
+        for txn in expense_transactions:
+            t_date = txn.created_at.date()
+            fee_date = t_date.replace(day=1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+            monthly_expense_totals[(t_date.year, t_date.month)][
+                txn.currency.lower()
+            ] += txn.amount
+
+        all_months = (
+            set(monthly_payments.keys())
+            | set(monthly_unpaid_totals.keys())
+            | set(monthly_expense_totals.keys())
+        )
+
+        result = []
+        for year, month in sorted(all_months):
+            payments = monthly_payments.get((year, month), [])
+            unpaid_amounts = monthly_unpaid_totals.get((year, month), {})
+            expense_amounts = monthly_expense_totals.get((year, month), {})
+
+            paid_total = sum(amt for _, amt in payments)
+            unpaid_total_usd = self._sum_amounts_usd(unpaid_amounts)
+            expected_total_usd = paid_total + unpaid_total_usd
+            expenses_usd = self._sum_amounts_usd(expense_amounts)
+
+            # Sort payments by day and build cumulative series
+            payments.sort(key=lambda x: x[0])
+            days_in_month = calendar.monthrange(year, month)[1]
+
+            # Build cumulative per-day
+            daily_cum: list[dict] = []
+            cumulative = 0.0
+            pay_idx = 0
+            for day in range(1, days_in_month + 1):
+                while pay_idx < len(payments) and payments[pay_idx][0] <= day:
+                    cumulative += payments[pay_idx][1]
+                    pay_idx += 1
+                daily_cum.append({"day": day, "cumulative_usd": round(cumulative, 2)})
+
+            result.append(
+                {
+                    "year": year,
+                    "month": month,
+                    "expected_total_usd": expected_total_usd,
+                    "expenses_usd": expenses_usd,
+                    "daily_cumulative": daily_cum,
+                }
+            )
+        return result
+
     def get_entity_transactions_by_day(
         self,
         entity_id: int,

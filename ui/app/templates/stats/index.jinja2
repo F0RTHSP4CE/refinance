@@ -4,6 +4,7 @@
 
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 
 <style>
     .charts {
@@ -25,6 +26,13 @@
         height: auto !important;
     }
 
+    .chart-container-wide {
+        flex: 1 1 100%;
+        max-width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
     .chart-empty-message {
         margin-top: 12px;
         text-align: center;
@@ -42,9 +50,9 @@
 </style>
 
 <div class="charts">
-    <div class="chart-container">
+    <div class="chart-container-wide">
         <h2>Resident Fee Sum by Month</h2>
-        <canvas id="resident-fee-chart"></canvas>
+        <div id="resident-fee-chart" style="width:100%;height:600px;"></div>
     </div>
     <div class="chart-container">
         <h2>Transactions Sum by Week</h2>
@@ -53,72 +61,106 @@
 </div>
 
 <script>
-    const residentFeeData = {{ resident_fee_sum | tojson }};
+    // --- 3D Waterfall Resident Fee Chart (Plotly) ---
+    const accumulationData = {{ resident_fee_accumulation | tojson }};
+    const totalMonths = accumulationData.length;
 
-    const residentFeeLabels = residentFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
-    
-    // Paid total USD (solid line)
-    const paidData = residentFeeData.map(item => item.total_usd || 0);
-    
-    // Expected total USD (dashed line - ceiling)
-    const expectedData = residentFeeData.map(item => item.expected_total_usd || 0);
+    if (totalMonths > 0) {
+        const traces = [];
 
-    // F0 expenses: rent + utilities (dashed line)
-    const expensesData = residentFeeData.map(item => item.expenses_usd || 0);
+        accumulationData.forEach((item, idx) => {
+            const label = `${item.year}-${item.month.toString().padStart(2, '0')}`;
+            const days = item.daily_cumulative.map(d => d.day);
+            const zVals = item.daily_cumulative.map(d => d.cumulative_usd);
+            const yVals = days.map(() => idx);
 
-    new Chart(document.getElementById('resident-fee-chart'), {
-        type: 'line',
-        data: {
-            labels: residentFeeLabels,
-            datasets: [
-                {
-                    label: 'Paid Fees (USD)',
-                    data: paidData,
-                    borderWidth: 3,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    tension: 0.2,
-                    fill: true
-                },
-                {
-                    label: 'Expected Fees (USD)',
-                    data: expectedData,
-                    borderWidth: 2,
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.05)',
-                    borderDash: [5, 5],
-                    tension: 0.2,
-                    fill: false
-                },
-                {
-                    label: 'F0 Expenses: rent + utilities (USD)',
-                    data: expensesData,
-                    borderWidth: 2,
-                    borderColor: 'rgb(255, 159, 64)',
-                    backgroundColor: 'rgba(255, 159, 64, 0.05)',
-                    tension: 0.2,
-                    fill: false
-                }
-            ]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Amount (USD)'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                }
+            // Color: hue spread across months, newest = brightest
+            const hue = Math.round((idx / totalMonths) * 300);
+            const color = `hsl(${hue}, 70%, 50%)`;
+
+            // Filled area: line on top, floor at 0
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: days,
+                y: yVals,
+                z: zVals,
+                line: { color: color, width: 4 },
+                name: label,
+                showlegend: true,
+                hovertemplate: `${label}<br>Day %{x}<br>$%{z:.0f}<extra></extra>`,
+            });
+
+            // Vertical "curtain" fill beneath each line
+            const xFill = [];
+            const yFill = [];
+            const zFill = [];
+            for (let i = 0; i < days.length; i++) {
+                xFill.push(days[i], days[i], days[i]);
+                yFill.push(idx, idx, idx);
+                zFill.push(0, zVals[i], null);
             }
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: xFill,
+                y: yFill,
+                z: zFill,
+                line: { color: color, width: 1 },
+                opacity: 0.15,
+                showlegend: false,
+                hoverinfo: 'skip',
+            });
+        });
+
+        // Expected and expenses planes for the latest month
+        const latest = accumulationData[totalMonths - 1];
+        const maxDay = latest.daily_cumulative.length;
+
+        if (latest.expected_total_usd > 0) {
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: [1, maxDay],
+                y: [totalMonths - 1, totalMonths - 1],
+                z: [latest.expected_total_usd, latest.expected_total_usd],
+                line: { color: 'rgb(255, 99, 132)', width: 3, dash: 'dash' },
+                name: 'Expected (latest)',
+            });
         }
-    });
+        if (latest.expenses_usd > 0) {
+            traces.push({
+                type: 'scatter3d',
+                mode: 'lines',
+                x: [1, maxDay],
+                y: [totalMonths - 1, totalMonths - 1],
+                z: [latest.expenses_usd, latest.expenses_usd],
+                line: { color: 'rgb(255, 159, 64)', width: 3, dash: 'dash' },
+                name: 'Expenses (latest)',
+            });
+        }
+
+        const monthLabels = accumulationData.map(
+            (item, idx) => [idx, `${item.year}-${item.month.toString().padStart(2, '0')}`]
+        );
+
+        Plotly.newPlot('resident-fee-chart', traces, {
+            scene: {
+                xaxis: { title: 'Day of Month', dtick: 1 },
+                yaxis: {
+                    title: 'Month',
+                    tickvals: monthLabels.map(m => m[0]),
+                    ticktext: monthLabels.map(m => m[1]),
+                },
+                zaxis: { title: 'Cumulative Paid Fees (USD)' },
+                camera: {
+                    eye: { x: 1.8, y: -1.8, z: 0.8 },
+                },
+            },
+            margin: { l: 0, r: 0, t: 30, b: 0 },
+            legend: { x: 0, y: 1 },
+        }, { responsive: true });
+    }
 
     const transactionsData = {{ transactions_sum_by_week | tojson }};
     const transactionsLabels = transactionsData.map(item => `${item.year}-W${item.week.toString().padStart(2, '0')}`);

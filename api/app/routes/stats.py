@@ -9,6 +9,7 @@ from app.schemas.stats import (
     EntityMoneyFlowByDaySchema,
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
+    ResidentFeeAccumulationMonthSchema,
     ResidentFeeSumByMonthSchema,
     TopEntityByMonthSchema,
     TopEntityStatSchema,
@@ -32,6 +33,20 @@ def get_resident_fee_sum_by_month(
     stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_resident_fee_sum_by_month(timeframe_from, timeframe_to)
+
+
+@router.get(
+    "/resident-fee-accumulation-by-month",
+    response_model=List[ResidentFeeAccumulationMonthSchema],
+)
+def get_resident_fee_accumulation_by_month(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_resident_fee_accumulation_by_month(
+        timeframe_from, timeframe_to
+    )
 
 
 @router.get(

@@ -14,6 +14,19 @@ class ResidentFeeSumByMonthSchema(BaseModel):
     expenses_usd: float = 0.0
 
 
+class ResidentFeeAccumulationDaySchema(BaseModel):
+    day: int
+    cumulative_usd: float
+
+
+class ResidentFeeAccumulationMonthSchema(BaseModel):
+    year: int
+    month: int
+    expected_total_usd: float = 0.0
+    expenses_usd: float = 0.0
+    daily_cumulative: list[ResidentFeeAccumulationDaySchema]
+
+
 class EntityTransactionsByDaySchema(BaseModel):
     day: date
     transaction_count: int
