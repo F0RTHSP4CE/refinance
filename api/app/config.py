@@ -47,6 +47,13 @@ class Config:
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))
+    # Telegram chat/topic to notify on new guest donations
+    donation_notification_chat_id: int | None = field(
+        default=int(getenv("REFINANCE_DONATION_NOTIFICATION_CHAT_ID") or "0") or None
+    )
+    donation_notification_topic_id: int | None = field(
+        default=int(getenv("REFINANCE_DONATION_NOTIFICATION_TOPIC_ID") or "0") or None
+    )
 
     @property
     def database_url(self) -> str:

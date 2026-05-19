@@ -14,6 +14,7 @@ from app.routes.balance import balance_router
 from app.routes.currency_exchange import currency_exchange_router
 from app.routes.deposit_provider_callbacks import deposit_provider_callbacks_router
 from app.routes.deposits import deposits_router
+from app.routes.donation import donation_router
 from app.routes.entity import entity_router
 from app.routes.fee import router as fee_router
 from app.routes.invoice import invoice_router
@@ -132,6 +133,7 @@ app.include_router(currency_exchange_router)
 app.include_router(pos_router)
 app.include_router(deposits_router)
 app.include_router(deposit_provider_callbacks_router)
+app.include_router(donation_router)
 app.include_router(keepz_router)
 app.include_router(notification_router)
 app.include_router(tasks_router)

@@ -122,6 +122,7 @@ class ServiceContainer:
                 db=self.db,
                 transaction_service=self.transaction_service,
                 tag_service=self.tag_service,
+                notification_service=self.notification_service,
             )
         return self._deposit_service
 

@@ -123,6 +123,23 @@ class NotificationService:
         )
         return False
 
+    def send_to_chat(
+        self,
+        chat_id: int,
+        message: str,
+        *,
+        topic_id: int | None = None,
+    ) -> bool:
+        """Send *message* directly to a Telegram chat/topic without an Entity."""
+        if not self.config.telegram_bot_api_token:
+            logger.warning("NotificationService: Telegram bot token not configured")
+            return False
+        base_url = f"https://api.telegram.org/bot{self.config.telegram_bot_api_token}/sendMessage"
+        payload: dict = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        if topic_id is not None:
+            payload["message_thread_id"] = topic_id
+        return self._post_with_retry(base_url, payload, chat_id)
+
     def _send_telegram(
         self,
         telegram_id: int,

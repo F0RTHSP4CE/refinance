@@ -1,24 +1,38 @@
 """Deposit service"""
 
+import logging
 from typing import Any
 from uuid import UUID
 
-from app.dependencies.services import get_tag_service, get_transaction_service
+from app.dependencies.services import (
+    get_notification_service,
+    get_tag_service,
+    get_transaction_service,
+)
 from app.errors.common import NotFoundError
 from app.errors.deposit import DepositAlreadyCompleted, DepositCannotBeEdited
 from app.models.deposit import Deposit, DepositStatus
 from app.models.transaction import TransactionStatus
 from app.schemas.deposit import DepositFiltersSchema, DepositUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
-from app.seeding import deposit_tag, keepz_treasury
+from app.seeding import (
+    anonymous_entity,
+    deposit_tag,
+    donation_tag,
+    f0_entity,
+    keepz_treasury,
+)
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
+from app.services.notification import NotificationService
 from app.services.tag import TagService
 from app.services.transaction import TransactionService
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
 from sqlalchemy.orm import Query, Session
+
+logger = logging.getLogger(__name__)
 
 
 class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
@@ -29,10 +43,12 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
         db: Session = Depends(get_uow),
         transaction_service: TransactionService = Depends(get_transaction_service),
         tag_service: TagService = Depends(get_tag_service),
+        notification_service: NotificationService = Depends(get_notification_service),
     ):
         self.db = db
         self._transaction_service = transaction_service
         self._tag_service = tag_service
+        self._notification_service = notification_service
 
     def _apply_filters(
         self, query: Query[Deposit], filters: DepositFiltersSchema
@@ -95,9 +111,53 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
                 overrides={"actor_entity_id": db_obj.actor_entity_id},
             )
             self.update(obj_id, DepositUpdateSchema(status=DepositStatus.COMPLETED))
+            if db_obj.to_entity_id == anonymous_entity.id:
+                self._complete_donation(db_obj)
             return tx
         else:
             raise DepositAlreadyCompleted
+
+    def _complete_donation(self, deposit: Deposit) -> None:
+        """After a guest donation deposit completes, transfer funds to F0 and notify."""
+        comment = (deposit.details or {}).get("donation_comment", "")
+        try:
+            self._transaction_service.create(
+                TransactionCreateSchema(
+                    amount=deposit.amount,
+                    currency=deposit.currency,
+                    from_entity_id=anonymous_entity.id,
+                    to_entity_id=f0_entity.id,
+                    status=TransactionStatus.COMPLETED,
+                    tag_ids=[donation_tag.id],
+                    comment=comment,
+                ),
+                overrides={"actor_entity_id": anonymous_entity.id},
+            )
+        except Exception:
+            logger.exception(
+                "Failed to create donation transfer for deposit id=%s", deposit.id
+            )
+            return
+
+        try:
+            chat_id = self._notification_service.config.donation_notification_chat_id
+            if chat_id:
+                amount_str = f"{deposit.amount} {deposit.currency.upper()}"
+                message = f"🎁 New donation: {amount_str}"
+                if comment:
+                    from html import escape
+
+                    message += f"\n{escape(comment)}"
+                topic_id = (
+                    self._notification_service.config.donation_notification_topic_id
+                )
+                self._notification_service.send_to_chat(
+                    chat_id, message, topic_id=topic_id
+                )
+        except Exception:
+            logger.exception(
+                "Failed to send donation notification for deposit id=%s", deposit.id
+            )
 
     def update(
         self, obj_id: int, schema: DepositUpdateSchema, overrides: dict = {}

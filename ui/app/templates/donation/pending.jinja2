@@ -1,0 +1,64 @@
+{% extends 'base.jinja2' %}
+
+{% block title %}Pay your donation — F0RTHSP4CE{% endblock %}
+
+{% block content %}
+<div class="deposit-detail-layout">
+    <section class="deposit-detail-card">
+        <div class="deposit-detail-header">
+            <div>
+                <div class="deposit-detail-amount">{{ donation.amount }} {{ donation.currency }}</div>
+                <div class="deposit-detail-subtitle">
+                    <span class="secondary">Status:</span> {{ donation.status }}
+                    <span class="secondary">· Thank you for supporting F0RTHSP4CE! 🎁</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="deposit-detail-grid">
+            {% if donation.status == 'pending' and donation.payment_url %}
+            <div class="deposit-detail-payment">
+                <div class="deposit-payment-actions">
+                    <a class="big-button" href="{{ donation.payment_url }}" target="_blank"
+                        rel="noopener noreferrer">Pay now</a>
+                </div>
+                <div class="secondary deposit-payment-helper">Scan the QR code to pay from mobile.</div>
+
+                <div class="deposit-qrcode" id="deposit-qrcode"></div>
+
+                <div class="deposit-payment-link">
+                    <div class="secondary">Payment link</div>
+                    <div class="deposit-mono">
+                        <a href="{{ donation.payment_url }}" target="_blank" rel="noopener noreferrer">{{
+                            donation.payment_url }}</a>
+                    </div>
+                </div>
+            </div>
+            {% elif donation.status == 'completed' %}
+            <div class="deposit-detail-payment">
+                <p>Payment received — thank you! 🎉</p>
+            </div>
+            {% endif %}
+
+            <div class="deposit-detail-main">
+                <p class="secondary">Your donation will be confirmed automatically once the payment is processed. No
+                    account needed.</p>
+                <p><a href="{{ url_for('donation.donate') }}">← Make another donation</a></p>
+            </div>
+        </div>
+    </section>
+</div>
+
+{% if donation.status == 'pending' and donation.payment_url %}
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script>
+    const qrTarget = document.getElementById('deposit-qrcode');
+    if (qrTarget) {
+        const qr = qrcode(0, 'M');
+        qr.addData({{ donation.payment_url | tojson }});
+    qr.make();
+    qrTarget.innerHTML = qr.createImgTag(5, 8);
+    }
+</script>
+{% endif %}
+{% endblock %}

@@ -26,6 +26,9 @@ currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
 fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
+donation_tag = Tag(
+    id=5, name="donation", comment="free money from guests/residents (not a fee)"
+)
 automatic_tag = Tag(id=17, name="automatic", comment="automatically generated / paid")
 # commonly used treasuries
 cash_treasury = Treasury(id=1, name="cash")
@@ -61,6 +64,12 @@ keepz_deposit_provider = Entity(
     comment="keepz.me deposit provider",
     tags=[deposit_tag],
 )
+anonymous_entity = Entity(
+    id=14,
+    name="anonymous",
+    comment="anonymous guest donor",
+    tags=[guest_tag],
+)
 
 SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
@@ -68,11 +77,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         resident_tag,
         fee_tag,
         utilities_tag,
-        Tag(
-            id=5,
-            name="donation",
-            comment="free money from guests/residents (not a fee)",
-        ),
+        donation_tag,
         rent_tag,
         f0_tag,
         deposit_tag,
@@ -126,6 +131,8 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         # payment providers
         cryptapi_deposit_provider,
         keepz_deposit_provider,
+        # guest donors
+        anonymous_entity,
         # residents
         #
         # Entity(
