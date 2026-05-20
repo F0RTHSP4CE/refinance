@@ -67,6 +67,10 @@
             line-height: 1.3;
         }
 
+        #donation-js-error:not([hidden]) {
+            margin-bottom: 20px;
+        }
+
         .donation-brand {
             height: 121px;
             background: #000000;
@@ -411,6 +415,7 @@
             </div>
             {% endif %}
             {% endwith %}
+            <div id="donation-js-error" class="donation-message error" hidden></div>
 
             <div class="donation-brand" aria-hidden="true">
                 <img class="donation-brand-mark" src="{{ url_for('static', filename='images/f0.jpg') }}" alt="">
@@ -459,6 +464,9 @@
     </div>
 
     <script>
+        const DONATION_MIN_AMOUNT = {{ donation_min_amount | tojson }};
+        const DONATION_MAX_AMOUNT = {{ donation_max_amount | tojson }};
+
         const donationForm = document.querySelector(".donation-form");
         const presetInput = document.getElementById("preset_amount");
         const customAmountInput = document.getElementById("custom_amount");
@@ -466,7 +474,22 @@
         const customAmountSizer = document.getElementById("custom-amount-sizer");
         const presetButtons = Array.from(document.querySelectorAll(".preset-option"));
         const submitButton = document.querySelector(".donation-submit");
+        const jsErrorContainer = document.getElementById("donation-js-error");
         let isSubmitting = false;
+
+        function showJsError(message) {
+            jsErrorContainer.textContent = message;
+            jsErrorContainer.hidden = false;
+        }
+
+        function clearJsError() {
+            jsErrorContainer.hidden = true;
+            jsErrorContainer.textContent = "";
+        }
+
+        function formatAmount(n) {
+            return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+        }
 
         function resizeCustomAmountField() {
             customAmountSizer.textContent = customAmountInput.value || customAmountInput.placeholder;
@@ -516,6 +539,37 @@
         });
 
         donationForm.addEventListener("submit", (event) => {
+            clearJsError();
+
+            const customRaw = customAmountInput.value.trim();
+            const presetRaw = presetInput.value.trim();
+            const raw = customRaw || presetRaw;
+
+            if (!raw) {
+                event.preventDefault();
+                showJsError("Select a donation amount or enter another amount.");
+                return;
+            }
+
+            const amount = parseFloat(raw.replace(",", "."));
+            if (isNaN(amount) || amount <= 0) {
+                event.preventDefault();
+                showJsError("Enter a valid donation amount.");
+                return;
+            }
+
+            if (amount < DONATION_MIN_AMOUNT) {
+                event.preventDefault();
+                showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)} {{ donation_currency_symbol }}.`);
+                return;
+            }
+
+            if (amount > DONATION_MAX_AMOUNT) {
+                event.preventDefault();
+                showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)} {{ donation_currency_symbol }}.`);
+                return;
+            }
+
             if (isSubmitting) {
                 event.preventDefault();
                 return;

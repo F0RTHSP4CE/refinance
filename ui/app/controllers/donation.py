@@ -113,6 +113,8 @@ def donate():
         donation_presets=DONATION_PRESET_AMOUNTS,
         donation_currency=DONATION_CURRENCY,
         donation_currency_symbol=DONATION_CURRENCY_SYMBOL,
+        donation_min_amount=Config.DONATION_MIN_AMOUNT,
+        donation_max_amount=Config.DONATION_MAX_AMOUNT,
     )
 
 
