@@ -196,7 +196,7 @@
             --button-hover-border: var(--accent);
             width: 100%;
             height: 62px;
-            margin-top: 58px;
+            margin-top: 2rem;
             border: 0;
             background: var(--accent);
             color: #ffffff;
@@ -275,7 +275,7 @@
         .custom-amount-wrap {
             display: flex;
             justify-content: center;
-            margin-top: 20px;
+            margin-top: 2rem;
         }
 
         .custom-amount-shell {
@@ -446,6 +446,8 @@
                         <span class="custom-amount-sizer" id="custom-amount-sizer" aria-hidden="true"></span>
                         <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
                             inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
+                            pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
+                            title="Enter a positive amount with up to 2 decimal places"
                             placeholder="other amount &lowbar;">
                         <span class="custom-amount-suffix" aria-hidden="true">{{ donation_currency_symbol }}</span>
                     </div>

@@ -1,8 +1,27 @@
+from decimal import Decimal, InvalidOperation
 from os import getenv
+
+
+def _decimal_env(name: str, default: str) -> Decimal:
+    raw_value = getenv(name, default)
+    try:
+        return Decimal(str(raw_value))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError(f"{name} must be a decimal amount.") from exc
 
 
 class Config:
     REFINANCE_API_BASE_URL = getenv("REFINANCE_API_BASE_URL", "http://api:8000")
+    DONATION_MIN_AMOUNT = _decimal_env("REFINANCE_DONATION_MIN_AMOUNT", "1")
+    DONATION_MAX_AMOUNT = _decimal_env("REFINANCE_DONATION_MAX_AMOUNT", "3000")
+
+    if DONATION_MIN_AMOUNT <= 0:
+        raise ValueError("REFINANCE_DONATION_MIN_AMOUNT must be greater than 0.")
+    if DONATION_MAX_AMOUNT < DONATION_MIN_AMOUNT:
+        raise ValueError(
+            "REFINANCE_DONATION_MAX_AMOUNT must be greater than or equal to "
+            "REFINANCE_DONATION_MIN_AMOUNT."
+        )
 
     UI_CURRENCIES = ["GEL", "USD", "EUR"]
     PREFERRED_CURRENCY = "GEL"

@@ -1,5 +1,7 @@
+import re
 from decimal import Decimal, InvalidOperation
 
+from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import RefinanceAPI
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -9,6 +11,11 @@ donation_bp = Blueprint("donation", __name__)
 DONATION_PRESET_AMOUNTS = ("10", "20", "50")
 DONATION_CURRENCY = "GEL"
 DONATION_CURRENCY_SYMBOL = "\u20be"
+DONATION_AMOUNT_PATTERN = re.compile(r"^\d+(?:[\.,]\d{1,2})?$")
+
+
+def _format_amount(amount: Decimal) -> str:
+    return format(amount.normalize(), "f").rstrip("0").rstrip(".") or "0"
 
 
 def _parse_amount(raw_amount: str) -> Decimal:
@@ -16,15 +23,32 @@ def _parse_amount(raw_amount: str) -> Decimal:
         raw_amount.upper()
         .replace(DONATION_CURRENCY, "")
         .replace(DONATION_CURRENCY_SYMBOL, "")
+        .replace(" ", "")
         .strip()
     )
+
+    if not normalized_amount:
+        raise ValueError("Enter a donation amount.")
+    if not DONATION_AMOUNT_PATTERN.fullmatch(normalized_amount):
+        raise ValueError("Enter a valid donation amount with up to 2 decimal places.")
+
     try:
-        amount = Decimal(normalized_amount)
+        amount = Decimal(normalized_amount.replace(",", "."))
     except (InvalidOperation, ValueError) as exc:
         raise ValueError("Enter a valid donation amount.") from exc
 
     if amount <= 0:
         raise ValueError("Donation amount must be greater than 0.")
+    if amount < Config.DONATION_MIN_AMOUNT:
+        raise ValueError(
+            "Donation amount must be at least "
+            f"{_format_amount(Config.DONATION_MIN_AMOUNT)} {DONATION_CURRENCY_SYMBOL}."
+        )
+    if amount > Config.DONATION_MAX_AMOUNT:
+        raise ValueError(
+            "Donation amount must be at most "
+            f"{_format_amount(Config.DONATION_MAX_AMOUNT)} {DONATION_CURRENCY_SYMBOL}."
+        )
 
     return amount
 
