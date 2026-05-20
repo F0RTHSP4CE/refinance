@@ -1,0 +1,275 @@
+/* Treasury detail — visually related to entity but cool-toned */
+
+.treasury-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+    min-width: 0;
+}
+
+.treasury-hero-card,
+.treasury-card {
+    border: 3px solid black;
+    background: white;
+    box-shadow: 5px 5px 0 black;
+    padding: 1.1rem 1.2rem;
+}
+
+.treasury-hero-card {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.treasury-identity-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.treasury-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    font-family: 'Unbounded', Arial, sans-serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    line-height: 1.08;
+    color: white;
+    background-image: repeating-linear-gradient(-45deg,
+            black 0px,
+            black 6px,
+            white 6px,
+            white 8px);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Blue radial glow — distinct from entity's warm yellow */
+.treasury-hero-card::after {
+    content: "";
+    position: absolute;
+    right: -110px;
+    top: -90px;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(26, 94, 255, 0.15), rgba(26, 94, 255, 0));
+    pointer-events: none;
+}
+
+.treasury-hero-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: auto;
+    padding-top: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.treasury-kicker {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    opacity: 0.6;
+    margin: 0;
+}
+
+.treasury-kicker-dot {
+    margin: 0 0.4rem;
+}
+
+.treasury-hero-title {
+    margin: 0.35rem 0 0.2rem;
+    font-family: 'Unbounded', Arial, sans-serif;
+    font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+    text-transform: uppercase;
+    line-height: 1.08;
+    word-break: break-word;
+}
+
+.treasury-hero-title .treasury-badge {
+    font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+    border-width: 3px;
+    padding: 0.15rem 0.55rem;
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+}
+
+.treasury-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+}
+
+.treasury-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 2px solid black;
+    background: white;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    line-height: 1.2;
+}
+
+.treasury-chip-ok {
+    background: #e8f1ff;
+    border-color: #1a5eff;
+    color: #1a5eff;
+}
+
+.treasury-chip-warning {
+    background: #fff2de;
+}
+
+.treasury-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 0.65rem;
+}
+
+.treasury-dashboard .big-button {
+    border-radius: 0;
+    border-width: 2px;
+    box-shadow: none;
+    transform: none;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.45px;
+    line-height: 1.1;
+    width: auto;
+    white-space: nowrap;
+}
+
+.treasury-dashboard .big-button:hover,
+.treasury-dashboard .big-button:active {
+    box-shadow: none;
+    transform: none;
+}
+
+.treasury-comment {
+    margin-top: 0.85rem;
+    max-width: 80ch;
+    line-height: 1.45;
+    font-size: 1.03rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: #444;
+}
+
+.treasury-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-items: stretch;
+    min-width: 0;
+}
+
+.treasury-card-title {
+    margin: 0;
+    font-family: 'Unbounded', Arial, sans-serif;
+    font-size: 1rem;
+    text-transform: uppercase;
+}
+
+.treasury-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-bottom: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.treasury-balance-card .treasury-card-title {
+    margin-bottom: 0.6rem;
+    text-align: left;
+}
+
+.treasury-balance-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.treasury-balance-card .treasury-balance-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    border-top: 1px solid #ddd;
+    padding: 0.65rem 0;
+    text-align: right;
+}
+
+.treasury-balance-card .treasury-balance-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.treasury-balance-amount {
+    font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+    font-weight: 900;
+    line-height: 1;
+}
+
+.treasury-balance-currency {
+    font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+.treasury-balance-separator {
+    margin-top: 0.85rem;
+    padding: 0.5rem 0 0.35rem;
+    border-top: 2px solid #333;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+}
+
+.treasury-balance-card .treasury-balance-row-draft {
+    opacity: 0.65;
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 10px,
+            rgba(200, 200, 200, 0.15) 10px,
+            rgba(200, 200, 200, 0.15) 20px);
+}
+
+.treasury-empty-state {
+    margin-top: 0.8rem;
+    color: #555;
+    font-style: italic;
+}
+
+.treasury-list-card .wide-table-wrapper {
+    overflow-x: auto;
+}
+
+.treasury-list-card .pagination {
+    margin-top: 0.9rem;
+}
+
+@media (max-width: 900px) {
+    .treasury-top-grid {
+        grid-template-columns: 1fr;
+    }
+}

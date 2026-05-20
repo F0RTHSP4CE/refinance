@@ -1,83 +1,87 @@
 {% extends "base.jinja2" %}
-{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
-{% from 'form.jinja2' import render_form %}
 {% from 'transaction/macro_list.jinja2' import transaction_list with context %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
+{% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
 
-{% block title %}Treasury {{ treasury_inline(treasury) }}{% endblock %}
+{% block title %}Treasury{% endblock %}
+{% block heading %}{% endblock %}
 
 {% block content %}
-<div class="details-balance">
-    <h2>Details</h2>
-    <table>
-        <tr>
-            <td>ID</td>
-            <td>{{ treasury.id }}</td>
-        </tr>
-        <tr>
-            <td>Name</td>
-            <td><span class="{% if not treasury.active %}secondary inactive{% endif %}">{{ treasury.name }}</span></td>
-        </tr>
-        <tr>
-            <td>Comment</td>
-            <td>{{ treasury.comment or "" }}</td>
-        </tr>
-        <tr>
-            <td>Active</td>
-            <td>{{ 'Yes' if treasury.active else 'No' }}</td>
-        </tr>
-        <tr>
-            <td>Created at</td>
-            <td>{{ human_readable_date(treasury.created_at) }}</td>
-        </tr>
-        <tr>
-            <td>Modified at</td>
-            <td>{{ human_readable_date(treasury.modified_at) if treasury.modified_at else "" }}</td>
-        </tr>
-    </table>
-    <p><a href="{{ url_for('treasury.edit', id=treasury.id) }}">Edit</a> |
-        <a href="{{ url_for('treasury.delete', id=treasury.id) }}">Delete</a>
-    </p>
-</div>
+<div class="treasury-dashboard">
+    <div class="treasury-top-grid">
+        <section class="treasury-hero-card">
+            <div class="treasury-identity-row">
+                <span class="treasury-type-badge" aria-hidden="true">Treasury</span>
+                <h2 class="treasury-hero-title">{{ treasury_inline(treasury) }}</h2>
+            </div>
+            {% if treasury.comment %}
+            <p class="treasury-comment">{{ treasury.comment }}</p>
+            {% endif %}
+            <div class="treasury-hero-footer">
+                <p class="treasury-kicker">
+                    Created {{ human_readable_date(treasury.created_at) }}
+                    {% if treasury.modified_at %}
+                    <span class="treasury-kicker-dot">•</span>
+                    Modified {{ human_readable_date(treasury.modified_at) }}
+                    {% endif %}
+                </p>
+                <div class="treasury-hero-actions">
+                    <a href="{{ url_for('treasury.edit', id=treasury.id) }}"
+                        class="big-button big-button-inline big-button-outline">Edit</a>
+                    <a href="{{ url_for('treasury.delete', id=treasury.id) }}"
+                        class="big-button big-button-inline big-button-outline">Delete</a>
+                </div>
+            </div>
+        </section>
 
-<div class="details-balance">
-    <h2>Balance</h2>
-    {% if not balance.draft and not balance.completed %}
-    <p>No transactions.</p>
-    {% endif %}
+        <section class="treasury-card treasury-balance-card">
+            <h3 class="treasury-card-title">Balance</h3>
+            {% if not balance.draft and not balance.completed %}
+            <p class="treasury-empty-state">No transactions yet.</p>
+            {% endif %}
 
-    {% if balance.completed %}
-    <p>Completed:</p>
-    <table>
-        {% for currency, amount in balance.completed.items() %}
-        <tr>
-            <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">{{ amount }}</td>
-            <td>{{ currency|upper }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% endif %}
+            {% if balance.completed %}
+            <div class="treasury-balance-list">
+                {% for currency, amount in balance.completed.items() %}
+                {% if amount|float != 0 %}
+                <div class="treasury-balance-row">
+                    <strong class="treasury-balance-amount {% if amount|float < 0 %}amount-negative{% endif %}">{{
+                        amount }}</strong>
+                    <span class="treasury-balance-currency">{{ currency | upper }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
 
-    {% if balance.draft %}
-    <p>Draft:</p>
-    <table>
-        {% for currency, amount in balance.draft.items() %}
-        <tr>
-            <td class="right-align {% if amount|float < 0 %}amount-negative{% endif %}">{{ amount }}</td>
-            <td>{{ currency|upper }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    {% endif %}
-</div>
+            {% if balance.draft %}
+            <div class="treasury-balance-separator">Draft</div>
+            <div class="treasury-balance-list">
+                {% for currency, amount in balance.draft.items() %}
+                {% if amount|float != 0 %}
+                <div class="treasury-balance-row treasury-balance-row-draft">
+                    <strong class="treasury-balance-amount {% if amount|float < 0 %}amount-negative{% endif %}">{{
+                        amount }}</strong>
+                    <span class="treasury-balance-currency">{{ currency | upper }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </section>
+    </div>
 
-<div class="details-balance">
-    <h2>Transactions</h2>
-    {% if transactions %}
-    {{ transaction_list(transactions) }}
-    {{ pagination_control(page, total, limit) }}
-    {% else %}
-    <p>No transactions for this treasury yet.</p>
-    {% endif %}
+    <section class="treasury-card treasury-list-card">
+        <div class="treasury-card-header">
+            <h3 class="treasury-card-title">Transactions</h3>
+            <span class="treasury-chip">{{ total }} total</span>
+        </div>
+        {% if transactions %}
+        {{ transaction_list(transactions) }}
+        {{ pagination_control(page, total, limit) }}
+        {% else %}
+        <p class="treasury-empty-state">No transactions for this treasury yet.</p>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

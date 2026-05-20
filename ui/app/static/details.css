@@ -123,14 +123,12 @@
 
 .transaction-detail-subtitle {
   margin-top: 0.35rem;
-  font-size: 1.05rem;
   color: #555;
 }
 
 .transaction-status-badge {
   border: 2px solid black;
   padding: 0.4rem 0.7rem;
-  font-size: 1.05rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -261,7 +259,6 @@
 
 .transaction-detail-note {
   margin-top: 1rem;
-  font-size: 1rem;
 }
 
 .deposit-mono {
@@ -314,14 +311,12 @@
 
 .invoice-detail-subtitle {
   margin-top: 0.35rem;
-  font-size: 1rem;
   color: #555;
 }
 
 .invoice-status-badge {
   border: 2px solid black;
   padding: 0.42rem 0.72rem;
-  font-size: 1rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.4px;
@@ -363,7 +358,6 @@
 }
 
 .invoice-detail-grid td {
-  font-size: 1.05rem;
   line-height: 1.28;
   vertical-align: top;
 }
@@ -420,7 +414,6 @@
   background: white;
   color: black;
   padding: 0.45rem 0.65rem;
-  font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -480,7 +473,6 @@
 
 .invoice-detail-note {
   margin-top: 1rem;
-  font-size: 1rem;
 }
 
 @media (max-width: 680px) {

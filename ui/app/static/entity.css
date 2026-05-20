@@ -755,7 +755,6 @@
   border-radius: 10px;
   padding: 0.6rem 0.85rem;
   font-size: 0.82rem;
-  font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   text-decoration: none;
@@ -782,8 +781,6 @@
   background: #fff;
   color: #111;
   text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.7px;
   line-height: 1;
@@ -803,6 +800,7 @@
   border-color: #555;
   color: #333;
   -webkit-text-stroke: 1px #333;
+
 }
 
 .entities-tag-tab:hover {
@@ -815,6 +813,8 @@
   border-color: var(--tab-color, #111);
   color: #fff;
   -webkit-text-stroke: 0;
+  font-weight: 900;
+
 }
 
 .entities-total-amount {

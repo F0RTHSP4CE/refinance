@@ -1,140 +1,129 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="theme-color" content="#000">
-    <title>refinance</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
-        crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/style.css?v={{ css_cache_buster }}">
-    <script src="https://unpkg.com/htmx.org@1.6.1"></script>
-</head>
-
-<body class="{% block body_class %}{% endblock %}">
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    {% for message in messages %}
-    <div class="message">{{ message }}</div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
-
-    <nav class="site-nav" aria-label="Primary">
-        <a href="#" class="mobile-menu-toggle" role="button" aria-haspopup="dialog" aria-controls="mobile-menu"
-            aria-expanded="false">
-            <span class="mobile-menu-toggle-text">REFINANCE</span>
-            {% if g.actor_entity %}
-            <span class="mobile-menu-toggle-user">{{ g.actor_entity.name }}</span>
-            {% endif %}
-            <span class="mobile-menu-toggle-icon" aria-hidden="true">≡</span>
-        </a>
-
-        <ul class="desktop-nav">
-            {% if g.actor_entity %}
-            <li{% if request.endpoint=='index.index' %} class="active" {% endif %}><a
-                    href="{{ url_for('index.index') }}">Home</a></li>
-                <li{% if request.endpoint and request.endpoint.startswith('transaction.') %} class="active" {% endif %}>
-                    <a href="{{ url_for('transaction.list') }}">Transaction</a></li>
-                    <li{% if request.endpoint and request.endpoint.startswith('fee.') %} class="active" {% endif %}><a
-                            href="{{ url_for('fee.index') }}">Fee</a></li>
-                        <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active" {% endif
-                            %}><a href="{{ url_for('split.list') }}">Split</a></li>
-                            <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active" {%
-                                endif %}><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
-                                <li{% if request.endpoint and request.endpoint.startswith('stats.') %} class="active" {%
-                                    endif %}><a href="{{ url_for('stats.index') }}">Stats</a></li>
-                                    <li{% if request.endpoint and request.endpoint.startswith('entity.') %}
-                                        class="active" {% endif %}><a href="{{ url_for('entity.list') }}">Entity</a>
+{% macro nav_items() %}
+{% if g.actor_entity %}
+<li{% if request.endpoint=='index.index' %} class="active" {% endif %}><a href="{{ url_for('index.index') }}">Home</a>
+    </li>
+    <li{% if request.endpoint and request.endpoint.startswith('transaction.') %} class="active" {% endif %}><a
+            href="{{ url_for('transaction.list') }}">Transaction</a></li>
+        <li{% if request.endpoint and request.endpoint.startswith('fee.') %} class="active" {% endif %}><a
+                href="{{ url_for('fee.index') }}">Fee</a></li>
+            <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active" {% endif %}><a
+                    href="{{ url_for('split.list') }}">Split</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active" {% endif %}><a
+                        href="{{ url_for('exchange.index') }}">Exchange</a></li>
+                    <li{% if request.endpoint and request.endpoint.startswith('stats.') %} class="active" {% endif %}><a
+                            href="{{ url_for('stats.index') }}">Stats</a></li>
+                        <li{% if request.endpoint and request.endpoint.startswith('entity.') %} class="active" {% endif
+                            %}><a href="{{ url_for('entity.list') }}">Entity</a></li>
+                            <li class="nav-separator" aria-hidden="true"></li>
+                            <li{% if request.endpoint and request.endpoint.startswith('treasury.') %} class="active" {%
+                                endif %}><a href="{{ url_for('treasury.list') }}">Treasury</a></li>
+                                <li{% if request.endpoint and request.endpoint.startswith('invoice.') %} class="active"
+                                    {% endif %}><a href="{{ url_for('invoice.list') }}">Invoice</a></li>
+                                    <li{% if request.endpoint and request.endpoint.startswith('deposit.') %}
+                                        class="active" {% endif %}><a href="{{ url_for('deposit.list') }}">Deposit</a>
                                         </li>
-                                        <li class="nav-separator" aria-hidden="true"></li>
-                                        <li{% if request.endpoint and request.endpoint.startswith('invoice.') %}
-                                            class="active" {% endif %}><a
-                                                href="{{ url_for('invoice.list') }}">Invoice</a></li>
-                                            <li{% if request.endpoint and request.endpoint.startswith('deposit.') %}
-                                                class="active" {% endif %}><a
-                                                    href="{{ url_for('deposit.list') }}">Deposit</a></li>
-                                                <li{% if request.endpoint and request.endpoint.startswith('tag.') %}
-                                                    class="active" {% endif %}><a
-                                                        href="{{ url_for('tag.list') }}">Tag</a></li>
-                                                    {% endif %}
-        </ul>
+                                        <li{% if request.endpoint and request.endpoint.startswith('tag.') %}
+                                            class="active" {% endif %}><a href="{{ url_for('tag.list') }}">Tag</a></li>
+                                            {% endif %}
+                                            {% endmacro %}
+                                            <!DOCTYPE html>
+                                            <html lang="en">
 
-        {% if g.actor_entity %}
-        <div class="desktop-nav-user">
-            <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"
-                class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">
-                {{ g.actor_entity.name }}
-            </a>
-            <a href="{{ url_for('auth.logout') }}">Log out</a>
-        </div>
-        {% endif %}
-    </nav>
+                                            <head>
+                                                <meta charset="UTF-8">
+                                                <meta name="viewport"
+                                                    content="width=device-width, initial-scale=1, maximum-scale=1">
+                                                <meta name="theme-color" content="#000">
+                                                <title>refinance</title>
+                                                <link rel="stylesheet"
+                                                    href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css"
+                                                    crossorigin="anonymous" referrerpolicy="no-referrer">
+                                                <link rel="preconnect" href="https://fonts.googleapis.com">
+                                                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                                                <link
+                                                    href="https://fonts.googleapis.com/css2?family=Unbounded:wght@900&display=swap"
+                                                    rel="stylesheet">
+                                                <link rel="stylesheet" href="/style.css?v={{ css_cache_buster }}">
+                                                <script src="https://unpkg.com/htmx.org@1.6.1"></script>
+                                            </head>
 
-    <div id="mobile-menu" class="mobile-menu" role="dialog" aria-modal="true" aria-label="Menu" hidden>
-        <div class="mobile-menu-header">
-            <div class="mobile-menu-title">REFINANCE</div>
-            {% if g.actor_entity %}
-            <a href="{{ url_for('auth.logout') }}" class="mobile-menu-logout">Log out</a>
-            {% endif %}
-            <a href="#" class="mobile-menu-close" role="button" aria-label="Close menu">×</a>
-        </div>
+                                            <body class="{% block body_class %}{% endblock %}">
+                                                {% with messages = get_flashed_messages() %}
+                                                {% if messages %}
+                                                {% for message in messages %}
+                                                <div class="message">{{ message }}</div>
+                                                {% endfor %}
+                                                {% endif %}
+                                                {% endwith %}
 
-        <div class="mobile-menu-content">
-            <ul class="mobile-menu-items">
-                {% if g.actor_entity %}
-                <li{% if request.endpoint=='index.index' %} class="active" {% endif %}><a
-                        href="{{ url_for('index.index') }}">Home</a></li>
-                    <li{% if request.endpoint and request.endpoint.startswith('transaction.') %} class="active" {% endif
-                        %}><a href="{{ url_for('transaction.list') }}">Transaction</a></li>
-                        <li{% if request.endpoint and request.endpoint.startswith('fee.') %} class="active" {% endif %}>
-                            <a href="{{ url_for('fee.index') }}">Fee</a></li>
-                            <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active" {%
-                                endif %}><a href="{{ url_for('split.list') }}">Split</a></li>
-                                <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active"
-                                    {% endif %}><a href="{{ url_for('exchange.index') }}">Exchange</a></li>
-                                    <li{% if request.endpoint and request.endpoint.startswith('stats.') %}
-                                        class="active" {% endif %}><a href="{{ url_for('stats.index') }}">Stats</a></li>
-                                        <li{% if request.endpoint and request.endpoint.startswith('entity.') %}
-                                            class="active" {% endif %}><a href="{{ url_for('entity.list') }}">Entity</a>
-                                            </li>
-                                            <li class="nav-separator" aria-hidden="true"></li>
-                                            <li{% if request.endpoint and request.endpoint.startswith('invoice.') %}
-                                                class="active" {% endif %}><a
-                                                    href="{{ url_for('invoice.list') }}">Invoice</a></li>
-                                                <li{% if request.endpoint and request.endpoint.startswith('deposit.') %}
-                                                    class="active" {% endif %}><a
-                                                        href="{{ url_for('deposit.list') }}">Deposit</a></li>
-                                                    <li{% if request.endpoint and request.endpoint.startswith('tag.') %}
-                                                        class="active" {% endif %}><a
-                                                            href="{{ url_for('tag.list') }}">Tag</a></li>
-                                                        {% else %}
-                                                        <li><a href="/">Home</a></li>
+                                                <nav class="site-nav" aria-label="Primary">
+                                                    <a href="#" class="mobile-menu-toggle" role="button"
+                                                        aria-haspopup="dialog" aria-controls="mobile-menu"
+                                                        aria-expanded="false">
+                                                        <span class="mobile-menu-toggle-text">REFINANCE</span>
+                                                        {% if g.actor_entity %}
+                                                        <span class="mobile-menu-toggle-user">{{ g.actor_entity.name
+                                                            }}</span>
                                                         {% endif %}
-            </ul>
-        </div>
+                                                        <span class="mobile-menu-toggle-icon"
+                                                            aria-hidden="true">≡</span>
+                                                    </a>
 
-        {% if g.actor_entity %}
-        <div class="mobile-menu-footer">
-            <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}" class="mobile-menu-entity">
-                {{ g.actor_entity.name }}
-            </a>
-        </div>
-        {% endif %}
-    </div>
+                                                    <ul class="desktop-nav">
+                                                        {{ nav_items() }}
+                                                    </ul>
 
-    <main>
-        {% block heading %}<h1>{% block title %}{% endblock title %}</h1>{% endblock heading %}
-        {% block content %}
-        {% endblock content %}
-    </main>
+                                                    {% if g.actor_entity %}
+                                                    <div class="desktop-nav-user">
+                                                        <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"
+                                                            class="{% if not g.actor_entity.active %}secondary inactive{% endif %}">
+                                                            {{ g.actor_entity.name }}
+                                                        </a>
+                                                        <a href="{{ url_for('auth.logout') }}">Log out</a>
+                                                    </div>
+                                                    {% endif %}
+                                                </nav>
 
-    <script src="/static/js/dateToggle.js"></script>
-    <script src="/static/js/mobileMenu.js"></script>
-</body>
+                                                <div id="mobile-menu" class="mobile-menu" role="dialog"
+                                                    aria-modal="true" aria-label="Menu" hidden>
+                                                    <div class="mobile-menu-header">
+                                                        <div class="mobile-menu-title">REFINANCE</div>
+                                                        {% if g.actor_entity %}
+                                                        <a href="{{ url_for('auth.logout') }}"
+                                                            class="mobile-menu-logout">Log out</a>
+                                                        {% endif %}
+                                                        <a href="#" class="mobile-menu-close" role="button"
+                                                            aria-label="Close menu">×</a>
+                                                    </div>
 
-</html>
+                                                    <div class="mobile-menu-content">
+                                                        <ul class="mobile-menu-items">
+                                                            {{ nav_items() }}
+                                                            {% if not g.actor_entity %}
+                                                            <li><a href="/">Home</a></li>
+                                                            {% endif %}
+                                                        </ul>
+                                                    </div>
+
+                                                    {% if g.actor_entity %}
+                                                    <div class="mobile-menu-footer">
+                                                        <a href="{{ url_for('entity.detail', id=g.actor_entity.id) }}"
+                                                            class="mobile-menu-entity">
+                                                            {{ g.actor_entity.name }}
+                                                        </a>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                <main>
+                                                    {% block heading %}<h1>{% block title %}{% endblock title %}</h1>{%
+                                                    endblock heading %}
+                                                    {% block content %}
+                                                    {% endblock content %}
+                                                </main>
+
+                                                <script src="/static/js/dateToggle.js"></script>
+                                                <script src="/static/js/mobileMenu.js"></script>
+                                            </body>
+
+                                            </html>

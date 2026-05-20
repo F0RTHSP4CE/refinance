@@ -413,6 +413,21 @@
   font-weight: 900;
 }
 
+.tx-treasury-layout {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.tx-treasury-from {
+  text-align: right;
+}
+
+.tx-treasury-to {
+  text-align: left;
+}
+
 .tx-treasury-arrow {
   font-size: 1rem;
   font-weight: 900;
@@ -421,10 +436,6 @@
 }
 
 .tx-treasury-none {
-  font-size: 0.75rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  opacity: 0.45;
   vertical-align: middle;
 }
 
@@ -522,6 +533,7 @@
   width: 1px;
   /* shrink to badge content */
   padding-left: 0;
+  vertical-align: middle;
 }
 
 /* ── BALANCE ─────────────────────────────────────────────────────────── */
@@ -578,6 +590,30 @@
 }
 
 /* ── treasury badge on hover ─────────────────────────────────────────── */
+
+/* ─── MOBILE — treasury list ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .treasury-table {
+    width: 100%;
+  }
+
+  .treasury-col-comment,
+  .treasury-table thead th:last-child {
+    display: none;
+  }
+
+  .treasury-col-balance {
+    padding-left: 0.8rem;
+  }
+
+  .treasury-balance-amount {
+    font-size: 1.2rem;
+  }
+
+  .treasury-balance-currency {
+    font-size: 0.8rem;
+  }
+}
 
 /* ─── MOBILE — compact transaction list ─────────────────────────────── */
 @media (max-width: 640px) {

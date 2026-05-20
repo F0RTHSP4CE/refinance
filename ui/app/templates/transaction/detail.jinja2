@@ -8,10 +8,12 @@
     <section class="transaction-detail-card">
         <div class="transaction-detail-header">
             <div>
-                <div class="transaction-detail-amount">{{ "%.2f"|format(transaction.amount|float) }} {{ transaction.currency | upper }}</div>
+                <div class="transaction-detail-amount">{{ "%.2f"|format(transaction.amount|float) }} {{
+                    transaction.currency | upper }}</div>
                 <div class="transaction-detail-subtitle">Transaction #{{ transaction.id }}</div>
             </div>
-            <div class="transaction-status-badge {% if transaction.status == 'completed' %}is-completed{% else %}is-draft{% endif %}">
+            <div
+                class="transaction-status-badge {% if transaction.status == 'completed' %}is-completed{% else %}is-draft{% endif %}">
                 {{ transaction.status }}
             </div>
         </div>
@@ -24,7 +26,8 @@
                         <div class="transaction-party-label">From</div>
                         <div class="transaction-party-value">
                             <a href="{{ url_for('entity.detail', id=transaction.from_entity_id) }}"
-                                class="{% if not transaction.from_entity.active %}secondary inactive{% endif %}">{{ transaction.from_entity.name }}</a>
+                                class="{% if not transaction.from_entity.active %}secondary inactive{% endif %}">{{
+                                transaction.from_entity.name }}</a>
                             {% for tag in transaction.from_entity.tags %}
                             {{ tag_inline(tag) }}
                             {% endfor %}
@@ -37,7 +40,8 @@
                         <div class="transaction-party-label">To</div>
                         <div class="transaction-party-value">
                             <a href="{{ url_for('entity.detail', id=transaction.to_entity_id) }}"
-                                class="{% if not transaction.to_entity.active %}secondary inactive{% endif %}">{{ transaction.to_entity.name }}</a>
+                                class="{% if not transaction.to_entity.active %}secondary inactive{% endif %}">{{
+                                transaction.to_entity.name }}</a>
                             {% for tag in transaction.to_entity.tags %}
                             {{ tag_inline(tag) }}
                             {% endfor %}
@@ -66,12 +70,29 @@
                     {% if transaction.invoice_id %}
                     <tr>
                         <td>Invoice</td>
-                        <td><a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{ transaction.invoice_id }}</a></td>
+                        <td><a href="{{ url_for('invoice.detail', id=transaction.invoice_id) }}">{{
+                                transaction.invoice_id }}</a></td>
                     </tr>
                     {% endif %}
                 </table>
                 {% endif %}
             </div>
+
+            {% if transaction.from_treasury_id or transaction.to_treasury_id %}
+            <div class="transaction-detail-secondary">
+                <table>
+                    <tr>
+                        <td>Treasury</td>
+                        <td>
+                            {% if transaction.from_treasury_id %}{{ treasury_inline(transaction.from_treasury) }}{%
+                            endif %}
+                            <span class="tx-treasury-arrow">►</span>
+                            {% if transaction.to_treasury_id %}{{ treasury_inline(transaction.to_treasury) }}{% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            {% endif %}
 
             <div class="transaction-detail-secondary">
                 <table>
@@ -85,29 +106,12 @@
                         <td>{{ human_readable_date(transaction.modified_at) }}</td>
                     </tr>
                     {% endif %}
-                    {% if transaction.from_treasury_id or transaction.to_treasury_id %}
-                    <tr>
-                        <td>Treasury</td>
-                        <td>
-                            {% if transaction.from_treasury_id %}
-                            {{ treasury_inline(transaction.from_treasury) }}
-                            {% else %}
-                            x
-                            {% endif %}
-                            →
-                            {% if transaction.to_treasury_id %}
-                            {{ treasury_inline(transaction.to_treasury) }}
-                            {% else %}
-                            x
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endif %}
                     <tr>
                         <td>Actor</td>
                         <td>
                             <a href="{{ url_for('entity.detail', id=transaction.actor_entity_id) }}"
-                                class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{ transaction.actor_entity.name }}</a>
+                                class="{% if not transaction.actor_entity.active %}secondary inactive{% endif %}">{{
+                                transaction.actor_entity.name }}</a>
                             {% for tag in transaction.actor_entity.tags %}
                             {{ tag_inline(tag) }}
                             {% endfor %}
@@ -125,12 +129,14 @@
             <button type="submit" name="confirm" value="1" class="big-button">Complete transaction</button>
         </form>
         <div class="transaction-detail-actions-row">
-            <a href="{{ url_for('transaction.edit', id=transaction.id) }}" class="big-button big-button-outline">Edit</a>
-            <a href="{{ url_for('transaction.delete', id=transaction.id) }}" class="big-button big-button-outline big-button-danger-outline">Delete</a>
+            <a href="{{ url_for('transaction.edit', id=transaction.id) }}"
+                class="big-button big-button-outline">Edit</a>
+            <a href="{{ url_for('transaction.delete', id=transaction.id) }}"
+                class="big-button big-button-outline big-button-danger-outline">Delete</a>
         </div>
     </div>
     {% else %}
     <p class="transaction-detail-note secondary">This transaction is completed and can no longer be changed.</p>
-{% endif %}
+    {% endif %}
 </div>
 {% endblock %}
