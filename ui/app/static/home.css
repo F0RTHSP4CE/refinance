@@ -1,7 +1,7 @@
 /* HOME PAGE */
 .home-title {
   font-family: 'Unbounded', Arial, sans-serif;
-  font-size: clamp(3rem, 10vw, 7rem);
+  font-size: clamp(2rem, 12vw, 7rem);
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 3px;
@@ -37,10 +37,12 @@
   font-weight: 900;
 }
 
-.home-card-value, .home-card-note {
+.home-card-value,
+.home-card-note {
   margin: 0;
   font-size: 1.25rem;
 }
+
 .home-card-value {
   font-weight: 700;
 }
@@ -219,4 +221,3 @@
     width: 100%;
   }
 }
-

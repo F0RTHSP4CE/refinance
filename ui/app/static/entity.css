@@ -682,33 +682,28 @@
 }
 
 .entities-add-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.75rem 1.25rem;
-  background: black;
-  color: white;
-  border: 3px solid black;
-  font-family: 'Unbounded', Arial, sans-serif;
-  font-size: 1.15rem;
+  display: inline-block;
+  padding: 0.35rem 1.1rem;
+  background: #000;
+  color: #fff;
   font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
   text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 7px 7px 0 black;
-  white-space: nowrap;
+  transition: background 0.08s, color 0.08s;
 }
 
 .entities-add-button:hover {
-  transform: translate(-4px, -4px);
-  box-shadow: 11px 11px 0 black;
+  background: #fff;
+  color: #000;
+  outline: 2px solid #000;
 }
 
 .entities-add-button:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 black;
+  background: #fff;
+  color: #000;
+  outline: 2px solid #000;
 }
 
 .entities-search-form-single {

@@ -330,7 +330,7 @@ nav.site-nav {
   }
 
   main {
-    margin-top: calc(1rem + var(--site-nav-height, 52px));
+    margin-top: calc(0.5rem + var(--site-nav-height, 52px));
   }
 }
 

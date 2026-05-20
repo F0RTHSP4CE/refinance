@@ -3,11 +3,9 @@
 {% from 'widgets/pagination.jinja2' import pagination_control %}
 
 {% block title %}Entities{% endblock %}
-{% block heading %}{% endblock %}
 {% block content %}
 <div class="entities-page">
     <div class="entities-header">
-        <h1 class="entities-title">Entities</h1>
         <a href="{{ url_for('entity.add') }}" class="entities-add-button">+ Add</a>
     </div>
 
@@ -34,35 +32,22 @@
         </a>
     </div>
 
-    <form method="get"
-        class="entities-search-form-single"
-        id="entities-search-form"
-        hx-get="{{ url_for('entity.list') }}"
-        hx-target="#entities-results"
-        hx-select="#entities-results"
-        hx-swap="outerHTML"
-        hx-push-url="true">
+    <form method="get" class="entities-search-form-single" id="entities-search-form"
+        hx-get="{{ url_for('entity.list') }}" hx-target="#entities-results" hx-select="#entities-results"
+        hx-swap="outerHTML" hx-push-url="true">
         {% if show_inactive %}
         <input type="hidden" name="inactive" value="1">
         {% endif %}
-        <input
-            type="search"
-            name="q"
-            value="{{ search_query }}"
-            id="entities-search-input"
-            class="entities-search-input"
-            placeholder="SEARCH ALL"
-            aria-label="Search entities by name or comment"
+        <input type="search" name="q" value="{{ search_query }}" id="entities-search-input"
+            class="entities-search-input" placeholder="SEARCH ALL" aria-label="Search entities by name or comment"
             autofocus>
         {% if search_query %}
         {% if show_inactive %}
-        <a href="{{ url_for('entity.list', inactive='1') }}"
-            class="entities-search-clear">
+        <a href="{{ url_for('entity.list', inactive='1') }}" class="entities-search-clear">
             Clear
         </a>
         {% else %}
-        <a href="{{ url_for('entity.list') }}"
-            class="entities-search-clear">
+        <a href="{{ url_for('entity.list') }}" class="entities-search-clear">
             Clear
         </a>
         {% endif %}
@@ -81,64 +66,64 @@
             {%- set card_color = "hsl(" + card_hue|string + ", 66%, 44%)" -%}
             <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}"
                 style="--entity-card-color: {{ card_color }};">
-            {% else %}
-            <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}">
-            {% endif %}
-                <span class="entity-list-card-id-bg" aria-hidden="true">#{{ entity.id }}</span>
-                <div class="entity-list-card-header">
-                    <h2 class="entity-list-card-title">
-                        <a href="{{ url_for('entity.detail', id=entity.id) }}"
-                            class="entity-list-card-link">
-                            {{ entity.name }}
-                        </a>{% if entity.tags %}<span>
-                            {% for tag in entity.tags %}
-                            {{ tag_inline(tag) }}
-                            {% endfor %}
-                        </span>{% endif %}
-                    </h2>
-                </div>
+                {% else %}
+                <article class="entity-list-card {% if not entity.active %}entity-list-card--inactive{% endif %}">
+                    {% endif %}
+                    <span class="entity-list-card-id-bg" aria-hidden="true">#{{ entity.id }}</span>
+                    <div class="entity-list-card-header">
+                        <h2 class="entity-list-card-title">
+                            <a href="{{ url_for('entity.detail', id=entity.id) }}" class="entity-list-card-link">
+                                {{ entity.name }}
+                            </a>{% if entity.tags %}<span>
+                                {% for tag in entity.tags %}
+                                {{ tag_inline(tag) }}
+                                {% endfor %}
+                            </span>{% endif %}
+                        </h2>
+                    </div>
 
-                {% if entity.comment %}
-                <div class="entity-list-card-comment">
-                    <p>{{ entity.comment }}</p>
-                </div>
-                {% endif %}
+                    {% if entity.comment %}
+                    <div class="entity-list-card-comment">
+                        <p>{{ entity.comment }}</p>
+                    </div>
+                    {% endif %}
 
-                {% if currency_columns and balance %}
-                {% set ns = namespace(has_values=false) %}
-                <div class="entity-list-card-balances">
-                    {% for currency in currency_columns %}
-                    {% set completed_amount = balance.completed.get(currency) if balance else None %}
-                    {% set draft_amount = balance.draft.get(currency) if balance else None %}
-                    {% set has_completed = completed_amount is not none and completed_amount|float != 0 %}
-                    {% set has_draft = draft_amount is not none and draft_amount|float != 0 %}
-                    {% if has_completed or has_draft %}
-                    {% set ns.has_values = true %}
-                    <div class="balance-row-list">
-                        <div class="balance-amounts">
-                            {% if has_completed %}
-                            <div class="balance-value {% if completed_amount|float < 0 %}amount-negative{% endif %}">
-                                {{ '%.2f' | format(completed_amount | float) }} {{ currency | upper }}
+                    {% if currency_columns and balance %}
+                    {% set ns = namespace(has_values=false) %}
+                    <div class="entity-list-card-balances">
+                        {% for currency in currency_columns %}
+                        {% set completed_amount = balance.completed.get(currency) if balance else None %}
+                        {% set draft_amount = balance.draft.get(currency) if balance else None %}
+                        {% set has_completed = completed_amount is not none and completed_amount|float != 0 %}
+                        {% set has_draft = draft_amount is not none and draft_amount|float != 0 %}
+                        {% if has_completed or has_draft %}
+                        {% set ns.has_values = true %}
+                        <div class="balance-row-list">
+                            <div class="balance-amounts">
+                                {% if has_completed %}
+                                <div
+                                    class="balance-value {% if completed_amount|float < 0 %}amount-negative{% endif %}">
+                                    {{ '%.2f' | format(completed_amount | float) }} {{ currency | upper }}
+                                </div>
+                                {% endif %}
+                                {% if has_draft %}
+                                <div class="balance-draft {% if draft_amount|float < 0 %}amount-negative{% endif %}">
+                                    {{ '%.2f' | format(draft_amount | float) }} {{ currency | upper }}*
+                                </div>
+                                {% endif %}
                             </div>
-                            {% endif %}
-                            {% if has_draft %}
-                            <div class="balance-draft {% if draft_amount|float < 0 %}amount-negative{% endif %}">
-                                {{ '%.2f' | format(draft_amount | float) }} {{ currency | upper }}*
-                            </div>
-                            {% endif %}
                         </div>
+                        {% endif %}
+                        {% endfor %}
+                        {% if not ns.has_values %}
+                        <div class="balance-row-list balance-row-list-empty">
+                            <span class="balance-currency-label">ZERO BALANCE</span>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
-                    {% endfor %}
-                    {% if not ns.has_values %}
-                    <div class="balance-row-list balance-row-list-empty">
-                        <span class="balance-currency-label">ZERO BALANCE</span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </article>
-            {% endfor %}
+                </article>
+                {% endfor %}
         </div>
         {% else %}
         <div class="entities-empty">

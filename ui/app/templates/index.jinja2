@@ -1,6 +1,7 @@
 {% extends "base.jinja2" %}
 {% block content %}
 <h1 class="home-title">REFINANCE</h1>
+<script src="/static/js/fitTitle.js"></script>
 <section class="home-cards" aria-label="Main actions">
 	<article class="home-card">
 		<h2>Balance</h2>
@@ -9,17 +10,15 @@
 		{%- set bal_draft = g.actor_entity_balance.get("draft", {}) -%}
 		{%- set ns = namespace(completed_has_neg=false, draft_has_neg=false) -%}
 		{%- for currency, amount in bal_completed.items() -%}
-			{%- if amount|float < 0 -%}{%- set ns.completed_has_neg = true -%}{%- endif -%}
-		{%- endfor -%}
-		{%- for currency, amount in bal_draft.items() -%}
-			{%- if amount|float < 0 -%}{%- set ns.draft_has_neg = true -%}{%- endif -%}
-		{%- endfor -%}
-		<div class="entity-balance-list">
+		{%- if amount|float < 0 -%}{%- set ns.completed_has_neg=true -%}{%- endif -%} {%- endfor -%} {%- for currency,
+			amount in bal_draft.items() -%} {%- if amount|float < 0 -%}{%- set ns.draft_has_neg=true -%}{%- endif -%}
+			{%- endfor -%} <div class="entity-balance-list">
 			{% for currency, value in bal_completed.items() %}
 			<div class="entity-balance-row">
-				{% if ns.completed_has_neg %}<span class="entity-balance-warning">{% if value|float < 0 %}⚠️{% endif %}</span>{% endif %}
-				<strong class="entity-balance-amount right-align">{{ value }}</strong>
-				<span class="entity-balance-currency">{{ currency | upper }}</span>
+				{% if ns.completed_has_neg %}<span class="entity-balance-warning">{% if value|float < 0 %}⚠️{% endif
+						%}</span>{% endif %}
+						<strong class="entity-balance-amount right-align">{{ value }}</strong>
+						<span class="entity-balance-currency">{{ currency | upper }}</span>
 			</div>
 			{% endfor %}
 			{% if bal_draft %}
@@ -31,17 +30,18 @@
 			</div>
 			{% endfor %}
 			{% endif %}
-		</div>
-		{% else %}
-		<p class="home-card-note">No balance yet.</p>
-		{% endif %}
-		<a class="home-card-button" href="{{ url_for('deposit.add_keepz') }}">💰 Top up by card</a>
-		<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
-			crypto</a>
+			</div>
+			{% else %}
+			<p class="home-card-note">No balance yet.</p>
+			{% endif %}
+			<a class="home-card-button" href="{{ url_for('deposit.add_keepz') }}">💰 Top up by card</a>
+			<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
+				crypto</a>
 	</article>
 
 	<article class="home-card">
-		<h2>Fee / Invoices{% if unpaid_fee_count > 0 %} <span class="home-card-title-count">({{ unpaid_fee_count }})</span>{% endif %}</h2>
+		<h2>Fee / Invoices{% if unpaid_fee_count > 0 %} <span class="home-card-title-count">({{ unpaid_fee_count
+				}})</span>{% endif %}</h2>
 		{% if unpaid_fee_count == 0 %}
 		<p class="home-card-value">✔️ Everything is paid</p>
 		{% endif %}
@@ -52,17 +52,23 @@
 				<a href="{{ url_for('invoice.detail', id=invoice.id) }}"
 					class="entity-invoice-compact-link {% if invoice.status == 'paid' %}entity-invoice-compact-link-paid{% endif %}">
 					<span class="entity-invoice-compact-amount">
-						{% for item in invoice.amounts %}{{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} / {% endif %}{% endfor %}
+						{% for item in invoice.amounts %}{{ item.amount }} {{ item.currency | upper }}{% if not
+						loop.last %} / {% endif %}{% endfor %}
 					</span>
 					<span class="entity-invoice-compact-meta">
-						#{{ invoice.id }} • {% if invoice.billing_period %}{{ format_billing_period(invoice.billing_period) }}{% else %}{{ human_readable_date(invoice.created_at) }}{% endif %} • {{ invoice.status }}
+						#{{ invoice.id }} • {% if invoice.billing_period %}{{
+						format_billing_period(invoice.billing_period) }}{% else %}{{
+						human_readable_date(invoice.created_at) }}{% endif %} • {{ invoice.status }}
 					</span>
 				</a>
 			</li>
 			{% endfor %}
 		</ul>
 		{% if unpaid_fee_count > 0 %}
-		<p class="home-card-value home-card-value-total">Total unpaid: <span class="home-card-total">{% if unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{ unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
+		<p class="home-card-value home-card-value-total">Total unpaid: <span class="home-card-total">{% if
+				unpaid_fee_summary %}{% for total in unpaid_fee_summary %}{{ total }}{% if not loop.last %} <span
+					class="home-approx" aria-hidden="true">&asymp;</span> {% endif %}{% endfor %}{% else %}{{
+				unpaid_fee_count ~ ' unpaid' }}{% endif %}</span></p>
 		<p class="home-card-note"><strong>Top up your balance!</strong> Invoices will be paid automatically.</p>
 		{% endif %}
 		{% endif %}
