@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import dataclass, field
+from decimal import Decimal
 from os import getenv
 
 DEFAULT_FEE_PRESETS: list[dict[str, str | int]] = [
@@ -53,6 +54,12 @@ class Config:
     )
     donation_notification_topic_id: int | None = field(
         default=int(getenv("REFINANCE_DONATION_NOTIFICATION_TOPIC_ID") or "0") or None
+    )
+    donation_min_amount: Decimal = field(
+        default=Decimal(getenv("REFINANCE_DONATION_MIN_AMOUNT") or "1")
+    )
+    donation_max_amount: Decimal = field(
+        default=Decimal(getenv("REFINANCE_DONATION_MAX_AMOUNT") or "3000")
     )
 
     @property

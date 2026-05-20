@@ -90,6 +90,46 @@ class TestDonationEndpoints:
         )
         assert response.status_code == 422
 
+    def test_create_donation_rejects_below_min_amount(
+        self, test_app: TestClient, monkeypatch
+    ):
+        """Amount below donation_min_amount is rejected."""
+        config = _active_config()
+        monkeypatch.setattr(config, "donation_min_amount", Decimal("5"))
+        response = test_app.post(
+            "/donations",
+            json={"amount": "4.99", "currency": "GEL"},
+        )
+        assert response.status_code == 422
+
+    def test_create_donation_rejects_above_max_amount(
+        self, test_app: TestClient, monkeypatch
+    ):
+        """Amount above donation_max_amount is rejected."""
+        config = _active_config()
+        monkeypatch.setattr(config, "donation_max_amount", Decimal("100"))
+        response = test_app.post(
+            "/donations",
+            json={"amount": "100.01", "currency": "GEL"},
+        )
+        assert response.status_code == 422
+
+    def test_create_donation_rejects_oversized_comment(self, test_app: TestClient):
+        """Comments longer than 500 characters are rejected."""
+        response = test_app.post(
+            "/donations",
+            json={"amount": "10.00", "currency": "GEL", "comment": "x" * 501},
+        )
+        assert response.status_code == 422
+
+    def test_create_donation_rejects_invalid_currency(self, test_app: TestClient):
+        """Currency longer than 10 characters is rejected."""
+        response = test_app.post(
+            "/donations",
+            json={"amount": "10.00", "currency": "A" * 11},
+        )
+        assert response.status_code == 422
+
     def test_get_donation_by_uuid_requires_no_auth(self, test_app: TestClient):
         """GET /donations/{uuid} returns deposit info without auth."""
         create = test_app.post(

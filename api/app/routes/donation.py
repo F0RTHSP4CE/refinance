@@ -9,7 +9,11 @@ from app.dependencies.services import (
 from app.errors.common import NotFoundError
 from app.schemas.deposit import DepositUpdateSchema
 from app.schemas.deposit_providers.keepz import KeepzDepositCreateSchema
-from app.schemas.donation import DonationCreateSchema, DonationResponseSchema
+from app.schemas.donation import (
+    DonationCreateSchema,
+    DonationResponseSchema,
+    get_validated_donation,
+)
 from app.seeding import anonymous_entity, donation_tag
 from app.services.deposit import DepositService
 from app.services.deposit_providers.keepz import KeepzDepositProviderService
@@ -26,7 +30,7 @@ def _payment_url(deposit) -> str | None:
 
 @donation_router.post("", response_model=DonationResponseSchema)
 def create_donation(
-    schema: DonationCreateSchema,
+    schema: DonationCreateSchema = Depends(get_validated_donation),
     keepz_provider: KeepzDepositProviderService = Depends(
         get_keepz_deposit_provider_service
     ),

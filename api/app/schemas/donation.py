@@ -3,13 +3,15 @@
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from app.config import Config, get_config
+from fastapi import Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
 
 
 class DonationCreateSchema(BaseModel):
     amount: Decimal
-    currency: str
-    comment: str = ""
+    currency: str = Field(min_length=1, max_length=10)
+    comment: str = Field(default="", max_length=500)
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
@@ -28,3 +30,21 @@ class DonationResponseSchema(BaseModel):
     payment_url: str | None
     amount: str
     currency: str
+
+
+def get_validated_donation(
+    schema: DonationCreateSchema,
+    config: Config = Depends(get_config),
+) -> DonationCreateSchema:
+    """Dependency that applies config-driven amount bounds to DonationCreateSchema."""
+    if schema.amount < config.donation_min_amount:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Amount must be at least {config.donation_min_amount}",
+        )
+    if schema.amount > config.donation_max_amount:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Amount must be at most {config.donation_max_amount}",
+        )
+    return schema

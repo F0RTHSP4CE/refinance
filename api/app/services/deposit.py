@@ -143,11 +143,11 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             chat_id = self._notification_service.config.donation_notification_chat_id
             if chat_id:
                 amount_str = f"{deposit.amount} {deposit.currency.upper()}"
-                message = f"🎁 New donation: {amount_str}"
+                message = f"🎁 New donation: <b>{amount_str}</b>"
                 if comment:
                     from html import escape
 
-                    message += f"\n{escape(comment)}"
+                    message += f"\n<i>{escape(comment)}</i>"
                 topic_id = (
                     self._notification_service.config.donation_notification_topic_id
                 )
