@@ -13,11 +13,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --page-bg: #ffffff;
+            --page-bg: #000000;
             --ink: #000000;
             --muted: #2c2c2c;
             --muted-light: #dddddd;
             --accent: #00ff00;
+            --surface-border: #353535;
             --content-width: min(626px, calc(100vw - 48px));
             --submit-stripe-shift: 33.941px;
         }
@@ -119,7 +120,7 @@
         .donation-name,
         .custom-amount-field {
             width: 100%;
-            border: 0;
+            border: 2px solid var(--surface-border);
             background: #000000;
             color: #ffffff;
             font-family: "Geist Mono", monospace;
@@ -151,8 +152,8 @@
         }
 
         .preset-option {
-            --button-hover-border: #000000;
-            border: 4px solid #000000;
+            --button-hover-border: var(--accent);
+            border: 2px solid var(--surface-border);
             background: #000000;
             color: #ffffff;
             height: 64px;
@@ -165,6 +166,7 @@
             font-weight: 700;
             line-height: 1;
             box-shadow: 0 0 0 0 transparent;
+            transition: box-shadow 0.15s ease;
         }
 
         .preset-option:focus-visible {
@@ -179,7 +181,7 @@
         }
 
         .preset-option.is-selected {
-            --button-hover-border: var(--accent);
+            --button-hover-border: #ffffff;
             background: var(--accent);
             border-color: var(--accent);
             color: #000000;
@@ -197,10 +199,10 @@
         }
 
         .donation-submit {
-            --button-hover-border: var(--accent);
+            --button-hover-border: #ffffff;
             width: 100%;
             height: 62px;
-            margin-top: 2rem;
+            margin-top: 6rem;
             border: 0;
             background: var(--accent);
             color: #ffffff;
@@ -297,7 +299,8 @@
             max-width: 320px;
             height: 53px;
             background: transparent;
-            color: #111111;
+            border: 0;
+            color: #ffffff;
             font-size: clamp(23px, 3.7vw, 43px);
             padding: 0;
         }
@@ -313,12 +316,12 @@
         }
 
         .custom-amount-field::placeholder {
-            color: #e8e8e8;
+            color: #4e4e4e;
             opacity: 1;
         }
 
         .custom-amount-field:focus {
-            color: #000000;
+            color: #ffffff;
         }
 
         .custom-amount-suffix {
@@ -326,7 +329,7 @@
             font-size: clamp(23px, 3.7vw, 43px);
             font-weight: 700;
             line-height: 1;
-            color: #111111;
+            color: #ffffff;
             opacity: 0;
             transform: translateX(-8px);
             pointer-events: none;
@@ -384,7 +387,7 @@
             }
 
             .donation-submit {
-                margin-top: 1rem;
+                margin-top: 2rem;
                 height: 58px;
             }
 
