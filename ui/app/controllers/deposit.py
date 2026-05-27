@@ -1,4 +1,5 @@
 from app.config import Config
+from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Deposit, DepositStatus, Treasury
@@ -29,6 +30,17 @@ deposit_bp = Blueprint("deposit", __name__)
 
 def _normalize_currency(value: str | None) -> str:
     return str(value or "").strip().upper()
+
+
+def _format_api_error(exc: ApplicationError, fallback: str) -> str:
+    payload = exc.args[0] if exc.args else None
+    if isinstance(payload, dict):
+        detail = payload.get("error") or payload.get("detail") or payload.get("message")
+        if detail:
+            return str(detail)
+        return str(payload)
+    text = str(exc).strip()
+    return text or fallback
 
 
 class CryptAPIDepositForm(FlaskForm):
@@ -76,6 +88,24 @@ class KeepzDepositForm(FlaskForm):
         description="Optional note for matching payments.",
     )
     submit = SubmitField("Create Deposit")
+
+
+class StripeDepositForm(FlaskForm):
+    to_entity_id = HiddenField("", validators=[DataRequired()])
+
+    currency = SelectField(
+        "Currency",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
+        validators=[DataRequired()],
+    )
+    amount = FloatField(
+        "Amount",
+        validators=[DataRequired()],
+        render_kw={"placeholder": "5.00", "class": "small"},
+    )
+    submit = SubmitField("Top up")
 
 
 class KeepzAuthForm(FlaskForm):
@@ -226,6 +256,41 @@ def add_keepz():
             flash(f"Error creating deposit: {str(e)}", "error")
 
     return render_template("deposit/add_keepz.jinja2", form=form)
+
+
+@deposit_bp.route("/stripe/add", methods=["GET", "POST"])
+@token_required
+def add_stripe():
+    form = StripeDepositForm()
+
+    # Always top up the currently authorized entity balance
+    form.to_entity_id.data = str(g.actor_entity["id"])
+
+    if form.validate_on_submit():
+        api = get_refinance_api_client()
+        try:
+            params = {
+                "to_entity_id": int(form.to_entity_id.data),
+                "amount": form.amount.data,
+                "currency": _normalize_currency(form.currency.data),
+            }
+            response = api.http("POST", "deposits/providers/stripe", params=params)
+            result = Deposit(**response.json())
+            payment_url = ((result.details or {}).get("stripe") or {}).get(
+                "payment_url"
+            )
+            if payment_url:
+                return redirect(payment_url)
+            return redirect(url_for("deposit.detail", id=result.id))
+        except ApplicationError as e:
+            flash(
+                _format_api_error(e, "Could not create Stripe deposit."),
+                "error",
+            )
+        except Exception as e:
+            flash(f"Error creating Stripe deposit: {str(e)}", "error")
+
+    return render_template("deposit/add_stripe.jinja2", form=form)
 
 
 @deposit_bp.route("/keepz/auth", methods=["GET", "POST"])

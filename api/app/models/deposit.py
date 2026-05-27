@@ -32,6 +32,7 @@ deposits_tags = Table(
 class DepositProvider(enum.Enum):
     CRYPTAPI = "cryptapi"
     KEEPZ = "keepz"
+    STRIPE = "stripe"
 
 
 class DepositStatus(enum.Enum):

@@ -5,7 +5,8 @@
 {% block title %}Deposit {{ deposit.id }}{% endblock %}
 {% block content %}
 {% set keepz = deposit.details.get('keepz') if deposit.details else None %}
-{% set payment_url = keepz.get('payment_url') if keepz else None %}
+{% set stripe = deposit.details.get('stripe') if deposit.details else None %}
+{% set payment_url = (keepz.get('payment_url') if keepz else None) or (stripe.get('payment_url') if stripe else None) %}
 {% set address = deposit.details.get('address') if deposit.details else None %}
 
 <div class="deposit-detail-layout">
@@ -35,7 +36,8 @@
                 {% if payment_url %}
                 <div class="deposit-payment-link">
                     <div class="secondary">Payment link</div>
-                    <div class="deposit-mono"><a href="{{ payment_url }}" target="_blank" rel="noopener noreferrer">{{ payment_url }}</a></div>
+                    <div class="deposit-mono"><a href="{{ payment_url }}" target="_blank" rel="noopener noreferrer">{{
+                            payment_url }}</a></div>
                 </div>
                 {% elif address %}
                 <div class="deposit-payment-link">
@@ -54,7 +56,8 @@
                         <td>From</td>
                         <td>
                             <a href="{{ url_for('entity.detail', id=deposit.from_entity_id) }}"
-                                class="{% if not deposit.from_entity.active %}secondary inactive{% endif %}">{{ deposit.from_entity.name }}</a>
+                                class="{% if not deposit.from_entity.active %}secondary inactive{% endif %}">{{
+                                deposit.from_entity.name }}</a>
                             {% for tag in deposit.from_entity.tags %}
                             {{ tag_inline(tag) }}
                             {% endfor %}
@@ -64,7 +67,8 @@
                         <td>To</td>
                         <td>
                             <a href="{{ url_for('entity.detail', id=deposit.to_entity_id) }}"
-                                class="{% if not deposit.to_entity.active %}secondary inactive{% endif %}">{{ deposit.to_entity.name }}</a>
+                                class="{% if not deposit.to_entity.active %}secondary inactive{% endif %}">{{
+                                deposit.to_entity.name }}</a>
                             {% for tag in deposit.to_entity.tags %}
                             {{ tag_inline(tag) }}
                             {% endfor %}
@@ -89,7 +93,8 @@
                             <td>Actor</td>
                             <td>
                                 <a href="{{ url_for('entity.detail', id=deposit.actor_entity_id) }}"
-                                    class="{% if not deposit.actor_entity.active %}secondary inactive{% endif %}">{{ deposit.actor_entity.name }}</a>
+                                    class="{% if not deposit.actor_entity.active %}secondary inactive{% endif %}">{{
+                                    deposit.actor_entity.name }}</a>
                             </td>
                         </tr>
                         <tr>
@@ -127,11 +132,12 @@
     const qrTarget = document.getElementById('deposit-qrcode');
     if (qrTarget) {
         const qr = qrcode(0, 'M');
-        const qrValue = {{ (payment_url or address) | tojson }};
-        qr.addData(qrValue);
-        qr.make();
-        // Smaller default so the page doesn't become dominated by the QR block.
-        qrTarget.innerHTML = qr.createImgTag(5, 8);
+        const qrValue = {{ (payment_url or address) | tojson
+    }};
+    qr.addData(qrValue);
+    qr.make();
+    // Smaller default so the page doesn't become dominated by the QR block.
+    qrTarget.innerHTML = qr.createImgTag(5, 8);
     }
 </script>
 {% endif %}

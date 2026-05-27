@@ -45,6 +45,21 @@ class Config:
     keepz_poll_interval_seconds: int = field(
         default=int(getenv("REFINANCE_KEEPZ_POLL_INTERVAL_SECONDS", "60"))
     )
+    stripe_secret_key: str | None = field(
+        default=getenv("REFINANCE_STRIPE_SECRET_KEY", "")
+    )
+    stripe_webhook_secret: str | None = field(
+        default=getenv("REFINANCE_STRIPE_WEBHOOK_SECRET", "")
+    )
+    stripe_success_url: str | None = field(
+        default=getenv("REFINANCE_STRIPE_SUCCESS_URL", "")
+    )
+    stripe_cancel_url: str | None = field(
+        default=getenv("REFINANCE_STRIPE_CANCEL_URL", "")
+    )
+    stripe_poll_interval_seconds: int = field(
+        default=int(getenv("REFINANCE_STRIPE_POLL_INTERVAL_SECONDS", "60"))
+    )
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))

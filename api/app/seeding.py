@@ -35,6 +35,7 @@ cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
 usdt_trc20_treasury = Treasury(id=52, name="usdt/trc20")
 keepz_treasury = Treasury(id=53, name="keepz")
+stripe_treasury = Treasury(id=54, name="stripe")
 
 # commonly used entities
 f0_entity = Entity(
@@ -62,6 +63,12 @@ keepz_deposit_provider = Entity(
     id=53,
     name="keepz_in",
     comment="keepz.me deposit provider",
+    tags=[deposit_tag],
+)
+stripe_deposit_provider = Entity(
+    id=54,
+    name="stripe_in",
+    comment="stripe.com deposit provider",
     tags=[deposit_tag],
 )
 anonymous_entity = Entity(
@@ -131,6 +138,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         # payment providers
         cryptapi_deposit_provider,
         keepz_deposit_provider,
+        stripe_deposit_provider,
         # guest donors
         anonymous_entity,
         # residents
@@ -154,6 +162,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Treasury: [
         cash_treasury,
         keepz_treasury,
+        stripe_treasury,
         usdt_erc20_treasury,
         usdt_trc20_treasury,
     ],

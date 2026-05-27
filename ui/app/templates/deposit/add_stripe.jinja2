@@ -1,0 +1,42 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
+
+{% block title %}Top up with Stripe{% endblock %}
+
+{% block content %}
+
+<div class="entry-form-layout">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-row">
+                <div class="form-field form-field-amount">
+                    <label class="form-label" for="amount">Amount</label>
+                    {{ form.amount(class_='form-input', step='0.01', min='0.01', inputmode='decimal',
+                    autocomplete='off', placeholder='100') }}
+                    {% if form.amount.errors %}
+                    <div class="form-error">{{ form.amount.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-field form-field-currency">
+                    <label class="form-label" for="currency">Currency</label>
+                    {{ currency_selector('currency', form.currency.choices, form.currency.data, id='currency') }}
+                    {% if form.currency.errors %}
+                    <div class="form-error">{{ form.currency.errors[0] }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if form.to_entity_id.errors %}
+            <div class="form-error">{{ form.to_entity_id.errors[0] }}</div>
+            {% endif %}
+
+            <div class="form-actions">
+                {{ form.submit(class_='big-button', value='Continue to Stripe') }}
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

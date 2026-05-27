@@ -23,6 +23,8 @@ class ServiceContainer:
         self._cryptapi_deposit_provider_service = None
         self._keepz_service = None
         self._keepz_deposit_provider_service = None
+        self._stripe_service = None
+        self._stripe_deposit_provider_service = None
         self._pos_service = None
         self._currency_exchange_service = None
         self._fee_service = None
@@ -164,6 +166,29 @@ class ServiceContainer:
         return self._keepz_deposit_provider_service
 
     @property
+    def stripe_service(self):
+        if self._stripe_service is None:
+            from app.services.stripe import StripeService
+
+            self._stripe_service = StripeService(config=self.config)
+        return self._stripe_service
+
+    @property
+    def stripe_deposit_provider_service(self):
+        if self._stripe_deposit_provider_service is None:
+            from app.services.deposit_providers.stripe import (
+                StripeDepositProviderService,
+            )
+
+            self._stripe_deposit_provider_service = StripeDepositProviderService(
+                db=self.db,
+                deposit_service=self.deposit_service,
+                stripe_service=self.stripe_service,
+                config=self.config,
+            )
+        return self._stripe_deposit_provider_service
+
+    @property
     def pos_service(self):
         if self._pos_service is None:
             from app.services.pos import POSService
@@ -289,6 +314,16 @@ def get_keepz_deposit_provider_service(
     container: ServiceContainer = Depends(get_container),
 ):
     return container.keepz_deposit_provider_service
+
+
+def get_stripe_service(container: ServiceContainer = Depends(get_container)):
+    return container.stripe_service
+
+
+def get_stripe_deposit_provider_service(
+    container: ServiceContainer = Depends(get_container),
+):
+    return container.stripe_deposit_provider_service
 
 
 def get_pos_service(container: ServiceContainer = Depends(get_container)):

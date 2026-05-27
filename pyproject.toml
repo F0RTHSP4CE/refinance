@@ -15,6 +15,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.38",
+    "stripe>=10.12.0",
     "uvicorn>=0.34.0",
     "psycopg2-binary>=2.9.7",
     "python-multipart>=0.0.20",

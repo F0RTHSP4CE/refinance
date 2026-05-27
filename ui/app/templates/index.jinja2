@@ -34,7 +34,7 @@
 			{% else %}
 			<p class="home-card-note">No balance yet.</p>
 			{% endif %}
-			<a class="home-card-button" href="{{ url_for('deposit.add_keepz') }}">💰 Top up by card</a>
+			<a class="home-card-button" href="{{ url_for('deposit.add_stripe') }}">💰 Top up by card</a>
 			<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
 				crypto</a>
 	</article>
