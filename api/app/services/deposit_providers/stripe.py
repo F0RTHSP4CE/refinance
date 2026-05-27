@@ -9,7 +9,6 @@ from app.config import Config, get_config
 from app.dependencies.services import get_deposit_service, get_stripe_service
 from app.errors.deposit import DepositAlreadyCompleted
 from app.models.deposit import Deposit, DepositStatus
-from app.models.entity import Entity
 from app.schemas.deposit import (
     DepositCreateSchema,
     DepositFiltersSchema,
@@ -17,7 +16,6 @@ from app.schemas.deposit import (
 )
 from app.schemas.deposit_providers.stripe import StripeDepositCreateSchema
 from app.seeding import stripe_deposit_provider, stripe_treasury
-from app.services.base import BaseService
 from app.services.deposit import DepositService
 from app.services.stripe import StripeService
 from app.uow import get_uow
@@ -25,7 +23,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 
-class StripeDepositProviderService(BaseService[Entity]):
+class StripeDepositProviderService:
     def __init__(
         self,
         db: Session = Depends(get_uow),

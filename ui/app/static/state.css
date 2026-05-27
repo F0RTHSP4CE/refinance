@@ -40,3 +40,80 @@ nav a {
   text-decoration: none;
   color: inherit;
 }
+
+.flash-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+  max-width: calc(100vw - 2rem);
+}
+
+@media (max-width: 1024px) {
+  .flash-stack {
+    margin-top: calc(0.5rem + var(--site-nav-height, 52px));
+  }
+}
+
+@media (max-width: 640px) {
+  .flash-stack {
+    margin-left: 0.4rem;
+    margin-right: 0.4rem;
+    max-width: calc(100vw - 0.8rem);
+  }
+}
+
+.flash {
+  border: 3px solid #111;
+  background: #ffffff;
+  color: #111;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  padding: 0.7rem 0.9rem;
+  box-shadow: 5px 5px 0 #111;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.flash-error {
+  border-color: #ff0000;
+  background: #fff;
+  color: #ff0000;
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.25;
+  text-transform: uppercase;
+  box-shadow: 7px 7px 0 #ff0000;
+}
+
+.flash-info,
+.flash-message {
+  border-color: #111;
+  background: #f6f6f6;
+  color: #111;
+}
+
+.flash-success {
+  border-color: #00ff00;
+  background: #fff;
+  color: #00ff00;
+  box-shadow: 5px 5px 0 #00ff00;
+}
+
+@media (max-width: 640px) {
+  .flash {
+    font-size: 0.95rem;
+    padding: 0.55rem 0.65rem;
+    box-shadow: 3px 3px 0 #111;
+  }
+
+  .flash-error {
+    font-size: 1rem;
+    line-height: 1.2;
+    box-shadow: 3px 3px 0 #ff0000;
+  }
+}

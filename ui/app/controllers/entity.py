@@ -1,9 +1,18 @@
 from datetime import date
 
+from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Balance, Entity, Invoice, InvoiceStatus, Tag, Transaction
-from flask import Blueprint, redirect, render_template, request, url_for
+from app.schemas import (
+    Balance,
+    Entity,
+    Invoice,
+    InvoiceStatus,
+    StripeAuthorization,
+    Tag,
+    Transaction,
+)
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
@@ -15,6 +24,28 @@ from wtforms import (
 from wtforms.validators import DataRequired
 
 entity_bp = Blueprint("entity", __name__)
+
+
+def _format_api_error(exc: ApplicationError, fallback: str) -> str:
+    payload = exc.args[0] if exc.args else None
+    if isinstance(payload, dict):
+        detail = payload.get("error") or payload.get("detail") or payload.get("message")
+        if detail:
+            detail_text = str(detail)
+            if "CHECKOUT_SESSION_ID" in detail_text:
+                return (
+                    "Stripe session id placeholder was not resolved. "
+                    "Please retry adding the card."
+                )
+            return detail_text
+        return str(payload)
+    text = str(exc).strip()
+    if "CHECKOUT_SESSION_ID" in text:
+        return (
+            "Stripe session id placeholder was not resolved. "
+            "Please retry adding the card."
+        )
+    return text or fallback
 
 
 class EntityForm(FlaskForm):
@@ -307,7 +338,7 @@ def edit(id):
     )
 
 
-@entity_bp.route("/<int:id>")
+@entity_bp.route("/<int:id>", methods=["GET", "POST"])
 @token_required
 def detail(id):
     page = request.args.get("page", 1, type=int)
@@ -331,6 +362,100 @@ def detail(id):
     stats_limit = max(1, stats_limit)
 
     api = get_refinance_api_client()
+    if request.method == "POST":
+        action = (request.form.get("stripe_action") or "").strip().lower()
+        try:
+            if action == "add":
+                success_base_url = url_for("entity.detail", id=id, _external=True)
+                separator = "&" if "?" in success_base_url else "?"
+                params = {
+                    "entity_id": id,
+                    "mode": "entity_dynamic",
+                    "success_url": (
+                        f"{success_base_url}{separator}"
+                        "stripe_session_id={CHECKOUT_SESSION_ID}"
+                    ),
+                    "cancel_url": url_for("entity.detail", id=id, _external=True),
+                }
+
+                response = api.http(
+                    "POST",
+                    "deposits/providers/stripe/authorizations/setup-session",
+                    params=params,
+                ).json()
+                checkout_url = response.get("checkout_session_url")
+                if checkout_url:
+                    return redirect(checkout_url)
+                flash(
+                    "Stripe setup session created, but no checkout URL returned.",
+                    "error",
+                )
+            elif action in {"enable", "disable", "delete", "priority"}:
+                auth_id = int(request.form.get("authorization_id", "0") or "0")
+                if auth_id <= 0:
+                    flash("Invalid authorization id.", "error")
+                    return redirect(url_for("entity.detail", id=id))
+
+                if action == "enable":
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/enable",
+                    )
+                    flash("Card enabled.", "info")
+                elif action == "disable":
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/disable",
+                    )
+                    flash("Card disabled.", "info")
+                elif action == "delete":
+                    api.http(
+                        "DELETE",
+                        f"deposits/providers/stripe/authorizations/{auth_id}",
+                    )
+                    flash("Card deleted.", "info")
+                elif action == "priority":
+                    priority = int(request.form.get("priority", "1") or "1")
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/priority",
+                        params={"priority": max(priority, 1)},
+                    )
+                    flash("Card priority updated.", "info")
+            else:
+                flash("Unsupported Stripe action.", "error")
+        except ApplicationError as e:
+            flash(_format_api_error(e, "Stripe authorization action failed."), "error")
+        except Exception as e:
+            flash(f"Stripe authorization action failed: {str(e)}", "error")
+
+        return redirect(url_for("entity.detail", id=id))
+
+    stripe_session_id = (request.args.get("stripe_session_id") or "").strip()
+    if stripe_session_id and "CHECKOUT_SESSION_ID" not in stripe_session_id:
+        try:
+            api.http(
+                "POST",
+                "deposits/providers/stripe/authorizations/sync-session",
+                params={
+                    "checkout_session_id": stripe_session_id,
+                    "entity_id": id,
+                },
+            ).json()
+            flash("Card authorization synchronized.", "success")
+        except ApplicationError as e:
+            flash(
+                _format_api_error(e, "Could not synchronize Stripe setup session."),
+                "error",
+            )
+        except Exception as e:
+            flash(f"Could not synchronize Stripe setup session: {str(e)}", "error")
+    elif stripe_session_id:
+        flash(
+            "Stripe session id placeholder was not resolved. Please retry adding the card.",
+            "error",
+        )
+
     entity_data = api.http("GET", f"entities/{id}").json()
     balance_data = api.http("GET", f"balances/{id}").json()
     transactions_page = api.http(
@@ -359,6 +484,15 @@ def detail(id):
         .json()
         .get("total", 0)
     )
+
+    authorizations_resp = api.http(
+        "GET",
+        "deposits/providers/stripe/authorizations",
+        params={"entity_id": id},
+    ).json()
+    stripe_authorizations = [
+        StripeAuthorization(**item) for item in authorizations_resp.get("items", [])
+    ]
 
     # For paid invoices, prefer the settled transaction amount/currency in compact UI.
     for invoice in invoices[:6]:
@@ -471,6 +605,7 @@ def detail(id):
         invoices=invoices,
         invoices_total=invoices_total,
         invoices_unpaid_count=invoices_unpaid_count,
+        stripe_authorizations=stripe_authorizations,
         invoice_page=invoice_page,
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,

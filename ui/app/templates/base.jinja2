@@ -48,14 +48,6 @@
                                             </head>
 
                                             <body class="{% block body_class %}{% endblock %}">
-                                                {% with messages = get_flashed_messages() %}
-                                                {% if messages %}
-                                                {% for message in messages %}
-                                                <div class="message">{{ message }}</div>
-                                                {% endfor %}
-                                                {% endif %}
-                                                {% endwith %}
-
                                                 <nav class="site-nav" aria-label="Primary">
                                                     <a href="#" class="mobile-menu-toggle" role="button"
                                                         aria-haspopup="dialog" aria-controls="mobile-menu"
@@ -115,7 +107,16 @@
                                                     {% endif %}
                                                 </div>
 
-                                                <main>
+                                                {% set flashes = get_flashed_messages(with_categories=true) %}
+                                                {% if flashes %}
+                                                <section class="flash-stack" aria-live="polite">
+                                                    {% for category, message in flashes %}
+                                                    <div class="flash flash-{{ category|e }}">{{ message }}</div>
+                                                    {% endfor %}
+                                                </section>
+                                                {% endif %}
+
+                                                <main class="{% if flashes %}main-with-flash{% endif %}">
                                                     {% block heading %}<h1>{% block title %}{% endblock
                                                         title %}</h1>{%
                                                     endblock heading %}

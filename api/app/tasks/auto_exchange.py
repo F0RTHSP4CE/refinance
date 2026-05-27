@@ -1,8 +1,7 @@
 """Auto-balance currency exchange background task.
 
-Runs before invoice auto-pay (at 11:58) and exchanges available positive-balance
-currencies to cover negative-balance currencies for all eligible entities
-(residents, members, ex-residents).
+Runs daily at 11:55, before Stripe entity charging (12:00 Monday) and
+invoice auto-pay (12:10), so balances are settled before those tasks fire.
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ from app.tasks import PeriodicTask
 class AutoExchangeTask(PeriodicTask):
     def next_delay(self) -> float:
         now = datetime.datetime.now()
-        target = datetime.datetime.combine(now.date(), datetime.time(11, 58))
+        target = datetime.datetime.combine(now.date(), datetime.time(11, 55))
         if now >= target:
             target += datetime.timedelta(days=1)
         return (target - now).total_seconds()

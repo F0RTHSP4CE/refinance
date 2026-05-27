@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.dependencies.services import (
     get_cryptapi_deposit_provider_service,
+    get_stripe_authorization_service,
     get_stripe_deposit_provider_service,
     get_stripe_service,
 )
@@ -13,6 +14,7 @@ from app.schemas.deposit_providers.cryptapi import CryptAPICallbackSchema
 from app.services.deposit_providers.cryptapi import CryptAPIDepositProviderService
 from app.services.deposit_providers.stripe import StripeDepositProviderService
 from app.services.stripe import StripeService
+from app.services.stripe_authorization import StripeAuthorizationService
 from fastapi import APIRouter, Body, Depends, Form, Header, HTTPException, Path, Request
 from fastapi.responses import PlainTextResponse
 
@@ -44,6 +46,9 @@ async def stripe_callback(
     stripe_deposit_provider_service: StripeDepositProviderService = Depends(
         get_stripe_deposit_provider_service
     ),
+    stripe_authorization_service: StripeAuthorizationService = Depends(
+        get_stripe_authorization_service
+    ),
 ):
     payload = await request.body()
     try:
@@ -52,4 +57,11 @@ async def stripe_callback(
         raise HTTPException(status_code=400, detail=f"Invalid Stripe webhook: {exc}")
 
     stripe_deposit_provider_service.handle_webhook_event(event)
+    event_type = str(event.get("type") or "")
+    data_object = (event.get("data") or {}).get("object") or {}
+    if (
+        event_type == "checkout.session.completed"
+        and str(data_object.get("mode") or "") == "setup"
+    ):
+        stripe_authorization_service.handle_setup_session_completed(data_object)
     return PlainTextResponse("ok")

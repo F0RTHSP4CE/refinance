@@ -13,6 +13,13 @@ DEFAULT_FEE_PRESETS: list[dict[str, str | int]] = [
 ]
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    value = getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class Config:
     secret_key: str | None = field(default=getenv("REFINANCE_SECRET_KEY", ""))
@@ -59,6 +66,35 @@ class Config:
     )
     stripe_poll_interval_seconds: int = field(
         default=int(getenv("REFINANCE_STRIPE_POLL_INTERVAL_SECONDS", "60"))
+    )
+    stripe_authorization_max_consecutive_errors: int = field(
+        default=int(
+            getenv("REFINANCE_STRIPE_AUTHORIZATION_MAX_CONSECUTIVE_ERRORS", "3")
+        )
+    )
+    stripe_entity_charge_enabled: bool = field(
+        default=_env_bool("REFINANCE_STRIPE_ENTITY_CHARGE_ENABLED", True)
+    )
+    stripe_entity_charge_weekday: int = field(
+        default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_WEEKDAY", "0"))
+    )
+    stripe_entity_charge_hour: int = field(
+        default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_HOUR", "12"))
+    )
+    stripe_entity_charge_minute: int = field(
+        default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_MINUTE", "0"))
+    )
+    stripe_guest_charge_enabled: bool = field(
+        default=_env_bool("REFINANCE_STRIPE_GUEST_CHARGE_ENABLED", True)
+    )
+    stripe_guest_charge_day: int = field(
+        default=int(getenv("REFINANCE_STRIPE_GUEST_CHARGE_DAY", "1"))
+    )
+    stripe_guest_charge_hour: int = field(
+        default=int(getenv("REFINANCE_STRIPE_GUEST_CHARGE_HOUR", "10"))
+    )
+    stripe_guest_charge_minute: int = field(
+        default=int(getenv("REFINANCE_STRIPE_GUEST_CHARGE_MINUTE", "0"))
     )
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))

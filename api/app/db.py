@@ -5,6 +5,7 @@ from typing import Any, Generator, List, Type
 
 from app.config import Config, get_config
 from app.models.base import BaseModel
+from app.models.stripe_authorization import StripeAuthorization  # noqa: F401
 from app.seeding import SEEDING
 from fastapi import Depends
 from sqlalchemy import Engine, create_engine, text

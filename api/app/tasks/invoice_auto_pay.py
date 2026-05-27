@@ -12,7 +12,7 @@ from app.tasks import PeriodicTask
 class InvoiceAutoPayTask(PeriodicTask):
     def next_delay(self) -> float:
         now = datetime.datetime.now()
-        target = datetime.datetime.combine(now.date(), datetime.time(12, 0))
+        target = datetime.datetime.combine(now.date(), datetime.time(12, 10))
         if now >= target:
             target += datetime.timedelta(days=1)
         return (target - now).total_seconds()

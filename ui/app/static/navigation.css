@@ -332,6 +332,10 @@ nav.site-nav {
   main {
     margin-top: calc(0.5rem + var(--site-nav-height, 52px));
   }
+
+  main.main-with-flash {
+    margin-top: 0.6rem;
+  }
 }
 
 @media (min-width: 1025px) {

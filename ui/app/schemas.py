@@ -101,6 +101,7 @@ class Invoice(Base):
 class DepositProvider(enum.Enum):
     CRYPTAPI = "cryptapi"
     KEEPZ = "keepz"
+    STRIPE = "stripe"
 
 
 @dataclass
@@ -119,6 +120,26 @@ class Deposit(Base):
     provider: DepositProvider
     details: dict | None
     tags: list[Tag]
+
+
+@dataclass
+class StripeAuthorization(Base):
+    entity_id: int
+    stripe_customer_id: str
+    stripe_payment_method_id: str
+    mode: str
+    static_amount: Decimal
+    static_currency: str | None
+    active: bool
+    priority: int
+    consecutive_error_count: int
+    last_error: str | None = None
+    last_attempt_at: datetime | None = None
+    last_success_at: datetime | None = None
+    card_brand: str | None = None
+    card_last4: str | None = None
+    card_exp_month: int | None = None
+    card_exp_year: int | None = None
 
 
 @dataclass

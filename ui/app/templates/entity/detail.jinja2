@@ -138,6 +138,170 @@
             <p class="entity-empty-state">No invoices.</p>
             {% endif %}
         </section>
+
+        <section class="entity-card entity-stripe-card">
+            <h3 class="entity-card-title">Stripe Cards</h3>
+
+            <div class="entity-stripe-compact-list">
+                <form method="post" class="entity-stripe-add-form">
+                    <input type="hidden" name="stripe_action" value="add">
+                    <div class="entity-stripe-actions">
+                        <button type="submit" class="big-button big-button-inline">Add Card via Stripe</button>
+                    </div>
+                </form>
+
+                {% if stripe_authorizations %}
+                <ul class="entity-stripe-list" id="entity-stripe-list">
+                    {% for auth in stripe_authorizations %}
+                    <li class="entity-stripe-item {% if not auth.active %}entity-stripe-item-inactive{% endif %}"
+                        data-authorization-id="{{ auth.id }}" draggable="true">
+                        <div class="entity-stripe-item-top">
+                            <div>
+                                <div class="entity-stripe-card-line">
+                                    <strong>{{ (auth.card_brand or 'card')|upper }} ****{{ auth.card_last4 or '????'
+                                        }}</strong>
+                                    {% if auth.card_exp_month and auth.card_exp_year %}
+                                    <span class="entity-stripe-muted">exp {{ '%02d'|format(auth.card_exp_month) }}/{{
+                                        '%02d'|format(auth.card_exp_year % 100) }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="entity-stripe-muted">
+                                    #{{ auth.id }} | {{ 'active' if auth.active else 'inactive' }}
+                                    {% if auth.static_amount and auth.static_amount|float > 0 and auth.static_currency
+                                    %}
+                                    | {{ auth.static_amount }} {{ auth.static_currency }}
+                                    {% endif %}
+                                </div>
+                                {% if auth.consecutive_error_count > 0 %}
+                                <div class="entity-stripe-muted {% if auth.active %}entity-stripe-failed{% endif %}">
+                                    Failed charges: {{ auth.consecutive_error_count }}
+                                </div>
+                                {% endif %}
+                                <div class="entity-stripe-muted">
+                                    Last charge: {% if auth.last_attempt_at %}{{
+                                    human_readable_date(auth.last_attempt_at)
+                                    }}{% elif auth.last_success_at %}{{ human_readable_date(auth.last_success_at) }}{%
+                                    else
+                                    %}never{% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if auth.last_error %}
+                        <div class="entity-stripe-error">Last error: {{ auth.last_error }}</div>
+                        {% endif %}
+
+                        <div class="entity-stripe-actions-row">
+                            {% if auth.active %}
+                            <form method="post">
+                                <input type="hidden" name="stripe_action" value="disable">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="entity-stripe-action-btn">Disable</button>
+                            </form>
+                            {% else %}
+                            <form method="post">
+                                <input type="hidden" name="stripe_action" value="enable">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="entity-stripe-action-btn">Enable</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" onsubmit="return confirm('Delete this card authorization?');">
+                                <input type="hidden" name="stripe_action" value="delete">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="entity-stripe-action-btn entity-stripe-delete-btn"
+                                    title="Delete">X</button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if stripe_authorizations|length > 1 %}
+                <p class="entity-stripe-drag-hint">You can change card priority by drag and drop.</p>
+                {% endif %}
+                <script>
+                    (() => {
+                        const list = document.getElementById('entity-stripe-list');
+                        if (!list) return;
+
+                        const endpoint = {{ url_for('entity.detail', id = entity.id) | tojson
+                    }};
+                    let draggingItem = null;
+
+                    const getItems = () => Array.from(list.querySelectorAll('.entity-stripe-item'));
+
+                    const sendPriority = (authorizationId, priority) => {
+                        const body = new URLSearchParams();
+                        body.set('stripe_action', 'priority');
+                        body.set('authorization_id', String(authorizationId));
+                        body.set('priority', String(priority));
+                        return fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                            },
+                            body: body.toString(),
+                            credentials: 'same-origin',
+                        });
+                    };
+
+                    const persistOrder = async () => {
+                        const items = getItems();
+                        for (let idx = 0; idx < items.length; idx += 1) {
+                            const authId = Number(items[idx].dataset.authorizationId || 0);
+                            if (!authId) continue;
+                            await sendPriority(authId, idx + 1);
+                        }
+                        window.location.reload();
+                    };
+
+                    const midpointY = (element) => {
+                        const rect = element.getBoundingClientRect();
+                        return rect.top + (rect.height / 2);
+                    };
+
+                    list.addEventListener('dragstart', (event) => {
+                        const item = event.target.closest('.entity-stripe-item');
+                        if (!item) return;
+                        draggingItem = item;
+                        item.classList.add('entity-stripe-item-dragging');
+                        if (event.dataTransfer) {
+                            event.dataTransfer.effectAllowed = 'move';
+                            event.dataTransfer.setData('text/plain', item.dataset.authorizationId || '');
+                        }
+                    });
+
+                    list.addEventListener('dragend', (event) => {
+                        const item = event.target.closest('.entity-stripe-item');
+                        if (item) item.classList.remove('entity-stripe-item-dragging');
+                        draggingItem = null;
+                    });
+
+                    list.addEventListener('dragover', (event) => {
+                        if (!draggingItem) return;
+                        event.preventDefault();
+                        const target = event.target.closest('.entity-stripe-item');
+                        if (!target || target === draggingItem) return;
+                        const before = event.clientY < midpointY(target);
+                        if (before) {
+                            list.insertBefore(draggingItem, target);
+                        } else {
+                            list.insertBefore(draggingItem, target.nextSibling);
+                        }
+                    });
+
+                    list.addEventListener('drop', async (event) => {
+                        if (!draggingItem) return;
+                        event.preventDefault();
+                        await persistOrder();
+                    });
+                }) ();
+                </script>
+                {% else %}
+                <p class="entity-empty-state">No card authorizations found for this entity.</p>
+                {% endif %}
+            </div>
+
+        </section>
     </div>
 
     <div class="entity-right-rail">

@@ -2,7 +2,7 @@ from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Deposit, DepositStatus, Treasury
+from app.schemas import Deposit, DepositStatus, StripeAuthorization, Treasury
 from flask import (
     Blueprint,
     flash,
@@ -106,6 +106,32 @@ class StripeDepositForm(FlaskForm):
         render_kw={"placeholder": "5.00", "class": "small"},
     )
     submit = SubmitField("Top up")
+
+
+class StripeAuthorizationSetupForm(FlaskForm):
+    entity_id = HiddenField("", validators=[DataRequired()])
+    mode = SelectField(
+        "Mode",
+        choices=[
+            ("entity_dynamic", "Entity Dynamic"),
+            ("guest_static", "Guest Static"),
+        ],
+        default="entity_dynamic",
+        validators=[DataRequired()],
+    )
+    static_amount = FloatField(
+        "Guest Static Amount",
+        validators=[Optional(), NumberRange(min=0.01)],
+        render_kw={"placeholder": "10.00", "class": "small"},
+    )
+    static_currency = SelectField(
+        "Guest Static Currency",
+        choices=Config.CURRENCY_CHOICES,
+        default=Config.PREFERRED_CURRENCY,
+        validate_choice=False,
+        validators=[Optional()],
+    )
+    submit = SubmitField("Add Card")
 
 
 class KeepzAuthForm(FlaskForm):
@@ -291,6 +317,133 @@ def add_stripe():
             flash(f"Error creating Stripe deposit: {str(e)}", "error")
 
     return render_template("deposit/add_stripe.jinja2", form=form)
+
+
+@deposit_bp.route("/stripe/authorizations", methods=["GET", "POST"])
+@token_required
+def stripe_authorizations():
+    api = get_refinance_api_client()
+    actor_id = int(g.actor_entity["id"])
+    target_entity_id = request.args.get("entity_id", type=int) or actor_id
+    stripe_session_id = (request.args.get("stripe_session_id") or "").strip()
+
+    setup_form = StripeAuthorizationSetupForm()
+    setup_form.entity_id.data = str(target_entity_id)
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").strip().lower()
+        try:
+            if action == "add" and setup_form.validate_on_submit():
+                params = {
+                    "entity_id": int(setup_form.entity_id.data),
+                    "mode": setup_form.mode.data,
+                }
+                if setup_form.mode.data == "guest_static":
+                    params["static_amount"] = setup_form.static_amount.data
+                    params["static_currency"] = _normalize_currency(
+                        setup_form.static_currency.data
+                    )
+                response = api.http(
+                    "POST",
+                    "deposits/providers/stripe/authorizations/setup-session",
+                    params=params,
+                ).json()
+                checkout_url = response.get("checkout_session_url")
+                if checkout_url:
+                    return redirect(checkout_url)
+                flash(
+                    "Stripe setup session created, but no checkout URL returned.",
+                    "error",
+                )
+            elif action in {"enable", "disable", "delete", "priority"}:
+                auth_id = int(request.form.get("authorization_id", "0") or "0")
+                if auth_id <= 0:
+                    flash("Invalid authorization id.", "error")
+                    return redirect(
+                        url_for(
+                            "deposit.stripe_authorizations",
+                            entity_id=target_entity_id,
+                        )
+                    )
+
+                if action == "enable":
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/enable",
+                    )
+                    flash("Card enabled.", "info")
+                elif action == "disable":
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/disable",
+                    )
+                    flash("Card disabled.", "info")
+                elif action == "delete":
+                    api.http(
+                        "DELETE",
+                        f"deposits/providers/stripe/authorizations/{auth_id}",
+                    )
+                    flash("Card deleted.", "info")
+                elif action == "priority":
+                    priority = int(request.form.get("priority", "1") or "1")
+                    api.http(
+                        "POST",
+                        f"deposits/providers/stripe/authorizations/{auth_id}/priority",
+                        params={"priority": max(priority, 1)},
+                    )
+                    flash("Card priority updated.", "info")
+            else:
+                flash("Unsupported action.", "error")
+        except ApplicationError as e:
+            flash(_format_api_error(e, "Stripe authorization action failed."), "error")
+        except Exception as e:
+            flash(f"Stripe authorization action failed: {str(e)}", "error")
+
+        return redirect(
+            url_for("deposit.stripe_authorizations", entity_id=target_entity_id)
+        )
+
+    if stripe_session_id:
+        try:
+            sync_result = api.http(
+                "POST",
+                "deposits/providers/stripe/authorizations/sync-session",
+                params={
+                    "checkout_session_id": stripe_session_id,
+                    "entity_id": target_entity_id,
+                },
+            ).json()
+            if sync_result and sync_result.get("id"):
+                flash("Card authorization synchronized.", "success")
+            else:
+                flash(
+                    "Stripe session was reached, but no authorization was created. "
+                    "Please ensure metadata includes entity_id and setup_intent.",
+                    "error",
+                )
+        except ApplicationError as e:
+            flash(
+                _format_api_error(e, "Could not synchronize Stripe setup session."),
+                "error",
+            )
+        except Exception as e:
+            flash(f"Could not synchronize Stripe setup session: {str(e)}", "error")
+
+    authorizations_resp = api.http(
+        "GET",
+        "deposits/providers/stripe/authorizations",
+        params={"entity_id": target_entity_id},
+    ).json()
+    authorizations = [
+        StripeAuthorization(**item) for item in authorizations_resp.get("items", [])
+    ]
+
+    return render_template(
+        "deposit/stripe_authorizations.jinja2",
+        setup_form=setup_form,
+        entity_id=target_entity_id,
+        authorizations=authorizations,
+    )
 
 
 @deposit_bp.route("/keepz/auth", methods=["GET", "POST"])

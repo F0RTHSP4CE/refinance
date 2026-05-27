@@ -3,6 +3,11 @@
 from app.errors.base import ApplicationError
 
 
+class StripeConfigMissing(ApplicationError):
+    error_code = 7601
+    error = "Stripe is not configured"
+
+
 class StripeRequestError(ApplicationError):
     error_code = 7602
     error = "Stripe request failed"

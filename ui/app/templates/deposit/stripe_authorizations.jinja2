@@ -1,0 +1,117 @@
+{% extends "base.jinja2" %}
+{% from 'widgets/currency_selector.jinja2' import currency_selector %}
+
+{% block title %}Stripe Card Authorizations{% endblock %}
+
+{% block content %}
+<div class="entry-form-layout">
+    <section class="entry-form-card">
+        <h2>Saved Cards</h2>
+        <p>Manage Stripe card authorizations for entity #{{ entity_id }}.</p>
+
+        <form method="post" class="entry-form" style="margin-bottom: 2rem;">
+            {{ setup_form.hidden_tag() }}
+            <input type="hidden" name="action" value="add">
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Mode</label>
+                    {{ setup_form.mode(class_='form-input') }}
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Guest Static Amount</label>
+                    {{ setup_form.static_amount(class_='form-input', step='0.01', min='0.01') }}
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Guest Static Currency</label>
+                    {{ currency_selector('static_currency', setup_form.static_currency.choices,
+                    setup_form.static_currency.data, id='static_currency') }}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                {{ setup_form.submit(class_='big-button', value='Add Card via Stripe') }}
+            </div>
+        </form>
+
+        {% if authorizations %}
+        <table class="item-list-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Card</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Error Count</th>
+                    <th>Last Error</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for auth in authorizations %}
+                <tr>
+                    <td>#{{ auth.id }}</td>
+                    <td>
+                        {{ (auth.card_brand or 'card')|upper }} ****{{ auth.card_last4 or '????' }}
+                        {% if auth.card_exp_month and auth.card_exp_year %}
+                        <div class="muted">exp {{ '%02d'|format(auth.card_exp_month) }}/{{ auth.card_exp_year }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ auth.mode }}
+                        {% if auth.mode == 'guest_static' %}
+                        <div class="muted">{{ auth.static_amount }} {{ auth.static_currency }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ 'active' if auth.active else 'inactive' }}</td>
+                    <td>
+                        <form method="post" style="display:flex; gap:0.4rem; align-items:center;">
+                            <input type="hidden" name="action" value="priority">
+                            <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                            <input type="number" name="priority" value="{{ auth.priority }}" min="1"
+                                style="width: 4rem;">
+                            <button type="submit" class="small-button">Set</button>
+                        </form>
+                    </td>
+                    <td>{{ auth.consecutive_error_count }}</td>
+                    <td>
+                        {% if auth.last_error %}
+                        <span title="{{ auth.last_error }}">{{ auth.last_error[:80] }}{% if auth.last_error|length > 80
+                            %}...{% endif %}</span>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+                            {% if auth.active %}
+                            <form method="post">
+                                <input type="hidden" name="action" value="disable">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="small-button">Disable</button>
+                            </form>
+                            {% else %}
+                            <form method="post">
+                                <input type="hidden" name="action" value="enable">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="small-button">Enable</button>
+                            </form>
+                            {% endif %}
+                            <form method="post" onsubmit="return confirm('Delete this card authorization?');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="authorization_id" value="{{ auth.id }}">
+                                <button type="submit" class="small-button small-button-danger">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No card authorizations found for this entity.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

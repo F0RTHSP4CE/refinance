@@ -650,6 +650,132 @@
   box-shadow: 6px 6px 0 #111;
 }
 
+.entity-stripe-card {
+  gap: 0.75rem;
+}
+
+.entity-stripe-note {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #2a2a2a;
+}
+
+.entity-stripe-compact-list {
+  margin-top: 0.8rem;
+}
+
+.entity-stripe-add-form {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.entity-stripe-actions {
+  display: flex;
+  align-items: center;
+}
+
+.entity-stripe-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.entity-stripe-item {
+  border: 2px solid #111;
+  background: #fff;
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  cursor: move;
+}
+
+.entity-stripe-item-inactive {
+  opacity: 0.65;
+}
+
+.entity-stripe-item-dragging {
+  opacity: 0.35;
+}
+
+.entity-stripe-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.entity-stripe-card-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.entity-stripe-drag-hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+  color: #4a4a4a;
+}
+
+.entity-stripe-muted {
+  font-size: 0.82rem;
+  color: #444;
+}
+
+.entity-stripe-failed {
+  color: #b00000;
+  font-weight: 800;
+}
+
+.entity-stripe-error {
+  font-size: 0.82rem;
+  color: #8f0000;
+  word-break: break-word;
+}
+
+.entity-stripe-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.entity-stripe-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #111;
+  background: #fff;
+  color: #111;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.58rem;
+  cursor: pointer;
+}
+
+.entity-stripe-action-btn:hover {
+  background: #111;
+  color: #fff;
+}
+
+.entity-stripe-delete-btn {
+  min-width: 1.9rem;
+  padding: 0.2rem;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 840px) {
+  .entity-stripe-item-top {
+    flex-direction: column;
+  }
+}
+
 /* ENTITIES LIST PAGE - BRUTALIST GRID LAYOUT */
 
 .entities-page {

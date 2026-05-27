@@ -33,6 +33,10 @@ from app.tasks.auto_exchange import schedule_auto_exchange
 from app.tasks.balance_reminder import schedule_balance_reminders
 from app.tasks.invoice_auto_pay import schedule_invoice_auto_pay
 from app.tasks.keepz_payments_poll import schedule_keepz_poll
+from app.tasks.stripe_entity_authorizations_charge import (
+    schedule_stripe_entity_authorization_charges,
+)
+from app.tasks.stripe_guest_monthly_charge import schedule_stripe_guest_monthly_charges
 from app.tasks.stripe_payments_poll import schedule_stripe_poll
 from fastapi import FastAPI, Request
 from fastapi.exceptions import ResponseValidationError
@@ -52,6 +56,12 @@ async def lifespan(app: FastAPI):
     app.state.invoice_auto_pay_task = asyncio.create_task(schedule_invoice_auto_pay())
     app.state.keepz_poll_task = asyncio.create_task(schedule_keepz_poll())
     app.state.stripe_poll_task = asyncio.create_task(schedule_stripe_poll())
+    app.state.stripe_entity_charge_task = asyncio.create_task(
+        schedule_stripe_entity_authorization_charges()
+    )
+    app.state.stripe_guest_charge_task = asyncio.create_task(
+        schedule_stripe_guest_monthly_charges()
+    )
     app.state.auto_exchange_task = asyncio.create_task(schedule_auto_exchange())
     app.state.balance_reminder_task = asyncio.create_task(schedule_balance_reminders())
     try:
@@ -61,6 +71,8 @@ async def lifespan(app: FastAPI):
             "invoice_auto_pay_task",
             "keepz_poll_task",
             "stripe_poll_task",
+            "stripe_entity_charge_task",
+            "stripe_guest_charge_task",
             "auto_exchange_task",
             "balance_reminder_task",
         ):

@@ -21,12 +21,14 @@ from app.config import Config
 from app.dependencies.services import ServiceContainer
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
+from app.services.entity_owed import calculate_entity_owed
 from app.services.notification import NotificationService
 from app.tasks import PeriodicTask
 from sqlalchemy import nullslast
 
 if TYPE_CHECKING:
     from app.services.balance import BalanceService
+    from app.services.currency_exchange import CurrencyExchangeService
     from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -71,20 +73,25 @@ def _sum_invoice_amounts(invoices: list[Invoice]) -> dict[str, Decimal]:
 def _calc_recommended_topup(
     pending_invoices: list[Invoice],
     all_balances: dict[str, Decimal],
+    convert_amount,
 ) -> dict[str, Decimal]:
-    """Return the recommended top-up per currency.
+    """Return the minimum top-up recommendation as {currency: amount}.
 
-    = sum of unpaid invoices - current balance (per currency), floored at 0.
-    Positive balances reduce what needs to be deposited; negative ones add to it.
+    Uses the shared owed calculation so reminders match Stripe auto-charge logic.
     """
     invoice_totals = _sum_invoice_amounts(pending_invoices)
-    totals: dict[str, Decimal] = {}
-    for currency, owed in invoice_totals.items():
-        current = all_balances.get(currency, Decimal(0))
-        needed = owed - current
-        if needed > Decimal(0):
-            totals[currency] = needed
-    return totals
+    summary = calculate_entity_owed(
+        pending_invoice_totals=invoice_totals,
+        completed_balances=all_balances,
+        convert_amount=convert_amount,
+    )
+    if not summary.minimum_topup_currency or not summary.minimum_topup_amount:
+        return {}
+    return {
+        summary.minimum_topup_currency: summary.minimum_topup_amount.quantize(
+            Decimal("0.01")
+        )
+    }
 
 
 def _build_reminder_message(
@@ -92,10 +99,11 @@ def _build_reminder_message(
     pending_invoices: list[Invoice],
     all_balances: dict[str, Decimal],
     entity_name: str,
+    convert_amount,
 ) -> str:
     lines: list[str] = [f"{random.choice(_GREETINGS)}, <b>{entity_name}</b>."]
 
-    topup = _calc_recommended_topup(pending_invoices, all_balances)
+    topup = _calc_recommended_topup(pending_invoices, all_balances, convert_amount)
     if topup:
         topup_rounded = {
             currency: int(amount.to_integral_value(rounding=ROUND_UP))
@@ -138,6 +146,7 @@ def send_balance_reminder(
     entity: Entity,
     db: "Session",
     balance_service: "BalanceService",
+    currency_exchange_service: "CurrencyExchangeService",
     notification_service: NotificationService,
 ) -> dict[str, bool] | None:
     """Send a balance reminder to a single entity if needed.
@@ -171,6 +180,27 @@ def send_balance_reminder(
     if not negative_balances and not pending_invoices:
         return None
 
+    def _convert_amount(
+        amount: Decimal, source_currency: str, target_currency: str
+    ) -> Decimal:
+        source = str(source_currency or "").lower().strip()
+        target = str(target_currency or "").lower().strip()
+        decimal_amount = Decimal(str(amount or "0"))
+        if decimal_amount == 0:
+            return Decimal("0")
+        if source == target:
+            return decimal_amount
+        try:
+            _, target_amount, _ = currency_exchange_service.calculate_conversion(
+                source_amount=decimal_amount,
+                target_amount=None,
+                source_currency=source,
+                target_currency=target,
+            )
+            return Decimal(str(target_amount))
+        except Exception:
+            return decimal_amount
+
     message = _build_reminder_message(
         negative_balances,
         pending_invoices,
@@ -180,6 +210,7 @@ def send_balance_reminder(
             if cd.value != Decimal(0)
         },
         entity_name=entity.name,
+        convert_amount=_convert_amount,
     )
     results = notification_service.send(entity, message)
     logger.info(
@@ -193,6 +224,7 @@ def send_balance_reminder(
 def send_reminders_to_all(
     db: "Session",
     balance_service: "BalanceService",
+    currency_exchange_service: "CurrencyExchangeService",
     notification_service: NotificationService,
 ) -> int:
     """Send reminders to all active entities that need attention. Returns number sent."""
@@ -208,6 +240,7 @@ def send_reminders_to_all(
             entity,
             db=db,
             balance_service=balance_service,
+            currency_exchange_service=currency_exchange_service,
             notification_service=notification_service,
         )
         if results and any(results.values()):
@@ -220,12 +253,12 @@ def send_reminders_to_all(
 # ---------------------------------------------------------------------------
 
 
-def _seconds_until_next_monday_10am(now: datetime.datetime) -> float:
-    """Return seconds until the next Monday at 10:00 (local time)."""
+def _seconds_until_next_monday_12_20(now: datetime.datetime) -> float:
+    """Return seconds until the next Monday at 12:20 (local time)."""
     days_ahead = (7 - now.weekday()) % 7
     target = datetime.datetime.combine(
         now.date() + datetime.timedelta(days=days_ahead),
-        datetime.time(10, 0),
+        datetime.time(12, 20),
     )
     if target <= now:
         target += datetime.timedelta(weeks=1)
@@ -234,12 +267,13 @@ def _seconds_until_next_monday_10am(now: datetime.datetime) -> float:
 
 class BalanceReminderTask(PeriodicTask):
     def next_delay(self) -> float:
-        return _seconds_until_next_monday_10am(datetime.datetime.now())
+        return _seconds_until_next_monday_12_20(datetime.datetime.now())
 
     def execute(self, container: ServiceContainer, config: Config) -> int:
         return send_reminders_to_all(
             db=container.db,
             balance_service=container.balance_service,
+            currency_exchange_service=container.currency_exchange_service,
             notification_service=NotificationService(config),
         )
 

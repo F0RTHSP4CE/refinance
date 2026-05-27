@@ -36,6 +36,10 @@
             <div class="form-actions">
                 {{ form.submit(class_='big-button', value='Continue to Stripe') }}
             </div>
+
+            <div class="form-actions" style="margin-top: 0.8rem;">
+                <a class="small-button" href="{{ url_for('deposit.stripe_authorizations') }}">Manage Saved Cards</a>
+            </div>
         </form>
     </section>
 </div>
