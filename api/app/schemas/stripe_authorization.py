@@ -73,3 +73,19 @@ class StripeAuthorizationPrioritySchema(BaseUpdateSchema):
 
 class StripeAuthorizationListSchema(BaseSchema):
     items: list[StripeAuthorizationSchema]
+
+
+class StripeAuthorizationChargeSchema(BaseSchema):
+    entity_id: int | None = None
+    amount: Decimal
+    currency: str
+
+    @field_validator("currency")
+    def normalize_currency(cls, v: str) -> str:
+        return v.upper().strip()
+
+    @field_validator("amount")
+    def validate_amount(cls, v: Decimal) -> Decimal:
+        if v <= 0:
+            raise ValueError("Amount must be positive")
+        return v

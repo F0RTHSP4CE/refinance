@@ -4,7 +4,11 @@
 <script src="/static/js/fitTitle.js"></script>
 <section class="home-cards" aria-label="Main actions">
 	<article class="home-card">
-		<h2>Balance</h2>
+		<div class="entity-card-header entity-card-header-tight">
+			<h2>Balance</h2>
+			<a href="{{ url_for('exchange.index') }}"
+				class="big-button big-button-inline entity-draft-find-button">Exchange</a>
+		</div>
 		{% if g.actor_entity_balance and g.actor_entity_balance["completed"] %}
 		{%- set bal_completed = g.actor_entity_balance["completed"] -%}
 		{%- set bal_draft = g.actor_entity_balance.get("draft", {}) -%}
@@ -34,9 +38,29 @@
 			{% else %}
 			<p class="home-card-note">No balance yet.</p>
 			{% endif %}
-			<a class="home-card-button" href="{{ url_for('deposit.add_stripe') }}">💰 Top up by card</a>
-			<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.manual') }}">💵 Cash / bank /
-				crypto</a>
+			{% if active_stripe_card %}
+			<form class="home-card-topup-form" method="post" action="{{ url_for('deposit.charge_stripe_card') }}"
+				onsubmit="this.querySelector('button[type=submit]').disabled=true">
+				<div class="home-card-topup-row">
+					<input class="home-card-topup-amount" type="number" name="amount" step="0.01" min="0.01"
+						inputmode="decimal" placeholder="Amount" required>
+					<select class="home-card-topup-currency" name="currency">
+						{% for value, label in currency_choices %}
+						<option value="{{ value }}" {% if value==preferred_currency %}selected{% endif %}>{{ label }}
+						</option>
+						{% endfor %}
+					</select>
+				</div>
+				<button class="home-card-button home-card-button-black" type="submit">💳 Charge my card ({{
+					active_stripe_card.card_brand | capitalize }} •••• {{ active_stripe_card.card_last4 }})</button>
+			</form>
+			{% else %}
+			<a class="home-card-button home-card-button-green" href="{{ url_for('deposit.add_stripe_card') }}">💳 Add my
+				card</a>
+			{% endif %}
+			<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.add_keepz') }}">💸 Top up
+				with Keepz</a>
+			<a class="home-card-link" href="{{ url_for('deposit.manual') }}">💵 Cash / bank / crypto</a>
 	</article>
 
 	<article class="home-card">
@@ -45,7 +69,7 @@
 		{% if unpaid_fee_count == 0 %}
 		<p class="home-card-value">✔️ Everything is paid</p>
 		{% endif %}
-		{% if recent_invoices %}
+		{% if recent_invoices and unpaid_fee_count > 0 %}
 		<ul class="entity-invoice-compact-list">
 			{% for invoice in recent_invoices %}
 			<li class="entity-invoice-compact-item">
@@ -77,8 +101,6 @@
 	<article class="home-card">
 		<h2>Fridge &amp; Coffee</h2>
 		<div class="home-card-actions">
-			<a class="home-card-button" href="{{ url_for('transaction.shortcut_fridge') }}">🍾
-				Pay fridge</a>
 			<a class="home-card-button home-card-button-outline" href="{{ url_for('transaction.shortcut_coffee') }}">☕
 				Pay Coffee Machine</a>
 

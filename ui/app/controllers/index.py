@@ -1,9 +1,10 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from app.config import Config
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
-from app.schemas import Invoice
+from app.schemas import Invoice, StripeAuthorization
 from flask import Blueprint, g, render_template
 
 index_bp = Blueprint("index", __name__)
@@ -65,10 +66,31 @@ def index():
         if total > 0
     ]
 
+    # Fetch stripe authorizations to check if user has a card linked
+    try:
+        auth_resp = api.http(
+            "GET",
+            "deposits/providers/stripe/authorizations",
+            params={"entity_id": actor_entity_id},
+        ).json()
+        stripe_authorizations = [
+            StripeAuthorization(**item) for item in auth_resp.get("items", [])
+        ]
+    except Exception:
+        stripe_authorizations = []
+
+    active_stripe_card = next(
+        (a for a in stripe_authorizations if a.active and a.mode == "entity_dynamic"),
+        None,
+    )
+
     return render_template(
         "index.jinja2",
         unpaid_fee_count=len(unpaid_invoices),
         unpaid_fee_summary=unpaid_fee_summary,
         unpaid_invoice_cards=unpaid_invoice_cards,
         recent_invoices=recent_invoices,
+        active_stripe_card=active_stripe_card,
+        currency_choices=Config.CURRENCY_CHOICES,
+        preferred_currency=Config.PREFERRED_CURRENCY,
     )

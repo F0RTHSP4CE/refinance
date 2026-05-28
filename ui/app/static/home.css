@@ -202,8 +202,122 @@
   color: white;
 }
 
+.home-card-button-green {
+  background: #00ff00;
+  color: black;
+  border-color: #00d800;
+  box-shadow: 5px 5px 0 black;
+}
+
+.home-card-button-green:hover {
+  background: white;
+  color: black;
+  box-shadow: 7px 7px 0 #00ff00;
+}
+
+.home-card-button-green:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
+}
+
+.home-card-link {
+  display: block;
+  text-align: center;
+  color: #555;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 0.4rem 0;
+}
+
+.home-card-link:hover {
+  color: black;
+  text-decoration: underline;
+}
+
+.home-card-button-black {
+  background: black;
+  color: white;
+  border-color: black;
+  box-shadow: 5px 5px 0 black;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 0.95rem;
+  border: 2px solid black;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.home-card-button-black:hover {
+  background: white;
+  color: black;
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 black;
+}
+
+.home-card-button-black:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 black;
+}
+
+.home-card-topup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home-card-topup-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.home-card-topup-amount {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid black;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: white;
+  box-sizing: border-box;
+}
+
+.home-card-topup-currency {
+  padding: 0.6rem 0.5rem;
+  border: 2px solid black;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
 .home-card .entity-invoice-compact-list {
   margin: 0;
+}
+
+.home-card .entity-draft-find-button {
+  box-shadow: none;
+  margin-top: 0.5rem;
+}
+
+.home-card .entity-draft-find-button:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.home-card .entity-card-header {
+  align-items: center;
+  margin-bottom: 0;
 }
 
 @media (max-width: 680px) {

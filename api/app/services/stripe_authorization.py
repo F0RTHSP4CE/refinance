@@ -356,6 +356,89 @@ class StripeAuthorizationService:
 
     # ── Charge Execution ───────────────────────────────────────────────────
 
+    def charge_on_demand(
+        self,
+        entity_id: int,
+        amount: Decimal,
+        currency: str,
+    ):
+        """Immediately charge the highest-priority active entity_dynamic card."""
+        authorizations = self._list_active_authorizations(
+            entity_id=entity_id, mode=StripeAuthorizationMode.ENTITY_DYNAMIC
+        )
+        if not authorizations:
+            raise NotFoundError(f"No active Stripe card for entity {entity_id}")
+
+        currency = currency.lower().strip()
+        amount = amount.quantize(Decimal("0.01"))
+
+        deposit = self._create_pending_charge_deposit(
+            target_entity_id=entity_id,
+            amount=amount,
+            currency=currency,
+            details={
+                "stripe": {
+                    "mode": "authorization_charge",
+                    "charge_mode": "on_demand",
+                    "attempts": [],
+                }
+            },
+            comment="on-demand top-up",
+        )
+
+        attempts: list[dict] = []
+        for auth in authorizations:
+            try:
+                pi_raw = self.stripe_service.create_off_session_payment_intent(
+                    amount=amount,
+                    currency=currency,
+                    customer_id=auth.stripe_customer_id,
+                    payment_method_id=auth.stripe_payment_method_id,
+                    idempotency_key=f"ondemand:{deposit.id}:auth:{auth.id}",
+                    metadata={
+                        "entity_id": str(entity_id),
+                        "authorization_id": str(auth.id),
+                    },
+                )
+                pi = self.stripe_service.normalize_payment_intent(pi_raw)
+                attempts.append(
+                    {
+                        "authorization_id": auth.id,
+                        "result": "success",
+                        "payment_intent_id": pi.id,
+                        "status": pi.status,
+                    }
+                )
+                self._record_charge_success(auth)
+                self._update_deposit_details(
+                    deposit,
+                    attempts,
+                    extra={
+                        "payment_intent_id": pi.id,
+                        "payment_intent_status": pi.status,
+                        "authorization_id": auth.id,
+                    },
+                )
+                self.deposit_service.complete(deposit.id)
+                return self.deposit_service.get(deposit.id)
+            except Exception as exc:
+                message = str(exc)
+                self._record_charge_failure(auth, message)
+                attempts.append(
+                    {"authorization_id": auth.id, "result": "failed", "error": message}
+                )
+
+        self._update_deposit_details(deposit, attempts)
+        self.deposit_service.update(
+            deposit.id, DepositUpdateSchema(status=DepositStatus.FAILED)
+        )
+        last_error = next(
+            (a["error"] for a in reversed(attempts) if a.get("result") == "failed"),
+            None,
+        )
+        detail = f": {last_error}" if last_error else "."
+        raise StripeRequestError(f"All Stripe card attempts failed{detail}")
+
     def _charge_entity_cycle(
         self,
         entity_id: int,

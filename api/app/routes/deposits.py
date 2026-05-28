@@ -21,6 +21,7 @@ from app.schemas.deposit_providers.cryptapi import (
 from app.schemas.deposit_providers.keepz import KeepzDepositCreateSchema
 from app.schemas.deposit_providers.stripe import StripeDepositCreateSchema
 from app.schemas.stripe_authorization import (
+    StripeAuthorizationChargeSchema,
     StripeAuthorizationListSchema,
     StripeAuthorizationPrioritySchema,
     StripeAuthorizationSchema,
@@ -144,6 +145,25 @@ def stripe_list_authorizations(
     target_entity_id = entity_id or actor_entity.id
     authorizations = stripe_authorization_service.list_for_entity(target_entity_id)
     return StripeAuthorizationListSchema(items=authorizations)
+
+
+@deposits_router.post(
+    "/providers/stripe/authorizations/charge",
+    response_model=DepositSchema,
+)
+def stripe_charge_authorization(
+    schema: StripeAuthorizationChargeSchema = Depends(),
+    stripe_authorization_service: StripeAuthorizationService = Depends(
+        get_stripe_authorization_service
+    ),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    entity_id = schema.entity_id or actor_entity.id
+    return stripe_authorization_service.charge_on_demand(
+        entity_id=entity_id,
+        amount=schema.amount,
+        currency=schema.currency,
+    )
 
 
 @deposits_router.post(

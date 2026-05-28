@@ -319,6 +319,63 @@ def add_stripe():
     return render_template("deposit/add_stripe.jinja2", form=form)
 
 
+@deposit_bp.route("/stripe/add-card")
+@token_required
+def add_stripe_card():
+    api = get_refinance_api_client()
+    entity_id = int(g.actor_entity["id"])
+    try:
+        response = api.http(
+            "POST",
+            "deposits/providers/stripe/authorizations/setup-session",
+            params={"entity_id": entity_id, "mode": "entity_dynamic"},
+        ).json()
+        checkout_url = response.get("checkout_session_url")
+        if checkout_url:
+            return redirect(checkout_url)
+        flash("Stripe setup session created, but no checkout URL returned.", "error")
+    except ApplicationError as e:
+        flash(_format_api_error(e, "Could not start Stripe card setup."), "error")
+    except Exception as e:
+        flash(f"Could not start Stripe card setup: {str(e)}", "error")
+    return redirect(url_for("deposit.stripe_authorizations"))
+
+
+@deposit_bp.route("/stripe/charge", methods=["POST"])
+@token_required
+def charge_stripe_card():
+    amount_raw = (request.form.get("amount") or "").strip()
+    currency = _normalize_currency(request.form.get("currency"))
+    entity_id = int(g.actor_entity["id"])
+
+    try:
+        amount = float(amount_raw)
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+    except (ValueError, TypeError):
+        flash("Invalid amount.", "error")
+        return redirect(url_for("index.index"))
+
+    api = get_refinance_api_client()
+    try:
+        response = api.http(
+            "POST",
+            "deposits/providers/stripe/authorizations/charge",
+            params={"entity_id": entity_id, "amount": amount, "currency": currency},
+        )
+        result = response.json()
+        flash(
+            f"Charged {amount_raw} {currency} from your card. Deposit #{result.get('id')}.",
+            "success",
+        )
+    except ApplicationError as e:
+        flash(_format_api_error(e, "Card charge failed."), "error")
+    except Exception as e:
+        flash(f"Card charge failed: {str(e)}", "error")
+
+    return redirect(url_for("index.index"))
+
+
 @deposit_bp.route("/stripe/authorizations", methods=["GET", "POST"])
 @token_required
 def stripe_authorizations():
@@ -428,6 +485,7 @@ def stripe_authorizations():
             )
         except Exception as e:
             flash(f"Could not synchronize Stripe setup session: {str(e)}", "error")
+        return redirect(url_for("index.index"))
 
     authorizations_resp = api.http(
         "GET",

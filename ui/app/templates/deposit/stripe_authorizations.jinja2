@@ -12,23 +12,7 @@
         <form method="post" class="entry-form" style="margin-bottom: 2rem;">
             {{ setup_form.hidden_tag() }}
             <input type="hidden" name="action" value="add">
-
-            <div class="form-row">
-                <div class="form-field">
-                    <label class="form-label">Mode</label>
-                    {{ setup_form.mode(class_='form-input') }}
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Guest Static Amount</label>
-                    {{ setup_form.static_amount(class_='form-input', step='0.01', min='0.01') }}
-                </div>
-                <div class="form-field">
-                    <label class="form-label">Guest Static Currency</label>
-                    {{ currency_selector('static_currency', setup_form.static_currency.choices,
-                    setup_form.static_currency.data, id='static_currency') }}
-                </div>
-            </div>
-
+            <input type="hidden" name="mode" value="entity_dynamic">
             <div class="form-actions">
                 {{ setup_form.submit(class_='big-button', value='Add Card via Stripe') }}
             </div>
