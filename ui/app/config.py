@@ -12,6 +12,7 @@ def _decimal_env(name: str, default: str) -> Decimal:
 
 class Config:
     REFINANCE_API_BASE_URL = getenv("REFINANCE_API_BASE_URL", "http://api:8000")
+    TELEGRAM_BOT_NAME = getenv("REFINANCE_TELEGRAM_BOT_NAME", "")
     DONATION_MIN_AMOUNT = _decimal_env("REFINANCE_DONATION_MIN_AMOUNT", "1")
     DONATION_MAX_AMOUNT = _decimal_env("REFINANCE_DONATION_MAX_AMOUNT", "3000")
 

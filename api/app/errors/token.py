@@ -13,3 +13,9 @@ class TokenMissing(ApplicationError):
     http_code = 403
     error_code = 3002
     error = "Token is missing"
+
+
+class TelegramAuthInvalid(ApplicationError):
+    http_code = 403
+    error_code = 3003
+    error = "Telegram authentication invalid"

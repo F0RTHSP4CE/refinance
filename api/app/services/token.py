@@ -1,5 +1,7 @@
 """Token service. Generates a token and sends it via all available channels. Verifies generated tokens."""
 
+import hashlib
+import hmac as hmac_lib
 import json
 import logging
 import time
@@ -8,9 +10,9 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from app.config import Config, get_config
 from app.dependencies.services import get_entity_service, get_notification_service
-from app.errors.token import TokenInvalid
+from app.errors.token import TelegramAuthInvalid, TokenInvalid
 from app.models.entity import Entity
-from app.schemas.token import TokenSendReportSchema
+from app.schemas.token import TelegramAuthSchema, TokenSendReportSchema
 from app.services.entity import EntityService
 from app.services.notification import NotificationService
 from app.uow import get_uow
@@ -101,3 +103,29 @@ class TokenService:
             return TokenSendReportSchema(
                 entity_found=False, token_generated=False, message_sent=False
             )
+
+    def login_via_telegram(self, auth_data: TelegramAuthSchema) -> str:
+        """Verify Telegram Login Widget data, find entity by telegram_id, return a JWT."""
+        if not self.config.telegram_bot_api_token:
+            raise TelegramAuthInvalid()
+
+        # Build the data-check string: sorted key=value pairs (excluding hash), joined by \n
+        fields = auth_data.model_dump(exclude_none=True)
+        check_hash = fields.pop("hash")
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(fields.items()))
+
+        secret_key = hashlib.sha256(
+            self.config.telegram_bot_api_token.encode()
+        ).digest()
+        computed_hash = hmac_lib.new(
+            secret_key, data_check_string.encode(), hashlib.sha256
+        ).hexdigest()
+
+        if not hmac_lib.compare_digest(computed_hash, check_hash):
+            raise TelegramAuthInvalid()
+
+        if time.time() - auth_data.auth_date > 86400:
+            raise TelegramAuthInvalid()
+
+        entity = self.entity_service.get_by_telegram_id(auth_data.id)
+        return self._generate_new_token(entity.id)

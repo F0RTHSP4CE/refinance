@@ -10,6 +10,22 @@
             <p class="login-subtitle">Enter your information to request access</p>
         </div>
 
+        {% if request.args.get('tg_error') %}
+        <div class="error-message" style="margin-bottom:1rem;">
+            <p>Telegram authentication failed. Make sure your Telegram account is linked to an entity.</p>
+        </div>
+        {% endif %}
+
+        {% if telegram_bot_name and not report %}
+        <div class="form-group" style="text-align:center; margin-bottom:1.5rem;">
+            <script async src="https://telegram.org/js/telegram-widget.js?22"
+                data-telegram-login="{{ telegram_bot_name }}" data-size="large"
+                data-auth-url="{{ url_for('auth.telegram_callback', _external=True) }}"
+                data-request-access="write"></script>
+        </div>
+        <div style="text-align:center; margin-bottom:1rem; color:#999;">— or enter your name —</div>
+        {% endif %}
+
         {% if not report %}
         <form method="post" class="login-form">
             {{ form.csrf_token }}
