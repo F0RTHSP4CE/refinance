@@ -139,6 +139,7 @@
             {% endif %}
         </section>
 
+        {% if stripe_configured %}
         <section class="entity-card entity-stripe-card">
             <h3 class="entity-card-title">Stripe Cards</h3>
 
@@ -302,6 +303,7 @@
             </div>
 
         </section>
+        {% endif %}
     </div>
 
     <div class="entity-right-rail">

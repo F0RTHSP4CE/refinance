@@ -38,6 +38,7 @@
 			{% else %}
 			<p class="home-card-note">No balance yet.</p>
 			{% endif %}
+			{% if stripe_configured %}
 			{% if active_stripe_card %}
 			<form class="home-card-topup-form" method="post" action="{{ url_for('deposit.charge_stripe_card') }}"
 				onsubmit="this.querySelector('button[type=submit]').disabled=true">
@@ -57,6 +58,7 @@
 			{% else %}
 			<a class="home-card-button home-card-button-green" href="{{ url_for('deposit.add_stripe_card') }}">💳 Add my
 				card</a>
+			{% endif %}
 			{% endif %}
 			<a class="home-card-button home-card-button-outline" href="{{ url_for('deposit.add_keepz') }}">💸 Top up
 				with Keepz</a>

@@ -28,6 +28,8 @@ class Config:
     PREFERRED_CURRENCY = "GEL"
     CURRENCY_CHOICES = [(currency, currency) for currency in UI_CURRENCIES]
 
+    STRIPE_CONFIGURED = bool(getenv("REFINANCE_STRIPE_SECRET_KEY", "").strip())
+
     FRIDGE_PRESETS = [
         {"amount": 5, "currency": "GEL", "label": "5 GEL"},
         {"amount": 10, "currency": "GEL", "label": "10 GEL"},

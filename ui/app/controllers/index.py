@@ -91,6 +91,7 @@ def index():
         unpaid_invoice_cards=unpaid_invoice_cards,
         recent_invoices=recent_invoices,
         active_stripe_card=active_stripe_card,
+        stripe_configured=Config.STRIPE_CONFIGURED,
         currency_choices=Config.CURRENCY_CHOICES,
         preferred_currency=Config.PREFERRED_CURRENCY,
     )

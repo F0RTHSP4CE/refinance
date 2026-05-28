@@ -606,6 +606,7 @@ def detail(id):
         invoices_total=invoices_total,
         invoices_unpaid_count=invoices_unpaid_count,
         stripe_authorizations=stripe_authorizations,
+        stripe_configured=Config.STRIPE_CONFIGURED,
         invoice_page=invoice_page,
         invoice_limit=invoice_limit,
         balance_changes=balance_changes,
