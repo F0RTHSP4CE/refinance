@@ -1,5 +1,6 @@
 /* LAYOUT */
 main {
+  container-type: inline-size;
   margin-top: 0.4rem;
   margin-left: 1rem;
   margin-right: 1rem;

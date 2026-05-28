@@ -1,10 +1,9 @@
 /* HOME PAGE */
 .home-title {
   font-family: 'Unbounded', Arial, sans-serif;
-  font-size: clamp(2rem, 12vw, 7rem);
   font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 3px;
+  font-size: 13.5cqw;
+  white-space: nowrap;
   line-height: 1;
   margin: 0 0 1.5rem 0;
   color: black;
