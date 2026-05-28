@@ -46,7 +46,7 @@
 						inputmode="decimal" placeholder="Amount" required>
 					<select class="home-card-topup-currency" name="currency">
 						{% for value, label in currency_choices %}
-						<option value="{{ value }}" {% if value==preferred_currency %}selected{% endif %}>{{ label }}
+						<option value="{{ value }}" {% if value=="USD" %}selected{% endif %}>{{ label }}
 						</option>
 						{% endfor %}
 					</select>
