@@ -1,5 +1,6 @@
 from datetime import date
 
+from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
