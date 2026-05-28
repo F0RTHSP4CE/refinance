@@ -485,14 +485,17 @@ def detail(id):
         .get("total", 0)
     )
 
-    authorizations_resp = api.http(
-        "GET",
-        "deposits/providers/stripe/authorizations",
-        params={"entity_id": id},
-    ).json()
-    stripe_authorizations = [
-        StripeAuthorization(**item) for item in authorizations_resp.get("items", [])
-    ]
+    if Config.STRIPE_CONFIGURED:
+        authorizations_resp = api.http(
+            "GET",
+            "deposits/providers/stripe/authorizations",
+            params={"entity_id": id},
+        ).json()
+        stripe_authorizations = [
+            StripeAuthorization(**item) for item in authorizations_resp.get("items", [])
+        ]
+    else:
+        stripe_authorizations = []
 
     # For paid invoices, prefer the settled transaction amount/currency in compact UI.
     for invoice in invoices[:6]:
