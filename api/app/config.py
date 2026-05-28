@@ -75,8 +75,8 @@ class Config:
     stripe_entity_charge_enabled: bool = field(
         default=_env_bool("REFINANCE_STRIPE_ENTITY_CHARGE_ENABLED", True)
     )
-    stripe_entity_charge_weekday: int = field(
-        default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_WEEKDAY", "0"))
+    stripe_entity_charge_day: int = field(
+        default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_DAY", "1"))
     )
     stripe_entity_charge_hour: int = field(
         default=int(getenv("REFINANCE_STRIPE_ENTITY_CHARGE_HOUR", "12"))

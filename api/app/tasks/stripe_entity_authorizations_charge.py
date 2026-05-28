@@ -1,7 +1,8 @@
-"""Weekly Stripe charge task for entity dynamic authorizations."""
+"""Monthly Stripe charge task for entity dynamic authorizations."""
 
 from __future__ import annotations
 
+import calendar
 import datetime
 import logging
 
@@ -15,9 +16,9 @@ logger = logging.getLogger(__name__)
 class StripeEntityAuthorizationChargeTask(PeriodicTask):
     def next_delay(self) -> float:
         config = get_config()
-        return _seconds_until_next_weekly_run(
+        return _seconds_until_next_monthly_run(
             now=datetime.datetime.now(),
-            weekday=config.stripe_entity_charge_weekday,
+            day=config.stripe_entity_charge_day,
             hour=config.stripe_entity_charge_hour,
             minute=config.stripe_entity_charge_minute,
         )
@@ -33,8 +34,8 @@ class StripeEntityAuthorizationChargeTask(PeriodicTask):
 async def schedule_stripe_entity_authorization_charges() -> None:
     config = get_config()
     logger.info(
-        "Stripe entity authorization charger started. weekday=%s time=%02d:%02d enabled=%s",
-        config.stripe_entity_charge_weekday,
+        "Stripe entity authorization charger started. day=%s time=%02d:%02d enabled=%s",
+        config.stripe_entity_charge_day,
         config.stripe_entity_charge_hour,
         config.stripe_entity_charge_minute,
         config.stripe_entity_charge_enabled,
@@ -42,22 +43,31 @@ async def schedule_stripe_entity_authorization_charges() -> None:
     await StripeEntityAuthorizationChargeTask().schedule()
 
 
-def _seconds_until_next_weekly_run(
+def _seconds_until_next_monthly_run(
     *,
     now: datetime.datetime,
-    weekday: int,
+    day: int,
     hour: int,
     minute: int,
 ) -> float:
-    weekday = max(0, min(6, int(weekday)))
+    day = max(1, min(31, int(day)))
     hour = max(0, min(23, int(hour)))
     minute = max(0, min(59, int(minute)))
 
-    days_ahead = (weekday - now.weekday()) % 7
-    target = datetime.datetime.combine(
-        now.date() + datetime.timedelta(days=days_ahead),
-        datetime.time(hour, minute),
-    )
+    year = now.year
+    month = now.month
+
+    def _mk_target(y: int, m: int) -> datetime.datetime:
+        last_day = calendar.monthrange(y, m)[1]
+        actual_day = min(day, last_day)
+        return datetime.datetime(y, m, actual_day, hour, minute)
+
+    target = _mk_target(year, month)
     if target <= now:
-        target += datetime.timedelta(weeks=1)
+        if month == 12:
+            year += 1
+            month = 1
+        else:
+            month += 1
+        target = _mk_target(year, month)
     return (target - now).total_seconds()
