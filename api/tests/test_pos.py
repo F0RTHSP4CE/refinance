@@ -85,3 +85,78 @@ def test_pos_charge_requires_pos_secret(
         },
     )
     assert response.status_code == 422
+
+
+class TestPOSBlockedByUnpaidInvoices:
+    def test_pos_blocked_when_entity_has_unpaid_invoice(
+        self, test_app: TestClient, token, pos_headers
+    ):
+        # Create two fresh entities
+        debtor = test_app.post(
+            "/entities", json={"name": "Debtor Entity"}, headers={"x-token": token}
+        )
+        assert debtor.status_code == 200, debtor.text
+        debtor_id = debtor.json()["id"]
+        debtor_name = "Debtor Entity"
+
+        creditor = test_app.post(
+            "/entities", json={"name": "Creditor Entity"}, headers={"x-token": token}
+        )
+        assert creditor.status_code == 200, creditor.text
+        creditor_id = creditor.json()["id"]
+
+        # Create a pending invoice where debtor owes creditor
+        inv = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": debtor_id,
+                "to_entity_id": creditor_id,
+                "amounts": [{"currency": "usd", "amount": "5.00"}],
+            },
+            headers={"x-token": token},
+        )
+        assert inv.status_code == 200, inv.text
+
+        # POS charge should be blocked
+        r = test_app.post(
+            "/pos/charge",
+            json={
+                "entity_name": debtor_name,
+                "amount": "1.00",
+                "currency": "usd",
+                "to_entity_id": creditor_id,
+            },
+            headers=pos_headers,
+        )
+        assert r.status_code == 418, r.text
+        assert r.json()["error_code"] == 10001
+
+    def test_pos_allowed_when_entity_has_no_unpaid_invoices(
+        self, test_app: TestClient, token, pos_headers
+    ):
+        # Create two fresh entities
+        payer = test_app.post(
+            "/entities", json={"name": "Clean Payer"}, headers={"x-token": token}
+        )
+        assert payer.status_code == 200, payer.text
+        payer_id = payer.json()["id"]
+        payer_name = "Clean Payer"
+
+        merchant = test_app.post(
+            "/entities", json={"name": "Clean Merchant"}, headers={"x-token": token}
+        )
+        assert merchant.status_code == 200, merchant.text
+        merchant_id = merchant.json()["id"]
+
+        r = test_app.post(
+            "/pos/charge",
+            json={
+                "entity_name": payer_name,
+                "amount": "5.00",
+                "currency": "usd",
+                "to_entity_id": merchant_id,
+            },
+            headers=pos_headers,
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["balance"]["completed"]["usd"] == "-5.00"

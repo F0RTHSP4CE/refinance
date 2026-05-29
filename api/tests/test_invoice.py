@@ -73,6 +73,29 @@ def _create_invoice_with_amounts(test_app: TestClient, token, from_id, to_id, am
     return response
 
 
+def _fund_entity(test_app: TestClient, token, entity_id, amount: str, currency: str):
+    """Create a plain completed transaction to give entity_id a positive balance."""
+    import uuid
+
+    bank = test_app.post(
+        "/entities",
+        json={"name": f"bank-{uuid.uuid4().hex[:8]}"},
+        headers={"x-token": token},
+    ).json()["id"]
+    r = test_app.post(
+        "/transactions",
+        json={
+            "from_entity_id": bank,
+            "to_entity_id": entity_id,
+            "amount": amount,
+            "currency": currency,
+            "status": "completed",
+        },
+        headers={"x-token": token},
+    )
+    assert r.status_code == 200, r.text
+
+
 def _run_auto_pay_job() -> int:
     config_provider = app.dependency_overrides.get(get_config, get_config)
     config = config_provider()
@@ -87,7 +110,7 @@ def _run_auto_pay_job() -> int:
 
 
 class TestInvoiceEndpoints:
-    def test_invoice_auto_paid_on_create_with_balance(
+    def test_invoice_not_auto_paid_on_create_even_with_balance(
         self, test_app: TestClient, token
     ):
         funding_entity = test_app.post(
@@ -131,16 +154,8 @@ class TestInvoiceEndpoints:
         )
         assert invoice_response.status_code == 200
         invoice = invoice_response.json()
-        assert invoice["status"] == "paid"
-        assert invoice["transaction_id"] is not None
-
-        tx_response = test_app.get(
-            f"/transactions/{invoice['transaction_id']}", headers={"x-token": token}
-        )
-        assert tx_response.status_code == 200
-        tx = tx_response.json()
-        assert tx["currency"] == "usd"
-        assert Decimal(tx["amount"]) == Decimal("10.00")
+        assert invoice["status"] == "pending"
+        assert invoice["transaction_id"] is None
 
     def test_create_invoice(
         self, test_app: TestClient, token, invoice_entity_from, invoice_entity_to
@@ -179,6 +194,7 @@ class TestInvoiceEndpoints:
         invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -204,6 +220,7 @@ class TestInvoiceEndpoints:
         invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "27.00", "gel")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -270,12 +287,37 @@ class TestInvoiceEndpoints:
         )
         assert tx_response.status_code == 418
 
+    def test_invoice_rejects_insufficient_balance(
+        self, test_app: TestClient, token, invoice_entity_from, invoice_entity_to
+    ):
+        """Payment is blocked when payer's completed balance < invoice amount, even as draft."""
+        invoice = _create_invoice(
+            test_app, token, invoice_entity_from, invoice_entity_to
+        ).json()
+        # Do NOT fund the entity — balance is 0 (or negative from earlier tests)
+        for tx_status in ("completed", "draft"):
+            tx_response = test_app.post(
+                "/transactions",
+                json={
+                    "from_entity_id": invoice_entity_from,
+                    "to_entity_id": invoice_entity_to,
+                    "amount": "10.00",
+                    "currency": "usd",
+                    "status": tx_status,
+                    "invoice_id": invoice["id"],
+                },
+                headers={"x-token": token},
+            )
+            assert tx_response.status_code == 418, tx_status
+            assert tx_response.json()["error_code"] == 8012, tx_status
+
     def test_invoice_rejects_second_transaction(
         self, test_app: TestClient, token, invoice_entity_from, invoice_entity_to
     ):
         invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         first_tx = test_app.post(
             "/transactions",
             json={
@@ -309,6 +351,7 @@ class TestInvoiceEndpoints:
         invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -354,6 +397,7 @@ class TestInvoiceEndpoints:
         invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -388,6 +432,7 @@ class TestInvoiceEndpoints:
         paid_invoice = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to, [invoice_tag_two]
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -567,6 +612,7 @@ class TestInvoiceAutoPayTask:
         invoice_two = _create_invoice(
             test_app, token, invoice_entity_from, invoice_entity_to
         ).json()
+        _fund_entity(test_app, token, invoice_entity_from, "10.00", "usd")
         tx_response = test_app.post(
             "/transactions",
             json={
@@ -645,6 +691,15 @@ class TestInvoiceAutoPayTask:
         assert len(invoices) == 1
 
         invoice = invoices[0]
-        assert invoice["status"] == "paid"
-        assert invoice["transaction_id"] is not None
-        assert any(tag["id"] == fee_tag.id for tag in invoice["tags"])
+        assert invoice["status"] == "pending"
+        assert invoice["transaction_id"] is None
+
+        paid_count = _run_auto_pay_job()
+        assert paid_count >= 1
+
+        invoice_after = test_app.get(
+            f"/invoices/{invoice['id']}", headers={"x-token": token}
+        ).json()
+        assert invoice_after["status"] == "paid"
+        assert invoice_after["transaction_id"] is not None
+        assert any(tag["id"] == fee_tag.id for tag in invoice_after["tags"])

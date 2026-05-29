@@ -65,6 +65,25 @@ class TestFeeService:
             return invoice_resp.json()["id"]
 
         def pay_invoice(invoice_id: int, from_entity_id: int) -> None:
+            import uuid
+
+            bank = test_app.post(
+                "/entities",
+                json={"name": f"fee-bank-{uuid.uuid4().hex[:8]}"},
+                headers={"x-token": token},
+            ).json()["id"]
+            fund_resp = test_app.post(
+                "/transactions",
+                json={
+                    "from_entity_id": bank,
+                    "to_entity_id": from_entity_id,
+                    "amount": "100",
+                    "currency": "usd",
+                    "status": "completed",
+                },
+                headers={"x-token": token},
+            )
+            assert fund_resp.status_code == 200, fund_resp.text
             tx_resp = test_app.post(
                 "/transactions",
                 json={

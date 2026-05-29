@@ -22,6 +22,7 @@ from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from flask import (
     Flask,
+    flash,
     g,
     jsonify,
     redirect,
@@ -59,7 +60,24 @@ app.register_blueprint(treasury_bp, url_prefix="/treasuries")
 
 @app.errorhandler(ApplicationError)
 def handle_foo_exception(error):
-    return render_template("error.jinja2", error=error), 418
+    detail = error.args[0] if error.args else {}
+    if isinstance(detail, dict):
+        err_code = detail.get("error_code")
+        err_message = detail.get("error", str(detail))
+        err_where = detail.get("where")
+    else:
+        err_code = None
+        err_message = str(detail)
+        err_where = None
+    return (
+        render_template(
+            "error.jinja2",
+            err_code=err_code,
+            err_message=err_message,
+            err_where=err_where,
+        ),
+        418,
+    )
 
 
 @app.before_request

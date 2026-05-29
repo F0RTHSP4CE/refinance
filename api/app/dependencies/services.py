@@ -213,6 +213,7 @@ class ServiceContainer:
                 entity_service=self.entity_service,
                 transaction_service=self.transaction_service,
                 balance_service=self.balance_service,
+                invoice_service=self.invoice_service,
             )
         return self._pos_service
 

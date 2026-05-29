@@ -3,5 +3,11 @@
 {% block title %}Error{% endblock %}
 
 {% block content %}
-{{ error }}
+<section class="flash-stack">
+    <div class="flash flash-error">
+        {% if err_code %}<span class="flash-error-code">#{{ err_code }}</span> {% endif %}
+        {{ err_message }}
+        {% if err_where %}<br><code class="flash-error-where">{{ err_where }}</code>{% endif %}
+    </div>
+</section>
 {% endblock %}

@@ -56,3 +56,8 @@ class InvoiceAmountInvalid(ApplicationError):
 class InvoiceDuplicateCurrency(ApplicationError):
     error_code = 8011
     error = "Invoice amounts must use unique currencies."
+
+
+class InvoiceInsufficientBalance(ApplicationError):
+    error_code = 8012
+    error = "Entity does not have sufficient balance to pay this invoice."

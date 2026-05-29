@@ -18,6 +18,7 @@ from app.errors.invoice import (
     InvoiceCurrencyNotAllowed,
     InvoiceDuplicateCurrency,
     InvoiceEntitiesMismatch,
+    InvoiceInsufficientBalance,
     InvoiceNotEditable,
     InvoiceTransactionAlreadyAttached,
 )
@@ -100,7 +101,6 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         if tag_ids is not None:
             self.set_tags(new_obj, tag_ids)
             self.db.flush()
-        self._try_auto_pay(new_obj)
         self.db.refresh(new_obj)
         return new_obj
 
@@ -190,39 +190,6 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             return None
 
         return selected_currency, selected_amount
-
-    def _try_auto_pay(self, invoice: Invoice) -> None:
-        if invoice.transaction is not None:
-            return
-        if invoice.status != InvoiceStatus.PENDING:
-            return
-
-        balances = self._balance_service.get_balances(invoice.from_entity_id)
-        completed_balances = balances.completed or {}
-
-        available_balances = {
-            currency.lower(): self._balance_to_decimal(amount)
-            for currency, amount in completed_balances.items()
-        }
-        selection = self._select_auto_pay_amount(invoice, available_balances)
-        if selection is None:
-            return
-        selected_currency, selected_amount = selection
-
-        tx_schema = TransactionCreateSchema(
-            to_entity_id=invoice.to_entity_id,
-            from_entity_id=invoice.from_entity_id,
-            amount=selected_amount,
-            currency=selected_currency,
-            status=TransactionStatus.COMPLETED,
-            invoice_id=invoice.id,
-            comment=invoice.comment,
-            tag_ids=[automatic_tag.id],
-        )
-
-        self._transaction_service.create(
-            tx_schema, overrides={"actor_entity_id": invoice.actor_entity_id}
-        )
 
     def auto_pay_oldest_invoices(self) -> int:
         pending_filter = [
@@ -325,6 +292,11 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             raise InvoiceCurrencyNotAllowed
         if amount < required_amount:
             raise InvoiceAmountInsufficient
+        balances = self._balance_service.get_balances(from_entity_id)
+        completed_balances = balances.completed or {}
+        available = self._balance_to_decimal(completed_balances.get(currency.lower()))
+        if available < amount:
+            raise InvoiceInsufficientBalance
         if (
             status == TransactionStatus.COMPLETED
             and invoice.status != InvoiceStatus.PAID

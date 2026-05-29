@@ -90,6 +90,21 @@ nav a {
   box-shadow: 7px 7px 0 #ff0000;
 }
 
+.flash-error-code {
+  opacity: 0.7;
+  margin-right: 0.35em;
+}
+
+.flash-error-where {
+  display: inline-block;
+  margin-top: 0.3em;
+  font-size: 0.65em;
+  font-weight: 700;
+  text-transform: none;
+  opacity: 0.6;
+  letter-spacing: 0;
+}
+
 .flash-info,
 .flash-message {
   border-color: #111;
