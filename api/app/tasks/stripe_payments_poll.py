@@ -16,7 +16,9 @@ class StripePollTask(PeriodicTask):
         return max(int(get_config().stripe_poll_interval_seconds or 60), 10)
 
     def execute(self, container: ServiceContainer, config: Config) -> int:
-        return container.stripe_deposit_provider_service.poll_pending_deposits()
+        n = container.stripe_deposit_provider_service.poll_pending_deposits()
+        n += container.stripe_authorization_service.poll_subscription_invoice_deposits()
+        return n
 
 
 async def schedule_stripe_poll() -> None:

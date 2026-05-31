@@ -22,25 +22,25 @@ class _FakePaymentIntent:
 
 @pytest.fixture
 def patch_setup_session(monkeypatch):
-    def _fake_create_setup_session(
+    def _fake_create_subscription_checkout_session(
         self,
         *,
         entity_id,
-        mode,
-        static_amount,
-        static_currency,
+        amount,
+        currency,
+        donation_comment=None,
         success_url,
         cancel_url,
     ):
         return _FakeCheckoutSession(
-            session_id=f"cs_setup_{entity_id}_{mode}",
+            session_id=f"cs_setup_{entity_id}_guest_static",
             url=f"https://checkout.stripe.test/setup/{entity_id}",
         )
 
     monkeypatch.setattr(
         StripeService,
-        "create_setup_session",
-        _fake_create_setup_session,
+        "create_subscription_checkout_session",
+        _fake_create_subscription_checkout_session,
     )
 
 
@@ -732,3 +732,239 @@ class TestStripeAuthorizationChargeFallback:
         )
         assert fail_auth["consecutive_error_count"] >= 1
         assert ok_auth["consecutive_error_count"] == 0
+
+
+class TestStripeSubscriptionInvoicePaid:
+    """Test that invoice.paid webhooks from Stripe subscriptions create deposits."""
+
+    def _register_subscription_auth(
+        self, test_app: TestClient, token, monkeypatch, *, entity_id: int
+    ) -> str:
+        """Register a GUEST_STATIC subscription authorization via webhook and return the subscription_id."""
+        subscription_id = f"sub_test_{entity_id}"
+
+        def _fake_construct_webhook_event(self, payload, signature):
+            return {
+                "id": f"evt_sub_setup_{entity_id}",
+                "type": "checkout.session.completed",
+                "data": {
+                    "object": {
+                        "id": f"cs_sub_{entity_id}",
+                        "mode": "subscription",
+                        "subscription": subscription_id,
+                        "customer": f"cus_sub_{entity_id}",
+                        "metadata": {
+                            "entity_id": str(entity_id),
+                            "mode": "guest_static",
+                            "static_amount": "10.00",
+                            "static_currency": "usd",
+                        },
+                    }
+                },
+            }
+
+        def _fake_retrieve_subscription(self, sub_id):
+            return {
+                "id": sub_id,
+                "default_payment_method": f"pm_sub_{entity_id}",
+            }
+
+        def _fake_retrieve_payment_method(self, pm_id):
+            return {
+                "id": pm_id,
+                "card": {
+                    "brand": "visa",
+                    "last4": "4242",
+                    "exp_month": 12,
+                    "exp_year": 2035,
+                },
+            }
+
+        monkeypatch.setattr(
+            StripeService, "construct_webhook_event", _fake_construct_webhook_event
+        )
+        monkeypatch.setattr(
+            StripeService, "retrieve_subscription", _fake_retrieve_subscription
+        )
+        monkeypatch.setattr(
+            StripeService, "retrieve_payment_method", _fake_retrieve_payment_method
+        )
+
+        callback = test_app.post(
+            "/deposit-callbacks/stripe",
+            data="{}",
+            headers={"Stripe-Signature": "testsig"},
+        )
+        assert callback.status_code == 200
+        return subscription_id
+
+    def test_invoice_paid_webhook_creates_completed_deposit(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        entity_resp = test_app.post(
+            "/entities",
+            json={"name": "guest_subscriber", "tag_ids": [], "auth": {}},
+            headers={"x-token": token},
+        )
+        assert entity_resp.status_code == 200
+        entity_id = entity_resp.json()["id"]
+
+        subscription_id = self._register_subscription_auth(
+            test_app, token, monkeypatch, entity_id=entity_id
+        )
+
+        def _fake_construct_invoice_event(self, payload, signature):
+            return {
+                "id": "evt_invoice_paid_1",
+                "type": "invoice.paid",
+                "data": {
+                    "object": {
+                        "id": "in_test_001",
+                        "parent": {
+                            "type": "subscription_details",
+                            "subscription_details": {"subscription": subscription_id},
+                        },
+                        "amount_paid": 1000,  # $10.00 in cents
+                        "currency": "usd",
+                        "billing_reason": "subscription_cycle",
+                    }
+                },
+            }
+
+        monkeypatch.setattr(
+            StripeService, "construct_webhook_event", _fake_construct_invoice_event
+        )
+
+        callback = test_app.post(
+            "/deposit-callbacks/stripe",
+            data="{}",
+            headers={"Stripe-Signature": "testsig"},
+        )
+        assert callback.status_code == 200
+
+        listing = test_app.get(
+            "/deposits",
+            params={"provider": "stripe", "to_entity_id": entity_id, "limit": 20},
+            headers={"x-token": token},
+        )
+        assert listing.status_code == 200
+        items = listing.json()["items"]
+        assert len(items) == 1
+        deposit = items[0]
+        assert deposit["status"] == "completed"
+        from decimal import Decimal
+
+        assert Decimal(deposit["amount"]) == Decimal("10.00")
+        assert deposit["currency"] == "usd"
+        stripe_details = (deposit.get("details") or {}).get("stripe") or {}
+        assert stripe_details.get("mode") == "subscription_invoice"
+        assert stripe_details.get("invoice_id") == "in_test_001"
+
+    def test_invoice_paid_webhook_is_idempotent(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        entity_resp = test_app.post(
+            "/entities",
+            json={"name": "guest_subscriber_idem", "tag_ids": [], "auth": {}},
+            headers={"x-token": token},
+        )
+        assert entity_resp.status_code == 200
+        entity_id = entity_resp.json()["id"]
+
+        subscription_id = self._register_subscription_auth(
+            test_app, token, monkeypatch, entity_id=entity_id
+        )
+
+        def _fake_construct_invoice_event(self, payload, signature):
+            return {
+                "id": "evt_invoice_idem",
+                "type": "invoice.paid",
+                "data": {
+                    "object": {
+                        "id": "in_idem_001",
+                        "parent": {
+                            "type": "subscription_details",
+                            "subscription_details": {"subscription": subscription_id},
+                        },
+                        "amount_paid": 500,
+                        "currency": "gel",
+                        "billing_reason": "subscription_cycle",
+                    }
+                },
+            }
+
+        monkeypatch.setattr(
+            StripeService, "construct_webhook_event", _fake_construct_invoice_event
+        )
+
+        # Send the same invoice.paid event twice
+        for _ in range(2):
+            callback = test_app.post(
+                "/deposit-callbacks/stripe",
+                data="{}",
+                headers={"Stripe-Signature": "testsig"},
+            )
+            assert callback.status_code == 200
+
+        listing = test_app.get(
+            "/deposits",
+            params={"provider": "stripe", "to_entity_id": entity_id, "limit": 20},
+            headers={"x-token": token},
+        )
+        assert listing.status_code == 200
+        items = listing.json()["items"]
+        assert len(items) == 1  # only one deposit despite two webhook deliveries
+
+    def test_stripe_poll_recovers_missed_subscription_invoice(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        """Verify /tasks/stripe-poll/run creates a deposit for a paid invoice not seen via webhook."""
+        entity_resp = test_app.post(
+            "/entities",
+            json={"name": "guest_subscriber_poll", "tag_ids": [], "auth": {}},
+            headers={"x-token": token},
+        )
+        assert entity_resp.status_code == 200
+        entity_id = entity_resp.json()["id"]
+
+        subscription_id = self._register_subscription_auth(
+            test_app, token, monkeypatch, entity_id=entity_id
+        )
+
+        def _fake_list_invoices(self, sub_id, *, limit=5):
+            if sub_id != subscription_id:
+                return []
+            return [
+                {
+                    "id": "in_poll_001",
+                    "parent": {
+                        "type": "subscription_details",
+                        "subscription_details": {"subscription": sub_id},
+                    },
+                    "amount_paid": 2000,  # $20.00
+                    "currency": "usd",
+                    "billing_reason": "subscription_cycle",
+                }
+            ]
+
+        monkeypatch.setattr(
+            StripeService, "list_invoices_for_subscription", _fake_list_invoices
+        )
+
+        run = test_app.post("/tasks/stripe-poll/run", headers={"x-token": token})
+        assert run.status_code == 200
+        assert run.json()["result"] >= 1
+
+        listing = test_app.get(
+            "/deposits",
+            params={"provider": "stripe", "to_entity_id": entity_id, "limit": 20},
+            headers={"x-token": token},
+        )
+        assert listing.status_code == 200
+        items = listing.json()["items"]
+        assert len(items) == 1
+        deposit = items[0]
+        assert deposit["status"] == "completed"
+        from decimal import Decimal
+
+        assert Decimal(deposit["amount"]) == Decimal("20.00")

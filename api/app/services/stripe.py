@@ -23,6 +23,8 @@ class StripeCheckoutSessionData:
     id: str
     mode: str
     setup_intent_id: str | None
+    subscription_id: str | None
+    customer_id: str | None
     metadata: dict[str, str]
 
 
@@ -124,6 +126,7 @@ class StripeService:
         static_currency: str | None,
         success_url: str,
         cancel_url: str,
+        donation_comment: str | None = None,
     ) -> stripe.checkout.Session:
         metadata = {
             "entity_id": str(entity_id),
@@ -131,6 +134,8 @@ class StripeService:
             "static_amount": str(static_amount.quantize(Decimal("0.01"))),
             "static_currency": (static_currency or ""),
         }
+        if donation_comment:
+            metadata["donation_comment"] = donation_comment
         with self._stripe_call():
             return stripe.checkout.Session.create(
                 mode="setup",
@@ -148,6 +153,90 @@ class StripeService:
         with self._stripe_call():
             params = {"expand": ["setup_intent"]} if expand_setup_intent else {}
             return stripe.checkout.Session.retrieve(session_id, **params)
+
+    def create_subscription_checkout_session(
+        self,
+        *,
+        entity_id: int,
+        amount: Decimal,
+        currency: str,
+        donation_comment: str | None = None,
+        success_url: str,
+        cancel_url: str,
+    ) -> stripe.checkout.Session:
+        unit_amount = int((amount * Decimal("100")).quantize(Decimal("1")))
+        if unit_amount <= 0:
+            raise ValueError("Amount must be positive")
+        metadata: dict[str, str] = {
+            "entity_id": str(entity_id),
+            "mode": "guest_static",
+            "static_amount": str(amount.quantize(Decimal("0.01"))),
+            "static_currency": currency.upper(),
+        }
+        if donation_comment:
+            metadata["donation_comment"] = donation_comment
+        with self._stripe_call():
+            return stripe.checkout.Session.create(
+                mode="subscription",
+                payment_method_types=["card"],
+                line_items=[
+                    {
+                        "quantity": 1,
+                        "price_data": {
+                            "currency": currency.lower(),
+                            "unit_amount": unit_amount,
+                            "recurring": {"interval": "month"},
+                            "product_data": {
+                                "name": "Monthly donation — F0RTHSP4CE",
+                            },
+                        },
+                    }
+                ],
+                metadata=metadata,
+                subscription_data={"metadata": metadata},
+                success_url=success_url,
+                cancel_url=cancel_url,
+            )
+
+    def create_billing_portal_session(
+        self,
+        *,
+        customer_id: str,
+        return_url: str,
+    ) -> stripe.billing_portal.Session:
+        with self._stripe_call():
+            return stripe.billing_portal.Session.create(
+                customer=customer_id,
+                return_url=return_url,
+            )
+
+    def retrieve_subscription(self, subscription_id: str):
+        with self._stripe_call():
+            return stripe.Subscription.retrieve(
+                subscription_id,
+                expand=["default_payment_method"],
+            )
+
+    def list_invoices_for_subscription(
+        self, subscription_id: str, *, limit: int = 5
+    ) -> list[dict]:
+        with self._stripe_call():
+            result = stripe.Invoice.list(
+                subscription=subscription_id,
+                status="paid",
+                limit=limit,
+            )
+            invoices = []
+            for inv in result.data:
+                if hasattr(inv, "to_dict_recursive"):
+                    d = inv.to_dict_recursive()
+                elif hasattr(inv, "to_dict"):
+                    d = inv.to_dict()
+                else:
+                    d = dict(inv)
+                if isinstance(d, dict):
+                    invoices.append(d)
+            return invoices
 
     # ── Webhooks ───────────────────────────────────────────────────────────
 
@@ -215,6 +304,8 @@ class StripeService:
             id=self._require_str(payload.get("id"), "checkout session id"),
             mode=str(payload.get("mode") or ""),
             setup_intent_id=self._extract_object_id(payload.get("setup_intent")),
+            subscription_id=self._extract_object_id(payload.get("subscription")),
+            customer_id=self._extract_object_id(payload.get("customer")),
             metadata=self._normalize_str_dict(payload.get("metadata")),
         )
 

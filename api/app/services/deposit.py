@@ -120,6 +120,11 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
     def _complete_donation(self, deposit: Deposit) -> None:
         """After a guest donation deposit completes, transfer funds to F0 and notify."""
         comment = (deposit.details or {}).get("donation_comment", "")
+        stripe_details = (deposit.details or {}).get("stripe", {})
+        is_recurring = (
+            stripe_details.get("charge_mode") == "guest_static"
+            or stripe_details.get("mode") == "subscription_invoice"
+        )
         try:
             self._transaction_service.create(
                 TransactionCreateSchema(
@@ -143,7 +148,10 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             chat_id = self._notification_service.config.donation_notification_chat_id
             if chat_id:
                 amount_str = f"{deposit.amount} {deposit.currency.upper()}"
-                message = f"🎁 New donation: <b>{amount_str}</b>"
+                if is_recurring:
+                    message = f"🎁 Subscription donation: <b>{amount_str}</b>"
+                else:
+                    message = f"🎁 New donation: <b>{amount_str}</b>"
                 if comment:
                     from html import escape
 

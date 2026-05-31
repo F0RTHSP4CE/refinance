@@ -90,9 +90,6 @@ class Config:
     stripe_guest_charge_enabled: bool = field(
         default=_env_bool("REFINANCE_STRIPE_GUEST_CHARGE_ENABLED", True)
     )
-    stripe_guest_charge_day: int = field(
-        default=int(getenv("REFINANCE_STRIPE_GUEST_CHARGE_DAY", "1"))
-    )
     stripe_guest_charge_hour: int = field(
         default=int(getenv("REFINANCE_STRIPE_GUEST_CHARGE_HOUR", "10"))
     )

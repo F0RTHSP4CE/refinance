@@ -40,6 +40,7 @@ class StripeAuthorizationSetupSchema(BaseSchema):
     entity_id: int | None = None
     success_url: str | None = None
     cancel_url: str | None = None
+    donation_comment: str | None = None
 
     @field_validator("static_currency")
     def normalize_currency(cls, v):

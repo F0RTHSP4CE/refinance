@@ -54,6 +54,7 @@ class StripeAuthorization(BaseModel):
 
     stripe_customer_id: Mapped[str] = mapped_column(String, nullable=False)
     stripe_payment_method_id: Mapped[str] = mapped_column(String, nullable=False)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String, nullable=True)
 
     mode: Mapped[StripeAuthorizationMode] = mapped_column(
         Enum(StripeAuthorizationMode),

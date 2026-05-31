@@ -23,6 +23,31 @@ deposit_provider_callbacks_router = APIRouter(
 )
 
 
+def _handle_subscription_deleted(
+    subscription_obj: dict,
+    stripe_authorization_service: StripeAuthorizationService,
+) -> None:
+    """Deactivate a StripeAuthorization when its Stripe subscription is cancelled."""
+    subscription_id = str(subscription_obj.get("id") or "").strip()
+    if not subscription_id:
+        return
+    from app.models.stripe_authorization import (  # avoid circular import at module level
+        StripeAuthorization,
+    )
+
+    auth = (
+        stripe_authorization_service.db.query(StripeAuthorization)
+        .filter(StripeAuthorization.stripe_subscription_id == subscription_id)
+        .first()
+    )
+    if auth and auth.active:
+        import datetime
+
+        auth.active = False
+        auth.modified_at = datetime.datetime.now()
+        stripe_authorization_service.db.flush()
+
+
 @deposit_provider_callbacks_router.post("/cryptapi/{deposit_uuid}")
 def cryptapi_callback(
     deposit_uuid: Annotated[UUID, Path()],
@@ -59,9 +84,14 @@ async def stripe_callback(
     stripe_deposit_provider_service.handle_webhook_event(event)
     event_type = str(event.get("type") or "")
     data_object = (event.get("data") or {}).get("object") or {}
-    if (
-        event_type == "checkout.session.completed"
-        and str(data_object.get("mode") or "") == "setup"
+    session_mode = str(data_object.get("mode") or "")
+    if event_type == "checkout.session.completed" and session_mode in (
+        "setup",
+        "subscription",
     ):
         stripe_authorization_service.handle_setup_session_completed(data_object)
+    elif event_type == "invoice.paid":
+        stripe_authorization_service.handle_subscription_invoice_paid(data_object)
+    elif event_type == "customer.subscription.deleted":
+        _handle_subscription_deleted(data_object, stripe_authorization_service)
     return PlainTextResponse("ok")

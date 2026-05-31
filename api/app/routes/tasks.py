@@ -45,11 +45,13 @@ def run_stripe_poll(
     stripe_deposit_provider_service: StripeDepositProviderService = Depends(
         get_stripe_deposit_provider_service
     ),
+    stripe_authorization_service: StripeAuthorizationService = Depends(
+        get_stripe_authorization_service
+    ),
 ):
-    return TaskRunResponse(
-        task="stripe-poll",
-        result=stripe_deposit_provider_service.poll_pending_deposits(),
-    )
+    n = stripe_deposit_provider_service.poll_pending_deposits()
+    n += stripe_authorization_service.poll_subscription_invoice_deposits()
+    return TaskRunResponse(task="stripe-poll", result=n)
 
 
 @tasks_router.post("/stripe-entity-charge/run", response_model=TaskRunResponse)
@@ -83,19 +85,6 @@ def debug_stripe_entity_charge(
     ),
 ):
     return stripe_authorization_service.debug_entity_dynamic_charge(entity_id)
-
-
-@tasks_router.post("/stripe-guest-charge/run", response_model=TaskRunResponse)
-def run_stripe_guest_charge(
-    _actor: Entity = Depends(get_entity_from_token),
-    stripe_authorization_service: StripeAuthorizationService = Depends(
-        get_stripe_authorization_service
-    ),
-):
-    return TaskRunResponse(
-        task="stripe-guest-charge",
-        result=stripe_authorization_service.run_monthly_guest_static_charges(),
-    )
 
 
 @tasks_router.post("/balance-reminder/run", response_model=TaskRunResponse)

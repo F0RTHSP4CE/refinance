@@ -121,18 +121,33 @@ class StripeAuthorizationService:
         )
         static_currency = (schema.static_currency or "").upper().strip() or None
 
-        session = self.stripe_service.create_setup_session(
-            entity_id=target_entity_id,
-            mode=mode.value,
-            static_amount=static_amount,
-            static_currency=static_currency,
-            success_url=self._resolve_setup_success_url(
-                schema.success_url, target_entity_id
-            ),
-            cancel_url=self._resolve_setup_cancel_url(
-                schema.cancel_url, target_entity_id
-            ),
-        )
+        if mode == StripeAuthorizationMode.GUEST_STATIC:
+            session = self.stripe_service.create_subscription_checkout_session(
+                entity_id=target_entity_id,
+                amount=static_amount,
+                currency=static_currency or "",
+                donation_comment=schema.donation_comment or None,
+                success_url=self._resolve_setup_success_url(
+                    schema.success_url, target_entity_id
+                ),
+                cancel_url=self._resolve_setup_cancel_url(
+                    schema.cancel_url, target_entity_id
+                ),
+            )
+        else:
+            session = self.stripe_service.create_setup_session(
+                entity_id=target_entity_id,
+                mode=mode.value,
+                static_amount=static_amount,
+                static_currency=static_currency,
+                success_url=self._resolve_setup_success_url(
+                    schema.success_url, target_entity_id
+                ),
+                cancel_url=self._resolve_setup_cancel_url(
+                    schema.cancel_url, target_entity_id
+                ),
+                donation_comment=schema.donation_comment or None,
+            )
         return session.id, session.url
 
     def handle_setup_session_completed(
@@ -145,6 +160,9 @@ class StripeAuthorizationService:
             if isinstance(session_obj, StripeCheckoutSessionData)
             else self.stripe_service.normalize_checkout_session(session_obj)
         )
+
+        if session_data.mode == "subscription":
+            return self._handle_subscription_session_completed(session_data)
 
         if session_data.mode != "setup":
             return None
@@ -207,6 +225,7 @@ class StripeAuthorizationService:
         )
 
         now = datetime.datetime.now()
+        donation_comment = metadata.get("donation_comment") or None
         if auth is None:
             auth = StripeAuthorization(
                 entity_id=entity_id,
@@ -219,9 +238,9 @@ class StripeAuthorizationService:
                 priority=self._next_priority(entity_id),
                 consecutive_error_count=0,
                 last_error=None,
-                last_success_at=now,
+                last_success_at=None,
                 last_attempt_at=now,
-                comment="stripe setup authorization",
+                comment=donation_comment or None,
                 **card_fields,
             )
             self.db.add(auth)
@@ -236,6 +255,8 @@ class StripeAuthorizationService:
             auth.last_success_at = now
             auth.last_attempt_at = now
             auth.modified_at = now
+            if donation_comment:
+                auth.comment = donation_comment
             for k, v in card_fields.items():
                 setattr(auth, k, v)
 
@@ -253,6 +274,14 @@ class StripeAuthorizationService:
             checkout_session_id, expand_setup_intent=True
         )
         session_data = self.stripe_service.normalize_checkout_session(session)
+        if session_data.mode == "subscription":
+            auth = self._handle_subscription_session_completed(session_data)
+            if auth is None:
+                raise StripeRequestError(
+                    "Stripe subscription session could not be synchronized: "
+                    "missing subscription ID, entity metadata, or customer"
+                )
+            return auth
         auth = self.handle_setup_session_completed(
             session_data, fallback_entity_id=fallback_entity_id
         )
@@ -262,6 +291,263 @@ class StripeAuthorizationService:
                 "entity metadata, customer, or payment method"
             )
         return auth
+
+    def _handle_subscription_session_completed(
+        self,
+        session_data: StripeCheckoutSessionData,
+    ) -> StripeAuthorization | None:
+        subscription_id = session_data.subscription_id
+        customer_id = session_data.customer_id
+        if not subscription_id or not customer_id:
+            return None
+
+        metadata = dict(session_data.metadata)
+        entity_id_raw = metadata.get("entity_id")
+        if not entity_id_raw:
+            return None
+
+        entity_id = int(entity_id_raw)
+        mode = StripeAuthorizationMode(str(metadata.get("mode") or "guest_static"))
+        static_amount = Decimal(str(metadata.get("static_amount") or "0")).quantize(
+            Decimal("0.01")
+        )
+        static_currency = metadata.get("static_currency")
+        if static_currency:
+            static_currency = str(static_currency).upper().strip()
+        donation_comment = metadata.get("donation_comment") or None
+
+        # Retrieve subscription to get the default payment method for card details.
+        card_fields: dict = {}
+        pm_id: str | None = None
+        try:
+            sub_raw = self.stripe_service.retrieve_subscription(subscription_id)
+            sub_dict = self.stripe_service._as_dict(sub_raw, "subscription")
+            pm_id = self.stripe_service._extract_object_id(
+                sub_dict.get("default_payment_method")
+            )
+            if pm_id:
+                pm_data = self.stripe_service.normalize_payment_method(
+                    self.stripe_service.retrieve_payment_method(pm_id)
+                )
+                card_fields = dict(
+                    card_brand=pm_data.card_brand,
+                    card_last4=pm_data.card_last4,
+                    card_exp_month=pm_data.card_exp_month,
+                    card_exp_year=pm_data.card_exp_year,
+                )
+        except Exception:
+            logger.warning(
+                "Could not retrieve subscription payment method details for sub %s",
+                subscription_id,
+                exc_info=True,
+            )
+
+        # stripe_payment_method_id is non-nullable; use a stable synthetic value when
+        # the real PM is unavailable (subscription ID is unique enough).
+        synthetic_pm_id = pm_id or f"sub_{subscription_id}"
+
+        resolved_amount, resolved_currency = _resolved_static(
+            mode, static_amount, static_currency
+        )
+        now = datetime.datetime.now()
+
+        auth = (
+            self.db.query(StripeAuthorization)
+            .filter(StripeAuthorization.stripe_subscription_id == subscription_id)
+            .first()
+        )
+
+        if auth is None:
+            auth = StripeAuthorization(
+                entity_id=entity_id,
+                stripe_customer_id=customer_id,
+                stripe_payment_method_id=synthetic_pm_id,
+                stripe_subscription_id=subscription_id,
+                mode=mode,
+                static_amount=resolved_amount,
+                static_currency=resolved_currency,
+                active=True,
+                priority=self._next_priority(entity_id),
+                consecutive_error_count=0,
+                last_error=None,
+                last_success_at=None,
+                last_attempt_at=now,
+                comment=donation_comment or None,
+                **card_fields,
+            )
+            self.db.add(auth)
+        else:
+            auth.stripe_customer_id = customer_id
+            if pm_id:
+                auth.stripe_payment_method_id = pm_id
+            auth.mode = mode
+            auth.static_amount = resolved_amount
+            auth.static_currency = resolved_currency
+            auth.active = True
+            auth.consecutive_error_count = 0
+            auth.last_error = None
+            auth.modified_at = now
+            if donation_comment:
+                auth.comment = donation_comment
+            for k, v in card_fields.items():
+                setattr(auth, k, v)
+
+        self.db.flush()
+        self.db.refresh(auth)
+        return auth
+
+    def handle_subscription_invoice_paid(self, invoice_obj: dict) -> bool:
+        """Record a deposit when Stripe successfully charges a subscription invoice.
+        Returns True if a new deposit was created, False if skipped."""
+        # Stripe API ≥ 2025-xx moved subscription from top-level to
+        # parent.subscription_details.subscription; support both.
+        subscription_id = self.stripe_service._extract_object_id(
+            invoice_obj.get("subscription")
+        )
+        if not subscription_id:
+            parent = invoice_obj.get("parent") or {}
+            if isinstance(parent, dict):
+                sub_details = parent.get("subscription_details") or {}
+                if isinstance(sub_details, dict):
+                    subscription_id = self.stripe_service._extract_object_id(
+                        sub_details.get("subscription")
+                    )
+        if not subscription_id:
+            logger.warning(
+                "handle_subscription_invoice_paid: no subscription_id in invoice %r (parent=%r)",
+                invoice_obj.get("id"),
+                invoice_obj.get("parent"),
+            )
+            return False
+
+        invoice_id = str(invoice_obj.get("id") or "").strip()
+        amount_paid = int(invoice_obj.get("amount_paid") or 0)
+        currency = str(invoice_obj.get("currency") or "").lower().strip()
+
+        if not invoice_id or amount_paid <= 0 or not currency:
+            logger.warning(
+                "Skipping invoice %s: invoice_id=%r amount_paid=%d currency=%r",
+                invoice_id or "(none)",
+                invoice_id,
+                amount_paid,
+                currency,
+            )
+            return False
+
+        cycle_key = f"invoice:{invoice_id}"
+        if self._cycle_exists(cycle_key):
+            return False
+
+        auth = (
+            self.db.query(StripeAuthorization)
+            .filter(StripeAuthorization.stripe_subscription_id == subscription_id)
+            .first()
+        )
+        if auth is None:
+            logger.warning(
+                "invoice.paid for unknown subscription %s (invoice %s) — no auth found",
+                subscription_id,
+                invoice_id,
+            )
+            return False
+
+        amount = (Decimal(str(amount_paid)) / Decimal("100")).quantize(Decimal("0.01"))
+        deposit = self._create_pending_charge_deposit(
+            target_entity_id=auth.entity_id,
+            amount=amount,
+            currency=currency,
+            details={
+                "donation_comment": auth.comment or None,
+                "stripe": {
+                    "mode": "subscription_invoice",
+                    "subscription_id": subscription_id,
+                    "invoice_id": invoice_id,
+                    "cycle_key": cycle_key,
+                    "billing_reason": str(invoice_obj.get("billing_reason") or ""),
+                    "authorization_id": auth.id,
+                },
+            },
+            comment=cycle_key,
+            actor_entity_id=auth.entity_id,
+        )
+        self._record_charge_success(auth)
+        self.deposit_service.complete(deposit.id)
+        logger.info(
+            "Subscription invoice deposit created: invoice=%s sub=%s amount=%s %s",
+            invoice_id,
+            subscription_id,
+            amount,
+            currency.upper(),
+        )
+        return True
+
+    def poll_subscription_invoice_deposits(self) -> int:
+        """Recovery poller: fetch recent paid Stripe invoices for each active subscription
+        and record any that were missed by the webhook."""
+        auths = [
+            a
+            for a in self._list_active_authorizations(
+                mode=StripeAuthorizationMode.GUEST_STATIC
+            )
+            if a.stripe_subscription_id
+        ]
+        processed = 0
+        for auth in auths:
+            try:
+                invoices = self.stripe_service.list_invoices_for_subscription(
+                    auth.stripe_subscription_id, limit=5
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to list invoices for subscription %s",
+                    auth.stripe_subscription_id,
+                    exc_info=True,
+                )
+                continue
+            logger.info(
+                "Subscription %s: %d paid invoice(s) from Stripe",
+                auth.stripe_subscription_id,
+                len(invoices),
+            )
+            for invoice in invoices:
+                invoice_id = str(invoice.get("id") or "").strip()
+                if not invoice_id:
+                    continue
+                if self._cycle_exists(f"invoice:{invoice_id}"):
+                    continue
+                try:
+                    if self.handle_subscription_invoice_paid(invoice):
+                        processed += 1
+                except Exception:
+                    logger.exception(
+                        "Failed to record deposit for invoice %s (sub %s)",
+                        invoice_id,
+                        auth.stripe_subscription_id,
+                    )
+        return processed
+
+    def get_customer_portal_url(
+        self,
+        checkout_session_id: str,
+        return_url: str,
+    ) -> str:
+        """Create a Stripe Customer Portal session URL for the customer of a checkout session."""
+        session = self.stripe_service.retrieve_checkout_session(checkout_session_id)
+        session_data = self.stripe_service.normalize_checkout_session(session)
+        customer_id = session_data.customer_id
+        if not customer_id:
+            raise StripeRequestError(
+                "No customer associated with this checkout session"
+            )
+        portal = self.stripe_service.create_billing_portal_session(
+            customer_id=customer_id,
+            return_url=return_url,
+        )
+        portal_dict = self.stripe_service._as_dict(portal, "billing portal session")
+        url = str(portal_dict.get("url") or "")
+        if not url:
+            raise StripeRequestError("Stripe did not return a billing portal URL")
+        return url
 
     # ── CRUD ───────────────────────────────────────────────────────────────
 
@@ -340,19 +626,18 @@ class StripeAuthorizationService:
             for entity_id in sorted({a.entity_id for a in authorizations})
         ]
 
-    def run_monthly_guest_static_charges(self) -> int:
+    def charge_new_guest_static(self, auth: StripeAuthorization) -> bool:
+        """Immediately charge a newly subscribed guest_static authorization (first charge)."""
+        if auth.stripe_subscription_id:
+            # Stripe handles billing automatically for subscription-mode auths.
+            return False
         now = datetime.datetime.now()
-        month_key = f"{now.year:04d}-{now.month:02d}"
-        processed = 0
-        for auth in self._list_active_authorizations(
-            mode=StripeAuthorizationMode.GUEST_STATIC
-        ):
-            amount = Decimal(auth.static_amount).quantize(Decimal("0.01"))
-            currency = (auth.static_currency or "").lower().strip()
-            if amount > 0 and currency:
-                if self._charge_guest_authorization(auth, amount, currency, month_key):
-                    processed += 1
-        return processed
+        day_key = now.strftime("%Y-%m-%d")
+        amount = Decimal(auth.static_amount).quantize(Decimal("0.01"))
+        currency = (auth.static_currency or "").lower().strip()
+        if amount > 0 and currency:
+            return self._charge_guest_authorization(auth, amount, currency, day_key)
+        return False
 
     # ── Charge Execution ───────────────────────────────────────────────────
 
@@ -523,9 +808,9 @@ class StripeAuthorizationService:
         auth: StripeAuthorization,
         amount: Decimal,
         currency: str,
-        month_key: str,
+        day_key: str,
     ) -> bool:
-        cycle_key = f"guest:{auth.id}:{currency.lower()}:{month_key}"
+        cycle_key = f"guest:{auth.id}:{currency.lower()}:{day_key}"
         if self._cycle_exists(cycle_key):
             return False
 
@@ -534,13 +819,14 @@ class StripeAuthorizationService:
             amount=amount,
             currency=currency,
             details={
+                "donation_comment": auth.comment or None,
                 "stripe": {
                     "mode": "authorization_charge",
                     "charge_mode": StripeAuthorizationMode.GUEST_STATIC.value,
                     "cycle_key": cycle_key,
                     "attempts": [],
                     "authorization_id": auth.id,
-                }
+                },
             },
             comment=f"monthly guest static charge {cycle_key}",
             actor_entity_id=auth.entity_id,
