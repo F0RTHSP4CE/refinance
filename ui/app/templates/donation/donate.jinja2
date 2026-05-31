@@ -252,9 +252,106 @@
         .recurring-hint {
             margin-top: 2rem;
             color: #4e4e4e;
+            font-size: clamp(14px, 2vw, 18px);
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .donation-faq {
+            margin-top: 1.5rem;
             font-size: clamp(12px, 1.8vw, 16px);
             line-height: 1.4;
             text-align: center;
+        }
+
+        .donation-faq details {
+            margin-top: 0.75rem;
+        }
+
+        .donation-faq summary {
+            color: #4e4e4e;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .donation-faq summary::-webkit-details-marker {
+            display: none;
+        }
+
+        @media (hover: hover) {
+            .donation-faq summary:hover {
+                color: #888;
+                text-decoration: underline;
+            }
+        }
+
+        .donation-faq details[open] summary {
+            margin-bottom: 0.5rem;
+        }
+
+        .donation-faq p {
+            color: #4e4e4e;
+            margin: 0 auto;
+            max-width: 90%;
+        }
+
+        @media (min-width: 701px) {
+            .donation-faq {
+                display: flex;
+                justify-content: center;
+                gap: 2rem;
+                font-size: 13px;
+            }
+
+            .donation-faq details {
+                position: relative;
+                margin-top: 0;
+            }
+
+            .donation-faq details[open] summary {
+                margin-bottom: 0;
+                position: relative;
+                z-index: 101;
+            }
+
+            .donation-faq details[open]::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.7);
+                z-index: 99;
+            }
+
+            .donation-faq details[open] > :not(summary) {
+                position: absolute;
+                bottom: calc(100% + 14px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 400px;
+                max-width: calc(100vw - 64px);
+                margin: 0;
+                padding: 20px 24px;
+                background: #000;
+                border: 2px solid var(--surface-border);
+                color: #ffffff;
+                text-align: left;
+                font-size: 15px;
+                line-height: 1.5;
+                z-index: 100;
+            }
+
+            .donation-faq details[open] > :not(summary)::before {
+                content: "";
+                position: absolute;
+                bottom: -9px;
+                left: 50%;
+                width: 14px;
+                height: 14px;
+                background: #000;
+                border-right: 2px solid var(--surface-border);
+                border-bottom: 2px solid var(--surface-border);
+                transform: translateX(-50%) rotate(45deg);
+            }
         }
 
 {% endblock %}
@@ -280,6 +377,18 @@
             .donation-submit {
                 margin-top: 2rem;
                 height: 58px;
+            }
+
+            .donation-faq summary::before {
+                content: "▶";
+                display: inline-block;
+                margin-right: 0.5em;
+                font-size: 0.7em;
+                transition: transform 0.15s ease;
+            }
+
+            .donation-faq details[open] summary::before {
+                transform: rotate(90deg);
             }
 {% endblock %}
 
@@ -326,6 +435,17 @@
                             class="donation-submit-label">Donate</span></button>
 
                     <p class="recurring-hint">We accept any cards and Apple Pay.</p>
+
+                    <div class="donation-faq">
+                        <details>
+                            <summary>Is my donation secure?</summary>
+                            <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner with Stripe, the industry's established payment processor trusted by some of the world's largest companies.<br><br>Your sensitive financial information never touches our servers. We send all data directly to Stripe's PCI-compliant servers through SSL.</p>
+                        </details>
+                        <details>
+                            <summary>Can I cancel my recurring donation?</summary>
+                            <p>Of course. You always remain in full control of your recurring donation, and you’re free to change or cancel it at any time.</p>
+                        </details>
+                    </div>
                 </div>
 
                 {% if stripe_configured %}
@@ -354,7 +474,18 @@
                     <button type="submit" class="donation-submit"><span
                             class="donation-submit-label">Subscribe</span></button>
 
-                    <p class="recurring-hint">Your card will be charged every month. You can change the amount or cancel any time.</p>
+                    <p class="recurring-hint">Your card will be charged every month.</p>
+
+                    <div class="donation-faq">
+                        <details>
+                            <summary>Is my donation secure?</summary>
+                            <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner with Stripe, the industry's established payment processor trusted by some of the world's largest companies.<br><br>Your sensitive financial information never touches our servers. We send all data directly to Stripe's PCI-compliant servers through SSL.</p>
+                        </details>
+                        <details>
+                            <summary>Can I cancel my recurring donation?</summary>
+                            <p>Of course. You always remain in full control of your recurring donation, and you’re free to change or cancel it at any time.</p>
+                        </details>
+                    </div>
                 </div>
                 {% endif %}
                 </div>
@@ -476,5 +607,29 @@
 
         updatePresetSelection(presetButtons, presetInput.value);
         if (recurringPresetInput) updatePresetSelection(recurringPresetButtons, recurringPresetInput.value);
+
+        const faqDetails = Array.from(document.querySelectorAll(".donation-faq details"));
+        faqDetails.forEach((d) => {
+            d.addEventListener("toggle", () => {
+                if (d.open) {
+                    faqDetails.forEach((other) => {
+                        if (other !== d) other.open = false;
+                    });
+                }
+            });
+        });
+        document.addEventListener("click", (event) => {
+            faqDetails.forEach((d) => {
+                if (!d.open) return;
+                if (event.target === d || !d.contains(event.target)) {
+                    d.open = false;
+                }
+            });
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                faqDetails.forEach((d) => { d.open = false; });
+            }
+        });
     </script>
 {% endblock %}
