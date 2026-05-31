@@ -9,11 +9,10 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 donation_bp = Blueprint("donation", __name__)
 
 DONATION_PRESET_AMOUNTS = ("5", "10", "25")
-DONATION_CURRENCY = "GEL"
-DONATION_CURRENCY_SYMBOL = "\u20be"
+DONATION_CURRENCY = "USD"
+DONATION_CURRENCY_SYMBOL = "$"
 DONATION_AMOUNT_PATTERN = re.compile(r"^\d+(?:[\.,]\d{1,2})?$")
 RECURRING_CURRENCIES = ["GEL", "USD", "EUR"]
-RECURRING_CURRENCY_SYMBOLS = {"GEL": "\u20be", "USD": "$", "EUR": "\u20ac"}
 
 
 def _format_amount(amount: Decimal) -> str:
@@ -56,13 +55,9 @@ def _parse_amount(raw_amount: str) -> Decimal:
 
 
 def _submitted_amount(form_data: dict[str, str]) -> Decimal:
-    custom_amount = form_data["custom_amount"].strip()
-    if custom_amount:
-        return _parse_amount(custom_amount)
-
     preset_amount = form_data["preset_amount"].strip()
     if not preset_amount:
-        raise ValueError("Select a donation amount or enter another amount.")
+        raise ValueError("Select a donation amount.")
     if preset_amount not in DONATION_PRESET_AMOUNTS:
         raise ValueError("Select one of the available donation amounts.")
 
@@ -75,11 +70,9 @@ def donate():
         "comment": "",
         "recurring_comment": "",
         "preset_amount": "",
-        "custom_amount": "",
         "type": "recurring",
         "onetime_currency": "USD",
         "recurring_preset_amount": "",
-        "recurring_custom_amount": "",
         "recurring_currency": "USD",
     }
 
@@ -89,16 +82,12 @@ def donate():
             "comment": (request.form.get("comment") or "").strip(),
             "recurring_comment": (request.form.get("recurring_comment") or "").strip(),
             "preset_amount": (request.form.get("preset_amount") or "").strip(),
-            "custom_amount": (request.form.get("custom_amount") or "").strip(),
             "type": donation_type,
             "onetime_currency": (request.form.get("onetime_currency") or "USD")
             .strip()
             .upper(),
             "recurring_preset_amount": (
                 request.form.get("recurring_preset_amount") or ""
-            ).strip(),
-            "recurring_custom_amount": (
-                request.form.get("recurring_custom_amount") or ""
             ).strip(),
             "recurring_currency": (request.form.get("recurring_currency") or "USD")
             .strip()
@@ -111,11 +100,9 @@ def donate():
                     raise ValueError(
                         "Recurring donations are not available at this time."
                     )
-                recurring_custom = form_data["recurring_custom_amount"]
-                recurring_preset = form_data["recurring_preset_amount"]
-                recurring_amount_raw = recurring_custom or recurring_preset
+                recurring_amount_raw = form_data["recurring_preset_amount"]
                 if not recurring_amount_raw:
-                    raise ValueError("Select a monthly amount or enter another amount.")
+                    raise ValueError("Select a monthly amount.")
                 amount = _parse_amount(recurring_amount_raw)
                 currency = form_data["recurring_currency"]
                 if currency not in RECURRING_CURRENCIES:
@@ -182,13 +169,9 @@ def donate():
         "donation/donate.jinja2",
         form_data=form_data,
         donation_presets=DONATION_PRESET_AMOUNTS,
-        donation_currency=DONATION_CURRENCY,
-        donation_currency_symbol=DONATION_CURRENCY_SYMBOL,
         donation_min_amount=Config.DONATION_MIN_AMOUNT,
         donation_max_amount=Config.DONATION_MAX_AMOUNT,
         stripe_configured=Config.STRIPE_CONFIGURED,
-        recurring_currencies=RECURRING_CURRENCIES,
-        recurring_currency_symbols=RECURRING_CURRENCY_SYMBOLS,
     )
 
 

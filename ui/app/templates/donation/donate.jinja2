@@ -29,8 +29,7 @@
             border: 0;
         }
 
-        .donation-name,
-        .custom-amount-field {
+        .donation-name {
             width: 100%;
             border: 2px solid var(--surface-border);
             background: #000000;
@@ -45,8 +44,7 @@
             height: 59px;
         }
 
-        .donation-name:focus-visible,
-        .custom-amount-field:focus-visible {
+        .donation-name:focus-visible {
             outline: 4px solid var(--accent);
             outline-offset: 4px;
         }
@@ -87,12 +85,6 @@
             outline-offset: 4px;
         }
 
-        .preset-option:disabled,
-        .preset-option.is-inactive {
-            opacity: 0.15;
-            cursor: default;
-        }
-
         .preset-option.is-selected {
             --button-hover-border: #ffffff;
             background: var(--accent);
@@ -115,7 +107,7 @@
             --button-hover-border: #ffffff;
             width: 100%;
             height: 62px;
-            margin-top: 6rem;
+            margin-top: 2rem;
             border: 0;
             background: var(--accent);
             color: #ffffff;
@@ -191,76 +183,6 @@
             }
         }
 
-        .custom-amount-wrap {
-            display: flex;
-            justify-content: center;
-            margin-top: 2rem;
-        }
-
-        .custom-amount-shell {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 53px;
-            position: relative;
-        }
-
-        .custom-amount-field {
-            width: auto;
-            min-width: 96px;
-            max-width: 320px;
-            height: 53px;
-            background: transparent;
-            border: 0;
-            color: #ffffff;
-            font-size: clamp(23px, 3.7vw, 43px);
-            padding: 0;
-        }
-
-        .custom-amount-sizer {
-            position: absolute;
-            visibility: hidden;
-            white-space: pre;
-            font-family: "Geist Mono", monospace;
-            font-size: clamp(23px, 3.7vw, 43px);
-            font-weight: 700;
-            line-height: 1;
-        }
-
-        .custom-amount-field::placeholder {
-            color: #4e4e4e;
-            opacity: 1;
-        }
-
-        .custom-amount-field:focus {
-            color: #ffffff;
-        }
-
-        .custom-amount-suffix {
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            margin-left: 14px;
-            font-family: "Geist Mono", monospace;
-            font-size: clamp(23px, 3.7vw, 43px);
-            font-weight: 700;
-            line-height: 1;
-            color: #ffffff;
-            opacity: 0;
-            transform: translate(-8px, -50%);
-            pointer-events: none;
-            white-space: nowrap;
-        }
-
-        .custom-amount-shell.has-value {
-            border: 2px solid var(--surface-border);
-        }
-
-        .custom-amount-shell.has-value .custom-amount-suffix {
-            opacity: 1;
-            transform: translate(0, -50%);
-        }
-
         /* ── type toggle ── */
         .donation-type-toggle {
             display: flex;
@@ -304,9 +226,22 @@
         }
 
         /* ── tab sections ── */
-        #onetime-section,
-        #recurring-section {
+        .donation-sections {
+            display: grid;
+            grid-template-columns: 1fr;
+        }
+
+        .donation-sections > #onetime-section,
+        .donation-sections > #recurring-section {
+            grid-area: 1 / 1;
+            min-width: 0;
             margin-top: 2.5rem;
+        }
+
+        .donation-sections > [hidden] {
+            display: block;
+            visibility: hidden;
+            pointer-events: none;
         }
 
         #onetime-section .preset-grid,
@@ -314,49 +249,8 @@
             grid-template-columns: repeat(3, 1fr);
         }
 
-        .recurring-currency-select {
-            height: 64px;
-            border: 2px solid var(--surface-border);
-            background: #000000 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 16px 10px;
-            color: #ffffff;
-            font-family: "Geist Mono", monospace;
-            font-size: clamp(28px, 4.5vw, 46px);
-            font-weight: 700;
-            text-align: center;
-            padding: 0 34px 0 0;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            cursor: pointer;
-            width: 100%;
-            transition: box-shadow 0.15s ease;
-        }
-
-        .recurring-currency-select:focus-visible {
-            outline: 4px solid var(--accent);
-            outline-offset: 4px;
-        }
-
-        .recurring-currency-select.is-inactive {
-            opacity: 0.15;
-            cursor: default;
-            pointer-events: none;
-        }
-
-        .recurring-custom-row {
-            display: flex;
-            gap: 12px;
-            align-items: stretch;
-        }
-
-        .recurring-custom-row .recurring-currency-select {
-            height: auto;
-            width: 90px;
-            flex-shrink: 0;
-        }
-
         .recurring-hint {
-            margin-top: 12px;
+            margin-top: 2rem;
             color: #4e4e4e;
             font-size: clamp(12px, 1.8vw, 16px);
             line-height: 1.4;
@@ -370,8 +264,7 @@
                 margin-top: 4rem;
             }
 
-            .donation-name,
-            .custom-amount-field {
+            .donation-name {
                 height: 54px;
             }
 
@@ -386,22 +279,6 @@
 
             .donation-submit {
                 margin-top: 2rem;
-                height: 58px;
-            }
-
-            .custom-amount-wrap {
-                margin-top: 16px;
-            }
-
-            .custom-amount-suffix {
-                margin-left: 10px;
-            }
-
-            .custom-amount-field {
-                max-width: 280px;
-            }
-
-            .recurring-currency-select {
                 height: 58px;
             }
 {% endblock %}
@@ -424,10 +301,7 @@
                 </div>
                 {% endif %}
 
-                <p class="recurring-hint" id="recurring-hint" {% if not stripe_configured or form_data.type
-                    !='recurring' %} hidden{% endif %}>Your card will be charged every month. You can change the amount
-                    or cancel any time.</p>
-
+                <div class="donation-sections">
                 <div id="onetime-section" {% if stripe_configured and form_data.type=='recurring' %} hidden{% endif %}>
                     <label class="sr-only" for="comment">Your name</label>
                     <input id="comment" name="comment" class="donation-name" type="text" maxlength="120"
@@ -440,31 +314,18 @@
                     <div class="preset-grid" role="group" aria-label="Donation amount presets">
                         {% for preset in donation_presets %}
                         <button type="button"
-                            class="preset-option{% if form_data.preset_amount == preset and not form_data.custom_amount %} is-selected{% endif %}{% if form_data.custom_amount %} is-inactive{% endif %}"
+                            class="preset-option{% if form_data.preset_amount == preset %} is-selected{% endif %}"
                             data-amount="{{ preset }}"
-                            aria-pressed="{{ 'true' if form_data.preset_amount == preset and not form_data.custom_amount else 'false' }}"
-                            {% if form_data.custom_amount %}disabled{% endif %}>
+                            aria-pressed="{{ 'true' if form_data.preset_amount == preset else 'false' }}">
                             <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
                         </button>
                         {% endfor %}
                     </div>
 
-                    <div class="custom-amount-wrap">
-                        <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
-                            id="custom-amount-shell">
-                            <label class="sr-only" for="custom_amount">Other amount</label>
-                            <span class="custom-amount-sizer" id="custom-amount-sizer" aria-hidden="true"></span>
-                            <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
-                                inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
-                                pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                                title="Enter a positive amount with up to 2 decimal places"
-                                placeholder="other amount &lowbar;">
-                            <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                        </div>
-                    </div>
-
                     <button type="submit" class="donation-submit"><span
                             class="donation-submit-label">Donate</span></button>
+
+                    <p class="recurring-hint">We accept any cards and Apple Pay.</p>
                 </div>
 
                 {% if stripe_configured %}
@@ -482,34 +343,21 @@
                     <div class="preset-grid" role="group" aria-label="Monthly donation amount presets">
                         {% for preset in donation_presets %}
                         <button type="button"
-                            class="preset-option{% if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount %} is-selected{% endif %}{% if form_data.recurring_custom_amount %} is-inactive{% endif %}"
+                            class="preset-option{% if form_data.recurring_preset_amount == preset %} is-selected{% endif %}"
                             data-amount="{{ preset }}"
-                            aria-pressed="{{ 'true' if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount else 'false' }}"
-                            {% if form_data.recurring_custom_amount %}disabled{% endif %}>
+                            aria-pressed="{{ 'true' if form_data.recurring_preset_amount == preset else 'false' }}">
                             <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
                         </button>
                         {% endfor %}
                     </div>
 
-                    <div class="custom-amount-wrap">
-                        <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
-                            id="recurring-custom-amount-shell">
-                            <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
-                            <span class="custom-amount-sizer" id="recurring-custom-amount-sizer"
-                                aria-hidden="true"></span>
-                            <input id="recurring_custom_amount" name="recurring_custom_amount"
-                                class="custom-amount-field" type="text" inputmode="decimal" autocomplete="off"
-                                value="{{ form_data.recurring_custom_amount }}" pattern="\d+(?:[\.,]\d{1,2})?"
-                                maxlength="10" title="Enter a positive amount with up to 2 decimal places"
-                                placeholder="other amount &lowbar;">
-                            <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                        </div>
-                    </div>
-
                     <button type="submit" class="donation-submit"><span
                             class="donation-submit-label">Subscribe</span></button>
+
+                    <p class="recurring-hint">Your card will be charged every month. You can change the amount or cancel any time.</p>
                 </div>
                 {% endif %}
+                </div>
             </form>
 {% endblock %}
 
@@ -517,34 +365,18 @@
     <script>
         const DONATION_MIN_AMOUNT = {{ donation_min_amount | tojson }};
         const DONATION_MAX_AMOUNT = {{ donation_max_amount | tojson }};
-        const STRIPE_CONFIGURED = {{ stripe_configured | tojson }};
-        const RECURRING_CURRENCY_SYMBOLS = {{ recurring_currency_symbols | tojson }};
 
         const donationForm = document.querySelector(".donation-form");
         const donationTypeInput = document.getElementById("donation-type");
         const presetInput = document.getElementById("preset_amount");
-        const customAmountInput = document.getElementById("custom_amount");
-        const customAmountShell = document.getElementById("custom-amount-shell");
-        const customAmountSizer = document.getElementById("custom-amount-sizer");
         const presetButtons = Array.from(document.querySelectorAll("#onetime-section .preset-option"));
         const submitButtons = Array.from(document.querySelectorAll(".donation-submit"));
         const jsErrorContainer = document.getElementById("donation-js-error");
         const onetimeSection = document.getElementById("onetime-section");
         const recurringSection = document.getElementById("recurring-section");
         const typeTabs = Array.from(document.querySelectorAll(".type-tab"));
-        const recurringHint = document.getElementById("recurring-hint");
         const recurringPresetInput = document.getElementById("recurring_preset_amount");
         const recurringPresetButtons = Array.from(document.querySelectorAll("#recurring-section .preset-option"));
-        const recurringCustomAmountInput = document.getElementById("recurring_custom_amount");
-        const recurringCustomAmountShell = document.getElementById("recurring-custom-amount-shell");
-        const recurringCustomAmountSizer = document.getElementById("recurring-custom-amount-sizer");
-        const recurringCustomAmountSuffix = document.getElementById("recurring-custom-amount-suffix");
-        const recurringCurrencyPresetSelect = document.getElementById("recurring_currency_preset");
-        const recurringCurrencyCustomSelect = document.getElementById("recurring_currency_custom");
-        const recurringCurrencyHidden = document.getElementById("recurring_currency_value");
-        const onetimeCurrencyPresetSelect = document.getElementById("onetime_currency_preset");
-        const onetimeCurrencyCustomSelect = document.getElementById("onetime_currency_custom");
-        const onetimeCurrencyHidden = document.getElementById("onetime_currency_value");
         let isSubmitting = false;
 
         function showJsError(message) {
@@ -561,101 +393,12 @@
             return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
         }
 
-        function resizeCustomAmountField() {
-            customAmountSizer.textContent = customAmountInput.value || customAmountInput.placeholder;
-            const measuredWidth = Math.ceil(customAmountSizer.getBoundingClientRect().width) + 8;
-            const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-            customAmountInput.style.width = `${clampedWidth}px`;
-        }
-
-        function updatePresetSelection(selectedAmount) {
-            presetButtons.forEach((button) => {
+        function updatePresetSelection(buttons, selectedAmount) {
+            buttons.forEach((button) => {
                 const isSelected = button.dataset.amount === selectedAmount;
                 button.classList.toggle("is-selected", isSelected);
                 button.setAttribute("aria-pressed", isSelected ? "true" : "false");
             });
-        }
-
-        function updatePresetAvailability(isInactive) {
-            presetButtons.forEach((button) => {
-                if (isInactive && document.activeElement === button) {
-                    customAmountInput.focus();
-                }
-                button.disabled = isInactive;
-                button.classList.toggle("is-inactive", isInactive);
-            });
-        }
-
-        function updateCustomAmountState() {
-            const hasValue = customAmountInput.value.trim() !== "";
-            customAmountShell.classList.toggle("has-value", hasValue);
-            if (hasValue) {
-                presetInput.value = "";
-                updatePresetSelection("");
-            }
-            updatePresetAvailability(hasValue);
-            if (onetimeCurrencyPresetSelect) {
-                onetimeCurrencyPresetSelect.classList.toggle("is-inactive", hasValue);
-            }
-            if (onetimeCurrencyCustomSelect) {
-                if (hasValue && onetimeCurrencyCustomSelect.hidden) {
-                    onetimeCurrencyCustomSelect.value = onetimeCurrencyHidden ? onetimeCurrencyHidden.value : "GEL";
-                }
-                onetimeCurrencyCustomSelect.hidden = !hasValue;
-            }
-            resizeCustomAmountField();
-        }
-
-        function resizeRecurringCustomAmountField() {
-            if (!recurringCustomAmountInput || !recurringCustomAmountSizer) return;
-            recurringCustomAmountSizer.textContent = recurringCustomAmountInput.value || recurringCustomAmountInput.placeholder;
-            const measuredWidth = Math.ceil(recurringCustomAmountSizer.getBoundingClientRect().width) + 8;
-            const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-            recurringCustomAmountInput.style.width = `${clampedWidth}px`;
-        }
-
-        function updateRecurringPresetSelection(selectedAmount) {
-            recurringPresetButtons.forEach((button) => {
-                const isSelected = button.dataset.amount === selectedAmount;
-                button.classList.toggle("is-selected", isSelected);
-                button.setAttribute("aria-pressed", isSelected ? "true" : "false");
-            });
-        }
-
-        function updateRecurringPresetAvailability(isInactive) {
-            recurringPresetButtons.forEach((button) => {
-                if (isInactive && document.activeElement === button) {
-                    recurringCustomAmountInput.focus();
-                }
-                button.disabled = isInactive;
-                button.classList.toggle("is-inactive", isInactive);
-            });
-        }
-
-        function updateRecurringCustomAmountState() {
-            const hasValue = recurringCustomAmountInput.value.trim() !== "";
-            recurringCustomAmountShell.classList.toggle("has-value", hasValue);
-            if (hasValue) {
-                recurringPresetInput.value = "";
-                updateRecurringPresetSelection("");
-            }
-            updateRecurringPresetAvailability(hasValue);
-            if (recurringCurrencyPresetSelect) {
-                recurringCurrencyPresetSelect.classList.toggle("is-inactive", hasValue);
-            }
-            if (recurringCurrencyCustomSelect) {
-                if (hasValue && recurringCurrencyCustomSelect.hidden) {
-                    recurringCurrencyCustomSelect.value = recurringCurrencyHidden ? recurringCurrencyHidden.value : "GEL";
-                }
-                recurringCurrencyCustomSelect.hidden = !hasValue;
-            }
-            resizeRecurringCustomAmountField();
-        }
-
-        function updateRecurringCurrencyDisplay() {
-            const value = recurringCurrencyHidden ? recurringCurrencyHidden.value : (recurringCurrencyPresetSelect ? recurringCurrencyPresetSelect.value : "GEL");
-            const symbol = RECURRING_CURRENCY_SYMBOLS[value] || value;
-            if (recurringCustomAmountSuffix) recurringCustomAmountSuffix.textContent = symbol;
         }
 
         function switchTab(type) {
@@ -663,8 +406,6 @@
             typeTabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.type === type));
             if (onetimeSection) onetimeSection.hidden = (type === "recurring");
             if (recurringSection) recurringSection.hidden = (type !== "recurring");
-            if (recurringHint) recurringHint.hidden = (type !== "recurring");
-            if (type === "recurring") resizeRecurringCustomAmountField();
             clearJsError();
         }
 
@@ -676,71 +417,48 @@
             button.addEventListener("click", () => {
                 const amount = button.dataset.amount;
                 presetInput.value = amount;
-                customAmountInput.value = "";
-                customAmountShell.classList.remove("has-value");
-                updatePresetSelection(amount);
-                resizeCustomAmountField();
+                updatePresetSelection(presetButtons, amount);
+            });
+        });
+
+        recurringPresetButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const amount = button.dataset.amount;
+                recurringPresetInput.value = amount;
+                updatePresetSelection(recurringPresetButtons, amount);
             });
         });
 
         donationForm.addEventListener("submit", (event) => {
             clearJsError();
             const currentType = donationTypeInput ? donationTypeInput.value : "onetime";
+            const rawValue = currentType === "recurring"
+                ? (recurringPresetInput ? recurringPresetInput.value.trim() : "")
+                : presetInput.value.trim();
 
-            if (currentType === "recurring") {
-                const customRaw = recurringCustomAmountInput ? recurringCustomAmountInput.value.trim() : "";
-                const presetRaw = recurringPresetInput ? recurringPresetInput.value.trim() : "";
-                const raw = (customRaw || presetRaw).replace(",", ".");
-                if (!raw) {
-                    event.preventDefault();
-                    showJsError("Select a monthly amount or enter another amount.");
-                    return;
-                }
-                const amount = parseFloat(raw);
-                if (isNaN(amount) || amount <= 0) {
-                    event.preventDefault();
-                    showJsError("Enter a valid donation amount.");
-                    return;
-                }
-                if (amount < DONATION_MIN_AMOUNT) {
-                    event.preventDefault();
-                    showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`);
-                    return;
-                }
-                if (amount > DONATION_MAX_AMOUNT) {
-                    event.preventDefault();
-                    showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`);
-                    return;
-                }
-            } else {
-                const customRaw = customAmountInput.value.trim();
-                const presetRaw = presetInput.value.trim();
-                const raw = customRaw || presetRaw;
+            if (!rawValue) {
+                event.preventDefault();
+                showJsError(currentType === "recurring"
+                    ? "Select a monthly amount."
+                    : "Select a donation amount.");
+                return;
+            }
 
-                if (!raw) {
-                    event.preventDefault();
-                    showJsError("Select a donation amount or enter another amount.");
-                    return;
-                }
-
-                const amount = parseFloat(raw.replace(",", "."));
-                if (isNaN(amount) || amount <= 0) {
-                    event.preventDefault();
-                    showJsError("Enter a valid donation amount.");
-                    return;
-                }
-
-                if (amount < DONATION_MIN_AMOUNT) {
-                    event.preventDefault();
-                    showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`);
-                    return;
-                }
-
-                if (amount > DONATION_MAX_AMOUNT) {
-                    event.preventDefault();
-                    showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`);
-                    return;
-                }
+            const amount = parseFloat(rawValue.replace(",", "."));
+            if (isNaN(amount) || amount <= 0) {
+                event.preventDefault();
+                showJsError("Enter a valid donation amount.");
+                return;
+            }
+            if (amount < DONATION_MIN_AMOUNT) {
+                event.preventDefault();
+                showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`);
+                return;
+            }
+            if (amount > DONATION_MAX_AMOUNT) {
+                event.preventDefault();
+                showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`);
+                return;
             }
 
             if (isSubmitting) {
@@ -756,55 +474,7 @@
             });
         });
 
-        customAmountInput.addEventListener("input", updateCustomAmountState);
-        if (recurringCustomAmountInput) {
-            recurringCustomAmountInput.addEventListener("input", updateRecurringCustomAmountState);
-        }
-        if (recurringCurrencyPresetSelect) {
-            recurringCurrencyPresetSelect.addEventListener("change", () => {
-                if (recurringCurrencyHidden) recurringCurrencyHidden.value = recurringCurrencyPresetSelect.value;
-                if (recurringCurrencyCustomSelect) recurringCurrencyCustomSelect.value = recurringCurrencyPresetSelect.value;
-                updateRecurringCurrencyDisplay();
-            });
-        }
-        if (recurringCurrencyCustomSelect) {
-            recurringCurrencyCustomSelect.addEventListener("change", () => {
-                if (recurringCurrencyHidden) recurringCurrencyHidden.value = recurringCurrencyCustomSelect.value;
-                if (recurringCurrencyPresetSelect) recurringCurrencyPresetSelect.value = recurringCurrencyCustomSelect.value;
-                updateRecurringCurrencyDisplay();
-            });
-        }
-        if (onetimeCurrencyPresetSelect) {
-            onetimeCurrencyPresetSelect.addEventListener("change", () => {
-                if (onetimeCurrencyHidden) onetimeCurrencyHidden.value = onetimeCurrencyPresetSelect.value;
-                if (onetimeCurrencyCustomSelect) onetimeCurrencyCustomSelect.value = onetimeCurrencyPresetSelect.value;
-            });
-        }
-        if (onetimeCurrencyCustomSelect) {
-            onetimeCurrencyCustomSelect.addEventListener("change", () => {
-                if (onetimeCurrencyHidden) onetimeCurrencyHidden.value = onetimeCurrencyCustomSelect.value;
-                if (onetimeCurrencyPresetSelect) onetimeCurrencyPresetSelect.value = onetimeCurrencyCustomSelect.value;
-            });
-        }
-        recurringPresetButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                const amount = button.dataset.amount;
-                recurringPresetInput.value = amount;
-                recurringCustomAmountInput.value = "";
-                recurringCustomAmountShell.classList.remove("has-value");
-                updateRecurringPresetSelection(amount);
-                resizeRecurringCustomAmountField();
-            });
-        });
-        window.addEventListener("resize", resizeCustomAmountField);
-        window.addEventListener("resize", resizeRecurringCustomAmountField);
-        updatePresetSelection(presetInput.value);
-        updateCustomAmountState();
-        if (recurringPresetInput) updateRecurringPresetSelection(recurringPresetInput.value);
-        if (recurringCustomAmountInput) updateRecurringCustomAmountState();
-        updateRecurringCurrencyDisplay();
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(() => { resizeCustomAmountField(); resizeRecurringCustomAmountField(); });
-        }
+        updatePresetSelection(presetButtons, presetInput.value);
+        if (recurringPresetInput) updatePresetSelection(recurringPresetButtons, recurringPresetInput.value);
     </script>
 {% endblock %}
