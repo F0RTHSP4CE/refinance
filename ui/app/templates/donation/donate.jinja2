@@ -31,6 +31,7 @@
 
         .donation-name {
             width: 100%;
+            margin-top: 12px;
             border: 2px solid var(--surface-border);
             background: #000000;
             color: #ffffff;
@@ -41,7 +42,7 @@
             text-align: center;
             padding: 8px 28px;
             outline: none;
-            height: 59px;
+            height: 64px;
         }
 
         .donation-name:focus-visible {
@@ -59,7 +60,6 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
-            margin-top: 12px;
         }
 
         .preset-option {
@@ -362,7 +362,7 @@
             }
 
             .donation-name {
-                height: 54px;
+                height: 58px;
             }
 
             .preset-grid {
@@ -412,10 +412,6 @@
 
                 <div class="donation-sections">
                 <div id="onetime-section" {% if stripe_configured and form_data.type=='recurring' %} hidden{% endif %}>
-                    <label class="sr-only" for="comment">Your name</label>
-                    <input id="comment" name="comment" class="donation-name" type="text" maxlength="120"
-                        value="{{ form_data.comment }}" placeholder="name / comment (optional)" autocomplete="off">
-
                     <input id="preset_amount" name="preset_amount" type="hidden" value="{{ form_data.preset_amount }}">
                     <input id="onetime_currency_value" name="onetime_currency" type="hidden"
                         value="{{ form_data.onetime_currency }}">
@@ -430,6 +426,10 @@
                         </button>
                         {% endfor %}
                     </div>
+
+                    <label class="sr-only" for="comment">Your name</label>
+                    <input id="comment" name="comment" class="donation-name" type="text" maxlength="120"
+                        value="{{ form_data.comment }}" placeholder="name / comment (optional)" autocomplete="off">
 
                     <button type="submit" class="donation-submit"><span
                             class="donation-submit-label">Donate</span></button>
@@ -450,11 +450,6 @@
 
                 {% if stripe_configured %}
                 <div id="recurring-section" {% if form_data.type !='recurring' %} hidden{% endif %}>
-                    <label class="sr-only" for="recurring-comment">Your name</label>
-                    <input id="recurring-comment" name="recurring_comment" class="donation-name" type="text"
-                        maxlength="120" value="{{ form_data.recurring_comment }}" placeholder="name / comment (optional)"
-                        autocomplete="off">
-
                     <input id="recurring_preset_amount" name="recurring_preset_amount" type="hidden"
                         value="{{ form_data.recurring_preset_amount }}">
                     <input id="recurring_currency_value" name="recurring_currency" type="hidden"
@@ -470,6 +465,11 @@
                         </button>
                         {% endfor %}
                     </div>
+
+                    <label class="sr-only" for="recurring-comment">Your name</label>
+                    <input id="recurring-comment" name="recurring_comment" class="donation-name" type="text"
+                        maxlength="120" value="{{ form_data.recurring_comment }}" placeholder="name / comment (optional)"
+                        autocomplete="off">
 
                     <button type="submit" class="donation-submit"><span
                             class="donation-submit-label">Subscribe</span></button>
