@@ -76,7 +76,7 @@ def donate():
         "recurring_comment": "",
         "preset_amount": "",
         "custom_amount": "",
-        "type": "onetime",
+        "type": "recurring",
         "onetime_currency": "GEL",
         "recurring_preset_amount": "",
         "recurring_custom_amount": "",
