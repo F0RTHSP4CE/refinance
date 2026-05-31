@@ -1,6 +1,7 @@
 """Deposit service"""
 
 import logging
+from html import escape
 from typing import Any
 from uuid import UUID
 
@@ -153,8 +154,6 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
                 else:
                     message = f"🎁 New donation: <b>{amount_str}</b>"
                 if comment:
-                    from html import escape
-
                     message += f"\n<i>{escape(comment)}</i>"
                 topic_id = (
                     self._notification_service.config.donation_notification_topic_id

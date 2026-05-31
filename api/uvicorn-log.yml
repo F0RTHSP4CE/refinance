@@ -28,6 +28,12 @@ loggers:
     handlers:
       - access
     propagate: no
+  # Suppress stripe SDK request/response INFO noise
+  stripe:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
 root:
   level: INFO
   handlers:

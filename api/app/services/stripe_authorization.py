@@ -36,7 +36,11 @@ from app.services.balance import BalanceService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.deposit import DepositService
 from app.services.entity_owed import EntityOwedSummary, calculate_entity_owed
-from app.services.stripe import StripeCheckoutSessionData, StripeService
+from app.services.stripe import (
+    StripeCheckoutSessionData,
+    StripeInvoiceData,
+    StripeService,
+)
 from app.uow import get_uow
 from fastapi import Depends
 from sqlalchemy import or_
@@ -396,74 +400,58 @@ class StripeAuthorizationService:
         self.db.refresh(auth)
         return auth
 
-    def handle_subscription_invoice_paid(self, invoice_obj: dict) -> bool:
+    def handle_subscription_invoice_paid(self, invoice: StripeInvoiceData) -> bool:
         """Record a deposit when Stripe successfully charges a subscription invoice.
         Returns True if a new deposit was created, False if skipped."""
-        # Stripe API ≥ 2025-xx moved subscription from top-level to
-        # parent.subscription_details.subscription; support both.
-        subscription_id = self.stripe_service._extract_object_id(
-            invoice_obj.get("subscription")
-        )
-        if not subscription_id:
-            parent = invoice_obj.get("parent") or {}
-            if isinstance(parent, dict):
-                sub_details = parent.get("subscription_details") or {}
-                if isinstance(sub_details, dict):
-                    subscription_id = self.stripe_service._extract_object_id(
-                        sub_details.get("subscription")
-                    )
-        if not subscription_id:
+        if not invoice.subscription_id:
             logger.warning(
-                "handle_subscription_invoice_paid: no subscription_id in invoice %r (parent=%r)",
-                invoice_obj.get("id"),
-                invoice_obj.get("parent"),
+                "invoice.paid skipped: no subscription_id (invoice_id=%r)", invoice.id
             )
             return False
 
-        invoice_id = str(invoice_obj.get("id") or "").strip()
-        amount_paid = int(invoice_obj.get("amount_paid") or 0)
-        currency = str(invoice_obj.get("currency") or "").lower().strip()
-
-        if not invoice_id or amount_paid <= 0 or not currency:
+        if not invoice.id or invoice.amount_paid <= 0 or not invoice.currency:
             logger.warning(
-                "Skipping invoice %s: invoice_id=%r amount_paid=%d currency=%r",
-                invoice_id or "(none)",
-                invoice_id,
-                amount_paid,
-                currency,
+                "invoice.paid skipped: missing fields invoice_id=%r amount_paid=%d currency=%r",
+                invoice.id,
+                invoice.amount_paid,
+                invoice.currency,
             )
             return False
 
-        cycle_key = f"invoice:{invoice_id}"
+        cycle_key = f"invoice:{invoice.id}"
         if self._cycle_exists(cycle_key):
             return False
 
         auth = (
             self.db.query(StripeAuthorization)
-            .filter(StripeAuthorization.stripe_subscription_id == subscription_id)
+            .filter(
+                StripeAuthorization.stripe_subscription_id == invoice.subscription_id
+            )
             .first()
         )
         if auth is None:
             logger.warning(
                 "invoice.paid for unknown subscription %s (invoice %s) — no auth found",
-                subscription_id,
-                invoice_id,
+                invoice.subscription_id,
+                invoice.id,
             )
             return False
 
-        amount = (Decimal(str(amount_paid)) / Decimal("100")).quantize(Decimal("0.01"))
+        amount = (Decimal(str(invoice.amount_paid)) / Decimal("100")).quantize(
+            Decimal("0.01")
+        )
         deposit = self._create_pending_charge_deposit(
             target_entity_id=auth.entity_id,
             amount=amount,
-            currency=currency,
+            currency=invoice.currency,
             details={
                 "donation_comment": auth.comment or None,
                 "stripe": {
                     "mode": "subscription_invoice",
-                    "subscription_id": subscription_id,
-                    "invoice_id": invoice_id,
+                    "subscription_id": invoice.subscription_id,
+                    "invoice_id": invoice.id,
                     "cycle_key": cycle_key,
-                    "billing_reason": str(invoice_obj.get("billing_reason") or ""),
+                    "billing_reason": invoice.billing_reason,
                     "authorization_id": auth.id,
                 },
             },
@@ -474,10 +462,10 @@ class StripeAuthorizationService:
         self.deposit_service.complete(deposit.id)
         logger.info(
             "Subscription invoice deposit created: invoice=%s sub=%s amount=%s %s",
-            invoice_id,
-            subscription_id,
+            invoice.id,
+            invoice.subscription_id,
             amount,
-            currency.upper(),
+            invoice.currency.upper(),
         )
         return True
 
@@ -504,27 +492,37 @@ class StripeAuthorizationService:
                     exc_info=True,
                 )
                 continue
-            logger.info(
+            logger.debug(
                 "Subscription %s: %d paid invoice(s) from Stripe",
                 auth.stripe_subscription_id,
                 len(invoices),
             )
             for invoice in invoices:
-                invoice_id = str(invoice.get("id") or "").strip()
-                if not invoice_id:
-                    continue
-                if self._cycle_exists(f"invoice:{invoice_id}"):
-                    continue
                 try:
                     if self.handle_subscription_invoice_paid(invoice):
                         processed += 1
                 except Exception:
                     logger.exception(
                         "Failed to record deposit for invoice %s (sub %s)",
-                        invoice_id,
+                        invoice.id,
                         auth.stripe_subscription_id,
                     )
         return processed
+
+    def handle_subscription_deleted(self, subscription_obj) -> None:
+        """Deactivate the StripeAuthorization when its Stripe subscription is cancelled."""
+        subscription_id = self.stripe_service._extract_object_id(subscription_obj)
+        if not subscription_id:
+            return
+        auth = (
+            self.db.query(StripeAuthorization)
+            .filter(StripeAuthorization.stripe_subscription_id == subscription_id)
+            .first()
+        )
+        if auth and auth.active:
+            auth.active = False
+            auth.modified_at = datetime.datetime.now()
+            self.db.flush()
 
     def get_customer_portal_url(
         self,

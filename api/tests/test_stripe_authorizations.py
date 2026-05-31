@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import pytest
-from app.services.stripe import StripeService
+from app.services.stripe import StripeInvoiceData, StripeService
 from fastapi.testclient import TestClient
 
 
@@ -935,16 +935,13 @@ class TestStripeSubscriptionInvoicePaid:
             if sub_id != subscription_id:
                 return []
             return [
-                {
-                    "id": "in_poll_001",
-                    "parent": {
-                        "type": "subscription_details",
-                        "subscription_details": {"subscription": sub_id},
-                    },
-                    "amount_paid": 2000,  # $20.00
-                    "currency": "usd",
-                    "billing_reason": "subscription_cycle",
-                }
+                StripeInvoiceData(
+                    id="in_poll_001",
+                    subscription_id=sub_id,
+                    amount_paid=2000,  # $20.00
+                    currency="usd",
+                    billing_reason="subscription_cycle",
+                )
             ]
 
         monkeypatch.setattr(

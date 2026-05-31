@@ -91,7 +91,8 @@ async def stripe_callback(
     ):
         stripe_authorization_service.handle_setup_session_completed(data_object)
     elif event_type == "invoice.paid":
-        stripe_authorization_service.handle_subscription_invoice_paid(data_object)
+        invoice = stripe_service.normalize_invoice(data_object)
+        stripe_authorization_service.handle_subscription_invoice_paid(invoice)
     elif event_type == "customer.subscription.deleted":
-        _handle_subscription_deleted(data_object, stripe_authorization_service)
+        stripe_authorization_service.handle_subscription_deleted(data_object)
     return PlainTextResponse("ok")

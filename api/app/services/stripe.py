@@ -52,6 +52,15 @@ class StripePaymentIntentData:
     status: str | None
 
 
+@dataclass(frozen=True)
+class StripeInvoiceData:
+    id: str
+    subscription_id: str | None
+    amount_paid: int
+    currency: str
+    billing_reason: str
+
+
 class StripeService:
     def __init__(self, config: Config = Depends(get_config)):
         self.config = config
@@ -219,24 +228,14 @@ class StripeService:
 
     def list_invoices_for_subscription(
         self, subscription_id: str, *, limit: int = 5
-    ) -> list[dict]:
+    ) -> list[StripeInvoiceData]:
         with self._stripe_call():
             result = stripe.Invoice.list(
                 subscription=subscription_id,
                 status="paid",
                 limit=limit,
             )
-            invoices = []
-            for inv in result.data:
-                if hasattr(inv, "to_dict_recursive"):
-                    d = inv.to_dict_recursive()
-                elif hasattr(inv, "to_dict"):
-                    d = inv.to_dict()
-                else:
-                    d = dict(inv)
-                if isinstance(d, dict):
-                    invoices.append(d)
-            return invoices
+            return [self.normalize_invoice(inv) for inv in result.data]
 
     # ── Webhooks ───────────────────────────────────────────────────────────
 
@@ -338,6 +337,27 @@ class StripeService:
         return StripePaymentIntentData(
             id=self._to_opt_str(payload.get("id")),
             status=self._to_opt_str(payload.get("status")),
+        )
+
+    def normalize_invoice(self, value: Any) -> StripeInvoiceData:
+        payload = self._as_dict(value, "invoice")
+        # Stripe API ≥ 2025: subscription moved from top-level to
+        # parent.subscription_details.subscription; support both.
+        subscription_id = self._extract_object_id(payload.get("subscription"))
+        if not subscription_id:
+            parent = payload.get("parent") or {}
+            if isinstance(parent, dict):
+                sub_details = parent.get("subscription_details") or {}
+                if isinstance(sub_details, dict):
+                    subscription_id = self._extract_object_id(
+                        sub_details.get("subscription")
+                    )
+        return StripeInvoiceData(
+            id=str(payload.get("id") or "").strip(),
+            subscription_id=subscription_id,
+            amount_paid=int(payload.get("amount_paid") or 0),
+            currency=str(payload.get("currency") or "").lower().strip(),
+            billing_reason=str(payload.get("billing_reason") or ""),
         )
 
     # ── Helpers ────────────────────────────────────────────────────────────
