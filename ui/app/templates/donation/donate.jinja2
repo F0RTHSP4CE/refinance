@@ -54,6 +54,7 @@
         .donation-name::placeholder {
             color: #4e4e4e;
             opacity: 1;
+            font-size: 0.7em;
         }
 
         .preset-grid {
@@ -430,7 +431,7 @@
                 <div id="onetime-section" {% if stripe_configured and form_data.type=='recurring' %} hidden{% endif %}>
                     <label class="sr-only" for="comment">Your name</label>
                     <input id="comment" name="comment" class="donation-name" type="text" maxlength="120"
-                        value="{{ form_data.comment }}" placeholder="your name / comment" autocomplete="off">
+                        value="{{ form_data.comment }}" placeholder="name / comment (optional)" autocomplete="off">
 
                     <input id="preset_amount" name="preset_amount" type="hidden" value="{{ form_data.preset_amount }}">
                     <input id="onetime_currency_value" name="onetime_currency" type="hidden"
@@ -470,7 +471,7 @@
                 <div id="recurring-section" {% if form_data.type !='recurring' %} hidden{% endif %}>
                     <label class="sr-only" for="recurring-comment">Your name</label>
                     <input id="recurring-comment" name="recurring_comment" class="donation-name" type="text"
-                        maxlength="120" value="{{ form_data.recurring_comment }}" placeholder="your name / comment"
+                        maxlength="120" value="{{ form_data.recurring_comment }}" placeholder="name / comment (optional)"
                         autocomplete="off">
 
                     <input id="recurring_preset_amount" name="recurring_preset_amount" type="hidden"
