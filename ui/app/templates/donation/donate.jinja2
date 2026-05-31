@@ -310,7 +310,7 @@
 
         #onetime-section .preset-grid,
         #recurring-section .preset-grid {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
         }
 
         .recurring-currency-select {
@@ -443,38 +443,22 @@
                             data-amount="{{ preset }}"
                             aria-pressed="{{ 'true' if form_data.preset_amount == preset and not form_data.custom_amount else 'false' }}"
                             {% if form_data.custom_amount %}disabled{% endif %}>
-                            <span class="preset-option-label">{{ preset }}</span>
+                            <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
                         </button>
                         {% endfor %}
-                        <select id="onetime_currency_preset"
-                            class="recurring-currency-select{% if form_data.custom_amount %} is-inactive{% endif %}"
-                            aria-label="Currency">
-                            {% for cur in recurring_currencies %}
-                            <option value="{{ cur }}" {% if form_data.onetime_currency==cur %} selected{% endif %}>{{
-                                recurring_currency_symbols.get(cur, cur) }}</option>
-                            {% endfor %}
-                        </select>
                     </div>
 
                     <div class="custom-amount-wrap">
-                        <div class="recurring-custom-row">
-                            <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
-                                id="custom-amount-shell">
-                                <label class="sr-only" for="custom_amount">Other amount</label>
-                                <span class="custom-amount-sizer" id="custom-amount-sizer" aria-hidden="true"></span>
-                                <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
-                                    inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
-                                    pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                                    title="Enter a positive amount with up to 2 decimal places"
-                                    placeholder="other amount &lowbar;">
-                            </div>
-                            <select id="onetime_currency_custom" class="recurring-currency-select" aria-label="Currency"
-                                {% if not form_data.custom_amount %} hidden{% endif %}>
-                                {% for cur in recurring_currencies %}
-                                <option value="{{ cur }}" {% if form_data.onetime_currency==cur %} selected{% endif %}>
-                                    {{ recurring_currency_symbols.get(cur, cur) }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
+                            id="custom-amount-shell">
+                            <label class="sr-only" for="custom_amount">Other amount</label>
+                            <span class="custom-amount-sizer" id="custom-amount-sizer" aria-hidden="true"></span>
+                            <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
+                                inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
+                                pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
+                                title="Enter a positive amount with up to 2 decimal places"
+                                placeholder="other amount &lowbar;">
+                            <span class="custom-amount-suffix" aria-hidden="true">$</span>
                         </div>
                     </div>
 
@@ -501,39 +485,23 @@
                             data-amount="{{ preset }}"
                             aria-pressed="{{ 'true' if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount else 'false' }}"
                             {% if form_data.recurring_custom_amount %}disabled{% endif %}>
-                            <span class="preset-option-label">{{ preset }}</span>
+                            <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
                         </button>
                         {% endfor %}
-                        <select id="recurring_currency_preset"
-                            class="recurring-currency-select{% if form_data.recurring_custom_amount %} is-inactive{% endif %}"
-                            aria-label="Currency">
-                            {% for cur in recurring_currencies %}
-                            <option value="{{ cur }}" {% if form_data.recurring_currency==cur %} selected{% endif %}>{{
-                                recurring_currency_symbols.get(cur, cur) }}</option>
-                            {% endfor %}
-                        </select>
                     </div>
 
                     <div class="custom-amount-wrap">
-                        <div class="recurring-custom-row">
-                            <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
-                                id="recurring-custom-amount-shell">
-                                <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
-                                <span class="custom-amount-sizer" id="recurring-custom-amount-sizer"
-                                    aria-hidden="true"></span>
-                                <input id="recurring_custom_amount" name="recurring_custom_amount"
-                                    class="custom-amount-field" type="text" inputmode="decimal" autocomplete="off"
-                                    value="{{ form_data.recurring_custom_amount }}" pattern="\d+(?:[\.,]\d{1,2})?"
-                                    maxlength="10" title="Enter a positive amount with up to 2 decimal places"
-                                    placeholder="other amount &lowbar;">
-                            </div>
-                            <select id="recurring_currency_custom" class="recurring-currency-select"
-                                aria-label="Currency" {% if not form_data.recurring_custom_amount %} hidden{% endif %}>
-                                {% for cur in recurring_currencies %}
-                                <option value="{{ cur }}" {% if form_data.recurring_currency==cur %} selected{% endif
-                                    %}>{{ recurring_currency_symbols.get(cur, cur) }}</option>
-                                {% endfor %}
-                            </select>
+                        <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
+                            id="recurring-custom-amount-shell">
+                            <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
+                            <span class="custom-amount-sizer" id="recurring-custom-amount-sizer"
+                                aria-hidden="true"></span>
+                            <input id="recurring_custom_amount" name="recurring_custom_amount"
+                                class="custom-amount-field" type="text" inputmode="decimal" autocomplete="off"
+                                value="{{ form_data.recurring_custom_amount }}" pattern="\d+(?:[\.,]\d{1,2})?"
+                                maxlength="10" title="Enter a positive amount with up to 2 decimal places"
+                                placeholder="other amount &lowbar;">
+                            <span class="custom-amount-suffix" aria-hidden="true">$</span>
                         </div>
                     </div>
 

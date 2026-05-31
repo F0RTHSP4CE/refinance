@@ -8,7 +8,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 donation_bp = Blueprint("donation", __name__)
 
-DONATION_PRESET_AMOUNTS = ("10", "20", "50")
+DONATION_PRESET_AMOUNTS = ("5", "10", "25")
 DONATION_CURRENCY = "GEL"
 DONATION_CURRENCY_SYMBOL = "\u20be"
 DONATION_AMOUNT_PATTERN = re.compile(r"^\d+(?:[\.,]\d{1,2})?$")
@@ -77,10 +77,10 @@ def donate():
         "preset_amount": "",
         "custom_amount": "",
         "type": "recurring",
-        "onetime_currency": "GEL",
+        "onetime_currency": "USD",
         "recurring_preset_amount": "",
         "recurring_custom_amount": "",
-        "recurring_currency": "GEL",
+        "recurring_currency": "USD",
     }
 
     if request.method == "POST":
@@ -91,7 +91,7 @@ def donate():
             "preset_amount": (request.form.get("preset_amount") or "").strip(),
             "custom_amount": (request.form.get("custom_amount") or "").strip(),
             "type": donation_type,
-            "onetime_currency": (request.form.get("onetime_currency") or "GEL")
+            "onetime_currency": (request.form.get("onetime_currency") or "USD")
             .strip()
             .upper(),
             "recurring_preset_amount": (
@@ -100,7 +100,7 @@ def donate():
             "recurring_custom_amount": (
                 request.form.get("recurring_custom_amount") or ""
             ).strip(),
-            "recurring_currency": (request.form.get("recurring_currency") or "GEL")
+            "recurring_currency": (request.form.get("recurring_currency") or "USD")
             .strip()
             .upper(),
         }
