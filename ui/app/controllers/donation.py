@@ -73,12 +73,12 @@ def donate():
     form_data = {
         "comment": "",
         "recurring_comment": "",
-        "preset_amount": "10",
-        "custom_amount": "",
+        "preset_amount": "",
+        "custom_amount": "10",
         "type": "recurring",
         "onetime_currency": "USD",
-        "recurring_preset_amount": "10",
-        "recurring_custom_amount": "",
+        "recurring_preset_amount": "",
+        "recurring_custom_amount": "10",
         "recurring_currency": "USD",
     }
 

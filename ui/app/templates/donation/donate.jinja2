@@ -131,7 +131,6 @@ box-shadow: 0 0 0 0 transparent;
 @media (hover: hover) {
 
 .preset-option:not(:disabled):hover,
-.custom-amount-shell:hover,
 .donation-submit:not(:disabled):hover {
 box-shadow: 0 0 0 4px var(--button-hover-border);
 }
@@ -203,11 +202,6 @@ box-shadow: 0 0 0 0 transparent;
 transition: box-shadow 0.15s ease;
 }
 
-.custom-amount-shell:focus-within {
-outline: 4px solid var(--accent);
-outline-offset: 4px;
-}
-
 .custom-amount-shell.has-value {
 --button-hover-border: #ffffff;
 border-color: var(--accent);
@@ -248,13 +242,17 @@ padding: 0 6px;
 
 .custom-amount-suffix {
 display: none;
+position: absolute;
+right: 16px;
+top: 50%;
+transform: translateY(-50%);
 color: #ffffff;
 font-family: "Geist Mono", monospace;
-font-size: clamp(28px, 4.5vw, 46px);
+font-size: clamp(16px, 2.6vw, 26px);
 font-weight: 700;
 line-height: 1;
-flex-shrink: 0;
-padding-right: 1em;
+letter-spacing: 0.02em;
+pointer-events: none;
 }
 
 .custom-amount-shell.has-value .custom-amount-suffix {
@@ -322,9 +320,8 @@ visibility: hidden;
 pointer-events: none;
 }
 
-#onetime-section .preset-grid,
-#recurring-section .preset-grid {
-grid-template-columns: repeat(4, 1fr);
+.custom-amount-shell {
+margin-top: 12px;
 }
 
 .recurring-hint {
@@ -511,23 +508,22 @@ transform: rotate(90deg);
             <div class="preset-grid" role="group" aria-label="Donation amount presets">
                 {% for preset in donation_presets %}
                 <button type="button"
-                    class="preset-option{% if form_data.preset_amount == preset and not form_data.custom_amount %} is-selected{% endif %}{% if form_data.custom_amount %} is-inactive{% endif %}"
+                    class="preset-option{% if form_data.custom_amount == preset %} is-selected{% endif %}"
                     data-amount="{{ preset }}"
-                    aria-pressed="{{ 'true' if form_data.preset_amount == preset and not form_data.custom_amount else 'false' }}"
-                    {% if form_data.custom_amount %}disabled{% endif %}>
-                    <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
+                    aria-pressed="{{ 'true' if form_data.custom_amount == preset else 'false' }}">
+                    <span class="preset-option-label">{{ preset }}</span>
                 </button>
                 {% endfor %}
-                <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
-                    id="custom-amount-shell">
-                    <label class="sr-only" for="custom_amount">Other amount</label>
-                    <span id="custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
-                    <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
-                        inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
-                        pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                        title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
-                    <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                </div>
+            </div>
+            <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
+                id="custom-amount-shell">
+                <label class="sr-only" for="custom_amount">Other amount</label>
+                <span id="custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
+                <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
+                    inputmode="numeric" autocomplete="off" value="{{ form_data.custom_amount }}"
+                    pattern="\d+" maxlength="10"
+                    title="Enter a positive whole amount" placeholder="_ USD">
+                <span class="custom-amount-suffix" aria-hidden="true">USD</span>
             </div>
 
             <label class="sr-only" for="comment">Your name</label>
@@ -564,23 +560,22 @@ transform: rotate(90deg);
             <div class="preset-grid" role="group" aria-label="Monthly donation amount presets">
                 {% for preset in donation_presets %}
                 <button type="button"
-                    class="preset-option{% if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount %} is-selected{% endif %}{% if form_data.recurring_custom_amount %} is-inactive{% endif %}"
+                    class="preset-option{% if form_data.recurring_custom_amount == preset %} is-selected{% endif %}"
                     data-amount="{{ preset }}"
-                    aria-pressed="{{ 'true' if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount else 'false' }}"
-                    {% if form_data.recurring_custom_amount %}disabled{% endif %}>
-                    <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
+                    aria-pressed="{{ 'true' if form_data.recurring_custom_amount == preset else 'false' }}">
+                    <span class="preset-option-label">{{ preset }}</span>
                 </button>
                 {% endfor %}
-                <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
-                    id="recurring-custom-amount-shell">
-                    <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
-                    <span id="recurring-custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
-                    <input id="recurring_custom_amount" name="recurring_custom_amount" class="custom-amount-field"
-                        type="text" inputmode="decimal" autocomplete="off"
-                        value="{{ form_data.recurring_custom_amount }}" pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                        title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
-                    <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                </div>
+            </div>
+            <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
+                id="recurring-custom-amount-shell">
+                <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
+                <span id="recurring-custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
+                <input id="recurring_custom_amount" name="recurring_custom_amount" class="custom-amount-field"
+                    type="text" inputmode="numeric" autocomplete="off"
+                    value="{{ form_data.recurring_custom_amount }}" pattern="\d+" maxlength="10"
+                    title="Enter a positive whole amount" placeholder="_ USD">
+                <span class="custom-amount-suffix" aria-hidden="true">USD</span>
             </div>
 
             <label class="sr-only" for="recurring-comment">Your name</label>
@@ -649,16 +644,8 @@ transform: rotate(90deg);
         return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
     }
 
-    function resizeCustomAmountField() {
-        if (!customAmountInput || !customAmountSizer) return;
-        if (!customAmountInput.value.trim()) {
-            customAmountInput.style.width = "";
-            return;
-        }
-        customAmountSizer.textContent = customAmountInput.value;
-        const measuredWidth = Math.ceil(customAmountSizer.getBoundingClientRect().width) + 8;
-        const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-        customAmountInput.style.width = `${clampedWidth}px`;
+    function sanitizeAmount(value) {
+        return value.replace(/\D/g, "");
     }
 
     function updatePresetSelection(buttons, selectedAmount) {
@@ -669,47 +656,24 @@ transform: rotate(90deg);
         });
     }
 
-    function updatePresetAvailability(buttons, isInactive) {
-        buttons.forEach((button) => {
-            button.disabled = isInactive;
-            button.classList.toggle("is-inactive", isInactive);
-        });
-    }
-
     function updateCustomAmountState() {
         if (!customAmountInput || !customAmountShell) return;
-        const hasValue = customAmountInput.value.trim() !== "";
+        const sanitized = sanitizeAmount(customAmountInput.value);
+        if (sanitized !== customAmountInput.value) customAmountInput.value = sanitized;
+        const hasValue = sanitized.trim() !== "";
         customAmountShell.classList.toggle("has-value", hasValue);
-        if (hasValue) {
-            presetInput.value = "";
-            updatePresetSelection(presetButtons, "");
-        }
-        updatePresetAvailability(presetButtons, hasValue);
-        resizeCustomAmountField();
-    }
-
-    function resizeRecurringCustomAmountField() {
-        if (!recurringCustomAmountInput || !recurringCustomAmountSizer) return;
-        if (!recurringCustomAmountInput.value.trim()) {
-            recurringCustomAmountInput.style.width = "";
-            return;
-        }
-        recurringCustomAmountSizer.textContent = recurringCustomAmountInput.value;
-        const measuredWidth = Math.ceil(recurringCustomAmountSizer.getBoundingClientRect().width) + 8;
-        const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-        recurringCustomAmountInput.style.width = `${clampedWidth}px`;
+        if (presetInput) presetInput.value = "";
+        updatePresetSelection(presetButtons, sanitized);
     }
 
     function updateRecurringCustomAmountState() {
         if (!recurringCustomAmountInput || !recurringCustomAmountShell) return;
-        const hasValue = recurringCustomAmountInput.value.trim() !== "";
+        const sanitized = sanitizeAmount(recurringCustomAmountInput.value);
+        if (sanitized !== recurringCustomAmountInput.value) recurringCustomAmountInput.value = sanitized;
+        const hasValue = sanitized.trim() !== "";
         recurringCustomAmountShell.classList.toggle("has-value", hasValue);
-        if (hasValue) {
-            recurringPresetInput.value = "";
-            updatePresetSelection(recurringPresetButtons, "");
-        }
-        updatePresetAvailability(recurringPresetButtons, hasValue);
-        resizeRecurringCustomAmountField();
+        if (recurringPresetInput) recurringPresetInput.value = "";
+        updatePresetSelection(recurringPresetButtons, sanitized);
     }
 
     function switchTab(type) {
@@ -717,7 +681,6 @@ transform: rotate(90deg);
         typeTabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.type === type));
         if (onetimeSection) onetimeSection.hidden = (type === "recurring");
         if (recurringSection) recurringSection.hidden = (type !== "recurring");
-        if (type === "recurring") resizeRecurringCustomAmountField();
         clearJsError();
     }
 
@@ -727,25 +690,17 @@ transform: rotate(90deg);
 
     presetButtons.forEach((button) => {
         button.addEventListener("click", () => {
-            const amount = button.dataset.amount;
-            presetInput.value = amount;
-            if (customAmountInput) { customAmountInput.value = ""; }
-            if (customAmountShell) { customAmountShell.classList.remove("has-value"); }
-            updatePresetSelection(presetButtons, amount);
-            updatePresetAvailability(presetButtons, false);
-            resizeCustomAmountField();
+            if (!customAmountInput) return;
+            customAmountInput.value = button.dataset.amount;
+            updateCustomAmountState();
         });
     });
 
     recurringPresetButtons.forEach((button) => {
         button.addEventListener("click", () => {
-            const amount = button.dataset.amount;
-            recurringPresetInput.value = amount;
-            if (recurringCustomAmountInput) { recurringCustomAmountInput.value = ""; }
-            if (recurringCustomAmountShell) { recurringCustomAmountShell.classList.remove("has-value"); }
-            updatePresetSelection(recurringPresetButtons, amount);
-            updatePresetAvailability(recurringPresetButtons, false);
-            resizeRecurringCustomAmountField();
+            if (!recurringCustomAmountInput) return;
+            recurringCustomAmountInput.value = button.dataset.amount;
+            updateRecurringCustomAmountState();
         });
     });
 
@@ -820,16 +775,9 @@ transform: rotate(90deg);
 
     if (customAmountInput) customAmountInput.addEventListener("input", updateCustomAmountState);
     if (recurringCustomAmountInput) recurringCustomAmountInput.addEventListener("input", updateRecurringCustomAmountState);
-    window.addEventListener("resize", resizeCustomAmountField);
-    window.addEventListener("resize", resizeRecurringCustomAmountField);
 
-    updatePresetSelection(presetButtons, presetInput.value);
     updateCustomAmountState();
-    if (recurringPresetInput) updatePresetSelection(recurringPresetButtons, recurringPresetInput.value);
     if (recurringCustomAmountInput) updateRecurringCustomAmountState();
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => { resizeCustomAmountField(); resizeRecurringCustomAmountField(); });
-    }
 
     const faqDetails = Array.from(document.querySelectorAll(".donation-faq details"));
     faqDetails.forEach((d) => {
