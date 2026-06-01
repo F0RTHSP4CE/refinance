@@ -1034,15 +1034,18 @@ class StripeAuthorizationService:
             )
             .all()
         )
-        invoice_totals: dict[str, Decimal] = {}
+        invoice_list: list[dict[str, Decimal]] = []
         for inv in pending_invoices:
+            options: dict[str, Decimal] = {}
             for item in inv.amounts or []:
                 currency = str(item.get("currency") or "").lower().strip()
                 if not currency:
                     continue
-                invoice_totals[currency] = invoice_totals.get(
-                    currency, Decimal("0")
-                ) + Decimal(str(item.get("amount") or "0"))
+                options[currency] = options.get(currency, Decimal("0")) + Decimal(
+                    str(item.get("amount") or "0")
+                )
+            if options:
+                invoice_list.append(options)
 
         balances = self.balance_service.get_balances(entity_id)
         completed_totals: dict[str, Decimal] = {
@@ -1052,7 +1055,7 @@ class StripeAuthorizationService:
         }
 
         return calculate_entity_owed(
-            pending_invoice_totals=invoice_totals,
+            pending_invoices=invoice_list,
             completed_balances=completed_totals,
             convert_amount=self._convert_amount,
         )

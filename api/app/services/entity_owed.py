@@ -31,21 +31,49 @@ def _normalize_currency_amounts(values: Mapping[str, Decimal]) -> dict[str, Deci
 
 def calculate_entity_owed(
     *,
-    pending_invoice_totals: Mapping[str, Decimal],
+    pending_invoices: list[Mapping[str, Decimal]],
     completed_balances: Mapping[str, Decimal],
     convert_amount: Callable[[Decimal, str, str], Decimal],
     currency_candidates: Iterable[str] | None = None,
 ) -> EntityOwedSummary:
     """Calculate owed amounts and minimal top-up recommendation.
 
-    Owed side per currency = unpaid invoices + absolute value of negative balances.
-    All positive balances in any currency are converted to USD and counted as
-    available credit, so a currency exchange can substitute for a Stripe charge.
+    Each element of ``pending_invoices`` is one invoice represented as a
+    ``{currency: amount}`` mapping of alternative payment options.  Paying in
+    *any* of those currencies satisfies that invoice, so only the cheapest
+    option (by USD equivalent) is counted toward the total owed.
+
+    Owed side per currency = (min-USD option for each invoice) + absolute value
+    of negative balances.  All positive balances in any currency are converted
+    to USD and counted as available credit so a currency exchange can substitute
+    for a Stripe charge.
     """
-    invoice_totals = _normalize_currency_amounts(pending_invoice_totals)
     balances = _normalize_currency_amounts(completed_balances)
 
-    owed_by_currency: dict[str, Decimal] = dict(invoice_totals)
+    owed_by_currency: dict[str, Decimal] = {}
+
+    # For each invoice pick the currency option whose USD equivalent is lowest.
+    for invoice_options in pending_invoices:
+        normalized = _normalize_currency_amounts(invoice_options)
+        best_currency: str | None = None
+        best_usd: Decimal | None = None
+        best_amount: Decimal | None = None
+        for currency, amount in sorted(normalized.items()):
+            if amount <= 0:
+                continue
+            try:
+                usd_val = Decimal(str(convert_amount(amount, currency, "usd")))
+            except Exception:
+                continue
+            if best_usd is None or usd_val < best_usd:
+                best_usd = usd_val
+                best_currency = currency
+                best_amount = amount
+        if best_currency is not None and best_amount is not None:
+            owed_by_currency[best_currency] = (
+                owed_by_currency.get(best_currency, Decimal("0")) + best_amount
+            )
+
     for currency, balance in balances.items():
         if balance < 0:
             owed_by_currency[currency] = owed_by_currency.get(

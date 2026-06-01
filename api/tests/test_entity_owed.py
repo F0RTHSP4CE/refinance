@@ -31,7 +31,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={},
+            pending_invoices=[],
             completed_balances={"usd": Decimal("100"), "gel": Decimal("-270")},
             convert_amount=convert,
         )
@@ -50,7 +50,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={"usd": Decimal("40")},
+            pending_invoices=[{"usd": Decimal("40")}],
             completed_balances={"usd": Decimal("-10")},
             convert_amount=convert,
         )
@@ -70,7 +70,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={"usd": Decimal("300")},
+            pending_invoices=[{"usd": Decimal("300")}],
             completed_balances={"usd": Decimal("20"), "eur": Decimal("20")},
             convert_amount=convert,
         )
@@ -92,7 +92,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={"gel": Decimal("270")},
+            pending_invoices=[{"gel": Decimal("270")}],
             completed_balances={"usd": Decimal("100")},
             convert_amount=convert,
         )
@@ -114,7 +114,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={},
+            pending_invoices=[],
             completed_balances={
                 "eur": Decimal("-7"),
                 "usd": Decimal("0"),
@@ -140,7 +140,7 @@ class TestEntityOwedCalculator:
         )
 
         summary = calculate_entity_owed(
-            pending_invoice_totals={"usd": Decimal("12")},
+            pending_invoices=[{"usd": Decimal("12")}],
             completed_balances={},
             convert_amount=convert,
             currency_candidates=[],
@@ -148,3 +148,69 @@ class TestEntityOwedCalculator:
 
         assert summary.minimum_topup_currency == "usd"
         assert summary.minimum_topup_amount == Decimal("12.00")
+
+    def test_multi_currency_invoice_counted_once(self):
+        # Invoice with 25 USD / 70 GEL alternatives must be counted as 25 USD,
+        # not as 25 USD + 70 GEL (≈ 25.9 USD at the test rate).
+        # 1 GEL = 0.37 USD  →  25 USD < 70 * 0.37 = 25.9 USD, so USD is cheaper.
+        convert = _stub_converter_factory(
+            {
+                "usd": Decimal("1"),
+                "gel": Decimal("0.37"),
+            }
+        )
+
+        summary = calculate_entity_owed(
+            pending_invoices=[{"usd": Decimal("25"), "gel": Decimal("70")}],
+            completed_balances={},
+            convert_amount=convert,
+        )
+
+        # Should owe exactly 25 USD (the cheaper option), not 25 + 25.9
+        assert summary.total_owed_usd == Decimal("25.00")
+        assert summary.net_owed_usd == Decimal("25.00")
+        assert summary.owed_by_currency == {"usd": Decimal("25")}
+        assert summary.minimum_topup_currency == "usd"
+        assert summary.minimum_topup_amount == Decimal("25.00")
+
+    def test_multi_currency_invoice_picks_gel_when_cheaper(self):
+        # Invoice 25 USD / 50 GEL; at 1 GEL = 0.37 USD, 50 GEL ≈ 18.5 USD < 25 USD
+        # so GEL is cheaper and should be selected.
+        convert = _stub_converter_factory(
+            {
+                "usd": Decimal("1"),
+                "gel": Decimal("0.37"),
+            }
+        )
+
+        summary = calculate_entity_owed(
+            pending_invoices=[{"usd": Decimal("25"), "gel": Decimal("50")}],
+            completed_balances={},
+            convert_amount=convert,
+        )
+
+        assert summary.total_owed_usd.quantize(Decimal("0.01")) == Decimal("18.50")
+        assert summary.owed_by_currency == {"gel": Decimal("50")}
+
+    def test_two_invoices_summed_independently(self):
+        # Two invoices: invoice A = 30 USD only, invoice B = 20 USD / 60 GEL.
+        # 60 GEL * 0.37 = 22.2 USD > 20 USD, so USD is chosen for invoice B too.
+        # Total owed = 30 + 20 = 50 USD.
+        convert = _stub_converter_factory(
+            {
+                "usd": Decimal("1"),
+                "gel": Decimal("0.37"),
+            }
+        )
+
+        summary = calculate_entity_owed(
+            pending_invoices=[
+                {"usd": Decimal("30")},
+                {"usd": Decimal("20"), "gel": Decimal("60")},
+            ],
+            completed_balances={},
+            convert_amount=convert,
+        )
+
+        assert summary.total_owed_usd == Decimal("50.00")
+        assert summary.owed_by_currency == {"usd": Decimal("50")}

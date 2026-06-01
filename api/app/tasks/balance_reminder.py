@@ -60,14 +60,23 @@ def _fmt_amounts(amounts: list[dict]) -> str:
     return " or ".join(parts)
 
 
-def _sum_invoice_amounts(invoices: list[Invoice]) -> dict[str, Decimal]:
-    totals: dict[str, Decimal] = {}
+def _per_invoice_amounts(invoices: list[Invoice]) -> list[dict[str, Decimal]]:
+    """Return per-invoice alternative currency amounts.
+
+    Each element is one invoice represented as ``{currency: amount}`` where the
+    currencies are *alternatives* — paying in any single one satisfies the invoice.
+    """
+    result: list[dict[str, Decimal]] = []
     for inv in invoices:
+        options: dict[str, Decimal] = {}
         for entry in inv.amounts or []:
             currency = str(entry.get("currency", "")).lower()
             amount = Decimal(str(entry.get("amount", "0")))
-            totals[currency] = totals.get(currency, Decimal(0)) + amount
-    return totals
+            if currency:
+                options[currency] = options.get(currency, Decimal(0)) + amount
+        if options:
+            result.append(options)
+    return result
 
 
 def _calc_recommended_topup(
@@ -79,9 +88,8 @@ def _calc_recommended_topup(
 
     Uses the shared owed calculation so reminders match Stripe auto-charge logic.
     """
-    invoice_totals = _sum_invoice_amounts(pending_invoices)
     summary = calculate_entity_owed(
-        pending_invoice_totals=invoice_totals,
+        pending_invoices=_per_invoice_amounts(pending_invoices),
         completed_balances=all_balances,
         convert_amount=convert_amount,
     )
