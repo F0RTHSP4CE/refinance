@@ -55,9 +55,13 @@ def _parse_amount(raw_amount: str) -> Decimal:
 
 
 def _submitted_amount(form_data: dict[str, str]) -> Decimal:
+    custom_amount = form_data["custom_amount"].strip()
+    if custom_amount:
+        return _parse_amount(custom_amount)
+
     preset_amount = form_data["preset_amount"].strip()
     if not preset_amount:
-        raise ValueError("Select a donation amount.")
+        raise ValueError("Select a donation amount or enter another amount.")
     if preset_amount not in DONATION_PRESET_AMOUNTS:
         raise ValueError("Select one of the available donation amounts.")
 
@@ -70,9 +74,11 @@ def donate():
         "comment": "",
         "recurring_comment": "",
         "preset_amount": "10",
+        "custom_amount": "",
         "type": "recurring",
         "onetime_currency": "USD",
         "recurring_preset_amount": "10",
+        "recurring_custom_amount": "",
         "recurring_currency": "USD",
     }
 
@@ -82,12 +88,16 @@ def donate():
             "comment": (request.form.get("comment") or "").strip(),
             "recurring_comment": (request.form.get("recurring_comment") or "").strip(),
             "preset_amount": (request.form.get("preset_amount") or "").strip(),
+            "custom_amount": (request.form.get("custom_amount") or "").strip(),
             "type": donation_type,
             "onetime_currency": (request.form.get("onetime_currency") or "USD")
             .strip()
             .upper(),
             "recurring_preset_amount": (
                 request.form.get("recurring_preset_amount") or ""
+            ).strip(),
+            "recurring_custom_amount": (
+                request.form.get("recurring_custom_amount") or ""
             ).strip(),
             "recurring_currency": (request.form.get("recurring_currency") or "USD")
             .strip()
@@ -100,9 +110,11 @@ def donate():
                     raise ValueError(
                         "Recurring donations are not available at this time."
                     )
-                recurring_amount_raw = form_data["recurring_preset_amount"]
+                recurring_custom = form_data["recurring_custom_amount"]
+                recurring_preset = form_data["recurring_preset_amount"]
+                recurring_amount_raw = recurring_custom or recurring_preset
                 if not recurring_amount_raw:
-                    raise ValueError("Select a monthly amount.")
+                    raise ValueError("Select a monthly amount or enter another amount.")
                 amount = _parse_amount(recurring_amount_raw)
                 currency = form_data["recurring_currency"]
                 if currency not in RECURRING_CURRENCIES:
