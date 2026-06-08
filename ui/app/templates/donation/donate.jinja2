@@ -491,6 +491,71 @@ transform: rotate(90deg);
 }
 {% endblock %}
 
+{% macro donation_faq(processor) %}
+<div class="donation-faq">
+    <details>
+        <summary>Is my donation secure?</summary>
+        <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner
+            with {{ processor }}, the industry's established payment processor trusted by some of the world's largest
+            companies.<br><br>Your sensitive financial information never touches our servers. We send all
+            data directly to {{ processor }}'s PCI-compliant servers through SSL.</p>
+    </details>
+    <details>
+        <summary>Can I cancel my recurring donation?</summary>
+        <p>Of course. You always remain in full control of your recurring donation, and you're free to
+            change or cancel it at any time.
+            &gt;&gt;&gt; <a href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00" target="_blank"
+                rel="noopener noreferrer">Manage subscription</a>
+        </p>
+    </details>
+</div>
+{% endmacro %}
+
+{% macro donation_section(
+section_id, hidden,
+preset_field, preset_value,
+currency_id, currency_name, currency_value,
+custom_field, custom_value, custom_shell_id, sizer_id,
+grid_label, custom_label,
+comment_id, comment_name, comment_value,
+submit_label, hint, processor
+) %}
+<div id="{{ section_id }}" {% if hidden %} hidden{% endif %}>
+    <input id="{{ preset_field }}" name="{{ preset_field }}" type="hidden" value="{{ preset_value }}">
+    <input id="{{ currency_id }}" name="{{ currency_name }}" type="hidden" value="{{ currency_value }}">
+
+    <div class="preset-grid" role="group" aria-label="{{ grid_label }}">
+        {% for preset in donation_presets %}
+        <button type="button"
+            class="preset-option{% if preset_value == preset and not custom_value %} is-selected{% endif %}{% if custom_value %} is-inactive{% endif %}"
+            data-amount="{{ preset }}"
+            aria-pressed="{{ 'true' if preset_value == preset and not custom_value else 'false' }}" {% if custom_value
+            %}disabled{% endif %}>
+            <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
+        </button>
+        {% endfor %}
+        <div class="custom-amount-shell{% if custom_value %} has-value{% endif %}" id="{{ custom_shell_id }}">
+            <label class="sr-only" for="{{ custom_field }}">{{ custom_label }}</label>
+            <span id="{{ sizer_id }}" class="custom-amount-sizer" aria-hidden="true"></span>
+            <input id="{{ custom_field }}" name="{{ custom_field }}" class="custom-amount-field" type="text"
+                inputmode="decimal" autocomplete="off" value="{{ custom_value }}" pattern="\d+(?:[\.,]\d{1,2})?"
+                maxlength="10" title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
+            <span class="custom-amount-suffix" aria-hidden="true">$</span>
+        </div>
+    </div>
+
+    <label class="sr-only" for="{{ comment_id }}">Your name</label>
+    <input id="{{ comment_id }}" name="{{ comment_name }}" class="donation-name" type="text" maxlength="120"
+        value="{{ comment_value }}" placeholder="name / comment (optional)" autocomplete="off">
+
+    <button type="submit" class="donation-submit"><span class="donation-submit-label">{{ submit_label }}</span></button>
+
+    <p class="recurring-hint">{{ hint }}</p>
+
+    {{ donation_faq(processor) }}
+</div>
+{% endmacro %}
+
 {% block pre_brand %}
 <div id="donation-js-error" class="donation-message error" hidden></div>
 {% endblock %}
@@ -510,113 +575,32 @@ transform: rotate(90deg);
     {% endif %}
 
     <div class="donation-sections">
-        <div id="onetime-section" {% if stripe_configured and form_data.type=='recurring' %} hidden{% endif %}>
-            <input id="preset_amount" name="preset_amount" type="hidden" value="{{ form_data.preset_amount }}">
-            <input id="onetime_currency_value" name="onetime_currency" type="hidden"
-                value="{{ form_data.onetime_currency }}">
-
-            <div class="preset-grid" role="group" aria-label="Donation amount presets">
-                {% for preset in donation_presets %}
-                <button type="button"
-                    class="preset-option{% if form_data.preset_amount == preset and not form_data.custom_amount %} is-selected{% endif %}{% if form_data.custom_amount %} is-inactive{% endif %}"
-                    data-amount="{{ preset }}"
-                    aria-pressed="{{ 'true' if form_data.preset_amount == preset and not form_data.custom_amount else 'false' }}"
-                    {% if form_data.custom_amount %}disabled{% endif %}>
-                    <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
-                </button>
-                {% endfor %}
-                <div class="custom-amount-shell{% if form_data.custom_amount %} has-value{% endif %}"
-                    id="custom-amount-shell">
-                    <label class="sr-only" for="custom_amount">Other amount</label>
-                    <span id="custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
-                    <input id="custom_amount" name="custom_amount" class="custom-amount-field" type="text"
-                        inputmode="decimal" autocomplete="off" value="{{ form_data.custom_amount }}"
-                        pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                        title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
-                    <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                </div>
-            </div>
-
-            <label class="sr-only" for="comment">Your name</label>
-            <input id="comment" name="comment" class="donation-name" type="text" maxlength="120"
-                value="{{ form_data.comment }}" placeholder="name / comment (optional)" autocomplete="off">
-
-            <button type="submit" class="donation-submit"><span class="donation-submit-label">Donate</span></button>
-
-            <p class="recurring-hint">We accept any cards and Apple Pay.</p>
-
-            <div class="donation-faq">
-                <details>
-                    <summary>Is my donation secure?</summary>
-                    <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner
-                        with Keepz, the industry's established payment processor trusted by some of the world's largest
-                        companies.<br><br>Your sensitive financial information never touches our servers. We send all
-                        data directly to Keepz's PCI-compliant servers through SSL.</p>
-                </details>
-                <details>
-                    <summary>Can I cancel my recurring donation?</summary>
-                    <p>Of course. You always remain in full control of your recurring donation, and you’re free to
-                        change or cancel it at any time.</p>
-                </details>
-                <a class="donation-faq-link" href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00"
-                    target="_blank" rel="noopener noreferrer">Manage subscription</a>
-            </div>
-        </div>
+        {{ donation_section(
+        section_id="onetime-section",
+        hidden=(stripe_configured and form_data.type == "recurring"),
+        preset_field="preset_amount", preset_value=form_data.preset_amount,
+        currency_id="onetime_currency_value", currency_name="onetime_currency",
+        currency_value=form_data.onetime_currency,
+        custom_field="custom_amount", custom_value=form_data.custom_amount, custom_shell_id="custom-amount-shell",
+        sizer_id="custom-amount-sizer",
+        grid_label="Donation amount presets", custom_label="Other amount",
+        comment_id="comment", comment_name="comment", comment_value=form_data.comment,
+        submit_label="Donate", hint="We accept any cards and Apple Pay.", processor="Keepz"
+        ) }}
 
         {% if stripe_configured %}
-        <div id="recurring-section" {% if form_data.type !='recurring' %} hidden{% endif %}>
-            <input id="recurring_preset_amount" name="recurring_preset_amount" type="hidden"
-                value="{{ form_data.recurring_preset_amount }}">
-            <input id="recurring_currency_value" name="recurring_currency" type="hidden"
-                value="{{ form_data.recurring_currency }}">
-
-            <div class="preset-grid" role="group" aria-label="Monthly donation amount presets">
-                {% for preset in donation_presets %}
-                <button type="button"
-                    class="preset-option{% if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount %} is-selected{% endif %}{% if form_data.recurring_custom_amount %} is-inactive{% endif %}"
-                    data-amount="{{ preset }}"
-                    aria-pressed="{{ 'true' if form_data.recurring_preset_amount == preset and not form_data.recurring_custom_amount else 'false' }}"
-                    {% if form_data.recurring_custom_amount %}disabled{% endif %}>
-                    <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
-                </button>
-                {% endfor %}
-                <div class="custom-amount-shell{% if form_data.recurring_custom_amount %} has-value{% endif %}"
-                    id="recurring-custom-amount-shell">
-                    <label class="sr-only" for="recurring_custom_amount">Other monthly amount</label>
-                    <span id="recurring-custom-amount-sizer" class="custom-amount-sizer" aria-hidden="true"></span>
-                    <input id="recurring_custom_amount" name="recurring_custom_amount" class="custom-amount-field"
-                        type="text" inputmode="decimal" autocomplete="off"
-                        value="{{ form_data.recurring_custom_amount }}" pattern="\d+(?:[\.,]\d{1,2})?" maxlength="10"
-                        title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
-                    <span class="custom-amount-suffix" aria-hidden="true">$</span>
-                </div>
-            </div>
-
-            <label class="sr-only" for="recurring-comment">Your name</label>
-            <input id="recurring-comment" name="recurring_comment" class="donation-name" type="text" maxlength="120"
-                value="{{ form_data.recurring_comment }}" placeholder="name / comment (optional)" autocomplete="off">
-
-            <button type="submit" class="donation-submit"><span class="donation-submit-label">Subscribe</span></button>
-
-            <p class="recurring-hint">Your card will be charged every month.</p>
-
-            <div class="donation-faq">
-                <details>
-                    <summary>Is my donation secure?</summary>
-                    <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner
-                        with Stripe, the industry's established payment processor trusted by some of the world's largest
-                        companies.<br><br>Your sensitive financial information never touches our servers. We send all
-                        data directly to Stripe's PCI-compliant servers through SSL.</p>
-                </details>
-                <details>
-                    <summary>Can I cancel my recurring donation?</summary>
-                    <p>Of course. You always remain in full control of your recurring donation, and you’re free to
-                        change or cancel it at any time.</p>
-                </details>
-                <a class="donation-faq-link" href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00"
-                    target="_blank" rel="noopener noreferrer">Manage subscription</a>
-            </div>
-        </div>
+        {{ donation_section(
+        section_id="recurring-section",
+        hidden=(form_data.type != "recurring"),
+        preset_field="recurring_preset_amount", preset_value=form_data.recurring_preset_amount,
+        currency_id="recurring_currency_value", currency_name="recurring_currency",
+        currency_value=form_data.recurring_currency,
+        custom_field="recurring_custom_amount", custom_value=form_data.recurring_custom_amount,
+        custom_shell_id="recurring-custom-amount-shell", sizer_id="recurring-custom-amount-sizer",
+        grid_label="Monthly donation amount presets", custom_label="Other monthly amount",
+        comment_id="recurring-comment", comment_name="recurring_comment", comment_value=form_data.recurring_comment,
+        submit_label="Subscribe", hint="Your card will be charged every month.", processor="Stripe"
+        ) }}
         {% endif %}
     </div>
 </form>
@@ -636,8 +620,8 @@ transform: rotate(90deg);
     const presetButtons = Array.from(document.querySelectorAll("#onetime-section .preset-option"));
     const submitButtons = Array.from(document.querySelectorAll(".donation-submit"));
     const jsErrorContainer = document.getElementById("donation-js-error");
-    const onetimeSection = document.getElementById("onetime-section");
-    const recurringSection = document.getElementById("recurring-section");
+    const onetimeSectionEl = document.getElementById("onetime-section");
+    const recurringSectionEl = document.getElementById("recurring-section");
     const typeTabs = Array.from(document.querySelectorAll(".type-tab"));
     const recurringPresetInput = document.getElementById("recurring_preset_amount");
     const recurringPresetButtons = Array.from(document.querySelectorAll("#recurring-section .preset-option"));
@@ -660,18 +644,6 @@ transform: rotate(90deg);
         return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
     }
 
-    function resizeCustomAmountField() {
-        if (!customAmountInput || !customAmountSizer) return;
-        if (!customAmountInput.value.trim()) {
-            customAmountInput.style.width = "";
-            return;
-        }
-        customAmountSizer.textContent = customAmountInput.value;
-        const measuredWidth = Math.ceil(customAmountSizer.getBoundingClientRect().width) + 8;
-        const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-        customAmountInput.style.width = `${clampedWidth}px`;
-    }
-
     function updatePresetSelection(buttons, selectedAmount) {
         buttons.forEach((button) => {
             const isSelected = button.dataset.amount === selectedAmount;
@@ -687,48 +659,69 @@ transform: rotate(90deg);
         });
     }
 
-    function updateCustomAmountState() {
-        if (!customAmountInput || !customAmountShell) return;
-        const hasValue = customAmountInput.value.trim() !== "";
-        customAmountShell.classList.toggle("has-value", hasValue);
-        if (hasValue) {
-            presetInput.value = "";
-            updatePresetSelection(presetButtons, "");
+    function makeAmountSection(cfg) {
+        function resize() {
+            if (!cfg.customInput || !cfg.customSizer) return;
+            if (!cfg.customInput.value.trim()) { cfg.customInput.style.width = ""; return; }
+            cfg.customSizer.textContent = cfg.customInput.value;
+            const measured = Math.ceil(cfg.customSizer.getBoundingClientRect().width) + 8;
+            cfg.customInput.style.width = `${Math.min(Math.max(measured, 96), window.innerWidth <= 700 ? 280 : 320)}px`;
         }
-        updatePresetAvailability(presetButtons, hasValue);
-        resizeCustomAmountField();
+        function updateState() {
+            if (!cfg.customInput || !cfg.customShell) return;
+            const hasValue = cfg.customInput.value.trim() !== "";
+            cfg.customShell.classList.toggle("has-value", hasValue);
+            if (hasValue) { cfg.presetInput.value = ""; updatePresetSelection(cfg.presetButtons, ""); }
+            updatePresetAvailability(cfg.presetButtons, hasValue);
+            resize();
+        }
+        cfg.presetButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const amount = btn.dataset.amount;
+                cfg.presetInput.value = amount;
+                if (cfg.customInput) cfg.customInput.value = "";
+                if (cfg.customShell) cfg.customShell.classList.remove("has-value");
+                updatePresetSelection(cfg.presetButtons, amount);
+                updatePresetAvailability(cfg.presetButtons, false);
+                resize();
+            });
+        });
+        if (cfg.customInput) cfg.customInput.addEventListener("input", updateState);
+        window.addEventListener("resize", resize);
+        return { resize, updateState };
     }
 
-    function resizeRecurringCustomAmountField() {
-        if (!recurringCustomAmountInput || !recurringCustomAmountSizer) return;
-        if (!recurringCustomAmountInput.value.trim()) {
-            recurringCustomAmountInput.style.width = "";
-            return;
-        }
-        recurringCustomAmountSizer.textContent = recurringCustomAmountInput.value;
-        const measuredWidth = Math.ceil(recurringCustomAmountSizer.getBoundingClientRect().width) + 8;
-        const clampedWidth = Math.min(Math.max(measuredWidth, 96), window.innerWidth <= 700 ? 280 : 320);
-        recurringCustomAmountInput.style.width = `${clampedWidth}px`;
+    function validateAmount(raw, emptyMsg) {
+        if (!raw) return emptyMsg;
+        const amount = parseFloat(raw);
+        if (isNaN(amount) || amount <= 0) return "Enter a valid donation amount.";
+        if (amount < DONATION_MIN_AMOUNT) return `Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`;
+        if (amount > DONATION_MAX_AMOUNT) return `Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`;
+        return null;
     }
 
-    function updateRecurringCustomAmountState() {
-        if (!recurringCustomAmountInput || !recurringCustomAmountShell) return;
-        const hasValue = recurringCustomAmountInput.value.trim() !== "";
-        recurringCustomAmountShell.classList.toggle("has-value", hasValue);
-        if (hasValue) {
-            recurringPresetInput.value = "";
-            updatePresetSelection(recurringPresetButtons, "");
-        }
-        updatePresetAvailability(recurringPresetButtons, hasValue);
-        resizeRecurringCustomAmountField();
-    }
+    const onetime = makeAmountSection({
+        presetInput,
+        presetButtons,
+        customInput: customAmountInput,
+        customShell: customAmountShell,
+        customSizer: customAmountSizer,
+    });
+
+    const recurring = makeAmountSection({
+        presetInput: recurringPresetInput,
+        presetButtons: recurringPresetButtons,
+        customInput: recurringCustomAmountInput,
+        customShell: recurringCustomAmountShell,
+        customSizer: recurringCustomAmountSizer,
+    });
 
     function switchTab(type) {
         donationTypeInput.value = type;
         typeTabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.type === type));
-        if (onetimeSection) onetimeSection.hidden = (type === "recurring");
-        if (recurringSection) recurringSection.hidden = (type !== "recurring");
-        if (type === "recurring") resizeRecurringCustomAmountField();
+        if (onetimeSectionEl) onetimeSectionEl.hidden = (type === "recurring");
+        if (recurringSectionEl) recurringSectionEl.hidden = (type !== "recurring");
+        if (type === "recurring") recurring.resize();
         clearJsError();
     }
 
@@ -736,134 +729,50 @@ transform: rotate(90deg);
         tab.addEventListener("click", () => switchTab(tab.dataset.type));
     });
 
-    presetButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const amount = button.dataset.amount;
-            presetInput.value = amount;
-            if (customAmountInput) { customAmountInput.value = ""; }
-            if (customAmountShell) { customAmountShell.classList.remove("has-value"); }
-            updatePresetSelection(presetButtons, amount);
-            updatePresetAvailability(presetButtons, false);
-            resizeCustomAmountField();
-        });
-    });
-
-    recurringPresetButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const amount = button.dataset.amount;
-            recurringPresetInput.value = amount;
-            if (recurringCustomAmountInput) { recurringCustomAmountInput.value = ""; }
-            if (recurringCustomAmountShell) { recurringCustomAmountShell.classList.remove("has-value"); }
-            updatePresetSelection(recurringPresetButtons, amount);
-            updatePresetAvailability(recurringPresetButtons, false);
-            resizeRecurringCustomAmountField();
-        });
-    });
-
     donationForm.addEventListener("submit", (event) => {
         clearJsError();
-        const currentType = donationTypeInput ? donationTypeInput.value : "onetime";
+        const isRecurring = (donationTypeInput ? donationTypeInput.value : "onetime") === "recurring";
+        const customRaw = isRecurring
+            ? (recurringCustomAmountInput ? recurringCustomAmountInput.value.trim() : "")
+            : (customAmountInput ? customAmountInput.value.trim() : "");
+        const presetRaw = isRecurring
+            ? (recurringPresetInput ? recurringPresetInput.value.trim() : "")
+            : presetInput.value.trim();
+        const raw = (customRaw || presetRaw).replace(",", ".");
+        const emptyMsg = isRecurring
+            ? "Select a monthly amount or enter another amount."
+            : "Select a donation amount or enter another amount.";
+        const error = validateAmount(raw, emptyMsg);
+        if (error) { event.preventDefault(); showJsError(error); return; }
 
-        if (currentType === "recurring") {
-            const customRaw = recurringCustomAmountInput ? recurringCustomAmountInput.value.trim() : "";
-            const presetRaw = recurringPresetInput ? recurringPresetInput.value.trim() : "";
-            const raw = (customRaw || presetRaw).replace(",", ".");
-            if (!raw) {
-                event.preventDefault();
-                showJsError("Select a monthly amount or enter another amount.");
-                return;
-            }
-            const amount = parseFloat(raw);
-            if (isNaN(amount) || amount <= 0) {
-                event.preventDefault();
-                showJsError("Enter a valid donation amount.");
-                return;
-            }
-            if (amount < DONATION_MIN_AMOUNT) {
-                event.preventDefault();
-                showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`);
-                return;
-            }
-            if (amount > DONATION_MAX_AMOUNT) {
-                event.preventDefault();
-                showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`);
-                return;
-            }
-        } else {
-            const customRaw = customAmountInput ? customAmountInput.value.trim() : "";
-            const presetRaw = presetInput.value.trim();
-            const raw = customRaw || presetRaw;
-            if (!raw) {
-                event.preventDefault();
-                showJsError("Select a donation amount or enter another amount.");
-                return;
-            }
-            const amount = parseFloat(raw.replace(",", "."));
-            if (isNaN(amount) || amount <= 0) {
-                event.preventDefault();
-                showJsError("Enter a valid donation amount.");
-                return;
-            }
-            if (amount < DONATION_MIN_AMOUNT) {
-                event.preventDefault();
-                showJsError(`Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`);
-                return;
-            }
-            if (amount > DONATION_MAX_AMOUNT) {
-                event.preventDefault();
-                showJsError(`Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`);
-                return;
-            }
-        }
-
-        if (isSubmitting) {
-            event.preventDefault();
-            return;
-        }
-
+        if (isSubmitting) { event.preventDefault(); return; }
         isSubmitting = true;
         donationForm.setAttribute("aria-busy", "true");
-        submitButtons.forEach((btn) => {
-            btn.disabled = true;
-            btn.classList.add("is-loading");
-        });
+        submitButtons.forEach((btn) => { btn.disabled = true; btn.classList.add("is-loading"); });
     });
 
-    if (customAmountInput) customAmountInput.addEventListener("input", updateCustomAmountState);
-    if (recurringCustomAmountInput) recurringCustomAmountInput.addEventListener("input", updateRecurringCustomAmountState);
-    window.addEventListener("resize", resizeCustomAmountField);
-    window.addEventListener("resize", resizeRecurringCustomAmountField);
-
     updatePresetSelection(presetButtons, presetInput.value);
-    updateCustomAmountState();
+    onetime.updateState();
     if (recurringPresetInput) updatePresetSelection(recurringPresetButtons, recurringPresetInput.value);
-    if (recurringCustomAmountInput) updateRecurringCustomAmountState();
+    if (recurringCustomAmountInput) recurring.updateState();
     if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => { resizeCustomAmountField(); resizeRecurringCustomAmountField(); });
+        document.fonts.ready.then(() => { onetime.resize(); recurring.resize(); });
     }
 
     const faqDetails = Array.from(document.querySelectorAll(".donation-faq details"));
     faqDetails.forEach((d) => {
         d.addEventListener("toggle", () => {
-            if (d.open) {
-                faqDetails.forEach((other) => {
-                    if (other !== d) other.open = false;
-                });
-            }
+            if (d.open) { faqDetails.forEach((other) => { if (other !== d) other.open = false; }); }
         });
     });
     document.addEventListener("click", (event) => {
         faqDetails.forEach((d) => {
             if (!d.open) return;
-            if (event.target === d || !d.contains(event.target)) {
-                d.open = false;
-            }
+            if (event.target === d || !d.contains(event.target)) d.open = false;
         });
     });
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            faqDetails.forEach((d) => { d.open = false; });
-        }
+        if (event.key === "Escape") faqDetails.forEach((d) => { d.open = false; });
     });
 </script>
 {% endblock %}
