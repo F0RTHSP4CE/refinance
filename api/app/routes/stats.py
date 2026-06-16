@@ -9,13 +9,13 @@ from app.schemas.stats import (
     EntityMoneyFlowByDaySchema,
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
+    FeeTransactionsByMonthSchema,
     ResidentFeeSumByMonthSchema,
     TopEntityByMonthSchema,
     TopEntityStatSchema,
     TopTagByMonthSchema,
     TopTagStatSchema,
     TransactionsSumByTagByMonthSchema,
-    TransactionsSumByWeekSchema,
 )
 from app.services.stats import StatsService
 from fastapi import APIRouter, Depends
@@ -35,14 +35,14 @@ def get_resident_fee_sum_by_month(
 
 
 @router.get(
-    "/transactions-sum-by-week", response_model=List[TransactionsSumByWeekSchema]
+    "/fee-transactions-by-month", response_model=List[FeeTransactionsByMonthSchema]
 )
-def get_transactions_sum_by_week(
+def get_fee_transactions_by_month(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     stats_service: StatsService = Depends(get_stats_service),
 ):
-    return stats_service.get_transactions_sum_by_week(timeframe_from, timeframe_to)
+    return stats_service.get_fee_transactions_by_month(timeframe_from, timeframe_to)
 
 
 @router.get(

@@ -25,11 +25,10 @@ class EntityMoneyFlowByDaySchema(BaseModel):
     outgoing_total_usd: float
 
 
-class TransactionsSumByWeekSchema(BaseModel):
+class FeeTransactionsByMonthSchema(BaseModel):
     year: int
-    week: int
-    amounts: dict[str, float]
-    total_usd: float
+    month: int
+    fee_total_usd: float
 
 
 class EntityBalanceChangeByDaySchema(BaseModel):

@@ -479,16 +479,16 @@ class StatsService(BaseService):
             builder,
         )
 
-    def get_transactions_sum_by_week(
+    def get_fee_transactions_by_month(
         self, timeframe_from: date | None = None, timeframe_to: date | None = None
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
 
-        query_result = (
+        fee_query_result = (
             self.db.query(
                 extract("year", Transaction.created_at).label("year"),
-                extract("week", Transaction.created_at).label("week"),
+                extract("month", Transaction.created_at).label("month"),
                 Transaction.currency,
                 func.sum(Transaction.amount).label("total_amount"),
             )
@@ -496,27 +496,28 @@ class StatsService(BaseService):
                 and_(
                     Transaction.created_at >= timeframe_from,
                     Transaction.created_at <= timeframe_to,
+                    Transaction.tags.any(Tag.id == fee_tag.id),
                 )
             )
-            .group_by("year", "week", "currency")
-            .order_by("year", "week")
+            .group_by("year", "month", "currency")
+            .order_by("year", "month")
             .all()
         )
 
-        weekly_totals = defaultdict(lambda: defaultdict(Decimal))
-        for row in query_result:
-            weekly_totals[(row.year, row.week)][row.currency] = row.total_amount
+        fee_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        for row in fee_query_result:
+            fee_monthly_totals[(row.year, row.month)][row.currency] += row.total_amount
 
         result = []
-        for (year, week), amounts in sorted(weekly_totals.items()):
-            amounts_float = {k: float(v) for k, v in amounts.items()}
-            total_usd = self._sum_amounts_usd(amounts)
+        for (year, month), amounts in sorted(fee_monthly_totals.items())[1:]:
+            fee_total_usd = self._sum_amounts_usd(amounts)
             result.append(
                 {
                     "year": year,
-                    "week": week,
-                    "amounts": amounts_float,
-                    "total_usd": total_usd,
+                    "month": month,
+                    "fee_total_usd": fee_total_usd,
                 }
             )
         return result

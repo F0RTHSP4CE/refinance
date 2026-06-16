@@ -8,10 +8,12 @@ stats_bp = Blueprint("stats", __name__, url_prefix="/stats")
 def index():
     api = get_refinance_api_client()
     resident_fee_sum = api.http("GET", "stats/resident-fee-sum-by-month").json()
-    transactions_sum_by_week = api.http("GET", "stats/transactions-sum-by-week").json()
+    fee_transactions_by_month = api.http(
+        "GET", "stats/fee-transactions-by-month"
+    ).json()
 
     return render_template(
         "stats/index.jinja2",
         resident_fee_sum=resident_fee_sum,
-        transactions_sum_by_week=transactions_sum_by_week,
+        fee_transactions_by_month=fee_transactions_by_month,
     )
