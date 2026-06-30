@@ -65,6 +65,115 @@ def test_entity_money_flow_by_day(test_app: TestClient, token):
     assert isinstance(body["money_flow_by_day"], list)
 
 
+def test_resident_fee_average_by_month_normalizes_by_invoice_count(
+    test_app: TestClient, token
+):
+    billing_period = date.today().replace(day=1).isoformat()
+
+    def create_entity(name: str) -> int:
+        response = test_app.post(
+            "/entities",
+            json={"name": name},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    def fund_entity(entity_id: int, amount: str) -> None:
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": 2,
+                "to_entity_id": entity_id,
+                "amount": amount,
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+
+    def create_fee_invoice(entity_id: int, amount: str) -> dict:
+        response = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": entity_id,
+                "to_entity_id": 1,
+                "amounts": [
+                    {"currency": "usd", "amount": amount},
+                    {"currency": "gel", "amount": "9999.00"},
+                ],
+                "billing_period": billing_period,
+                "tag_ids": [3],
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        return response.json()
+
+    def pay_invoice(entity_id: int, invoice_id: int, amount: str) -> None:
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": entity_id,
+                "to_entity_id": 1,
+                "amount": amount,
+                "currency": "usd",
+                "status": "completed",
+                "invoice_id": invoice_id,
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+
+    first_resident = create_entity("Average Fee Resident 1")
+    second_resident = create_entity("Average Fee Resident 2")
+    third_resident = create_entity("Average Fee Resident 3")
+
+    fund_entity(first_resident, "100.00")
+    fund_entity(second_resident, "200.00")
+
+    first_invoice = create_fee_invoice(first_resident, "100.00")
+    second_invoice = create_fee_invoice(second_resident, "200.00")
+    create_fee_invoice(third_resident, "300.00")
+
+    pay_invoice(first_resident, first_invoice["id"], "100.00")
+    pay_invoice(second_resident, second_invoice["id"], "200.00")
+
+    # F0 expenses should not participate in the normalized fee chart.
+    expense_response = test_app.post(
+        "/transactions",
+        json={
+            "from_entity_id": 1,
+            "to_entity_id": 10,
+            "amount": "999.00",
+            "currency": "usd",
+            "status": "completed",
+            "tag_ids": [7],
+        },
+        headers={"x-token": token},
+    )
+    assert expense_response.status_code == 200
+
+    response = test_app.get(
+        "/stats/resident-fee-average-by-month",
+        params={"timeframe_from": billing_period, "timeframe_to": billing_period},
+        headers={"x-token": token},
+    )
+    assert response.status_code == 200
+
+    rows = response.json()
+    row = next(
+        item
+        for item in rows
+        if f"{item['year']}-{item['month']:02d}" == billing_period[:7]
+    )
+    assert row["invoice_count"] == 3
+    assert row["paid_invoice_count"] == 2
+    assert row["paid_usd_per_invoice"] == pytest.approx(100.0)
+    assert row["expected_usd_per_invoice"] == pytest.approx(200.0)
+
+
 @pytest.fixture(scope="class")
 def top_entities_data(test_app: TestClient, token):
     """Prepare entities and transactions for top incoming/outgoing stats."""

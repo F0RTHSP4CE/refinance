@@ -14,6 +14,15 @@ class ResidentFeeSumByMonthSchema(BaseModel):
     expenses_usd: float = 0.0
 
 
+class ResidentFeeAverageByMonthSchema(BaseModel):
+    year: int
+    month: int
+    invoice_count: int
+    paid_invoice_count: int
+    paid_usd_per_invoice: float
+    expected_usd_per_invoice: float
+
+
 class EntityTransactionsByDaySchema(BaseModel):
     day: date
     transaction_count: int

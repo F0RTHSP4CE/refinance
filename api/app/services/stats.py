@@ -353,6 +353,123 @@ class StatsService(BaseService):
             )
         return result
 
+    def get_resident_fee_average_by_month(
+        self, timeframe_from: date | None = None, timeframe_to: date | None = None
+    ):
+        timeframe_to = timeframe_to or date.today()
+        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        hackerspace = self._entity_service.get(f0_entity.id)
+
+        paid_invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PAID,
+            )
+            .all()
+        )
+
+        unpaid_invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.to_entity_id == hackerspace.id,
+                Invoice.billing_period.isnot(None),
+                Invoice.tags.contains(fee_tag),
+                Invoice.status == InvoiceStatus.PENDING,
+            )
+            .all()
+        )
+
+        monthly_paid_totals = defaultdict(lambda: defaultdict(Decimal))
+        monthly_expected_totals = defaultdict(lambda: defaultdict(Decimal))
+        monthly_paid_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
+        monthly_invoice_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
+        today = date.today()
+        start_month = timeframe_from.replace(day=1)
+        end_month = timeframe_to.replace(day=1)
+
+        for invoice in paid_invoices:
+            if invoice.billing_period is None:
+                continue
+            if invoice.transaction is None:
+                continue
+            if invoice.transaction.status != TransactionStatus.COMPLETED:
+                continue
+
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            if year > today.year or (year == today.year and month > today.month):
+                continue
+
+            fee_date = date(year, month, 1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+
+            month_key = (year, month)
+            monthly_invoice_counts[month_key] += 1
+            monthly_paid_counts[month_key] += 1
+            monthly_paid_totals[month_key][
+                invoice.transaction.currency.lower()
+            ] += invoice.transaction.amount
+            monthly_expected_totals[month_key][
+                invoice.transaction.currency.lower()
+            ] += invoice.transaction.amount
+
+        for invoice in unpaid_invoices:
+            if invoice.billing_period is None:
+                continue
+
+            year = invoice.billing_period.year
+            month = invoice.billing_period.month
+            if year > today.year or (year == today.year and month > today.month):
+                continue
+
+            fee_date = date(year, month, 1)
+            if not (start_month <= fee_date <= end_month):
+                continue
+
+            if invoice.amounts and len(invoice.amounts) > 0:
+                amount_entry = invoice.amounts[0]
+                currency = amount_entry.get("currency", "").lower()
+                amount = amount_entry.get("amount", 0)
+                if currency and amount:
+                    month_key = (year, month)
+                    monthly_invoice_counts[month_key] += 1
+                    monthly_expected_totals[month_key][currency] += Decimal(str(amount))
+
+        all_months = set(monthly_invoice_counts.keys())
+
+        result = []
+        for year, month in sorted(all_months):
+            month_key = (year, month)
+            invoice_count = monthly_invoice_counts[month_key]
+            paid_count = monthly_paid_counts[month_key]
+
+            paid_total_usd = self._sum_amounts_usd(
+                monthly_paid_totals.get(month_key, {})
+            )
+            expected_total_usd = self._sum_amounts_usd(
+                monthly_expected_totals.get(month_key, {})
+            )
+
+            result.append(
+                {
+                    "year": year,
+                    "month": month,
+                    "invoice_count": invoice_count,
+                    "paid_invoice_count": paid_count,
+                    "paid_usd_per_invoice": (
+                        paid_total_usd / invoice_count if invoice_count else 0.0
+                    ),
+                    "expected_usd_per_invoice": (
+                        expected_total_usd / invoice_count if invoice_count else 0.0
+                    ),
+                }
+            )
+        return result
+
     def get_entity_transactions_by_day(
         self,
         entity_id: int,

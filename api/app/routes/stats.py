@@ -10,6 +10,7 @@ from app.schemas.stats import (
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     FeeTransactionsByMonthSchema,
+    ResidentFeeAverageByMonthSchema,
     ResidentFeeSumByMonthSchema,
     TopEntityByMonthSchema,
     TopEntityStatSchema,
@@ -32,6 +33,18 @@ def get_resident_fee_sum_by_month(
     stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_resident_fee_sum_by_month(timeframe_from, timeframe_to)
+
+
+@router.get(
+    "/resident-fee-average-by-month",
+    response_model=List[ResidentFeeAverageByMonthSchema],
+)
+def get_resident_fee_average_by_month(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_resident_fee_average_by_month(timeframe_from, timeframe_to)
 
 
 @router.get(

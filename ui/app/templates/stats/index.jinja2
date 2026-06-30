@@ -47,6 +47,10 @@
         <canvas id="resident-fee-chart"></canvas>
     </div>
     <div class="chart-container">
+        <h2>Resident Fee per Invoice</h2>
+        <canvas id="resident-fee-average-chart"></canvas>
+    </div>
+    <div class="chart-container">
         <h2>Fee Transactions per Month</h2>
         <canvas id="fee-month-chart"></canvas>
     </div>
@@ -56,10 +60,10 @@
     const residentFeeData = {{ resident_fee_sum | tojson }};
 
     const residentFeeLabels = residentFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
-    
+
     // Paid total USD (solid line)
     const paidData = residentFeeData.map(item => item.total_usd || 0);
-    
+
     // Expected total USD (dashed line - ceiling)
     const expectedData = residentFeeData.map(item => item.expected_total_usd || 0);
 
@@ -108,6 +112,54 @@
                     title: {
                         display: true,
                         text: 'Amount (USD)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    const residentFeeAverageData = {{ resident_fee_average | tojson }};
+    const residentFeeAverageLabels = residentFeeAverageData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+
+    new Chart(document.getElementById('resident-fee-average-chart'), {
+        type: 'line',
+        data: {
+            labels: residentFeeAverageLabels,
+            datasets: [
+                {
+                    label: 'Paid Fees / Invoice Issued (USD)',
+                    data: residentFeeAverageData.map(item => item.paid_usd_per_invoice || 0),
+                    borderWidth: 3,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.2,
+                    fill: true
+                },
+                {
+                    label: 'Expected Fees / Invoice Issued (USD)',
+                    data: residentFeeAverageData.map(item => item.expected_usd_per_invoice || 0),
+                    borderWidth: 2,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.05)',
+                    borderDash: [5, 5],
+                    tension: 0.2,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Amount per invoice (USD)'
                     }
                 }
             },
