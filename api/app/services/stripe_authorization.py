@@ -485,6 +485,23 @@ class StripeAuthorizationService:
                 invoices = self.stripe_service.list_invoices_for_subscription(
                     auth.stripe_subscription_id, limit=5
                 )
+            except StripeRequestError as exc:
+                if "no such subscription" in str(exc).lower():
+                    logger.warning(
+                        "Subscription %s not found in Stripe, disabling authorization %d",
+                        auth.stripe_subscription_id,
+                        auth.id,
+                    )
+                    auth.active = False
+                    auth.modified_at = datetime.datetime.now()
+                    self.db.flush()
+                else:
+                    logger.warning(
+                        "Failed to list invoices for subscription %s",
+                        auth.stripe_subscription_id,
+                        exc_info=True,
+                    )
+                continue
             except Exception:
                 logger.warning(
                     "Failed to list invoices for subscription %s",
