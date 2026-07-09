@@ -63,6 +63,7 @@ class Transaction(Base):
     status: str
     tags: list[Tag]
     invoice_id: int | None = None
+    invoice_item_id: int | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
     from_treasury: Treasury | None = None
@@ -82,20 +83,46 @@ class InvoiceAmount:
 
 
 @dataclass
+class InvoiceItem(Base):
+    invoice_id: int
+    amounts: list[InvoiceAmount]
+    to_entity_id: int | None = None
+    to_entity: "Entity | None" = None
+    to_tag_id: int | None = None
+    to_tag: "Tag | None" = None
+    transaction_id: int | None = None
+
+    def __post_init__(self):
+        self.amounts = [
+            InvoiceAmount(**a) if isinstance(a, dict) else a for a in self.amounts
+        ]
+        if isinstance(self.to_entity, dict):
+            self.to_entity = Entity(**self.to_entity)
+        if isinstance(self.to_tag, dict):
+            self.to_tag = Tag(**self.to_tag)
+
+
+@dataclass
 class Invoice(Base):
     actor_entity_id: int
     actor_entity: Entity
     from_entity_id: int
     from_entity: Entity
-    to_entity_id: int
-    to_entity: Entity
     amounts: list[InvoiceAmount]
     status: InvoiceStatus
     tags: list[Tag]
+    items: list[InvoiceItem] = field(default_factory=list)
+    to_entity_id: int | None = None
+    to_entity: Entity | None = None
     transaction_id: int | None = None
     billing_period: date | None = None
     paid_amount: Decimal | None = None
     paid_currency: str | None = None
+
+    def __post_init__(self):
+        self.items = [
+            InvoiceItem(**i) if isinstance(i, dict) else i for i in self.items
+        ]
 
 
 class DepositProvider(enum.Enum):

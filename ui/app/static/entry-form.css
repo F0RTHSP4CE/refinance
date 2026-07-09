@@ -4,6 +4,12 @@
   max-width: 320px;
 }
 
+@media (min-width: 768px) {
+  .entry-form-layout {
+    max-width: 520px;
+  }
+}
+
 .entry-form-card {
   border: 2px solid black;
   padding: 1rem 1.1rem;

@@ -1,7 +1,11 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
+from app.app import app
+from app.config import get_config
+from app.db import DatabaseConnection
+from app.models.transaction import Transaction
 from fastapi.testclient import TestClient
 
 
@@ -111,7 +115,7 @@ def test_resident_fee_average_by_month_normalizes_by_invoice_count(
         assert response.status_code == 200
         return response.json()
 
-    def pay_invoice(entity_id: int, invoice_id: int, amount: str) -> None:
+    def pay_invoice(entity_id: int, invoice_id: int, amount: str) -> dict:
         response = test_app.post(
             "/transactions",
             json={
@@ -125,6 +129,21 @@ def test_resident_fee_average_by_month_normalizes_by_invoice_count(
             headers={"x-token": token},
         )
         assert response.status_code == 200
+        return response.json()
+
+    def set_transaction_created_at(transaction_id: int, created_at: datetime) -> None:
+        config_provider = app.dependency_overrides.get(get_config, get_config)
+        config = config_provider()
+        db_conn = DatabaseConnection(config=config)
+        session = db_conn.get_session()
+        try:
+            transaction = session.get(Transaction, transaction_id)
+            assert transaction is not None
+            transaction.created_at = created_at
+            session.commit()
+        finally:
+            session.close()
+            db_conn.engine.dispose()
 
     first_resident = create_entity("Average Fee Resident 1")
     second_resident = create_entity("Average Fee Resident 2")
@@ -138,7 +157,16 @@ def test_resident_fee_average_by_month_normalizes_by_invoice_count(
     create_fee_invoice(third_resident, "300.00")
 
     pay_invoice(first_resident, first_invoice["id"], "100.00")
-    pay_invoice(second_resident, second_invoice["id"], "200.00")
+    second_transaction = pay_invoice(second_resident, second_invoice["id"], "200.00")
+
+    if date.today().month == 12:
+        next_month = date(date.today().year + 1, 1, 1)
+    else:
+        next_month = date(date.today().year, date.today().month + 1, 1)
+    set_transaction_created_at(
+        second_transaction["id"],
+        datetime(next_month.year, next_month.month, 1, 12, 0, 0),
+    )
 
     # F0 expenses should not participate in the normalized fee chart.
     expense_response = test_app.post(
@@ -157,7 +185,11 @@ def test_resident_fee_average_by_month_normalizes_by_invoice_count(
 
     response = test_app.get(
         "/stats/resident-fee-average-by-month",
-        params={"timeframe_from": billing_period, "timeframe_to": billing_period},
+        params={
+            "timeframe_from": billing_period,
+            "timeframe_to": billing_period,
+            "as_of_month": billing_period,
+        },
         headers={"x-token": token},
     )
     assert response.status_code == 200
@@ -169,9 +201,29 @@ def test_resident_fee_average_by_month_normalizes_by_invoice_count(
         if f"{item['year']}-{item['month']:02d}" == billing_period[:7]
     )
     assert row["invoice_count"] == 3
-    assert row["paid_invoice_count"] == 2
-    assert row["paid_usd_per_invoice"] == pytest.approx(100.0)
+    assert row["paid_invoice_count"] == 1
+    assert row["paid_usd_per_invoice"] == pytest.approx(100.0 / 3)
     assert row["expected_usd_per_invoice"] == pytest.approx(200.0)
+
+    next_month_response = test_app.get(
+        "/stats/resident-fee-average-by-month",
+        params={
+            "timeframe_from": billing_period,
+            "timeframe_to": billing_period,
+            "as_of_month": next_month.isoformat(),
+        },
+        headers={"x-token": token},
+    )
+    assert next_month_response.status_code == 200
+    next_month_row = next(
+        item
+        for item in next_month_response.json()
+        if f"{item['year']}-{item['month']:02d}" == billing_period[:7]
+    )
+    assert next_month_row["invoice_count"] == 3
+    assert next_month_row["paid_invoice_count"] == 2
+    assert next_month_row["paid_usd_per_invoice"] == pytest.approx(100.0)
+    assert next_month_row["expected_usd_per_invoice"] == pytest.approx(200.0)
 
 
 @pytest.fixture(scope="class")

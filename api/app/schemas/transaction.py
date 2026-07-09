@@ -24,6 +24,7 @@ class TransactionSchema(BaseReadSchema):
     from_entity_id: int
     from_entity: EntitySchema
     invoice_id: int | None = None
+    invoice_item_id: int | None = None
     amount: CurrencyDecimal
     currency: str
     status: TransactionStatus
@@ -37,22 +38,31 @@ class TransactionSchema(BaseReadSchema):
 class TransactionCreateSchema(BaseUpdateSchema):
     to_entity_id: int
     from_entity_id: int
-    amount: Decimal
-    currency: str
+    amount: Decimal | None = (
+        None  # Optional; auto-derived from invoice amounts when invoice_id is provided
+    )
+    currency: str | None = (
+        None  # Optional; auto-selected if not provided for invoice payments
+    )
     status: TransactionStatus | None = None
     invoice_id: int | None = None
+    invoice_item_id: int | None = None
     from_treasury_id: int | None = None
     to_treasury_id: int | None = None
     tag_ids: list[int] = []
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
+        if v is None:
+            return None
         if v > 0:
             return v
         raise ValueError("Amount must be greater than 0")
 
     @field_validator("currency")
     def currency_must_be_lowercase(cls, v):
+        if v is None:
+            return None
         return v.lower()
 
     @field_validator("from_treasury_id", mode="before")

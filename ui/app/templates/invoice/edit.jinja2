@@ -1,6 +1,7 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/tag_selector.jinja2' import tag_selector %}
 {% from 'widgets/currency_selector.jinja2' import currency_selector %}
+{% from 'widgets/entity_selector.jinja2' import entity_selector %}
 
 {% block title %}Edit invoice {{ invoice.id }}{% endblock %}
 
@@ -8,11 +9,13 @@
 {% if invoice.status != "paid" and invoice.status != "cancelled" %}
 <div class="invoice-form-layout shortcut-form-container">
     <section class="entry-form-card">
-        <form method="post" class="entry-form">
+        <form method="post" class="entry-form" id="edit-invoice-form">
             {{ form.hidden_tag() }}
 
             <input type="hidden" name="from_entity_id" value="{{ invoice.from_entity_id }}">
+            {% if not is_multi %}
             <input type="hidden" name="to_entity_id" value="{{ invoice.to_entity_id }}">
+            {% endif %}
 
             <div class="form-row transaction-equal-row">
                 <div class="form-field">
@@ -22,13 +25,17 @@
                         {{ invoice.from_entity.name }}
                     </a>
                 </div>
+                {% if not is_multi %}
                 <div class="form-field">
                     <label class="form-label">To</label>
+                    {% if invoice.to_entity %}
                     <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
                         class="inline-link {% if not invoice.to_entity.active %}secondary inactive{% endif %}">
                         {{ invoice.to_entity.name }}
                     </a>
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
             <div class="form-group">
@@ -41,6 +48,99 @@
                 {{ form.billing_period(class_='form-input') }}
             </div>
 
+            {% if is_multi %}
+            {# ── multi-item recipient slots ── #}
+            <h2 style="margin: 1.5rem 0 0.5rem">Recipients</h2>
+
+            {% for n in range(max_items) %}
+            {% set item = items_data[n] %}
+            {% set locked = item and item.transaction_id %}
+            <div class="invoice-multi-item-slot" id="item-slot-{{ n }}"
+                 {% if n >= initial_visible %} style="display:none"{% endif %}>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                    <strong>Recipient {{ n + 1 }}
+                        {% if locked %}<span class="secondary" style="font-weight:normal;font-size:.85em"> — paid, locked</span>{% endif %}
+                    </strong>
+                    {% if n > 0 and not locked %}
+                    <button type="button" class="btn-link" onclick="hideItemSlot({{ n }})">Remove</button>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        To entity
+                        <span class="secondary" style="font-weight:normal">(optional)</span>
+                    </label>
+                    {% if locked %}
+                    <span>
+                        {% if item.to_entity %}
+                        <a href="{{ url_for('entity.detail', id=item.to_entity_id) }}" class="inline-link">{{ item.to_entity.name }}</a>
+                        {% else %}— any —{% endif %}
+                    </span>
+                    <input type="hidden" name="item_{{ n }}_to_entity_id" value="{{ item.to_entity_id or '' }}">
+                    {% else %}
+                    {{ entity_selector('item_' ~ n ~ '_to_entity',
+                        initial_name=item.to_entity.name if item and item.to_entity else '',
+                        initial_id=item.to_entity_id if item and item.to_entity_id else '',
+                        show_id_input=False) }}
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Tag filter
+                        <span class="secondary" style="font-weight:normal">(optional)</span>
+                    </label>
+                    {% if locked %}
+                    <span class="secondary">{{ item.to_tag.name if item and item.to_tag else '— any —' }}</span>
+                    <input type="hidden" name="item_{{ n }}_to_tag_id" value="{{ item.to_tag_id or '' }}">
+                    {% else %}
+                    <select name="item_{{ n }}_to_tag_id" class="form-input">
+                        <option value="">— any entity —</option>
+                        {% for tag in all_tags | sort(attribute='name') %}
+                        <option value="{{ tag.id }}"{% if item and item.to_tag_id == tag.id %} selected{% endif %}>{{ tag.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% endif %}
+                </div>
+
+                {% for j in range(1, 4) %}
+                {% set amt = item.amounts[j-1] if item and item.amounts|length >= j else None %}
+                <div class="form-row transaction-equal-row"{% if j == 3 %} style="margin-bottom:1rem"{% endif %}>
+                    <div class="form-field form-field-amount">
+                        <label class="form-label">Amount {{ j }}{% if j > 1 %} <span class="secondary">optional</span>{% endif %}</label>
+                        <input type="number" name="item_{{ n }}_amount_{{ j }}"
+                            class="form-input" step="0.01" min="0.01"
+                            placeholder="{{ '10.00' if j == 1 else '27.00' if j == 2 else '5.00' }}"
+                            value="{{ amt.amount if amt else '' }}"
+                            {% if j == 1 and not locked %}required{% endif %}
+                            {% if locked %}disabled{% endif %}>
+                        {% if locked and amt %}<input type="hidden" name="item_{{ n }}_amount_{{ j }}" value="{{ amt.amount }}">{% endif %}
+                    </div>
+                    <div class="form-field form-field-currency">
+                        <label class="form-label">Currency {{ j }}</label>
+                        {% if locked and amt %}
+                        <span class="form-input" style="display:flex;align-items:center">{{ amt.currency | upper }}</span>
+                        <input type="hidden" name="item_{{ n }}_currency_{{ j }}" value="{{ amt.currency }}">
+                        {% else %}
+                        <select name="item_{{ n }}_currency_{{ j }}" class="form-input"{% if locked %} disabled{% endif %}>
+                            {% for value, label in currency_choices %}
+                            <option value="{{ value }}"{% if amt and amt.currency | upper == value %} selected{% elif not amt and value == preferred_currency %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+
+            <div id="add-item-btn-wrap" style="margin-bottom:1.5rem">
+                <button type="button" class="big-button big-button-outline" onclick="addNextItemSlot()">+ Add recipient</button>
+            </div>
+
+            {% else %}
+            {# ── simple invoice amounts ── #}
             <div class="form-row transaction-equal-row">
                 <div class="form-field form-field-amount">
                     <label class="form-label" for="amount_1">Amount 1</label>
@@ -73,6 +173,7 @@
                     {{ currency_selector('currency_3', form.currency_3.choices, form.currency_3.data, id='currency_3', required=False) }}
                 </div>
             </div>
+            {% endif %}
 
             <div class="form-group">
                 <label class="form-label">Tags</label>
@@ -89,5 +190,68 @@
 <p>This invoice can not be edited anymore.</p>
 {% endif %}
 
+<script src="/static/js/entitySelector.js"></script>
 <script src="/static/js/multiSelect.js"></script>
+{% if is_multi %}
+<script>
+(function () {
+    var maxItems = {{ max_items }};
+    var initialVisible = {{ initial_visible }};
+    var visible = {{ range(initial_visible) | list | tojson }};
+
+    function slotAmountInputs(slot) {
+        return slot.querySelectorAll('input[type="number"]');
+    }
+    function stripRequired(slot) {
+        slotAmountInputs(slot).forEach(function (el) { el.removeAttribute('required'); });
+    }
+    function restoreRequired(slot) {
+        var first = slot.querySelector('input[name$="_amount_1"]');
+        if (first) first.setAttribute('required', '');
+    }
+
+    // strip required from initially-hidden slots
+    for (var i = initialVisible; i < maxItems; i++) {
+        var s = document.getElementById('item-slot-' + i);
+        if (s) stripRequired(s);
+    }
+
+    window.hideItemSlot = function (n) {
+        var slot = document.getElementById('item-slot-' + n);
+        if (!slot) return;
+        slot.style.display = 'none';
+        visible = visible.filter(function (i) { return i !== n; });
+        stripRequired(slot);
+        slot.querySelectorAll('input[type="number"]').forEach(function (el) { el.value = ''; });
+        slot.querySelectorAll('input[type="hidden"]').forEach(function (el) { el.value = ''; });
+        slot.querySelectorAll('input[type="search"]').forEach(function (el) { el.value = ''; });
+        slot.querySelectorAll('select').forEach(function (el) { el.selectedIndex = 0; });
+        updateAddBtn();
+    };
+
+    window.addNextItemSlot = function () {
+        for (var i = 0; i < maxItems; i++) {
+            if (visible.indexOf(i) === -1) {
+                var slot = document.getElementById('item-slot-' + i);
+                if (slot) {
+                    slot.style.display = '';
+                    restoreRequired(slot);
+                    visible.push(i);
+                    slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    updateAddBtn();
+                }
+                break;
+            }
+        }
+    };
+
+    function updateAddBtn() {
+        var wrap = document.getElementById('add-item-btn-wrap');
+        if (wrap) wrap.style.display = visible.length >= maxItems ? 'none' : '';
+    }
+
+    updateAddBtn();
+}());
+</script>
+{% endif %}
 {% endblock %}

@@ -281,9 +281,10 @@
 
 /* Invoice detail */
 .invoice-detail-layout {
-  max-width: 350px;
+  max-width: 500px;
   margin-left: 0;
   margin-right: auto;
+  box-sizing: border-box;
 }
 
 .invoice-detail-card {

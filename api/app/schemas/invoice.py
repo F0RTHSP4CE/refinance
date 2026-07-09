@@ -12,6 +12,11 @@ from app.schemas.base import (
     CurrencyDecimal,
 )
 from app.schemas.entity import EntitySchema
+from app.schemas.invoice_item import (
+    InvoiceItemCreateSchema,
+    InvoiceItemSchema,
+    InvoicePayItemsSchema,
+)
 from app.schemas.mixins.tags_filter_mixin import TagsFilterSchemaMixin
 from app.schemas.tag import TagSchema
 from pydantic import Field, field_validator, model_validator
@@ -42,34 +47,45 @@ class InvoiceSchema(BaseReadSchema):
     actor_entity: EntitySchema
     from_entity_id: int
     from_entity: EntitySchema
-    to_entity_id: int
-    to_entity: EntitySchema
+    to_entity_id: int | None = None
+    to_entity: EntitySchema | None = None
     amounts: list[InvoiceAmountSchema]
     billing_period: date | None = None
     status: InvoiceStatus
     tags: list[TagSchema]
     transaction_id: int | None = None
+    items: list[InvoiceItemSchema] = Field(default_factory=list)
 
 
 class InvoiceCreateSchema(BaseUpdateSchema):
     from_entity_id: int
-    to_entity_id: int
+    to_entity_id: int | None = None
     amounts: list[InvoiceAmountCreateSchema] = Field(default_factory=list)
+    items: list[InvoiceItemCreateSchema] = Field(default_factory=list)
     billing_period: date | None = None
     tag_ids: list[int] = []
 
     @model_validator(mode="after")
-    def amounts_must_be_unique(self) -> "InvoiceCreateSchema":
-        currencies = [item.currency for item in self.amounts]
-        if len(currencies) != len(set(currencies)):
-            raise ValueError("Amounts must use unique currencies")
-        if not self.amounts:
-            raise ValueError("At least one amount must be provided")
+    def validate_schema(self) -> "InvoiceCreateSchema":
+        has_simple = bool(self.to_entity_id and self.amounts)
+        has_items = bool(self.items)
+        if has_simple and has_items:
+            raise ValueError(
+                "Provide either (to_entity_id + amounts) for a simple invoice "
+                "or items for a multi-recipient invoice, not both."
+            )
+        if not has_simple and not has_items:
+            raise ValueError("Provide either (to_entity_id + amounts) or items.")
+        if has_simple:
+            currencies = [item.currency for item in self.amounts]
+            if len(currencies) != len(set(currencies)):
+                raise ValueError("Amounts must use unique currencies")
         return self
 
 
 class InvoiceUpdateSchema(BaseUpdateSchema):
     amounts: list[InvoiceAmountCreateSchema] | None = None
+    items: list[InvoiceItemCreateSchema] | None = None
     billing_period: date | None = None
     tag_ids: list[int] | None = None
 

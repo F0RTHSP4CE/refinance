@@ -19,10 +19,20 @@ from app.errors.invoice import (
     InvoiceDuplicateCurrency,
     InvoiceEntitiesMismatch,
     InvoiceInsufficientBalance,
+    InvoiceIsMultiItem,
+    InvoiceIsNotMultiItem,
+    InvoiceItemAlreadyPaid,
+    InvoiceItemAmountInsufficient,
+    InvoiceItemCurrencyNotAllowed,
+    InvoiceItemEntityRequired,
+    InvoiceItemInvalidEntityTag,
+    InvoiceItemNotFound,
     InvoiceNotEditable,
+    InvoicePayItemsMismatch,
     InvoiceTransactionAlreadyAttached,
 )
 from app.models.invoice import Invoice, InvoiceStatus
+from app.models.invoice_item import InvoiceItem
 from app.models.transaction import TransactionStatus
 from app.schemas.invoice import (
     InvoiceBulkCreateReportSchema,
@@ -31,6 +41,7 @@ from app.schemas.invoice import (
     InvoiceFiltersSchema,
     InvoiceUpdateSchema,
 )
+from app.schemas.invoice_item import InvoiceItemCreateSchema, InvoicePayItemsSchema
 from app.schemas.transaction import TransactionCreateSchema
 from app.seeding import automatic_tag
 from app.services.balance import BalanceService
@@ -89,7 +100,13 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
     ) -> Invoice:
         data = schema.dump()
         tag_ids = data.pop("tag_ids", None)
-        data["amounts"] = self._serialize_amounts(data.get("amounts", []))
+        items_data = data.pop("items", None)
+        if items_data:
+            # Multi-recipient invoice: no single to_entity or amounts
+            data["to_entity_id"] = None
+            data["amounts"] = []
+        else:
+            data["amounts"] = self._serialize_amounts(data.get("amounts", []))
         if "billing_period" in data:
             data["billing_period"] = self._normalize_billing_period(
                 data.get("billing_period")
@@ -101,8 +118,30 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         if tag_ids is not None:
             self.set_tags(new_obj, tag_ids)
             self.db.flush()
+        if items_data:
+            for item_schema_dict in items_data:
+                item_schema = InvoiceItemCreateSchema(**item_schema_dict)
+                self._create_invoice_item(new_obj.id, item_schema)
+        self.db.flush()
         self.db.refresh(new_obj)
         return new_obj
+
+    def _create_invoice_item(
+        self, invoice_id: int, schema: InvoiceItemCreateSchema
+    ) -> InvoiceItem:
+        amounts = self._serialize_amounts(
+            [{"currency": a.currency, "amount": a.amount} for a in schema.amounts]
+        )
+        item = InvoiceItem(
+            invoice_id=invoice_id,
+            to_entity_id=schema.to_entity_id,
+            to_tag_id=schema.to_tag_id,
+            amounts=amounts,
+            comment=schema.comment,
+        )
+        self.db.add(item)
+        self.db.flush()
+        return item
 
     def update(  # type: ignore[override]
         self, obj_id: int, schema: InvoiceUpdateSchema, overrides: dict = {}
@@ -110,8 +149,12 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         db_obj = self.get(obj_id)
         if db_obj.status != InvoiceStatus.PENDING or db_obj.transaction is not None:
             raise InvoiceNotEditable
+        # For multi-item invoices, also reject if any item already has a transaction
+        if db_obj.items and any(item.transaction is not None for item in db_obj.items):
+            raise InvoiceNotEditable
         data = schema.dump()
         tag_ids = data.pop("tag_ids", None)
+        new_items_data = data.pop("items", None)
         if "amounts" in data and data["amounts"] is not None:
             data["amounts"] = self._serialize_amounts(data["amounts"])
         if "billing_period" in data:
@@ -123,6 +166,14 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             setattr(db_obj, key, value)
         if tag_ids is not None:
             self.set_tags(db_obj, tag_ids)
+        if new_items_data is not None:
+            # Replace all items
+            for old_item in list(db_obj.items):
+                self.db.delete(old_item)
+            self.db.flush()
+            for item_schema_dict in new_items_data:
+                item_schema = InvoiceItemCreateSchema(**item_schema_dict)
+                self._create_invoice_item(db_obj.id, item_schema)
         setattr(db_obj, "modified_at", datetime.datetime.now())
         self.db.flush()
         self.db.refresh(db_obj)
@@ -131,6 +182,8 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
     def delete(self, obj_id: int) -> int:  # type: ignore[override]
         db_obj = self.get(obj_id)
         if db_obj.status != InvoiceStatus.PENDING or db_obj.transaction is not None:
+            raise InvoiceNotEditable
+        if db_obj.items and any(item.transaction is not None for item in db_obj.items):
             raise InvoiceNotEditable
         return super().delete(obj_id)
 
@@ -166,6 +219,29 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             value = value.to_decimal()
         return value if isinstance(value, Decimal) else Decimal(str(value))
 
+    def select_best_currency(
+        self, from_entity_id: int, available_currencies: set[str]
+    ) -> str | None:
+        """Select the best currency based on entity balance. Prefers highest positive balance."""
+        balances = self._balance_service.get_balances(from_entity_id)
+        completed_balances = balances.completed or {}
+
+        best_currency = None
+        best_balance = Decimal("-999999")
+
+        for curr in available_currencies:
+            curr_lower = curr.lower()
+            bal = self._balance_to_decimal(completed_balances.get(curr_lower))
+            if bal > best_balance:
+                best_balance = bal
+                best_currency = curr_lower
+
+        # Only return if balance is positive
+        if best_currency and best_balance > Decimal("0"):
+            return best_currency
+
+        return None
+
     def _select_auto_pay_amount(
         self, invoice: Invoice, balances: dict[str, Decimal]
     ) -> tuple[str, Decimal] | None:
@@ -192,13 +268,15 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         return selected_currency, selected_amount
 
     def auto_pay_oldest_invoices(self) -> int:
-        pending_filter = [
+        # ── simple invoices (no items) ──────────────────────────────────────
+        simple_pending_filter = [
             self.model.status == InvoiceStatus.PENDING,
             ~self.model.transaction.has(),
+            ~self.model.items.any(),
         ]
         entity_ids = (
             self.db.query(self.model.from_entity_id)
-            .filter(*pending_filter)
+            .filter(*simple_pending_filter)
             .distinct()
             .all()
         )
@@ -215,7 +293,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
 
             invoices = (
                 self.db.query(self.model)
-                .filter(*pending_filter)
+                .filter(*simple_pending_filter)
                 .filter(self.model.from_entity_id == entity_id)
                 .order_by(self.model.created_at.asc(), self.model.id.asc())
                 .all()
@@ -242,6 +320,83 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                     tx_schema, overrides={"actor_entity_id": invoice.actor_entity_id}
                 )
                 available_balances[currency] = available_balances[currency] - amount
+                paid_count += 1
+
+        # ── multi-item invoices (only when every item has to_entity_id set) ─
+        multi_pending_filter = [
+            self.model.status == InvoiceStatus.PENDING,
+            self.model.items.any(),
+        ]
+        multi_entity_ids = (
+            self.db.query(self.model.from_entity_id)
+            .filter(*multi_pending_filter)
+            .distinct()
+            .all()
+        )
+
+        for (entity_id,) in multi_entity_ids:
+            balances = self._balance_service.get_balances(entity_id)
+            completed_balances = balances.completed or {}
+            available_balances = {
+                currency.lower(): self._balance_to_decimal(amount)
+                for currency, amount in completed_balances.items()
+            }
+
+            invoices = (
+                self.db.query(self.model)
+                .filter(*multi_pending_filter)
+                .filter(self.model.from_entity_id == entity_id)
+                .order_by(self.model.created_at.asc(), self.model.id.asc())
+                .all()
+            )
+
+            for invoice in invoices:
+                # Skip if any item has no entity or is already paid
+                if any(
+                    item.to_entity_id is None or item.transaction is not None
+                    for item in invoice.items
+                ):
+                    continue
+
+                # Pre-select amounts for all items; skip invoice if any can't be paid
+                selections: list[tuple[InvoiceItem, str, Decimal]] = []
+                temp_balances = dict(available_balances)
+                payable = True
+                for item in invoice.items:
+                    sel = self._select_auto_pay_amount(
+                        item,  # type: ignore[arg-type]
+                        temp_balances,
+                    )
+                    if sel is None:
+                        payable = False
+                        break
+                    currency, amount = sel
+                    temp_balances[currency] = temp_balances[currency] - amount
+                    selections.append((item, currency, amount))
+
+                if not payable:
+                    continue
+
+                for item, currency, amount in selections:
+                    tx_schema = TransactionCreateSchema(
+                        to_entity_id=item.to_entity_id,
+                        from_entity_id=invoice.from_entity_id,
+                        amount=amount,
+                        currency=currency,
+                        status=TransactionStatus.COMPLETED,
+                        invoice_item_id=item.id,
+                        comment=item.comment or invoice.comment,
+                        tag_ids=[automatic_tag.id],
+                    )
+                    self._transaction_service.create(
+                        tx_schema,
+                        overrides={"actor_entity_id": invoice.actor_entity_id},
+                    )
+
+                available_balances = temp_balances
+                invoice.status = InvoiceStatus.PAID
+                invoice.modified_at = datetime.datetime.now()
+                self.db.flush()
                 paid_count += 1
 
         return paid_count
@@ -274,6 +429,8 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         status: TransactionStatus,
     ) -> None:
         invoice = self.get(invoice_id)
+        if invoice.items:
+            raise InvoiceIsMultiItem
         if invoice.status == InvoiceStatus.CANCELLED:
             raise InvoiceCancelledNotPayable
         if invoice.status == InvoiceStatus.PAID and (
@@ -304,6 +461,183 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             invoice.status = InvoiceStatus.PAID
             invoice.modified_at = datetime.datetime.now()
             self.db.flush()
+
+    def pay_items(
+        self,
+        invoice_id: int,
+        schema: InvoicePayItemsSchema,
+        actor_entity_id: int,
+    ) -> Invoice:
+        """Atomically pay all items of a multi-recipient invoice."""
+        from app.models.entity import Entity
+
+        invoice = self.get(invoice_id)
+        if not invoice.items:
+            raise InvoiceIsNotMultiItem
+        if invoice.status == InvoiceStatus.CANCELLED:
+            raise InvoiceCancelledNotPayable
+        if invoice.status == InvoiceStatus.PAID:
+            raise InvoiceAlreadyPaid
+
+        # Validate that submitted item_ids exactly match invoice items
+        invoice_item_ids = {item.id for item in invoice.items}
+        submitted_item_ids = {p.item_id for p in schema.items}
+        if invoice_item_ids != submitted_item_ids:
+            raise InvoicePayItemsMismatch
+
+        # Build item lookup
+        item_by_id = {item.id: item for item in invoice.items}
+
+        # If currency not specified in request, auto-select best currency
+        # Collect all available currencies from invoice items
+        available_currencies = set()
+        for item in invoice.items:
+            if item.amounts:
+                for amount_obj in item.amounts:
+                    # Handle both dict and object formats
+                    currency = (
+                        amount_obj.get("currency")
+                        if isinstance(amount_obj, dict)
+                        else amount_obj.currency
+                    )
+                    available_currencies.add(currency.lower())
+
+        # Use service method to find best currency
+        auto_selected_currency = self.select_best_currency(
+            invoice.from_entity_id, available_currencies
+        )
+
+        # Get running balances for validation
+        balances = self._balance_service.get_balances(invoice.from_entity_id)
+        completed_balances = balances.completed or {}
+        running_balances: dict[str, Decimal] = {}
+        for currency, value in completed_balances.items():
+            running_balances[currency.lower()] = self._balance_to_decimal(value)
+
+        for payment in schema.items:
+            item = item_by_id[payment.item_id]
+            if item.transaction is not None:
+                raise InvoiceItemAlreadyPaid
+            if not payment.to_entity_id:
+                raise InvoiceItemEntityRequired
+            # Validate entity-tag constraint if present
+            if item.to_tag_id is not None:
+                entity = (
+                    self.db.query(Entity)
+                    .filter(Entity.id == payment.to_entity_id)
+                    .first()
+                )
+                if entity is None:
+                    raise InvoiceItemEntityRequired
+                tag_ids = {tag.id for tag in entity.tags}
+                if item.to_tag_id not in tag_ids:
+                    raise InvoiceItemInvalidEntityTag
+
+            # Determine currency to use for this payment
+            currency = payment.currency or auto_selected_currency
+            if not currency:
+                raise InvoiceCurrencyNotAllowed
+
+            currency = currency.lower()
+
+            # Validate currency allowed for this item
+            required_amount = self._required_amount_for_currency(
+                item,  # type: ignore[arg-type]
+                currency,
+            )
+            if required_amount is None:
+                raise InvoiceItemCurrencyNotAllowed
+            # Use required amount from invoice item if not specified in payment
+            effective_amount = (
+                payment.amount if payment.amount is not None else required_amount
+            )
+            if effective_amount < required_amount:
+                raise InvoiceItemAmountInsufficient
+            # Deduct from running balance check
+            current = running_balances.get(currency, Decimal("0"))
+            if current < effective_amount:
+                raise InvoiceInsufficientBalance
+            running_balances[currency] = current - effective_amount
+
+        # All validated — create transactions
+        for payment in schema.items:
+            item = item_by_id[payment.item_id]
+
+            # Determine currency for this payment
+            currency = (payment.currency or auto_selected_currency or "").lower()
+            if not currency:
+                raise InvoiceCurrencyNotAllowed
+
+            # Use required amount from invoice item if not specified
+            tx_amount = payment.amount if payment.amount is not None else self._required_amount_for_currency(item, currency)  # type: ignore[arg-type]
+
+            tx_schema = TransactionCreateSchema(
+                to_entity_id=payment.to_entity_id,
+                from_entity_id=invoice.from_entity_id,
+                amount=tx_amount,
+                currency=currency,
+                status=TransactionStatus.COMPLETED,
+                invoice_id=invoice.id,
+                invoice_item_id=item.id,
+                comment=item.comment or invoice.comment,
+                tag_ids=list({tag.id for tag in invoice.tags}),
+            )
+            self._transaction_service.create(
+                tx_schema, overrides={"actor_entity_id": actor_entity_id}
+            )
+
+        invoice.status = InvoiceStatus.PAID
+        invoice.modified_at = datetime.datetime.now()
+        self.db.flush()
+        self.db.refresh(invoice)
+        return invoice
+
+    def validate_transaction_for_invoice_item(
+        self,
+        *,
+        item_id: int,
+        tx_id: int | None,
+        from_entity_id: int,
+        to_entity_id: int,
+        amount: Decimal,
+        currency: str,
+        status: TransactionStatus,
+    ) -> None:
+        """Validate a transaction that targets an individual invoice item."""
+        item = self.db.query(InvoiceItem).filter(InvoiceItem.id == item_id).first()
+        if item is None:
+            raise InvoiceItemNotFound
+        invoice = item.invoice
+        if invoice.status == InvoiceStatus.CANCELLED:
+            raise InvoiceCancelledNotPayable
+        if item.transaction is not None and item.transaction.id != tx_id:
+            raise InvoiceItemAlreadyPaid
+        if invoice.from_entity_id != from_entity_id:
+            raise InvoiceEntitiesMismatch
+        currency_lower = currency.lower()
+        required_amount = self._required_amount_for_currency(
+            item,  # type: ignore[arg-type]
+            currency_lower,
+        )
+        if required_amount is None:
+            raise InvoiceItemCurrencyNotAllowed
+        if amount < required_amount:
+            raise InvoiceItemAmountInsufficient
+        balances = self._balance_service.get_balances(from_entity_id)
+        completed_balances = balances.completed or {}
+        available = self._balance_to_decimal(completed_balances.get(currency_lower))
+        if available < amount:
+            raise InvoiceInsufficientBalance
+        if status == TransactionStatus.COMPLETED and item.transaction is None:
+            # Check if this is the last unpaid item -> mark invoice PAID
+            all_paid = all(
+                (i.transaction is not None and i.id != item_id) or i.id == item_id
+                for i in invoice.items
+            )
+            if all_paid and invoice.status != InvoiceStatus.PAID:
+                invoice.status = InvoiceStatus.PAID
+                invoice.modified_at = datetime.datetime.now()
+                self.db.flush()
 
     def bulk_create(
         self, schema: InvoiceBulkCreateSchema, actor_entity_id: int

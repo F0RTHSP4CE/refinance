@@ -32,6 +32,24 @@
         font-style: italic;
     }
 
+    .chart-heading-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .chart-filter-form {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .chart-filter-form input[type="month"] {
+        max-width: 150px;
+    }
+
     /* Responsive: full width on small screens */
     @media (max-width: 600px) {
         .chart-container {
@@ -47,7 +65,13 @@
         <canvas id="resident-fee-chart"></canvas>
     </div>
     <div class="chart-container">
-        <h2>Resident Fee per Invoice</h2>
+        <div class="chart-heading-row">
+            <h2>Resident Fee per Invoice</h2>
+            <form method="get" class="chart-filter-form">
+                <input type="month" name="resident_fee_as_of_month" value="{{ resident_fee_as_of_month }}">
+                <button type="submit">Apply</button>
+            </form>
+        </div>
         <canvas id="resident-fee-average-chart"></canvas>
     </div>
     <div class="chart-container">

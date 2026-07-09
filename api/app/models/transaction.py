@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from app.models.invoice import Invoice
+    from app.models.invoice_item import InvoiceItem
 
 transactions_tags = Table(
     "transactions_tags",
@@ -44,10 +45,17 @@ class Transaction(BaseModel):
     to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
 
     invoice_id: Mapped[int | None] = mapped_column(
-        ForeignKey("invoices.id"), nullable=True, unique=True
+        ForeignKey("invoices.id"), nullable=True
     )
     invoice: Mapped["Invoice | None"] = relationship(
         "Invoice", back_populates="transaction"
+    )
+
+    invoice_item_id: Mapped[int | None] = mapped_column(
+        ForeignKey("invoice_items.id"), nullable=True, unique=True
+    )
+    invoice_item: Mapped["InvoiceItem | None"] = relationship(
+        "InvoiceItem", back_populates="transaction"
     )
 
     amount: Mapped[Decimal] = mapped_column(DECIMAL(scale=2), nullable=False)

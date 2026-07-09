@@ -61,3 +61,48 @@ class InvoiceDuplicateCurrency(ApplicationError):
 class InvoiceInsufficientBalance(ApplicationError):
     error_code = 8012
     error = "Entity does not have sufficient balance to pay this invoice."
+
+
+class InvoiceIsMultiItem(ApplicationError):
+    error_code = 8020
+    error = "This invoice has multiple recipients — use POST /invoices/{id}/pay-items."
+
+
+class InvoiceIsNotMultiItem(ApplicationError):
+    error_code = 8021
+    error = "This is not a multi-recipient invoice."
+
+
+class InvoiceItemNotFound(ApplicationError):
+    error_code = 8022
+    error = "Invoice item not found."
+
+
+class InvoiceItemEntityRequired(ApplicationError):
+    error_code = 8023
+    error = "A recipient entity must be specified for this invoice item."
+
+
+class InvoiceItemInvalidEntityTag(ApplicationError):
+    error_code = 8024
+    error = "The chosen entity does not have the required tag for this invoice item."
+
+
+class InvoiceItemCurrencyNotAllowed(ApplicationError):
+    error_code = 8025
+    error = "The currency is not allowed for this invoice item."
+
+
+class InvoiceItemAmountInsufficient(ApplicationError):
+    error_code = 8026
+    error = "The payment amount is insufficient for this invoice item."
+
+
+class InvoiceItemAlreadyPaid(ApplicationError):
+    error_code = 8027
+    error = "This invoice item has already been paid."
+
+
+class InvoicePayItemsMismatch(ApplicationError):
+    error_code = 8028
+    error = "The provided item IDs do not match the invoice items."

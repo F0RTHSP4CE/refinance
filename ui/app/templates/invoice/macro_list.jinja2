@@ -33,6 +33,7 @@
                 {% endfor %}
             </td>
             <td>
+                {% if invoice.to_entity %}
                 <a href="{{ url_for('entity.detail', id=invoice.to_entity_id) }}"
                     class="{% if not invoice.to_entity.active %}secondary inactive{% endif %}">{{
                     invoice.to_entity.name
@@ -40,6 +41,9 @@
                 {% for tag in invoice.to_entity.tags %}
                 {{ tag_inline(tag) }}
                 {% endfor %}
+                {% else %}
+                <span class="secondary">— multi-recipient —</span>
+                {% endif %}
             </td>
             <td>
                 {% for item in invoice.amounts %}

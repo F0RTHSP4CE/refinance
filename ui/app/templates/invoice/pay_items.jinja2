@@ -1,0 +1,119 @@
+{% extends 'base.jinja2' %}
+{% from 'widgets/tag_inline.jinja2' import tag_inline %}
+
+{% block title %}Pay invoice {{ invoice.id }}{% endblock %}
+
+{% block content %}
+<div class="invoice-form-layout shortcut-form-container">
+    <section class="entry-form-card">
+        <form method="post" class="entry-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                <label class="form-label">From</label>
+                <div class="invoice-party-block">
+                    <div class="invoice-party-value">
+                        <a href="{{ url_for('entity.detail', id=invoice.from_entity_id) }}"
+                            class="{% if not invoice.from_entity.active %}secondary inactive{% endif %}">{{
+                            invoice.from_entity.name }}</a>
+                    </div>
+                    {% if from_entity_balance %}
+                    <div class="invoice-party-balance">
+                        {% for currency, value in from_entity_balance.items() %}
+                        <span{% if value | float < 0 %} class="amount-negative" {% endif %}>{{
+                            "%.2f"|format(value|float) }} {{ currency | upper }}</span>{% if not loop.last %}<span
+                                class="invoice-amount-sep"> · </span>{% endif %}
+                            {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <h2>Recipients</h2>
+
+            {% for item in invoice.items %}
+            <div class="invoice-item-pay-block"
+                style="border:1px solid var(--border-color);border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                <div class="form-group">
+                    <label class="form-label">
+                        Recipient
+                        {% if item.to_tag %}
+                        — must have tag {{ tag_inline(item.to_tag) }}
+                        {% endif %}
+                    </label>
+                    {% if item_entity_choices[item.id] %}
+                    {# Tag-filtered dropdown #}
+                    <select name="item_{{ item.id }}_entity_id" class="form-input" required>
+                        {% for eid, ename in item_entity_choices[item.id] %}
+                        <option value="{{ eid }}" {% if item.to_entity_id==eid %} selected{% endif %}>{{ ename }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    {# Free entity selector (disabled if no tag filter) #}
+                    <div class="entity-selector entity-selector-no-id" id="item_{{ item.id }}_widget"
+                        data-fetch-url="/hx/entity-name">
+                        <input id="item_{{ item.id }}_name" class="form-input" type="search" name="name"
+                            placeholder="search..." autocomplete="off" hx-trigger="input changed delay:250ms, name"
+                            hx-get="/hx/search" hx-target="#item_{{ item.id }}_search_results"
+                            value="{{ item.to_entity.name if item.to_entity else '' }}" {% if not item.to_tag_id
+                            %}disabled{% endif %}>
+                        <input id="item_{{ item.id }}_entity_id_input" class="entity-id-field-hidden" type="hidden"
+                            name="item_{{ item.id }}_entity_id" value="{{ item.to_entity_id or '' }}">
+                        <div id="item_{{ item.id }}_search_results" class="entity-search-results"></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Amount &amp; currency</label>
+                    <div class="invoice-amount-choices" id="item-{{ item.id }}-choices">
+                        {% for a in item.amounts %}
+                        <button type="button" class="invoice-amount-choice{% if loop.first %} is-active{% endif %}"
+                            data-item-id="{{ item.id }}" data-currency="{{ a.currency | upper }}"
+                            data-amount="{{ a.amount }}">
+                            {{ a.amount }} {{ a.currency | upper }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="item_{{ item.id }}_currency" id="item-{{ item.id }}-currency"
+                        value="{{ item.amounts[0].currency | upper if item.amounts else '' }}">
+                    <input type="hidden" name="item_{{ item.id }}_amount" id="item-{{ item.id }}-amount"
+                        value="{{ item.amounts[0].amount if item.amounts else '' }}">
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="form-actions">
+                <button type="submit" class="big-button">Pay all</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<script src="/static/js/entitySelector.js"></script>
+<script>
+    (function () {
+        document.querySelectorAll('.invoice-amount-choices').forEach(function (container) {
+            var buttons = Array.from(container.querySelectorAll('.invoice-amount-choice'));
+            var itemId = container.id.replace('item-', '').replace('-choices', '');
+            var currencyInput = document.getElementById('item-' + itemId + '-currency');
+            var amountInput = document.getElementById('item-' + itemId + '-amount');
+
+            function setActive(btn) {
+                buttons.forEach(function (b) { b.classList.remove('is-active'); });
+                btn.classList.add('is-active');
+                if (currencyInput) currencyInput.value = btn.getAttribute('data-currency');
+                if (amountInput) amountInput.value = btn.getAttribute('data-amount');
+            }
+
+            buttons.forEach(function (btn) {
+                btn.addEventListener('click', function () { setActive(btn); });
+            });
+
+            var preset = buttons.find(function (b) { return b.classList.contains('is-active'); }) || buttons[0];
+            if (preset) setActive(preset);
+        });
+    }());
+</script>
+{% endblock %}

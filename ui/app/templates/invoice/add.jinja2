@@ -38,7 +38,8 @@
                 </div>
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_1">Currency 1</label>
-                    {{ currency_selector('currency_1', form.currency_1.choices, form.currency_1.data, id='currency_1') }}
+                    {{ currency_selector('currency_1', form.currency_1.choices, form.currency_1.data, id='currency_1')
+                    }}
                 </div>
             </div>
 
@@ -49,7 +50,8 @@
                 </div>
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_2">Currency 2</label>
-                    {{ currency_selector('currency_2', form.currency_2.choices, form.currency_2.data, id='currency_2', required=False) }}
+                    {{ currency_selector('currency_2', form.currency_2.choices, form.currency_2.data, id='currency_2',
+                    required=False) }}
                 </div>
             </div>
 
@@ -60,7 +62,8 @@
                 </div>
                 <div class="form-field form-field-currency">
                     <label class="form-label" for="currency_3">Currency 3</label>
-                    {{ currency_selector('currency_3', form.currency_3.choices, form.currency_3.data, id='currency_3', required=False) }}
+                    {{ currency_selector('currency_3', form.currency_3.choices, form.currency_3.data, id='currency_3',
+                    required=False) }}
                 </div>
             </div>
 
@@ -74,6 +77,10 @@
             </div>
         </form>
     </section>
+
+    <p class="secondary" style="text-align:center;margin-top:1rem">
+        <a href="{{ url_for('invoice.add_multi') }}">+ Multi-recipient invoice →</a>
+    </p>
 </div>
 
 <script src="/static/js/entitySelector.js"></script>

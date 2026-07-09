@@ -1,5 +1,6 @@
 """Transaction service"""
 
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from app.dependencies.services import (
@@ -129,6 +130,45 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
     def create(  # type: ignore[override]
         self, schema: TransactionCreateSchema, overrides: dict = {}
     ) -> Transaction:
+        # Auto-select best currency (and amount) for invoice payments if not specified
+        if schema.invoice_id is not None and (
+            not schema.currency or schema.amount is None
+        ):
+            invoice_service = self._get_invoice_service()
+            invoice = invoice_service.get(schema.invoice_id)
+
+            # Collect available currencies from invoice amounts
+            available_currencies = set()
+            amounts_by_currency: dict[str, Decimal] = {}
+            if invoice.amounts:
+                for amount_obj in invoice.amounts:
+                    # Handle both dict and object formats
+                    currency = (
+                        amount_obj.get("currency")
+                        if isinstance(amount_obj, dict)
+                        else amount_obj.currency
+                    )
+                    amount = (
+                        amount_obj.get("amount")
+                        if isinstance(amount_obj, dict)
+                        else amount_obj.amount
+                    )
+                    curr_lower = currency.lower()
+                    available_currencies.add(curr_lower)
+                    amounts_by_currency[curr_lower] = Decimal(str(amount))
+
+            if not schema.currency:
+                # Use invoice service to select best currency
+                best_currency = invoice_service.select_best_currency(
+                    schema.from_entity_id, available_currencies
+                )
+                schema.currency = best_currency or (
+                    invoice.amounts[0].get("currency") if invoice.amounts else None
+                )
+
+            if schema.amount is None and schema.currency:
+                schema.amount = amounts_by_currency.get(schema.currency.lower())
+
         if (
             schema.status == TransactionStatus.COMPLETED
             and self._treasury_service.transaction_will_overdraft_treasury(
@@ -138,7 +178,18 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             )
         ):
             raise TransactionWillOverdraftTreasury
-        if schema.invoice_id is not None:
+        if schema.invoice_item_id is not None:
+            invoice_service = self._get_invoice_service()
+            invoice_service.validate_transaction_for_invoice_item(
+                item_id=schema.invoice_item_id,
+                tx_id=None,
+                from_entity_id=schema.from_entity_id,
+                to_entity_id=schema.to_entity_id,
+                amount=schema.amount,
+                currency=schema.currency,
+                status=schema.status or TransactionStatus.DRAFT,
+            )
+        elif schema.invoice_id is not None:
             invoice_service = self._get_invoice_service()
             invoice_service.validate_transaction_for_invoice(
                 invoice_id=schema.invoice_id,
@@ -202,7 +253,21 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         ):
             raise TransactionWillOverdraftTreasury
         resolved_invoice_id = schema.invoice_id or tx.invoice_id
-        if resolved_invoice_id is not None:
+        resolved_invoice_item_id = tx.invoice_item_id  # item_id cannot be changed
+        if resolved_invoice_item_id is not None:
+            invoice_service = self._get_invoice_service()
+            invoice_service.validate_transaction_for_invoice_item(
+                item_id=resolved_invoice_item_id,
+                tx_id=tx.id,
+                from_entity_id=tx.from_entity_id,
+                to_entity_id=tx.to_entity_id,
+                amount=schema.amount if schema.amount is not None else tx.amount,
+                currency=(
+                    schema.currency if schema.currency is not None else tx.currency
+                ),
+                status=schema.status if schema.status is not None else tx.status,
+            )
+        elif resolved_invoice_id is not None:
             invoice_service = self._get_invoice_service()
             invoice_service.validate_transaction_for_invoice(
                 invoice_id=resolved_invoice_id,

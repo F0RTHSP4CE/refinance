@@ -11,6 +11,7 @@ from sqlalchemy import JSON, Column, Date, Enum, ForeignKey, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
+    from app.models.invoice_item import InvoiceItem
     from app.models.transaction import Transaction
 
 invoices_tags = Table(
@@ -40,8 +41,10 @@ class Invoice(BaseModel):
     )
     from_entity: Mapped[Entity] = relationship(foreign_keys=[from_entity_id])
 
-    to_entity_id: Mapped[int] = mapped_column(ForeignKey("entities.id"), nullable=False)
-    to_entity: Mapped[Entity] = relationship(foreign_keys=[to_entity_id])
+    to_entity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("entities.id"), nullable=True
+    )
+    to_entity: Mapped[Entity | None] = relationship(foreign_keys=[to_entity_id])
 
     amounts: Mapped[list[dict]] = mapped_column(JSON, nullable=False)
 
@@ -60,6 +63,10 @@ class Invoice(BaseModel):
     )
 
     tags: Mapped[list[Tag]] = relationship(secondary=invoices_tags)
+
+    items: Mapped[list["InvoiceItem"]] = relationship(
+        "InvoiceItem", back_populates="invoice", cascade="all, delete-orphan"
+    )
 
     transaction: Mapped["Transaction | None"] = relationship(
         "Transaction", back_populates="invoice", uselist=False

@@ -354,30 +354,28 @@ class StatsService(BaseService):
         return result
 
     def get_resident_fee_average_by_month(
-        self, timeframe_from: date | None = None, timeframe_to: date | None = None
+        self,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+        as_of_month: date | None = None,
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        as_of_month = as_of_month or date.today()
+        last_as_of_day = calendar.monthrange(as_of_month.year, as_of_month.month)[1]
+        paid_until = datetime.combine(
+            as_of_month.replace(day=last_as_of_day),
+            time.max,
+        )
         hackerspace = self._entity_service.get(f0_entity.id)
 
-        paid_invoices = (
+        invoices = (
             self.db.query(Invoice)
             .filter(
                 Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
                 Invoice.tags.contains(fee_tag),
-                Invoice.status == InvoiceStatus.PAID,
-            )
-            .all()
-        )
-
-        unpaid_invoices = (
-            self.db.query(Invoice)
-            .filter(
-                Invoice.to_entity_id == hackerspace.id,
-                Invoice.billing_period.isnot(None),
-                Invoice.tags.contains(fee_tag),
-                Invoice.status == InvoiceStatus.PENDING,
+                Invoice.status != InvoiceStatus.CANCELLED,
             )
             .all()
         )
@@ -390,34 +388,7 @@ class StatsService(BaseService):
         start_month = timeframe_from.replace(day=1)
         end_month = timeframe_to.replace(day=1)
 
-        for invoice in paid_invoices:
-            if invoice.billing_period is None:
-                continue
-            if invoice.transaction is None:
-                continue
-            if invoice.transaction.status != TransactionStatus.COMPLETED:
-                continue
-
-            year = invoice.billing_period.year
-            month = invoice.billing_period.month
-            if year > today.year or (year == today.year and month > today.month):
-                continue
-
-            fee_date = date(year, month, 1)
-            if not (start_month <= fee_date <= end_month):
-                continue
-
-            month_key = (year, month)
-            monthly_invoice_counts[month_key] += 1
-            monthly_paid_counts[month_key] += 1
-            monthly_paid_totals[month_key][
-                invoice.transaction.currency.lower()
-            ] += invoice.transaction.amount
-            monthly_expected_totals[month_key][
-                invoice.transaction.currency.lower()
-            ] += invoice.transaction.amount
-
-        for invoice in unpaid_invoices:
+        for invoice in invoices:
             if invoice.billing_period is None:
                 continue
 
@@ -438,6 +409,16 @@ class StatsService(BaseService):
                     month_key = (year, month)
                     monthly_invoice_counts[month_key] += 1
                     monthly_expected_totals[month_key][currency] += Decimal(str(amount))
+
+                    if (
+                        invoice.transaction is not None
+                        and invoice.transaction.status == TransactionStatus.COMPLETED
+                        and invoice.transaction.created_at <= paid_until
+                    ):
+                        monthly_paid_counts[month_key] += 1
+                        monthly_paid_totals[month_key][
+                            invoice.transaction.currency.lower()
+                        ] += invoice.transaction.amount
 
         all_months = set(monthly_invoice_counts.keys())
 

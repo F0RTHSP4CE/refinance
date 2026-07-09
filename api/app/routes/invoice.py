@@ -13,6 +13,7 @@ from app.schemas.invoice import (
     InvoiceSchema,
     InvoiceUpdateSchema,
 )
+from app.schemas.invoice_item import InvoicePayItemsSchema
 from app.services.invoice import InvoiceService
 from fastapi import APIRouter, Depends
 
@@ -85,3 +86,15 @@ def trigger_invoice_auto_pay(
 ):
     paid_count = invoice_service.auto_pay_oldest_invoices()
     return InvoiceAutoPayReportSchema(paid=paid_count)
+
+
+@invoice_router.post("/{invoice_id}/pay-items", response_model=InvoiceSchema)
+def pay_invoice_items(
+    invoice_id: int,
+    payload: InvoicePayItemsSchema,
+    invoice_service: InvoiceService = Depends(get_invoice_service),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    return invoice_service.pay_items(
+        invoice_id, payload, actor_entity_id=actor_entity.id
+    )

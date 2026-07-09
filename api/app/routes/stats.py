@@ -42,9 +42,12 @@ def get_resident_fee_sum_by_month(
 def get_resident_fee_average_by_month(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
+    as_of_month: Optional[date] = None,
     stats_service: StatsService = Depends(get_stats_service),
 ):
-    return stats_service.get_resident_fee_average_by_month(timeframe_from, timeframe_to)
+    return stats_service.get_resident_fee_average_by_month(
+        timeframe_from, timeframe_to, as_of_month
+    )
 
 
 @router.get(
