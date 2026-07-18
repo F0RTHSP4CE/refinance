@@ -65,7 +65,9 @@ class _ExchangePlanItem(NamedTuple):
 class CurrencyExchangeService:
     rates_ttl_seconds = timedelta(hours=1).total_seconds()
     rates_request_timeout_seconds: tuple[float, float] = (2.0, 3.0)
-    _rates_cache: dict | None = None
+    nbg_rates_url = "https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json"
+    frankfurter_rates_url = "https://api.frankfurter.dev/v2/rates?base=GEL"
+    _rates_cache: list[dict] | None = None
     _rates_cached_at: float = 0.0
     _rates_lock = threading.Lock()
 
@@ -82,7 +84,7 @@ class CurrencyExchangeService:
         self.balance_service = balance_service
 
     @property
-    def _raw_rates(self) -> dict:
+    def _raw_rates(self) -> list[dict]:
         now = time.time()
         cached_rates = self.__class__._rates_cache
         cached_at = self.__class__._rates_cached_at
@@ -96,24 +98,105 @@ class CurrencyExchangeService:
             if cached_rates is not None and now - cached_at < self.rates_ttl_seconds:
                 return cached_rates
 
-            try:
-                response = requests.get(
-                    "https://nbg.gov.ge/gw/api/ct/monetarypolicy/currencies/en/json",
-                    timeout=self.rates_request_timeout_seconds,
-                )
-                response.raise_for_status()
-                rates = response.json()
+            provider_errors: list[tuple[str, Exception]] = []
+            for provider_name, fetch_rates in (
+                ("NBG", self._fetch_nbg_rates),
+                ("Frankfurter", self._fetch_frankfurter_rates),
+            ):
+                try:
+                    rates = fetch_rates()
+                except (
+                    requests.RequestException,
+                    ValueError,
+                    TypeError,
+                    KeyError,
+                ) as exc:
+                    provider_errors.append((provider_name, exc))
+                    logger.warning(
+                        "%s currency rates fetch failed%s: %s",
+                        provider_name,
+                        "; trying secondary provider" if provider_name == "NBG" else "",
+                        exc,
+                    )
+                    continue
                 self.__class__._rates_cache = rates
                 self.__class__._rates_cached_at = time.time()
+                logger.info("Currency rates loaded from %s", provider_name)
                 return rates
-            except requests.RequestException:
-                if cached_rates is not None:
-                    logger.warning(
-                        "Currency rates fetch failed, using stale cached rates",
-                        exc_info=True,
-                    )
-                    return cached_rates
-                raise
+
+            if cached_rates is not None:
+                logger.warning(
+                    "All currency rate providers failed; using stale cached rates"
+                )
+                return cached_rates
+
+            details = "; ".join(
+                f"{provider}: {error}" for provider, error in provider_errors
+            )
+            raise requests.ConnectionError(
+                f"All currency rate providers failed ({details})"
+            ) from provider_errors[-1][1]
+
+    def _fetch_nbg_rates(self) -> list[dict]:
+        response = requests.get(
+            self.nbg_rates_url,
+            timeout=self.rates_request_timeout_seconds,
+        )
+        response.raise_for_status()
+        rates = response.json()
+        if not isinstance(rates, list) or not rates:
+            raise ValueError("NBG returned an invalid rate payload")
+        currencies = rates[0].get("currencies")
+        if not isinstance(currencies, list) or not currencies:
+            raise ValueError("NBG returned no currencies")
+        return rates
+
+    def _fetch_frankfurter_rates(self) -> list[dict]:
+        response = requests.get(
+            self.frankfurter_rates_url,
+            timeout=self.rates_request_timeout_seconds,
+        )
+        response.raise_for_status()
+        rows = response.json()
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("Frankfurter returned an invalid rate payload")
+
+        currencies: list[dict[str, str | int]] = []
+        dates: list[str] = []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            if str(row.get("base") or "").upper() != "GEL":
+                continue
+            currency = str(row.get("quote") or "").upper().strip()
+            if not currency or currency == "GEL":
+                continue
+            try:
+                units_per_gel = Decimal(str(row.get("rate")))
+            except Exception:
+                continue
+            if units_per_gel <= 0:
+                continue
+            gel_per_unit = Decimal("1") / units_per_gel
+            currencies.append(
+                {
+                    "code": currency,
+                    "quantity": 1,
+                    "rate": format(gel_per_unit, "f"),
+                }
+            )
+            if row.get("date"):
+                dates.append(str(row["date"]))
+
+        if not currencies or "USD" not in {item["code"] for item in currencies}:
+            raise ValueError("Frankfurter returned no usable GEL currency rates")
+        return [
+            {
+                "date": max(dates) if dates else None,
+                "currencies": currencies,
+                "source": "frankfurter",
+            }
+        ]
 
     def calculate_conversion(
         self,

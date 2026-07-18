@@ -87,6 +87,18 @@
                                                     {% for tag in item_tx.to_entity.tags %}{{ tag_inline(tag) }}{%
                                                     endfor %}
                                                 </div>
+                                                {% elif item.to_tag %}
+                                                <div
+                                                    style="display: flex; gap: 0.5rem; align-items: center; white-space: nowrap;">
+                                                    <select name="item_{{ item.id }}_entity_id" class="form-input"
+                                                        style="width: 120px; min-width: 120px; padding: 0.2rem 0.3rem; font-size: 0.9rem; font-weight: bold;">
+                                                        <option value="">Select entity...</option>
+                                                        {% for eid, ename in item_entity_choices.get(item.id, []) %}
+                                                        <option value="{{ eid }}"{% if item.to_entity_id == eid %} selected{% endif %}>{{ ename }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div style="flex-shrink: 0;">{{ tag_inline(item.to_tag) }}</div>
+                                                </div>
                                                 {% elif item.to_entity %}
                                                 <div
                                                     style="display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;">
@@ -96,18 +108,6 @@
                                                     {% for tag in item.to_entity.tags %}
                                                     {{ tag_inline(tag) }}
                                                     {% endfor %}
-                                                </div>
-                                                {% elif item.to_tag %}
-                                                <div
-                                                    style="display: flex; gap: 0.5rem; align-items: center; white-space: nowrap;">
-                                                    <select name="item_{{ item.id }}_entity_id" class="form-input"
-                                                        style="width: 120px; min-width: 120px; padding: 0.2rem 0.3rem; font-size: 0.9rem; font-weight: bold;">
-                                                        <option value="">Select entity...</option>
-                                                        {% for eid, ename in item_entity_choices.get(item.id, []) %}
-                                                        <option value="{{ eid }}">{{ ename }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                    <div style="flex-shrink: 0;">{{ tag_inline(item.to_tag) }}</div>
                                                 </div>
                                                 {% else %}
                                                 <span class="secondary">—</span>

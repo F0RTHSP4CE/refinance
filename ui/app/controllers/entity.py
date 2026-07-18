@@ -3,6 +3,7 @@ from datetime import date
 from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
+from app.invoice_amounts import invoice_display_amounts
 from app.middlewares.auth import token_required
 from app.schemas import (
     Balance,
@@ -475,6 +476,8 @@ def detail(id):
     ).json()
     invoices_total = invoices_page["total"]
     invoices = [Invoice(**item) for item in invoices_page["items"]]
+    for invoice in invoices:
+        invoice.display_amounts = invoice_display_amounts(invoice)
 
     invoices_unpaid_count = (
         api.http(

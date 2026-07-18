@@ -2,6 +2,9 @@
 
 from decimal import Decimal
 
+import pytest
+import requests
+from app.services.currency_exchange import CurrencyExchangeService
 from fastapi import status
 from fastapi.testclient import TestClient
 
@@ -106,3 +109,169 @@ class TestBalanceEndpoints:
         )
         balance_b = Decimal(response.json()["completed"]["usd"])
         assert balance_b == Decimal("100")
+
+    def test_recommended_deposit_includes_multi_recipient_invoice_items(
+        self, test_app: TestClient, token
+    ):
+        payer = test_app.post(
+            "/entities",
+            json={"name": "Recommended Deposit Payer"},
+            headers={"x-token": token},
+        ).json()
+        fixed_recipient = test_app.post(
+            "/entities",
+            json={"name": "Recommended Deposit Fixed Recipient"},
+            headers={"x-token": token},
+        ).json()
+        room_recipient = test_app.post(
+            "/entities",
+            json={"name": "Recommended Deposit Room Recipient"},
+            headers={"x-token": token},
+        ).json()
+        invoice_response = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": payer["id"],
+                "items": [
+                    {
+                        "to_entity_id": fixed_recipient["id"],
+                        "amounts": [{"currency": "usd", "amount": "42.00"}],
+                    },
+                    {
+                        "to_entity_id": room_recipient["id"],
+                        "amounts": [{"currency": "usd", "amount": "8.00"}],
+                    },
+                ],
+            },
+            headers={"x-token": token},
+        )
+        assert invoice_response.status_code == status.HTTP_200_OK
+
+        response = test_app.get(
+            f"/balances/{payer['id']}/recommended-deposit",
+            headers={"x-token": token},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "entity_id": payer["id"],
+            "currency": "usd",
+            "amount": "50.00",
+        }
+
+    def test_recommended_deposit_is_empty_when_entity_owes_nothing(
+        self, test_app: TestClient, token
+    ):
+        entity = test_app.post(
+            "/entities",
+            json={"name": "No Recommended Deposit"},
+            headers={"x-token": token},
+        ).json()
+
+        response = test_app.get(
+            f"/balances/{entity['id']}/recommended-deposit",
+            headers={"x-token": token},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "entity_id": entity["id"],
+            "currency": None,
+            "amount": None,
+        }
+
+    def test_recommended_deposit_falls_back_when_rates_are_unavailable(
+        self, test_app: TestClient, token, monkeypatch: pytest.MonkeyPatch
+    ):
+        payer = test_app.post(
+            "/entities",
+            json={"name": "Offline Rates Payer"},
+            headers={"x-token": token},
+        ).json()
+        recipient = test_app.post(
+            "/entities",
+            json={"name": "Offline Rates Recipient"},
+            headers={"x-token": token},
+        ).json()
+        invoice_response = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": payer["id"],
+                "to_entity_id": recipient["id"],
+                "amounts": [
+                    {"currency": "usd", "amount": "50.00"},
+                    {"currency": "gel", "amount": "135.00"},
+                ],
+            },
+            headers={"x-token": token},
+        )
+        assert invoice_response.status_code == status.HTTP_200_OK
+
+        for transaction in (
+            {
+                "from_entity_id": 1,
+                "to_entity_id": payer["id"],
+                "amount": "39.69",
+                "currency": "usd",
+                "status": "completed",
+            },
+            {
+                "from_entity_id": payer["id"],
+                "to_entity_id": recipient["id"],
+                "amount": "319.25",
+                "currency": "gel",
+                "status": "completed",
+            },
+        ):
+            transaction_response = test_app.post(
+                "/transactions/", json=transaction, headers={"x-token": token}
+            )
+            assert transaction_response.status_code == status.HTTP_200_OK
+
+        def unavailable_rates(*args, **kwargs):
+            raise requests.ConnectionError("NBG DNS unavailable")
+
+        monkeypatch.setattr(
+            CurrencyExchangeService,
+            "calculate_conversion",
+            unavailable_rates,
+        )
+
+        response = test_app.get(
+            f"/balances/{payer['id']}/recommended-deposit",
+            headers={"x-token": token},
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {
+            "entity_id": payer["id"],
+            "currency": "usd",
+            "amount": "11.00",
+        }
+
+        gel_only_payer = test_app.post(
+            "/entities",
+            json={"name": "Offline Rates GEL-only Payer"},
+            headers={"x-token": token},
+        ).json()
+        gel_invoice_response = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": gel_only_payer["id"],
+                "to_entity_id": recipient["id"],
+                "amounts": [{"currency": "gel", "amount": "135.00"}],
+            },
+            headers={"x-token": token},
+        )
+        assert gel_invoice_response.status_code == status.HTTP_200_OK
+
+        gel_response = test_app.get(
+            f"/balances/{gel_only_payer['id']}/recommended-deposit",
+            headers={"x-token": token},
+        )
+        assert gel_response.status_code == status.HTTP_200_OK
+        assert gel_response.json() == {
+            "entity_id": gel_only_payer["id"],
+            "currency": "gel",
+            "amount": "135.00",
+        }

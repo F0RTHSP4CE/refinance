@@ -86,6 +86,12 @@ def test_app():
             app_name="refinance-test",
             database_url_env=database_url,
             pos_secret="test-pos-secret",
+            # Existing auto-pay tests exercise payment ordering rather than timing.
+            invoice_auto_pay_grace_days=0,
+            invoice_recipient_rotations_raw=(
+                '[{"tag_id":19,"anchor_period":"2026-07",'
+                '"entity_ids":[60,58,55,56,57,59,61]}]'
+            ),
         )
         app.dependency_overrides = {get_config: lambda: test_config}
 

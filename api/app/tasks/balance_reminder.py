@@ -21,7 +21,7 @@ from app.config import Config
 from app.dependencies.services import ServiceContainer
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
-from app.services.entity_owed import calculate_entity_owed
+from app.services.entity_owed import calculate_entity_owed, invoice_currency_options
 from app.services.notification import NotificationService
 from app.tasks import PeriodicTask
 from sqlalchemy import nullslast
@@ -68,12 +68,7 @@ def _per_invoice_amounts(invoices: list[Invoice]) -> list[dict[str, Decimal]]:
     """
     result: list[dict[str, Decimal]] = []
     for inv in invoices:
-        options: dict[str, Decimal] = {}
-        for entry in inv.amounts or []:
-            currency = str(entry.get("currency", "")).lower()
-            amount = Decimal(str(entry.get("amount", "0")))
-            if currency:
-                options[currency] = options.get(currency, Decimal(0)) + amount
+        options = invoice_currency_options(inv)
         if options:
             result.append(options)
     return result

@@ -32,6 +32,7 @@ class ServiceContainer:
         self._stats_service = None
         self._token_service = None
         self._notification_service = None
+        self._entity_owed_service = None
 
     @property
     def tag_service(self):
@@ -100,6 +101,7 @@ class ServiceContainer:
                 tag_service=self.tag_service,
                 balance_service=self.balance_service,
                 transaction_service=self._transaction_service,
+                config=self.config,
             )
         self._transaction_service.set_invoice_service(self._invoice_service)
 
@@ -231,6 +233,18 @@ class ServiceContainer:
         return self._currency_exchange_service
 
     @property
+    def entity_owed_service(self):
+        if self._entity_owed_service is None:
+            from app.services.entity_owed import EntityOwedService
+
+            self._entity_owed_service = EntityOwedService(
+                db=self.db,
+                balance_service=self.balance_service,
+                currency_exchange_service=self.currency_exchange_service,
+            )
+        return self._entity_owed_service
+
+    @property
     def fee_service(self):
         if self._fee_service is None:
             from app.services.fee import FeeService
@@ -355,6 +369,10 @@ def get_pos_service(container: ServiceContainer = Depends(get_container)):
 
 def get_currency_exchange_service(container: ServiceContainer = Depends(get_container)):
     return container.currency_exchange_service
+
+
+def get_entity_owed_service(container: ServiceContainer = Depends(get_container)):
+    return container.entity_owed_service
 
 
 def get_fee_service(container: ServiceContainer = Depends(get_container)):

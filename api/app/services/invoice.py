@@ -4,6 +4,7 @@ import datetime
 from datetime import date
 from decimal import Decimal
 
+from app.config import Config, get_config
 from app.dependencies.services import (
     get_balance_service,
     get_tag_service,
@@ -29,8 +30,10 @@ from app.errors.invoice import (
     InvoiceItemNotFound,
     InvoiceNotEditable,
     InvoicePayItemsMismatch,
+    InvoiceRecipientRotationInvalid,
     InvoiceTransactionAlreadyAttached,
 )
+from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
 from app.models.transaction import TransactionStatus
@@ -43,7 +46,7 @@ from app.schemas.invoice import (
 )
 from app.schemas.invoice_item import InvoiceItemCreateSchema, InvoicePayItemsSchema
 from app.schemas.transaction import TransactionCreateSchema
-from app.seeding import automatic_tag
+from app.seeding import automatic_tag, fee_tag
 from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.mixins.taggable_mixin import TaggableServiceMixin
@@ -64,11 +67,58 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         tag_service: TagService = Depends(get_tag_service),
         balance_service: BalanceService = Depends(get_balance_service),
         transaction_service: TransactionService = Depends(get_transaction_service),
+        config: Config = Depends(get_config),
     ):
         self.db = db
         self._tag_service = tag_service
         self._balance_service = balance_service
         self._transaction_service = transaction_service
+        self._config = config
+
+    def _rotated_recipient_id(self, tag_id: int, billing_period: date) -> int | None:
+        for rotation in self._config.invoice_recipient_rotations:
+            if rotation["tag_id"] != tag_id:
+                continue
+            anchor_year, anchor_month = map(
+                int, rotation["anchor_period"].split("-", 1)
+            )
+            month_offset = (billing_period.year - anchor_year) * 12 + (
+                billing_period.month - anchor_month
+            )
+            entity_ids = rotation["entity_ids"]
+            recipient_id = entity_ids[month_offset % len(entity_ids)]
+            recipient = self.db.query(Entity).filter(Entity.id == recipient_id).first()
+            if recipient is None or not recipient.active:
+                raise InvoiceRecipientRotationInvalid(
+                    f"entity {recipient_id} for tag {tag_id} is missing or inactive"
+                )
+            if tag_id not in {tag.id for tag in recipient.tags}:
+                raise InvoiceRecipientRotationInvalid(
+                    f"entity {recipient_id} does not have tag {tag_id}"
+                )
+            return recipient_id
+        return None
+
+    def _apply_recipient_rotations(
+        self,
+        items: list[InvoiceItemCreateSchema],
+        billing_period: date,
+        *,
+        require_configured_recipient: bool,
+    ) -> list[InvoiceItemCreateSchema]:
+        resolved: list[InvoiceItemCreateSchema] = []
+        for original in items:
+            item = original.model_copy(deep=True)
+            if item.to_entity_id is None and item.to_tag_id is not None:
+                item.to_entity_id = self._rotated_recipient_id(
+                    item.to_tag_id, billing_period
+                )
+                if item.to_entity_id is None and require_configured_recipient:
+                    raise InvoiceRecipientRotationInvalid(
+                        f"no rotation configured for tag {item.to_tag_id}"
+                    )
+            resolved.append(item)
+        return resolved
 
     def _apply_filters(  # type: ignore[override]
         self, query: Query[Invoice], filters: InvoiceFiltersSchema
@@ -268,9 +318,12 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         return selected_currency, selected_amount
 
     def auto_pay_oldest_invoices(self) -> int:
+        grace_days = max(self._config.invoice_auto_pay_grace_days, 0)
+        eligible_before = datetime.datetime.now() - datetime.timedelta(days=grace_days)
         # ── simple invoices (no items) ──────────────────────────────────────
         simple_pending_filter = [
             self.model.status == InvoiceStatus.PENDING,
+            self.model.created_at <= eligible_before,
             ~self.model.transaction.has(),
             ~self.model.items.any(),
         ]
@@ -325,6 +378,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         # ── multi-item invoices (only when every item has to_entity_id set) ─
         multi_pending_filter = [
             self.model.status == InvoiceStatus.PENDING,
+            self.model.created_at <= eligible_before,
             self.model.items.any(),
         ]
         multi_entity_ids = (
@@ -469,8 +523,6 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         actor_entity_id: int,
     ) -> Invoice:
         """Atomically pay all items of a multi-recipient invoice."""
-        from app.models.entity import Entity
-
         invoice = self.get(invoice_id)
         if not invoice.items:
             raise InvoiceIsNotMultiItem
@@ -527,7 +579,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                     .filter(Entity.id == payment.to_entity_id)
                     .first()
                 )
-                if entity is None:
+                if entity is None or not entity.active:
                     raise InvoiceItemEntityRequired
                 tag_ids = {tag.id for tag in entity.tags}
                 if item.to_tag_id not in tag_ids:
@@ -652,6 +704,14 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         else:
             billing_period = date(billing_period.year, billing_period.month, 1)
 
+        resolved_items = self._apply_recipient_rotations(
+            schema.items,
+            billing_period,
+            require_configured_recipient=(
+                bool(schema.items) and fee_tag.id in schema.tag_ids
+            ),
+        )
+
         entity_ids: set[int] = set(schema.from_entity_ids)
 
         if schema.from_tag_ids:
@@ -672,7 +732,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                 skipped_count += 1
                 continue
 
-            if schema.items:
+            if resolved_items:
                 # Multi-item invoice mode
                 invoice = self.create(
                     InvoiceCreateSchema(
@@ -682,7 +742,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                         billing_period=billing_period,
                         tag_ids=schema.tag_ids,
                         comment=schema.comment,
-                        items=schema.items,
+                        items=resolved_items,
                     ),
                     overrides={"actor_entity_id": actor_entity_id},
                 )
@@ -707,3 +767,63 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
             skipped_count=skipped_count,
             invoice_ids=invoice_ids,
         )
+
+    def reconcile_recipient_rotations(self, *, apply: bool = False) -> list[dict]:
+        """Find and optionally fill missing rotated recipients on pending fees."""
+        rotation_tag_ids = {
+            rotation["tag_id"] for rotation in self._config.invoice_recipient_rotations
+        }
+        invoices = (
+            self.db.query(Invoice)
+            .filter(
+                Invoice.status == InvoiceStatus.PENDING,
+                Invoice.billing_period.isnot(None),
+                Invoice.items.any(),
+                Invoice.tags.contains(fee_tag),
+            )
+            .order_by(Invoice.id)
+            .all()
+        )
+        changes: list[dict] = []
+        for invoice in invoices:
+            if invoice.billing_period is None:
+                continue
+            unresolved_items = [
+                item
+                for item in invoice.items
+                if item.to_entity_id is None and item.to_tag_id is not None
+            ]
+            for item in unresolved_items:
+                previous_tag_id = item.to_tag_id
+                target_tag_id = previous_tag_id
+                if target_tag_id not in rotation_tag_ids:
+                    if len(rotation_tag_ids) != 1 or len(unresolved_items) != 1:
+                        raise InvoiceRecipientRotationInvalid(
+                            f"cannot infer rotation tag for invoice {invoice.id} "
+                            f"item {item.id} constrained to tag {previous_tag_id}"
+                        )
+                    target_tag_id = next(iter(rotation_tag_ids))
+                recipient_id = self._rotated_recipient_id(
+                    target_tag_id, invoice.billing_period
+                )
+                if recipient_id is None:
+                    raise InvoiceRecipientRotationInvalid(
+                        f"no rotation configured for tag {target_tag_id}"
+                    )
+                changes.append(
+                    {
+                        "invoice_id": invoice.id,
+                        "item_id": item.id,
+                        "billing_period": invoice.billing_period.isoformat(),
+                        "previous_to_tag_id": previous_tag_id,
+                        "to_tag_id": target_tag_id,
+                        "to_entity_id": recipient_id,
+                    }
+                )
+                if apply:
+                    item.to_tag_id = target_tag_id
+                    item.to_entity_id = recipient_id
+                    item.modified_at = datetime.datetime.now()
+        if apply and changes:
+            self.db.flush()
+        return changes

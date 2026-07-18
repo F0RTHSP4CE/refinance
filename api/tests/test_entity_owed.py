@@ -1,6 +1,10 @@
 from decimal import Decimal
 
-from app.services.entity_owed import calculate_entity_owed
+from app.services.entity_owed import (
+    EntityOwedService,
+    calculate_entity_owed,
+    calculate_same_currency_invoice_topup,
+)
 
 
 def _stub_converter_factory(usd_per_unit: dict[str, Decimal]):
@@ -20,6 +24,28 @@ def _stub_converter_factory(usd_per_unit: dict[str, Decimal]):
 
 
 class TestEntityOwedCalculator:
+    def test_recommended_deposit_rounds_up_to_a_whole_currency_unit(self):
+        assert EntityOwedService._round_recommended_deposit(
+            Decimal("13.37")
+        ) == Decimal("14")
+        assert EntityOwedService._round_recommended_deposit(
+            Decimal("14.00")
+        ) == Decimal("14")
+
+    def test_same_currency_fallback_makes_invoice_payable_without_fx(self):
+        currency, amount = calculate_same_currency_invoice_topup(
+            pending_invoices=[
+                {"usd": Decimal("50"), "gel": Decimal("135")},
+            ],
+            completed_balances={
+                "usd": Decimal("39.69"),
+                "gel": Decimal("-319.25"),
+            },
+        )
+
+        assert currency == "usd"
+        assert amount == Decimal("10.31")
+
     def test_cross_currency_credit_cancels_equivalent_debt(self):
         # USD +100 should cancel GEL -270 (= 100 USD) via conversion.
         convert = _stub_converter_factory(

@@ -35,7 +35,11 @@ from app.seeding import (
 from app.services.balance import BalanceService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.deposit import DepositService
-from app.services.entity_owed import EntityOwedSummary, calculate_entity_owed
+from app.services.entity_owed import (
+    EntityOwedSummary,
+    calculate_entity_owed,
+    invoice_currency_options,
+)
 from app.services.stripe import (
     StripeCheckoutSessionData,
     StripeInvoiceData,
@@ -1053,14 +1057,7 @@ class StripeAuthorizationService:
         )
         invoice_list: list[dict[str, Decimal]] = []
         for inv in pending_invoices:
-            options: dict[str, Decimal] = {}
-            for item in inv.amounts or []:
-                currency = str(item.get("currency") or "").lower().strip()
-                if not currency:
-                    continue
-                options[currency] = options.get(currency, Decimal("0")) + Decimal(
-                    str(item.get("amount") or "0")
-                )
+            options = invoice_currency_options(inv)
             if options:
                 invoice_list.append(options)
 

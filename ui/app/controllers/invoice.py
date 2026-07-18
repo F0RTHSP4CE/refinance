@@ -456,7 +456,9 @@ def detail(id):
         for item in invoice.items:
             if item.to_tag_id is not None:
                 entities_data = api.http(
-                    "GET", "entities", params={"tags_ids": item.to_tag_id, "limit": 200}
+                    "GET",
+                    "entities",
+                    params={"tags_ids": item.to_tag_id, "active": True, "limit": 200},
                 ).json()
                 item_entity_choices[item.id] = [
                     (e["id"], e["name"]) for e in entities_data.get("items", [])

@@ -115,9 +115,9 @@
                             {% if invoice.paid_amount is not none and invoice.paid_currency %}
                             {{ invoice.paid_amount }} {{ invoice.paid_currency }}
                             {% else %}
-                            {% for item in invoice.amounts %}
-                            {{ item.amount }} {{ item.currency | upper }}{% if not loop.last %} / {% endif %}
-                            {% endfor %}
+                            {% for currency, amount in invoice.display_amounts %}
+                            {{ "%.2f"|format(amount|float) }} {{ currency | upper }}{% if not loop.last %} / {% endif %}
+                            {% else %}Amount unavailable{% endfor %}
                             {% endif %}
                         </span>
                         <span class="entity-invoice-compact-meta">

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.config import Config
 from app.external.refinance import get_refinance_api_client
+from app.invoice_amounts import invoice_display_amounts
 from app.middlewares.auth import token_required
 from app.schemas import Invoice, StripeAuthorization
 from flask import Blueprint, g, render_template
@@ -37,18 +38,17 @@ def index():
     recent_invoices = [
         Invoice(**item) for item in recent_invoices_resp.get("items", [])
     ]
+    for invoice in recent_invoices:
+        invoice.display_amounts = invoice_display_amounts(invoice)
 
     unpaid_totals = defaultdict(Decimal)
     unpaid_invoice_cards: list[dict[str, object]] = []
     for invoice in unpaid_invoices:
         invoice_id = invoice.get("id")
         invoice_amounts: list[str] = []
-        for amount in invoice.get("amounts", []):
-            currency = str(amount.get("currency", "")).upper()
-            value = amount.get("amount")
-            if not currency or value is None:
-                continue
-            decimal_value = Decimal(str(value)).quantize(Decimal("0.01"))
+        for raw_currency, value in invoice_display_amounts(invoice):
+            currency = raw_currency.upper()
+            decimal_value = value.quantize(Decimal("0.01"))
             unpaid_totals[currency] += decimal_value
             invoice_amounts.append(f"{format(decimal_value, 'f')} {currency}")
 

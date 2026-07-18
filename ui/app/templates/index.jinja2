@@ -78,8 +78,8 @@
 				<a href="{{ url_for('invoice.detail', id=invoice.id) }}"
 					class="entity-invoice-compact-link {% if invoice.status == 'paid' %}entity-invoice-compact-link-paid{% endif %}">
 					<span class="entity-invoice-compact-amount">
-						{% for item in invoice.amounts %}{{ item.amount }} {{ item.currency | upper }}{% if not
-						loop.last %} / {% endif %}{% endfor %}
+						{% for currency, amount in invoice.display_amounts %}{{ "%.2f"|format(amount|float) }} {{
+						currency | upper }}{% if not loop.last %} / {% endif %}{% else %}Amount unavailable{% endfor %}
 					</span>
 					<span class="entity-invoice-compact-meta">
 						#{{ invoice.id }} • {% if invoice.billing_period %}{{

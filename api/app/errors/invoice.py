@@ -106,3 +106,8 @@ class InvoiceItemAlreadyPaid(ApplicationError):
 class InvoicePayItemsMismatch(ApplicationError):
     error_code = 8028
     error = "The provided item IDs do not match the invoice items."
+
+
+class InvoiceRecipientRotationInvalid(ApplicationError):
+    error_code = 8029
+    error = "Invoice recipient rotation is missing or invalid."

@@ -109,6 +109,12 @@ class Config:
     fee_invoice_items_raw: str = field(
         default=getenv("REFINANCE_FEE_INVOICE_ITEMS", "")
     )
+    invoice_auto_pay_grace_days: int = field(
+        default=int(getenv("REFINANCE_INVOICE_AUTO_PAY_GRACE_DAYS", "7"))
+    )
+    invoice_recipient_rotations_raw: str = field(
+        default=getenv("REFINANCE_INVOICE_RECIPIENT_ROTATIONS", "")
+    )
     # Telegram chat/topic to notify on new guest donations
     donation_notification_chat_id: int | None = field(
         default=int(getenv("REFINANCE_DONATION_NOTIFICATION_CHAT_ID") or "0") or None
@@ -177,6 +183,45 @@ class Config:
         if not isinstance(parsed, list):
             return DEFAULT_FEE_INVOICE_ITEMS
         return parsed
+
+    @property
+    def invoice_recipient_rotations(self) -> list[dict]:
+        """Configured recipient rotations for tag-constrained invoice items."""
+        if not self.invoice_recipient_rotations_raw:
+            return []
+        try:
+            parsed = json.loads(self.invoice_recipient_rotations_raw)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(parsed, list):
+            return []
+
+        normalized: list[dict] = []
+        for entry in parsed:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                tag_id = int(entry["tag_id"])
+                anchor_period = str(entry["anchor_period"])
+                year_text, month_text = anchor_period.split("-", 1)
+                anchor_year = int(year_text)
+                anchor_month = int(month_text)
+                raw_entity_ids = entry["entity_ids"]
+                if not isinstance(raw_entity_ids, list):
+                    continue
+                entity_ids = [int(value) for value in raw_entity_ids]
+            except (KeyError, TypeError, ValueError):
+                continue
+            if not 1 <= anchor_month <= 12 or not entity_ids:
+                continue
+            normalized.append(
+                {
+                    "tag_id": tag_id,
+                    "anchor_period": f"{anchor_year:04d}-{anchor_month:02d}",
+                    "entity_ids": entity_ids,
+                }
+            )
+        return normalized
 
 
 def get_config():

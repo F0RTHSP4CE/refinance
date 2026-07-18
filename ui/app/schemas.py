@@ -118,6 +118,7 @@ class Invoice(Base):
     billing_period: date | None = None
     paid_amount: Decimal | None = None
     paid_currency: str | None = None
+    display_amounts: list[tuple[str, Decimal]] = field(default_factory=list, init=False)
 
     def __post_init__(self):
         self.items = [
