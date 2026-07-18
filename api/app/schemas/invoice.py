@@ -117,20 +117,28 @@ class InvoiceAutoPayReportSchema(BaseSchema):
 class InvoiceBulkCreateSchema(BaseUpdateSchema):
     from_entity_ids: list[int] = Field(default_factory=list)
     from_tag_ids: list[int] = Field(default_factory=list)
-    to_entity_id: int
+    to_entity_id: int | None = None
     amounts: list[InvoiceAmountCreateSchema] = Field(default_factory=list)
+    items: list[InvoiceItemCreateSchema] = Field(default_factory=list)
     billing_period: date | None = None
     tag_ids: list[int] = Field(default_factory=list)
+    comment: str | None = None
 
     @model_validator(mode="after")
     def validate_schema(self) -> "InvoiceBulkCreateSchema":
         if not self.from_tag_ids:
             raise ValueError("Must provide from_tag_ids")
-        if not self.amounts:
-            raise ValueError("At least one amount must be provided")
-        currencies = [item.currency for item in self.amounts]
-        if len(currencies) != len(set(currencies)):
-            raise ValueError("Amounts must use unique currencies")
+        if self.items:
+            # Multi-item mode: items take precedence over to_entity_id + amounts
+            pass
+        else:
+            if self.to_entity_id is None:
+                raise ValueError("Must provide to_entity_id when not using items")
+            if not self.amounts:
+                raise ValueError("At least one amount must be provided")
+            currencies = [item.currency for item in self.amounts]
+            if len(currencies) != len(set(currencies)):
+                raise ValueError("Amounts must use unique currencies")
         return self
 
 

@@ -12,6 +12,13 @@ DEFAULT_FEE_PRESETS: list[dict[str, str | int]] = [
     {"tag_id": 14, "currency": "gel", "amount": "70"},
 ]
 
+# Multi-item invoice structure for fee issuance.
+# Each entry maps a payer tag_id to an ordered list of invoice items.
+# Items may use `to_entity_id` (fixed recipient) or `to_tag_id` (chosen at pay-time).
+# Example env var value (JSON):
+# [{"tag_id":2,"items":[{"to_entity_id":1,"amounts":[{"currency":"usd","amount":"42"},{"currency":"gel","amount":"115"}]},{"to_tag_id":19,"amounts":[{"currency":"usd","amount":"8"},{"currency":"gel","amount":"20"}]}]},{"tag_id":14,"items":[{"to_entity_id":1,"amounts":[{"currency":"usd","amount":"25"},{"currency":"gel","amount":"65"}]},{"to_tag_id":19,"amounts":[{"currency":"usd","amount":"5"},{"currency":"gel","amount":"15"}]}]}]
+DEFAULT_FEE_INVOICE_ITEMS: list[dict] = []
+
 
 def _env_bool(name: str, default: bool) -> bool:
     value = getenv(name)
@@ -99,6 +106,9 @@ class Config:
     # Optional database URL for Postgres or other databases
     database_url_env: str | None = field(default=getenv("REFINANCE_DATABASE_URL", None))
     fee_presets_raw: str = field(default=getenv("REFINANCE_FEE_PRESETS", ""))
+    fee_invoice_items_raw: str = field(
+        default=getenv("REFINANCE_FEE_INVOICE_ITEMS", "")
+    )
     # Telegram chat/topic to notify on new guest donations
     donation_notification_chat_id: int | None = field(
         default=int(getenv("REFINANCE_DONATION_NOTIFICATION_CHAT_ID") or "0") or None
@@ -154,6 +164,19 @@ class Config:
                 }
             )
         return normalized or DEFAULT_FEE_PRESETS
+
+    @property
+    def fee_invoice_items(self) -> list[dict]:
+        """Per-tag multi-item invoice structure. Returns [] if not configured."""
+        if not self.fee_invoice_items_raw:
+            return DEFAULT_FEE_INVOICE_ITEMS
+        try:
+            parsed = json.loads(self.fee_invoice_items_raw)
+        except json.JSONDecodeError:
+            return DEFAULT_FEE_INVOICE_ITEMS
+        if not isinstance(parsed, list):
+            return DEFAULT_FEE_INVOICE_ITEMS
+        return parsed
 
 
 def get_config():

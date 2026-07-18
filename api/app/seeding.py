@@ -30,6 +30,7 @@ donation_tag = Tag(
     id=5, name="donation", comment="free money from guests/residents (not a fee)"
 )
 automatic_tag = Tag(id=17, name="automatic", comment="automatically generated / paid")
+room_tag = Tag(id=19, name="room", comment="hackerspace rooms")
 # commonly used treasuries
 cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
@@ -96,6 +97,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         guest_tag,
         pos_tag,
         automatic_tag,
+        room_tag,
     ],
     Entity: [
         # hackerspace
@@ -141,6 +143,14 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         stripe_deposit_provider,
         # guest donors
         anonymous_entity,
+        # rooms
+        Entity(id=55, name="basement workshop", tags=[room_tag]),
+        Entity(id=56, name="open-space", tags=[room_tag]),
+        Entity(id=57, name="resident room", tags=[room_tag]),
+        Entity(id=58, name="electronics lab", tags=[room_tag]),
+        Entity(id=59, name="kitchen", tags=[room_tag]),
+        Entity(id=60, name="music studio", tags=[room_tag]),
+        Entity(id=61, name="chill zone", tags=[room_tag]),
         # residents
         #
         # Entity(

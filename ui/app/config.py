@@ -48,6 +48,7 @@ class Config:
         "withdrawal": 10,
         "resident": 2,
         "member": 14,
+        "room": 19,
     }
     ENTITY_IDS = {
         "f0": 1,

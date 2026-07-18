@@ -424,3 +424,7 @@ class FeeService(BaseService):
                 )
             )
         return items
+
+    def get_fee_invoice_items(self) -> list[dict]:
+        """Returns per-tag multi-item invoice structure from config."""
+        return self._config.fee_invoice_items

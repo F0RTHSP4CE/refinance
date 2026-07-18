@@ -672,17 +672,32 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                 skipped_count += 1
                 continue
 
-            invoice = self.create(
-                InvoiceCreateSchema(
-                    from_entity_id=entity_id,
-                    to_entity_id=schema.to_entity_id,
-                    amounts=schema.amounts,
-                    billing_period=billing_period,
-                    tag_ids=schema.tag_ids,
-                    comment=schema.comment,
-                ),
-                overrides={"actor_entity_id": actor_entity_id},
-            )
+            if schema.items:
+                # Multi-item invoice mode
+                invoice = self.create(
+                    InvoiceCreateSchema(
+                        from_entity_id=entity_id,
+                        to_entity_id=None,
+                        amounts=[],
+                        billing_period=billing_period,
+                        tag_ids=schema.tag_ids,
+                        comment=schema.comment,
+                        items=schema.items,
+                    ),
+                    overrides={"actor_entity_id": actor_entity_id},
+                )
+            else:
+                invoice = self.create(
+                    InvoiceCreateSchema(
+                        from_entity_id=entity_id,
+                        to_entity_id=schema.to_entity_id,
+                        amounts=schema.amounts,
+                        billing_period=billing_period,
+                        tag_ids=schema.tag_ids,
+                        comment=schema.comment,
+                    ),
+                    overrides={"actor_entity_id": actor_entity_id},
+                )
             invoice_ids.append(invoice.id)
             created_count += 1
 

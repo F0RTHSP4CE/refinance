@@ -1,5 +1,7 @@
 """Fee routes"""
 
+from typing import Any
+
 from app.dependencies.services import get_fee_service
 from app.middlewares.token import get_entity_from_token
 from app.models.entity import Entity
@@ -28,3 +30,13 @@ def get_fee_config(
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     return service.get_fee_amounts()
+
+
+@router.get("/invoice-items", response_model=list[dict[str, Any]])
+def get_fee_invoice_items(
+    service: FeeService = Depends(get_fee_service),
+    actor_entity: Entity = Depends(get_entity_from_token),
+):
+    """Returns the multi-item invoice structure per payer tag group.
+    Empty list if REFINANCE_FEE_INVOICE_ITEMS is not configured."""
+    return service.get_fee_invoice_items()

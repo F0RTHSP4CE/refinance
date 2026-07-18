@@ -644,6 +644,15 @@ def bulk_add():
             }
         )
 
+    # Fetch multi-item invoice structure if configured
+    fee_invoice_items = api.http("GET", "fees/invoice-items").json()
+    # Build a lookup: payer tag_id -> list of invoice items
+    fee_items_by_tag: dict[int, list[dict]] = {
+        entry["tag_id"]: entry["items"]
+        for entry in fee_invoice_items
+        if "tag_id" in entry and "items" in entry
+    }
+
     form.from_tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
     form.tag_ids.choices = [(tag.id, tag.name) for tag in all_tags]
 
@@ -655,33 +664,79 @@ def bulk_add():
             "invoice/bulk_add.jinja2",
             form=form,
             fee_preset_groups=fee_preset_groups,
+            fee_items_by_tag=fee_items_by_tag,
             f0_entity_id=Config.ENTITY_IDS["f0"],
             fee_tag_id=Config.TAG_IDS["fee"],
         )
 
     if form.validate_on_submit():
-        amounts = _build_amounts_from_bulk_form(form)
-        if not amounts or not form.from_tag_ids.data:
-            flash("Preset selection required.")
+        if not form.from_tag_ids.data:
+            flash("Select at least one payer tag.")
             return _render()
-        data = {
-            "from_tag_ids": form.from_tag_ids.data,
-            "to_entity_id": form.to_entity_id.data,
-            "comment": form.comment.data or None,
-            "amounts": amounts,
-            "tag_ids": form.tag_ids.data or [],
-            "billing_period": _normalize_billing_period(form.billing_period.data),
-        }
-        result = api.http("POST", "invoices/bulk", data=data).json()
-        invoice_ids = result.get("invoice_ids", [])
-        invoices = [
-            Invoice(**api.http("GET", f"invoices/{iid}").json()) for iid in invoice_ids
-        ]
-        return render_template(
-            "invoice/bulk_add_result.jinja2",
-            result=result,
-            invoices=invoices,
-        )
+
+        # Determine if all selected tag groups have multi-item config
+        selected_tag_ids = form.from_tag_ids.data
+        all_have_items = all(tid in fee_items_by_tag for tid in selected_tag_ids)
+
+        if all_have_items and fee_items_by_tag:
+            # Multi-item mode: issue one type of invoice per tag group
+            # If multiple tag groups selected, we need to issue separate bulk calls per group
+            all_invoice_ids: list[int] = []
+            all_created = 0
+            all_skipped = 0
+            for tag_id in selected_tag_ids:
+                items = fee_items_by_tag[tag_id]
+                data = {
+                    "from_tag_ids": [tag_id],
+                    "items": items,
+                    "comment": form.comment.data or None,
+                    "tag_ids": form.tag_ids.data or [],
+                    "billing_period": _normalize_billing_period(
+                        form.billing_period.data
+                    ),
+                }
+                result = api.http("POST", "invoices/bulk", data=data).json()
+                all_invoice_ids.extend(result.get("invoice_ids", []))
+                all_created += result.get("created_count", 0)
+                all_skipped += result.get("skipped_count", 0)
+            invoices = [
+                Invoice(**api.http("GET", f"invoices/{iid}").json())
+                for iid in all_invoice_ids
+            ]
+            return render_template(
+                "invoice/bulk_add_result.jinja2",
+                result={
+                    "invoice_ids": all_invoice_ids,
+                    "created_count": all_created,
+                    "skipped_count": all_skipped,
+                },
+                invoices=invoices,
+            )
+        else:
+            # Legacy single-recipient mode
+            amounts = _build_amounts_from_bulk_form(form)
+            if not amounts:
+                flash("Preset selection required.")
+                return _render()
+            data = {
+                "from_tag_ids": form.from_tag_ids.data,
+                "to_entity_id": form.to_entity_id.data,
+                "comment": form.comment.data or None,
+                "amounts": amounts,
+                "tag_ids": form.tag_ids.data or [],
+                "billing_period": _normalize_billing_period(form.billing_period.data),
+            }
+            result = api.http("POST", "invoices/bulk", data=data).json()
+            invoice_ids = result.get("invoice_ids", [])
+            invoices = [
+                Invoice(**api.http("GET", f"invoices/{iid}").json())
+                for iid in invoice_ids
+            ]
+            return render_template(
+                "invoice/bulk_add_result.jinja2",
+                result=result,
+                invoices=invoices,
+            )
 
     return _render()
 
