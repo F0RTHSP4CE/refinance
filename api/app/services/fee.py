@@ -14,6 +14,7 @@ from app.dependencies.services import (
 )
 from app.models.entity import Entity, entities_tags
 from app.models.invoice import Invoice, InvoiceStatus, invoices_tags
+from app.models.invoice_item import InvoiceItem
 from app.models.tag import Tag
 from app.models.transaction import TransactionStatus
 from app.schemas.base import CurrencyDecimal
@@ -34,9 +35,10 @@ from app.seeding import (
 )
 from app.services.base import BaseService
 from app.services.entity import EntityService
+from app.services.entity_owed import invoice_currency_options
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -143,30 +145,6 @@ class FeeService(BaseService):
             normalized[currency.lower()] = amount
         return normalized
 
-    def _amounts_list_to_map(
-        self, items: list[Mapping[str, Any]] | None
-    ) -> dict[str, Decimal]:
-        if not items:
-            return {}
-        normalized: dict[str, Decimal] = {}
-        for item in items:
-            currency = str(item.get("currency", "")).lower().strip()
-            if not currency:
-                continue
-            raw_value = item.get("amount")
-            if raw_value in (None, ""):
-                continue
-            try:
-                amount = (
-                    raw_value
-                    if isinstance(raw_value, Decimal)
-                    else Decimal(str(raw_value))
-                )
-            except Exception:
-                continue
-            normalized[currency] = amount
-        return normalized
-
     def _build_monthly_fee(
         self,
         year: int,
@@ -268,9 +246,12 @@ class FeeService(BaseService):
                     invoices_tags.c.tag_id == fee_tag.id,
                 ),
             )
-            .options(selectinload(Invoice.transaction))
+            .options(selectinload(Invoice.items).selectinload(InvoiceItem.transaction))
             .filter(
-                Invoice.to_entity_id == hackerspace.id,
+                or_(
+                    Invoice.to_entity_id == hackerspace.id,
+                    Invoice.items.any(),
+                ),
                 Invoice.billing_period.isnot(None),
                 Invoice.billing_period >= start_period,
                 Invoice.billing_period <= max_future_period,
@@ -312,12 +293,20 @@ class FeeService(BaseService):
                     ] = invoice.id
                     unpaid_amounts_by_resident_by_month[invoice.from_entity_id][
                         (year, month)
-                    ] = self._amounts_list_to_map(invoice.amounts or [])
+                    ] = invoice_currency_options(invoice)
                 continue
             if invoice.status != InvoiceStatus.PAID:
                 continue
-            tx = invoice.transaction
-            if tx is None or tx.status != TransactionStatus.COMPLETED:
+            if invoice.items:
+                transactions = [item.transaction for item in invoice.items]
+            else:
+                transactions = [invoice.transaction]
+            completed_transactions = [
+                tx
+                for tx in transactions
+                if tx is not None and tx.status == TransactionStatus.COMPLETED
+            ]
+            if not completed_transactions:
                 continue
             current_paid = paid_invoice_by_resident_by_month[
                 invoice.from_entity_id
@@ -326,9 +315,10 @@ class FeeService(BaseService):
                 paid_invoice_by_resident_by_month[invoice.from_entity_id][
                     (year, month)
                 ] = invoice.id
-            fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
-                tx.currency.lower()
-            ] += tx.amount
+            for tx in completed_transactions:
+                fees_by_resident_by_month[invoice.from_entity_id][(year, month)][
+                    tx.currency.lower()
+                ] += tx.amount
 
         # Build the final response structure
         results: list[FeeRecord] = []

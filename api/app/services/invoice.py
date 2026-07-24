@@ -324,7 +324,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         simple_pending_filter = [
             self.model.status == InvoiceStatus.PENDING,
             self.model.created_at <= eligible_before,
-            ~self.model.transaction.has(),
+            ~self.model.transactions.any(),
             ~self.model.items.any(),
         ]
         entity_ids = (

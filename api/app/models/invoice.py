@@ -68,9 +68,21 @@ class Invoice(BaseModel):
         "InvoiceItem", back_populates="invoice", cascade="all, delete-orphan"
     )
 
-    transaction: Mapped["Transaction | None"] = relationship(
-        "Transaction", back_populates="invoice", uselist=False
+    transactions: Mapped[list["Transaction"]] = relationship(
+        "Transaction", back_populates="invoice"
     )
+
+    @property
+    def transaction(self) -> "Transaction | None":
+        """Return the direct transaction used by a legacy/simple invoice."""
+        return next(
+            (
+                transaction
+                for transaction in self.transactions
+                if transaction.invoice_item_id is None
+            ),
+            None,
+        )
 
     @property
     def transaction_id(self) -> int | None:

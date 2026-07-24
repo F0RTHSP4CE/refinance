@@ -48,7 +48,7 @@ class Transaction(BaseModel):
         ForeignKey("invoices.id"), nullable=True
     )
     invoice: Mapped["Invoice | None"] = relationship(
-        "Invoice", back_populates="transaction"
+        "Invoice", back_populates="transactions"
     )
 
     invoice_item_id: Mapped[int | None] = mapped_column(

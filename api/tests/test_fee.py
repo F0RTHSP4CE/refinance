@@ -1,13 +1,127 @@
 """Tests for FeeService"""
 
+import warnings
 from datetime import date
 
 from app.seeding import fee_tag, resident_tag
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import SAWarning
 
 
 class TestFeeService:
     """Test FeeService logic through its API endpoint"""
+
+    def test_get_fees_includes_multi_recipient_invoices(
+        self, test_app: TestClient, token
+    ):
+        today = date.today()
+        period = today.replace(day=1).isoformat()
+
+        def create_resident(name: str) -> int:
+            response = test_app.post(
+                "/entities",
+                json={"name": name, "tag_ids": [resident_tag.id]},
+                headers={"x-token": token},
+            )
+            assert response.status_code == 200, response.text
+            return response.json()["id"]
+
+        recipient = test_app.post(
+            "/entities",
+            json={"name": "Multi-fee recipient"},
+            headers={"x-token": token},
+        ).json()["id"]
+        pending_resident = create_resident("Pending multi-fee resident")
+        paid_resident = create_resident("Paid multi-fee resident")
+
+        def create_invoice(from_entity_id: int) -> dict:
+            response = test_app.post(
+                "/invoices",
+                json={
+                    "from_entity_id": from_entity_id,
+                    "billing_period": period,
+                    "tag_ids": [fee_tag.id],
+                    "items": [
+                        {
+                            "to_entity_id": 1,
+                            "amounts": [
+                                {"currency": "usd", "amount": "40"},
+                                {"currency": "gel", "amount": "100"},
+                            ],
+                        },
+                        {
+                            "to_entity_id": recipient,
+                            "amounts": [
+                                {"currency": "usd", "amount": "10"},
+                                {"currency": "gel", "amount": "25"},
+                            ],
+                        },
+                    ],
+                },
+                headers={"x-token": token},
+            )
+            assert response.status_code == 200, response.text
+            return response.json()
+
+        pending_invoice = create_invoice(pending_resident)
+        paid_invoice = create_invoice(paid_resident)
+
+        funding_entity = test_app.post(
+            "/entities",
+            json={"name": "Multi-fee funding"},
+            headers={"x-token": token},
+        ).json()["id"]
+        funding_response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": funding_entity,
+                "to_entity_id": paid_resident,
+                "amount": "50",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert funding_response.status_code == 200, funding_response.text
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter("always", SAWarning)
+            pay_response = test_app.post(
+                f"/invoices/{paid_invoice['id']}/pay-items",
+                json={
+                    "items": [
+                        {
+                            "item_id": item["id"],
+                            "to_entity_id": item["to_entity_id"],
+                            "currency": "usd",
+                        }
+                        for item in paid_invoice["items"]
+                    ]
+                },
+                headers={"x-token": token},
+            )
+        assert pay_response.status_code == 200, pay_response.text
+        assert not any(
+            "Multiple rows returned with uselist=False" in str(warning.message)
+            for warning in caught_warnings
+        )
+
+        response = test_app.get("/fees/?months=1", headers={"x-token": token})
+        assert response.status_code == 200, response.text
+        fees_by_resident = {
+            record["entity"]["id"]: record["fees"][0] for record in response.json()
+        }
+
+        pending_fee = fees_by_resident[pending_resident]
+        assert pending_fee["unpaid_invoice_id"] == pending_invoice["id"]
+        assert pending_fee["unpaid_invoice_amounts"] == {
+            "usd": "50.00",
+            "gel": "125.00",
+        }
+
+        paid_fee = fees_by_resident[paid_resident]
+        assert paid_fee["paid_invoice_id"] == paid_invoice["id"]
+        assert paid_fee["amounts"] == {"usd": "50.00"}
 
     def test_get_fees(self, test_app: TestClient, token):
         # The DB is pre-populated with a "resident" tag (id=2) and a hackerspace entity (id=1)
