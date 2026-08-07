@@ -69,7 +69,7 @@ def index():
             timeline_set.add((f.year, f.month))
     # sort timeline chronologically
     timeline = sorted(timeline_set)
-    # align each resident's fees to the unified timeline
+    # Align each entity's monthly fees to the unified timeline.
     for rf in fees:
         fee_map = {(f.year, f.month): f for f in rf.fees}
         rf.fees = []

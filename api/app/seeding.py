@@ -25,7 +25,7 @@ withdrawal_tag = Tag(id=10, name="withdrawal", comment="money output from system
 currency_exchange_tag = Tag(
     id=12, name="exchange", comment="currency exchange (automatic)"
 )
-fee_tag = Tag(id=3, name="fee", comment="monthly resident's fee")
+fee_tag = Tag(id=3, name="fee", comment="monthly fee")
 donation_tag = Tag(
     id=5, name="donation", comment="free money from guests/residents (not a fee)"
 )

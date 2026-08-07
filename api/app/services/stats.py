@@ -18,9 +18,11 @@ from app.dependencies.services import (
 )
 from app.models.entity import Entity
 from app.models.invoice import Invoice, InvoiceStatus
+from app.models.invoice_item import InvoiceItem
 from app.models.tag import Tag
 from app.models.transaction import Transaction, TransactionStatus
 from app.seeding import (
+    donation_tag,
     ex_resident_tag,
     f0_entity,
     fee_tag,
@@ -194,18 +196,77 @@ class StatsService(BaseService):
                 continue
         return float(total)
 
-    def get_resident_fee_sum_by_month(
+    @staticmethod
+    def _invoice_amounts_for_entity(
+        invoice: Invoice, entity_id: int
+    ) -> dict[str, Decimal]:
+        """Return an invoice's payment options that belong to one recipient.
+
+        A legacy invoice stores its recipient and amounts on the invoice itself.
+        Multi-recipient invoices store them per item, while a paid item's
+        transaction is authoritative when the recipient was selected at pay time.
+        """
+        if not invoice.items:
+            if invoice.to_entity_id != entity_id:
+                return {}
+            amount_groups = [invoice.amounts or []]
+        else:
+            amount_groups = []
+            for item in invoice.items:
+                transaction = item.transaction
+                recipient_id = (
+                    transaction.to_entity_id
+                    if transaction is not None
+                    else item.to_entity_id
+                )
+                if recipient_id == entity_id:
+                    amount_groups.append(item.amounts or [])
+
+        options: dict[str, Decimal] = {}
+        for amounts in amount_groups:
+            for entry in amounts:
+                currency = str(entry.get("currency") or "").lower().strip()
+                if not currency:
+                    continue
+                options[currency] = options.get(currency, Decimal("0")) + Decimal(
+                    str(entry.get("amount") or "0")
+                )
+        return options
+
+    @staticmethod
+    def _completed_invoice_transactions_for_entity(
+        invoice: Invoice, entity_id: int
+    ) -> list[Transaction]:
+        if invoice.items:
+            transactions = [item.transaction for item in invoice.items]
+        else:
+            transactions = [invoice.transaction]
+        return [
+            transaction
+            for transaction in transactions
+            if transaction is not None
+            and transaction.to_entity_id == entity_id
+            and transaction.status == TransactionStatus.COMPLETED
+        ]
+
+    def get_monthly_fee_sum_by_month(
         self, timeframe_from: date | None = None, timeframe_to: date | None = None
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
         hackerspace = self._entity_service.get(f0_entity.id)
 
-        # Query paid invoices
+        invoice_load_options = (
+            selectinload(Invoice.items).selectinload(InvoiceItem.transaction),
+            selectinload(Invoice.transactions),
+        )
+
+        # Query paid invoices. Multi-recipient invoices have no Invoice.to_entity_id,
+        # so recipient filtering is performed against their item transactions below.
         paid_invoices = (
             self.db.query(Invoice)
+            .options(*invoice_load_options)
             .filter(
-                Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
                 Invoice.tags.contains(fee_tag),
                 Invoice.status == InvoiceStatus.PAID,
@@ -216,8 +277,8 @@ class StatsService(BaseService):
         # Query unpaid invoices
         unpaid_invoices = (
             self.db.query(Invoice)
+            .options(*invoice_load_options)
             .filter(
-                Invoice.to_entity_id == hackerspace.id,
                 Invoice.billing_period.isnot(None),
                 Invoice.tags.contains(fee_tag),
                 Invoice.status == InvoiceStatus.PENDING,
@@ -233,9 +294,10 @@ class StatsService(BaseService):
         for invoice in paid_invoices:
             if invoice.billing_period is None:
                 continue
-            if invoice.transaction is None:
-                continue
-            if invoice.transaction.status != TransactionStatus.COMPLETED:
+            completed_transactions = self._completed_invoice_transactions_for_entity(
+                invoice, hackerspace.id
+            )
+            if not completed_transactions:
                 continue
             year = invoice.billing_period.year
             month = invoice.billing_period.month
@@ -252,9 +314,10 @@ class StatsService(BaseService):
             if not (start_month <= fee_date <= end_month):
                 continue
 
-            monthly_paid_totals[(year, month)][
-                invoice.transaction.currency.lower()
-            ] += invoice.transaction.amount
+            for transaction in completed_transactions:
+                monthly_paid_totals[(year, month)][
+                    transaction.currency.lower()
+                ] += transaction.amount
 
         # Process unpaid invoices
         for invoice in unpaid_invoices:
@@ -278,68 +341,24 @@ class StatsService(BaseService):
             # For unpaid invoices, only count the first amount entry (primary payment option)
             # Fee invoices have multiple payment options (e.g., pay in GEL or USD), but only
             # one will actually be paid, so we shouldn't sum all options.
-            if invoice.amounts and len(invoice.amounts) > 0:
-                amount_entry = invoice.amounts[0]
-                currency = amount_entry.get("currency", "").lower()
-                amount = amount_entry.get("amount", 0)
-                if currency and amount:
-                    monthly_unpaid_totals[(year, month)][currency] += Decimal(
-                        str(amount)
-                    )
+            entity_amounts = self._invoice_amounts_for_entity(invoice, hackerspace.id)
+            if entity_amounts:
+                currency, amount = next(iter(entity_amounts.items()))
+                if amount:
+                    monthly_unpaid_totals[(year, month)][currency] += amount
 
-        # Query F0 outgoing expenses tagged with rent or utilities
-        # (match on transaction tags OR destination entity tags)
-        _expense_tag_ids = (rent_tag.id, utilities_tag.id)
-        expense_transactions = (
-            self.db.query(Transaction)
-            .filter(
-                Transaction.from_entity_id == hackerspace.id,
-                Transaction.status == TransactionStatus.COMPLETED,
-                or_(
-                    Transaction.tags.any(Tag.id.in_(_expense_tag_ids)),
-                    Transaction.to_entity.has(
-                        Entity.tags.any(Tag.id.in_(_expense_tag_ids))
-                    ),
-                ),
-            )
-            .all()
-        )
-
-        monthly_expense_totals: dict[tuple[int, int], dict[str, Decimal]] = defaultdict(
-            lambda: defaultdict(Decimal)
-        )
-
-        start_month = timeframe_from.replace(day=1)
-        end_month = timeframe_to.replace(day=1)
-
-        for txn in expense_transactions:
-            t_date = txn.created_at.date()
-            fee_date = t_date.replace(day=1)
-            if not (start_month <= fee_date <= end_month):
-                continue
-            monthly_expense_totals[(t_date.year, t_date.month)][
-                txn.currency.lower()
-            ] += txn.amount
-
-        # Combine all months from both paid and unpaid
-        all_months = (
-            set(monthly_paid_totals.keys())
-            | set(monthly_unpaid_totals.keys())
-            | set(monthly_expense_totals.keys())
-        )
+        all_months = set(monthly_paid_totals.keys()) | set(monthly_unpaid_totals.keys())
 
         result = []
         for year, month in sorted(all_months):
             paid_amounts = monthly_paid_totals.get((year, month), {})
             unpaid_amounts = monthly_unpaid_totals.get((year, month), {})
-            expense_amounts = monthly_expense_totals.get((year, month), {})
 
             paid_amounts_float = {k: float(v) for k, v in paid_amounts.items()}
 
             paid_total_usd = self._sum_amounts_usd(paid_amounts)
             unpaid_total_usd = self._sum_amounts_usd(unpaid_amounts)
             expected_total_usd = paid_total_usd + unpaid_total_usd
-            expenses_usd = self._sum_amounts_usd(expense_amounts)
 
             result.append(
                 {
@@ -348,105 +367,6 @@ class StatsService(BaseService):
                     "amounts": paid_amounts_float,
                     "total_usd": paid_total_usd,
                     "expected_total_usd": expected_total_usd,
-                    "expenses_usd": expenses_usd,
-                }
-            )
-        return result
-
-    def get_resident_fee_average_by_month(
-        self,
-        timeframe_from: date | None = None,
-        timeframe_to: date | None = None,
-        as_of_month: date | None = None,
-    ):
-        timeframe_to = timeframe_to or date.today()
-        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
-        as_of_month = as_of_month or date.today()
-        last_as_of_day = calendar.monthrange(as_of_month.year, as_of_month.month)[1]
-        paid_until = datetime.combine(
-            as_of_month.replace(day=last_as_of_day),
-            time.max,
-        )
-        hackerspace = self._entity_service.get(f0_entity.id)
-
-        invoices = (
-            self.db.query(Invoice)
-            .filter(
-                Invoice.to_entity_id == hackerspace.id,
-                Invoice.billing_period.isnot(None),
-                Invoice.tags.contains(fee_tag),
-                Invoice.status != InvoiceStatus.CANCELLED,
-            )
-            .all()
-        )
-
-        monthly_paid_totals = defaultdict(lambda: defaultdict(Decimal))
-        monthly_expected_totals = defaultdict(lambda: defaultdict(Decimal))
-        monthly_paid_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
-        monthly_invoice_counts: defaultdict[tuple[int, int], int] = defaultdict(int)
-        today = date.today()
-        start_month = timeframe_from.replace(day=1)
-        end_month = timeframe_to.replace(day=1)
-
-        for invoice in invoices:
-            if invoice.billing_period is None:
-                continue
-
-            year = invoice.billing_period.year
-            month = invoice.billing_period.month
-            if year > today.year or (year == today.year and month > today.month):
-                continue
-
-            fee_date = date(year, month, 1)
-            if not (start_month <= fee_date <= end_month):
-                continue
-
-            if invoice.amounts and len(invoice.amounts) > 0:
-                amount_entry = invoice.amounts[0]
-                currency = amount_entry.get("currency", "").lower()
-                amount = amount_entry.get("amount", 0)
-                if currency and amount:
-                    month_key = (year, month)
-                    monthly_invoice_counts[month_key] += 1
-                    monthly_expected_totals[month_key][currency] += Decimal(str(amount))
-
-                    if (
-                        invoice.transaction is not None
-                        and invoice.transaction.status == TransactionStatus.COMPLETED
-                        and invoice.transaction.created_at <= paid_until
-                    ):
-                        monthly_paid_counts[month_key] += 1
-                        monthly_paid_totals[month_key][
-                            invoice.transaction.currency.lower()
-                        ] += invoice.transaction.amount
-
-        all_months = set(monthly_invoice_counts.keys())
-
-        result = []
-        for year, month in sorted(all_months):
-            month_key = (year, month)
-            invoice_count = monthly_invoice_counts[month_key]
-            paid_count = monthly_paid_counts[month_key]
-
-            paid_total_usd = self._sum_amounts_usd(
-                monthly_paid_totals.get(month_key, {})
-            )
-            expected_total_usd = self._sum_amounts_usd(
-                monthly_expected_totals.get(month_key, {})
-            )
-
-            result.append(
-                {
-                    "year": year,
-                    "month": month,
-                    "invoice_count": invoice_count,
-                    "paid_invoice_count": paid_count,
-                    "paid_usd_per_invoice": (
-                        paid_total_usd / invoice_count if invoice_count else 0.0
-                    ),
-                    "expected_usd_per_invoice": (
-                        expected_total_usd / invoice_count if invoice_count else 0.0
-                    ),
                 }
             )
         return result
@@ -582,6 +502,9 @@ class StatsService(BaseService):
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        timeframe_to_exclusive = datetime.combine(
+            timeframe_to + timedelta(days=1), time.min
+        )
 
         fee_query_result = (
             self.db.query(
@@ -593,8 +516,15 @@ class StatsService(BaseService):
             .filter(
                 and_(
                     Transaction.created_at >= timeframe_from,
-                    Transaction.created_at <= timeframe_to,
-                    Transaction.tags.any(Tag.id == fee_tag.id),
+                    Transaction.created_at < timeframe_to_exclusive,
+                    Transaction.status == TransactionStatus.COMPLETED,
+                    or_(
+                        Transaction.tags.any(Tag.id == fee_tag.id),
+                        Transaction.invoice.has(Invoice.tags.contains(fee_tag)),
+                        Transaction.invoice_item.has(
+                            InvoiceItem.invoice.has(Invoice.tags.contains(fee_tag))
+                        ),
+                    ),
                 )
             )
             .group_by("year", "month", "currency")
@@ -608,17 +538,113 @@ class StatsService(BaseService):
         for row in fee_query_result:
             fee_monthly_totals[(row.year, row.month)][row.currency] += row.total_amount
 
+        expense_tag_ids = (rent_tag.id, utilities_tag.id)
+        expense_query_result = (
+            self.db.query(
+                extract("year", Transaction.created_at).label("year"),
+                extract("month", Transaction.created_at).label("month"),
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_amount"),
+            )
+            .filter(
+                Transaction.created_at >= timeframe_from,
+                Transaction.created_at < timeframe_to_exclusive,
+                Transaction.from_entity_id == f0_entity.id,
+                Transaction.status == TransactionStatus.COMPLETED,
+                or_(
+                    Transaction.tags.any(Tag.id.in_(expense_tag_ids)),
+                    Transaction.to_entity.has(
+                        Entity.tags.any(Tag.id.in_(expense_tag_ids))
+                    ),
+                ),
+            )
+            .group_by("year", "month", "currency")
+            .order_by("year", "month")
+            .all()
+        )
+        expense_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
+        )
+        for row in expense_query_result:
+            expense_monthly_totals[(row.year, row.month)][
+                row.currency
+            ] += row.total_amount
+
         result = []
-        for (year, month), amounts in sorted(fee_monthly_totals.items())[1:]:
-            fee_total_usd = self._sum_amounts_usd(amounts)
+        all_months = set(fee_monthly_totals) | set(expense_monthly_totals)
+        for year, month in sorted(all_months):
+            fee_total_usd = self._sum_amounts_usd(
+                fee_monthly_totals.get((year, month), {})
+            )
+            expenses_usd = self._sum_amounts_usd(
+                expense_monthly_totals.get((year, month), {})
+            )
             result.append(
                 {
                     "year": year,
                     "month": month,
                     "fee_total_usd": fee_total_usd,
+                    "expenses_usd": expenses_usd,
                 }
             )
         return result
+
+    def get_donations_by_month(
+        self, timeframe_from: date | None = None, timeframe_to: date | None = None
+    ):
+        timeframe_to = timeframe_to or date.today()
+        timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
+        timeframe_to_exclusive = datetime.combine(
+            timeframe_to + timedelta(days=1), time.min
+        )
+
+        rows = (
+            self.db.query(
+                extract("year", Transaction.created_at).label("year"),
+                extract("month", Transaction.created_at).label("month"),
+                Transaction.to_entity_id,
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_amount"),
+            )
+            .filter(
+                Transaction.created_at >= timeframe_from,
+                Transaction.created_at < timeframe_to_exclusive,
+                Transaction.status == TransactionStatus.COMPLETED,
+                Transaction.tags.any(Tag.id == donation_tag.id),
+            )
+            .group_by("year", "month", Transaction.to_entity_id, "currency")
+            .order_by("year", "month")
+            .all()
+        )
+
+        f0_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        general_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
+        )
+        for row in rows:
+            monthly_totals = (
+                f0_monthly_totals
+                if row.to_entity_id == f0_entity.id
+                else general_monthly_totals
+            )
+            monthly_totals[(row.year, row.month)][row.currency] += row.total_amount
+
+        all_months = set(f0_monthly_totals) | set(general_monthly_totals)
+        return [
+            {
+                "year": year,
+                "month": month,
+                "f0_donation_total_usd": self._sum_amounts_usd(
+                    f0_monthly_totals.get((year, month), {})
+                ),
+                "general_donation_total_usd": self._sum_amounts_usd(
+                    general_monthly_totals.get((year, month), {})
+                ),
+            }
+            for year, month in sorted(all_months)
+        ]
 
     def get_entity_balance_history(
         self,

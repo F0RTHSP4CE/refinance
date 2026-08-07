@@ -19,7 +19,7 @@
         <tbody>
             {% set state = namespace(prev_group=None) %}
             {% for row in fee_rows %}
-            {% set resident_fee = row.fee %}
+            {% set monthly_fee = row.fee %}
             {% set is_last = loop.last %}
             {% set next_group = fee_rows[loop.index].group if not loop.last else None %}
             {% if state.prev_group is not none and state.prev_group != row.group %}
@@ -76,9 +76,9 @@
             <tr class="fee-row fee-row--{{ row.group }}">
                 <td class="fee-index fee-index--{{ row.group }}">{{ row.index + 1 }}</td>
                 <td class="fee-entity-cell">
-                    <a href="{{ url_for('entity.detail', id=resident_fee.entity.id) }}"
-                        class="fee-entity-name {% if not resident_fee.entity.active %}secondary inactive{% endif %}">{{resident_fee.entity.name}}</a>
-                    {% for tag in resident_fee.entity.tags %}
+                    <a href="{{ url_for('entity.detail', id=monthly_fee.entity.id) }}"
+                        class="fee-entity-name {% if not monthly_fee.entity.active %}secondary inactive{% endif %}">{{monthly_fee.entity.name}}</a>
+                    {% for tag in monthly_fee.entity.tags %}
                     {{ tag_inline(tag) }}
                     {% endfor %}
                     {% if row.unpaid_total %}
@@ -89,7 +89,7 @@
                     {% endif %}
                 </td>
 
-                {% for fee in resident_fee.fees|reverse %}
+                {% for fee in monthly_fee.fees|reverse %}
                 {% set is_future = fee.year > current_year or (fee.year == current_year and fee.month > current_month)
                 %}
                 {% if fee.amounts %}

@@ -5,13 +5,13 @@ from typing import List, Optional
 
 from app.dependencies.services import get_stats_service
 from app.schemas.stats import (
+    DonationsByMonthSchema,
     EntityBalanceChangeByDaySchema,
     EntityMoneyFlowByDaySchema,
     EntityStatsBundleSchema,
     EntityTransactionsByDaySchema,
     FeeTransactionsByMonthSchema,
-    ResidentFeeAverageByMonthSchema,
-    ResidentFeeSumByMonthSchema,
+    MonthlyFeeSumByMonthSchema,
     TopEntityByMonthSchema,
     TopEntityStatSchema,
     TopTagByMonthSchema,
@@ -25,29 +25,14 @@ router = APIRouter(prefix="/stats", tags=["Stats"])
 
 
 @router.get(
-    "/resident-fee-sum-by-month", response_model=List[ResidentFeeSumByMonthSchema]
+    "/monthly-fee-sum-by-month", response_model=List[MonthlyFeeSumByMonthSchema]
 )
-def get_resident_fee_sum_by_month(
+def get_monthly_fee_sum_by_month(
     timeframe_from: Optional[date] = None,
     timeframe_to: Optional[date] = None,
     stats_service: StatsService = Depends(get_stats_service),
 ):
-    return stats_service.get_resident_fee_sum_by_month(timeframe_from, timeframe_to)
-
-
-@router.get(
-    "/resident-fee-average-by-month",
-    response_model=List[ResidentFeeAverageByMonthSchema],
-)
-def get_resident_fee_average_by_month(
-    timeframe_from: Optional[date] = None,
-    timeframe_to: Optional[date] = None,
-    as_of_month: Optional[date] = None,
-    stats_service: StatsService = Depends(get_stats_service),
-):
-    return stats_service.get_resident_fee_average_by_month(
-        timeframe_from, timeframe_to, as_of_month
-    )
+    return stats_service.get_monthly_fee_sum_by_month(timeframe_from, timeframe_to)
 
 
 @router.get(
@@ -59,6 +44,15 @@ def get_fee_transactions_by_month(
     stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_fee_transactions_by_month(timeframe_from, timeframe_to)
+
+
+@router.get("/donations-by-month", response_model=List[DonationsByMonthSchema])
+def get_donations_by_month(
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_donations_by_month(timeframe_from, timeframe_to)
 
 
 @router.get(

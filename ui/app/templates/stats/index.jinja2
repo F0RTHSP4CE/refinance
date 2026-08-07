@@ -32,24 +32,6 @@
         font-style: italic;
     }
 
-    .chart-heading-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-
-    .chart-filter-form {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .chart-filter-form input[type="month"] {
-        max-width: 150px;
-    }
-
     /* Responsive: full width on small screens */
     @media (max-width: 600px) {
         .chart-container {
@@ -61,43 +43,34 @@
 
 <div class="charts">
     <div class="chart-container">
-        <h2>Resident Fee Sum by Month</h2>
-        <canvas id="resident-fee-chart"></canvas>
-    </div>
-    <div class="chart-container">
-        <div class="chart-heading-row">
-            <h2>Resident Fee per Invoice</h2>
-            <form method="get" class="chart-filter-form">
-                <input type="month" name="resident_fee_as_of_month" value="{{ resident_fee_as_of_month }}">
-                <button type="submit">Apply</button>
-            </form>
-        </div>
-        <canvas id="resident-fee-average-chart"></canvas>
-    </div>
-    <div class="chart-container">
         <h2>Fee Transactions per Month</h2>
         <canvas id="fee-month-chart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h2>Monthly Fee Sum by Month</h2>
+        <canvas id="monthly-fee-chart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h2>Donations per Month</h2>
+        <canvas id="donations-month-chart"></canvas>
     </div>
 </div>
 
 <script>
-    const residentFeeData = {{ resident_fee_sum | tojson }};
+    const monthlyFeeData = {{ monthly_fee_sum | tojson }};
 
-    const residentFeeLabels = residentFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+    const monthlyFeeLabels = monthlyFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
 
     // Paid total USD (solid line)
-    const paidData = residentFeeData.map(item => item.total_usd || 0);
+    const paidData = monthlyFeeData.map(item => item.total_usd || 0);
 
     // Expected total USD (dashed line - ceiling)
-    const expectedData = residentFeeData.map(item => item.expected_total_usd || 0);
+    const expectedData = monthlyFeeData.map(item => item.expected_total_usd || 0);
 
-    // F0 expenses: rent + utilities (dashed line)
-    const expensesData = residentFeeData.map(item => item.expenses_usd || 0);
-
-    new Chart(document.getElementById('resident-fee-chart'), {
+    new Chart(document.getElementById('monthly-fee-chart'), {
         type: 'line',
         data: {
-            labels: residentFeeLabels,
+            labels: monthlyFeeLabels,
             datasets: [
                 {
                     label: 'Paid Fees (USD)',
@@ -117,15 +90,6 @@
                     borderDash: [5, 5],
                     tension: 0.2,
                     fill: false
-                },
-                {
-                    label: 'F0 Expenses: rent + utilities (USD)',
-                    data: expensesData,
-                    borderWidth: 2,
-                    borderColor: 'rgb(255, 159, 64)',
-                    backgroundColor: 'rgba(255, 159, 64, 0.05)',
-                    tension: 0.2,
-                    fill: false
                 }
             ]
         },
@@ -136,54 +100,6 @@
                     title: {
                         display: true,
                         text: 'Amount (USD)'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                }
-            }
-        }
-    });
-
-    const residentFeeAverageData = {{ resident_fee_average | tojson }};
-    const residentFeeAverageLabels = residentFeeAverageData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
-
-    new Chart(document.getElementById('resident-fee-average-chart'), {
-        type: 'line',
-        data: {
-            labels: residentFeeAverageLabels,
-            datasets: [
-                {
-                    label: 'Paid Fees / Invoice Issued (USD)',
-                    data: residentFeeAverageData.map(item => item.paid_usd_per_invoice || 0),
-                    borderWidth: 3,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    tension: 0.2,
-                    fill: true
-                },
-                {
-                    label: 'Expected Fees / Invoice Issued (USD)',
-                    data: residentFeeAverageData.map(item => item.expected_usd_per_invoice || 0),
-                    borderWidth: 2,
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.05)',
-                    borderDash: [5, 5],
-                    tension: 0.2,
-                    fill: false
-                }
-            ]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Amount per invoice (USD)'
                     }
                 }
             },
@@ -212,6 +128,52 @@
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     tension: 0.2,
                     fill: true
+                },
+                {
+                    label: 'F0 Expenses: rent + utilities (USD)',
+                    data: feeMonthData.map(item => item.expenses_usd || 0),
+                    borderWidth: 2,
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgba(255, 159, 64, 0.05)',
+                    tension: 0.2,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const donationsMonthData = {{ donations_by_month | tojson }};
+    const donationsMonthLabels = donationsMonthData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
+
+    new Chart(document.getElementById('donations-month-chart'), {
+        type: 'line',
+        data: {
+            labels: donationsMonthLabels,
+            datasets: [
+                {
+                    label: 'Donations to F0 (USD)',
+                    data: donationsMonthData.map(item => item.f0_donation_total_usd || 0),
+                    borderWidth: 2,
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    tension: 0.2,
+                    fill: true
+                },
+                {
+                    label: 'General donation-tagged transactions (USD)',
+                    data: donationsMonthData.map(item => item.general_donation_total_usd || 0),
+                    borderWidth: 2,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.2,
+                    fill: false
                 }
             ]
         },

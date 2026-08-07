@@ -1,7 +1,7 @@
 {% extends 'base.jinja2' %}
 {% from 'widgets/currency_selector.jinja2' import currency_selector %}
 
-{% block title %}Pay Member/Resident Fee{% endblock %}
+{% block title %}Pay Monthly Fee{% endblock %}
 
 {% block content %}
 {% set currency_choices = currency_choices | default([('GEL', 'GEL'), ('USD', 'USD'), ('EUR', 'EUR')]) %}

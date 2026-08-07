@@ -5,22 +5,12 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 
-class ResidentFeeSumByMonthSchema(BaseModel):
+class MonthlyFeeSumByMonthSchema(BaseModel):
     year: int
     month: int
     amounts: dict[str, float]
     total_usd: float
     expected_total_usd: float = 0.0
-    expenses_usd: float = 0.0
-
-
-class ResidentFeeAverageByMonthSchema(BaseModel):
-    year: int
-    month: int
-    invoice_count: int
-    paid_invoice_count: int
-    paid_usd_per_invoice: float
-    expected_usd_per_invoice: float
 
 
 class EntityTransactionsByDaySchema(BaseModel):
@@ -38,6 +28,14 @@ class FeeTransactionsByMonthSchema(BaseModel):
     year: int
     month: int
     fee_total_usd: float
+    expenses_usd: float = 0.0
+
+
+class DonationsByMonthSchema(BaseModel):
+    year: int
+    month: int
+    f0_donation_total_usd: float
+    general_donation_total_usd: float
 
 
 class EntityBalanceChangeByDaySchema(BaseModel):
