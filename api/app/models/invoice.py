@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from sqlalchemy import JSON, Column, Date, Enum, ForeignKey, String, Table
+from sqlalchemy import JSON, Column, Date, Enum, ForeignKey, Index, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -19,6 +19,8 @@ invoices_tags = Table(
     BaseModel.metadata,
     Column("invoice_id", ForeignKey("invoices.id")),
     Column("tag_id", ForeignKey("tags.id")),
+    Index("ix_invoices_tags_invoice_tag", "invoice_id", "tag_id"),
+    Index("ix_invoices_tags_tag_invoice", "tag_id", "invoice_id"),
 )
 
 
@@ -30,6 +32,10 @@ class InvoiceStatus(enum.Enum):
 
 class Invoice(BaseModel):
     __tablename__ = "invoices"
+    __table_args__ = (
+        Index("ix_invoices_status_billing_period", "status", "billing_period"),
+        {"sqlite_autoincrement": True},
+    )
 
     actor_entity_id: Mapped[int] = mapped_column(
         ForeignKey("entities.id"), nullable=False

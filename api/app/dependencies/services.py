@@ -263,8 +263,6 @@ class ServiceContainer:
 
             self._stats_service = StatsService(
                 db=self.db,
-                fee_service=self.fee_service,
-                balance_service=self.balance_service,
                 entity_service=self.entity_service,
                 currency_exchange_service=self.currency_exchange_service,
             )

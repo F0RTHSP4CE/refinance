@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
-from sqlalchemy import JSON, ForeignKey
+from sqlalchemy import JSON, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 
 class InvoiceItem(BaseModel):
     __tablename__ = "invoice_items"
+    __table_args__ = (
+        Index("ix_invoice_items_invoice_id", "invoice_id"),
+        {"sqlite_autoincrement": True},
+    )
 
     invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id"), nullable=False)
     invoice: Mapped["Invoice"] = relationship(

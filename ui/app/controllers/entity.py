@@ -14,7 +14,7 @@ from app.schemas import (
     Tag,
     Transaction,
 )
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
@@ -351,13 +351,6 @@ def detail(id):
     invoice_limit = request.args.get("invoice_limit", 20, type=int)
     invoice_skip = (invoice_page - 1) * invoice_limit
 
-    stats_requested = request.args.get("stats", "", type=str).lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
-
     stats_months = request.args.get("stats_months", 6, type=int)
     stats_limit = request.args.get("stats_limit", 6, type=int)
     stats_months = max(1, stats_months)
@@ -574,33 +567,6 @@ def detail(id):
         outgoing_by_tag_by_month,
     ) = _apply_stats_bundle(cached_bundle)
 
-    if not stats_loaded and stats_requested:
-        # User explicitly requested calculation/loading.
-        stats_bundle = api.http(
-            "GET",
-            f"stats/entity/{id}",
-            params={
-                "limit": stats_limit,
-                "months": stats_months,
-                "timeframe_to": date.today().isoformat(),
-            },
-        ).json()
-
-        (
-            stats_loaded,
-            balance_changes,
-            transactions_by_day,
-            money_flow_by_day,
-            top_incoming,
-            top_outgoing,
-            top_incoming_tags,
-            top_outgoing_tags,
-            incoming_by_entity_by_month,
-            outgoing_by_entity_by_month,
-            incoming_by_tag_by_month,
-            outgoing_by_tag_by_month,
-        ) = _apply_stats_bundle(stats_bundle)
-
     return render_template(
         "entity/detail.jinja2",
         entity=Entity(**entity_data),
@@ -636,23 +602,22 @@ def detail(id):
 @entity_bp.route("/<int:id>/stats")
 @token_required
 def stats(id):
-    """Trigger calculation / loading of cached statistics for an entity."""
+    """Calculate entity statistics without delaying the entity page response."""
 
-    page = request.args.get("page", 1, type=int)
-    limit = request.args.get("limit", 20, type=int)
     stats_months = request.args.get("stats_months", 6, type=int)
     stats_limit = request.args.get("stats_limit", 6, type=int)
     stats_months = max(1, stats_months)
     stats_limit = max(1, stats_limit)
 
-    return redirect(
-        url_for(
-            "entity.detail",
-            id=id,
-            page=page,
-            limit=limit,
-            stats=1,
-            stats_months=stats_months,
-            stats_limit=stats_limit,
-        )
-    )
+    api = get_refinance_api_client()
+    stats_bundle = api.http(
+        "GET",
+        f"stats/entity/{id}",
+        params={
+            "limit": stats_limit,
+            "months": stats_months,
+            "timeframe_to": date.today().isoformat(),
+        },
+    ).json()
+
+    return jsonify({"loaded": stats_bundle.get("cached", True)})

@@ -45,6 +45,12 @@ class DatabaseConnection:
         """Create all database tables defined in models."""
         logger.info("Creating database tables...")
         BaseModel.metadata.create_all(bind=self.engine)
+        # ``create_all`` skips an existing table as a unit, including indexes added
+        # after that table was first deployed. Create declared indexes separately so
+        # performance improvements also reach existing installations.
+        for table in BaseModel.metadata.sorted_tables:
+            for index in table.indexes:
+                index.create(bind=self.engine, checkfirst=True)
         logger.info("Database tables created.")
 
     def drop_tables(self) -> None:

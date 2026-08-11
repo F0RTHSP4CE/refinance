@@ -8,7 +8,7 @@ from app.models.base import BaseModel
 from app.models.entity import Entity
 from app.models.tag import Tag
 from app.models.treasury import Treasury
-from sqlalchemy import DECIMAL, Column, Enum, ForeignKey, String, Table
+from sqlalchemy import DECIMAL, Column, Enum, ForeignKey, Index, String, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
@@ -20,6 +20,8 @@ transactions_tags = Table(
     BaseModel.metadata,
     Column("transaction_id", ForeignKey("transactions.id")),
     Column("tag_id", ForeignKey("tags.id")),
+    Index("ix_transactions_tags_transaction_tag", "transaction_id", "tag_id"),
+    Index("ix_transactions_tags_tag_transaction", "tag_id", "transaction_id"),
 )
 
 
@@ -30,6 +32,20 @@ class TransactionStatus(enum.Enum):
 
 class Transaction(BaseModel):
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index(
+            "ix_transactions_from_entity_created_at",
+            "from_entity_id",
+            "created_at",
+        ),
+        Index(
+            "ix_transactions_to_entity_created_at",
+            "to_entity_id",
+            "created_at",
+        ),
+        Index("ix_transactions_status_created_at", "status", "created_at"),
+        {"sqlite_autoincrement": True},
+    )
 
     actor_entity_id: Mapped[int] = mapped_column(
         ForeignKey("entities.id"), nullable=False

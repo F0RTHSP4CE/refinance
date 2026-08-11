@@ -11,34 +11,27 @@ from threading import Lock
 from typing import Any, Callable, Iterable, Mapping
 
 from app.dependencies.services import (
-    get_balance_service,
     get_currency_exchange_service,
     get_entity_service,
-    get_fee_service,
 )
-from app.models.entity import Entity
+from app.models.entity import Entity, entities_tags
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
 from app.models.tag import Tag
-from app.models.transaction import Transaction, TransactionStatus
+from app.models.transaction import Transaction, TransactionStatus, transactions_tags
 from app.seeding import (
     donation_tag,
-    ex_resident_tag,
     f0_entity,
     fee_tag,
-    member_tag,
     rent_tag,
-    resident_tag,
     utilities_tag,
 )
-from app.services.balance import BalanceService
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
 from app.services.entity import EntityService
-from app.services.fee import FeeService
 from app.uow import get_uow
 from fastapi import Depends
-from sqlalchemy import and_, case, extract, func, or_
+from sqlalchemy import Date, and_, case, extract, func, literal, or_, select, union_all
 from sqlalchemy.orm import Session, selectinload
 
 
@@ -50,16 +43,12 @@ class StatsService(BaseService):
     def __init__(
         self,
         db: Session = Depends(get_uow),
-        fee_service: FeeService = Depends(get_fee_service),
-        balance_service: BalanceService = Depends(get_balance_service),
         entity_service: EntityService = Depends(get_entity_service),
         currency_exchange_service: CurrencyExchangeService = Depends(
             get_currency_exchange_service
         ),
     ):
         self.db = db
-        self._fee_service = fee_service
-        self._balance_service = balance_service
         self._entity_service = entity_service
         self._currency_exchange_service = currency_exchange_service
 
@@ -254,98 +243,56 @@ class StatsService(BaseService):
     ):
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
-        hackerspace = self._entity_service.get(f0_entity.id)
+        start_month = timeframe_from.replace(day=1)
+        end_month = min(timeframe_to, date.today()).replace(day=1)
 
         invoice_load_options = (
             selectinload(Invoice.items).selectinload(InvoiceItem.transaction),
             selectinload(Invoice.transactions),
         )
 
-        # Query paid invoices. Multi-recipient invoices have no Invoice.to_entity_id,
-        # so recipient filtering is performed against their item transactions below.
-        paid_invoices = (
+        # Apply the timeframe before loading relationships, and fetch both statuses
+        # together. Previously this loaded every fee invoice twice and discarded old
+        # rows in Python.
+        invoices = (
             self.db.query(Invoice)
             .options(*invoice_load_options)
             .filter(
-                Invoice.billing_period.isnot(None),
+                Invoice.billing_period >= start_month,
+                Invoice.billing_period <= end_month,
                 Invoice.tags.contains(fee_tag),
-                Invoice.status == InvoiceStatus.PAID,
-            )
-            .all()
-        )
-
-        # Query unpaid invoices
-        unpaid_invoices = (
-            self.db.query(Invoice)
-            .options(*invoice_load_options)
-            .filter(
-                Invoice.billing_period.isnot(None),
-                Invoice.tags.contains(fee_tag),
-                Invoice.status == InvoiceStatus.PENDING,
+                Invoice.status.in_((InvoiceStatus.PAID, InvoiceStatus.PENDING)),
             )
             .all()
         )
 
         monthly_paid_totals = defaultdict(lambda: defaultdict(Decimal))
         monthly_unpaid_totals = defaultdict(lambda: defaultdict(Decimal))
-        today = date.today()
-
-        # Process paid invoices
-        for invoice in paid_invoices:
-            if invoice.billing_period is None:
-                continue
-            completed_transactions = self._completed_invoice_transactions_for_entity(
-                invoice, hackerspace.id
-            )
-            if not completed_transactions:
-                continue
-            year = invoice.billing_period.year
-            month = invoice.billing_period.month
-
-            # Skip future months
-            if year > today.year or (year == today.year and month > today.month):
-                continue
-
-            # Check if the month is within the requested timeframe
-            fee_date = date(year, month, 1)
-            start_month = timeframe_from.replace(day=1)
-            end_month = timeframe_to.replace(day=1)
-
-            if not (start_month <= fee_date <= end_month):
-                continue
-
-            for transaction in completed_transactions:
-                monthly_paid_totals[(year, month)][
-                    transaction.currency.lower()
-                ] += transaction.amount
-
-        # Process unpaid invoices
-        for invoice in unpaid_invoices:
+        for invoice in invoices:
+            # billing_period is guaranteed by the query, but keeping this guard makes
+            # the type narrowing explicit.
             if invoice.billing_period is None:
                 continue
             year = invoice.billing_period.year
             month = invoice.billing_period.month
-
-            # Skip future months
-            if year > today.year or (year == today.year and month > today.month):
-                continue
-
-            # Check if the month is within the requested timeframe
-            fee_date = date(year, month, 1)
-            start_month = timeframe_from.replace(day=1)
-            end_month = timeframe_to.replace(day=1)
-
-            if not (start_month <= fee_date <= end_month):
-                continue
-
-            # For unpaid invoices, only count the first amount entry (primary payment option)
-            # Fee invoices have multiple payment options (e.g., pay in GEL or USD), but only
-            # one will actually be paid, so we shouldn't sum all options.
-            entity_amounts = self._invoice_amounts_for_entity(invoice, hackerspace.id)
-            if entity_amounts:
-                currency, amount = next(iter(entity_amounts.items()))
-                if amount:
-                    monthly_unpaid_totals[(year, month)][currency] += amount
+            if invoice.status == InvoiceStatus.PAID:
+                completed_transactions = (
+                    self._completed_invoice_transactions_for_entity(
+                        invoice, f0_entity.id
+                    )
+                )
+                for transaction in completed_transactions:
+                    monthly_paid_totals[(year, month)][
+                        transaction.currency.lower()
+                    ] += transaction.amount
+            else:
+                # Fee invoices expose several payment options; only the primary one
+                # belongs in the expected (unpaid) total.
+                entity_amounts = self._invoice_amounts_for_entity(invoice, f0_entity.id)
+                if entity_amounts:
+                    currency, amount = next(iter(entity_amounts.items()))
+                    if amount:
+                        monthly_unpaid_totals[(year, month)][currency] += amount
 
         all_months = set(monthly_paid_totals.keys()) | set(monthly_unpaid_totals.keys())
 
@@ -382,6 +329,8 @@ class StatsService(BaseService):
         cache_args = (int(entity_id), timeframe_from, timeframe_to)
 
         def builder() -> list[dict[str, Any]]:
+            start_dt = datetime.combine(timeframe_from, time.min)
+            end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
             rows = (
                 self.db.query(
                     func.date(Transaction.created_at).label("day"),
@@ -389,8 +338,8 @@ class StatsService(BaseService):
                 )
                 .filter(
                     and_(
-                        Transaction.created_at >= timeframe_from,
-                        Transaction.created_at <= timeframe_to,
+                        Transaction.created_at >= start_dt,
+                        Transaction.created_at < end_dt,
                         (Transaction.from_entity_id == entity_id)
                         | (Transaction.to_entity_id == entity_id),
                     )
@@ -430,6 +379,8 @@ class StatsService(BaseService):
 
         def builder() -> list[dict[str, Any]]:
             day_col = func.date(Transaction.created_at)
+            start_dt = datetime.combine(timeframe_from, time.min)
+            end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
             direction = case(
                 (Transaction.to_entity_id == entity_id, "incoming"),
                 (Transaction.from_entity_id == entity_id, "outgoing"),
@@ -445,8 +396,8 @@ class StatsService(BaseService):
                 )
                 .filter(
                     and_(
-                        day_col >= timeframe_from,
-                        day_col <= timeframe_to,
+                        Transaction.created_at >= start_dt,
+                        Transaction.created_at < end_dt,
                         (Transaction.from_entity_id == entity_id)
                         | (Transaction.to_entity_id == entity_id),
                     )
@@ -662,59 +613,94 @@ class StatsService(BaseService):
         cache_args = (int(entity_id), start_day, timeframe_to)
 
         def builder() -> list[dict[str, Any]]:
+            # Preserve the old missing-entity behavior while avoiding one lookup per
+            # chart day.
+            self._entity_service.get(entity_id)
+
+            start_dt = datetime.combine(start_day, time.min)
+            end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
+            initial_day = start_day - timedelta(days=1)
+
+            def balance_leg(*, incoming: bool, initial: bool):
+                entity_column = (
+                    Transaction.to_entity_id if incoming else Transaction.from_entity_id
+                )
+                amount = Transaction.amount if incoming else -Transaction.amount
+                if initial:
+                    day = literal(initial_day, type_=Date)
+                    date_filter = Transaction.created_at < start_dt
+                else:
+                    day = func.date(Transaction.created_at)
+                    date_filter = and_(
+                        Transaction.created_at >= start_dt,
+                        Transaction.created_at < end_dt,
+                    )
+
+                return (
+                    select(
+                        day.label("day"),
+                        Transaction.currency.label("currency"),
+                        func.sum(amount).label("delta"),
+                    )
+                    .where(
+                        entity_column == entity_id,
+                        Transaction.status == TransactionStatus.COMPLETED,
+                        date_filter,
+                    )
+                    .group_by(day, Transaction.currency)
+                )
+
+            # Four index-friendly range aggregates replace the previous O(days)
+            # balance recalculation. UNION ALL keeps incoming and outgoing legs
+            # independent so PostgreSQL can use each composite entity/date index.
+            balance_legs = union_all(
+                balance_leg(incoming=True, initial=True),
+                balance_leg(incoming=False, initial=True),
+                balance_leg(incoming=True, initial=False),
+                balance_leg(incoming=False, initial=False),
+            ).subquery()
+
+            rows = self.db.execute(
+                select(
+                    balance_legs.c.day,
+                    balance_legs.c.currency,
+                    func.sum(balance_legs.c.delta).label("delta"),
+                )
+                .group_by(balance_legs.c.day, balance_legs.c.currency)
+                .order_by(balance_legs.c.day)
+            ).all()
+
+            initial_balances: dict[str, Decimal] = {}
+            deltas_by_day: defaultdict[date, dict[str, Decimal]] = defaultdict(dict)
+            for row in rows:
+                delta = row.delta or Decimal("0")
+                if row.day == initial_day:
+                    initial_balances[row.currency] = delta
+                else:
+                    deltas_by_day[row.day][row.currency] = delta
+
+            completed_balances = initial_balances.copy()
+            last_completed_balances = completed_balances.copy()
             result: list[dict[str, Any]] = []
-            current_day = start_day
-            last_completed_balances: dict[str, Decimal] | None = None
+            for current_day in sorted(deltas_by_day):
+                for currency, delta in deltas_by_day[current_day].items():
+                    completed_balances[currency] = (
+                        completed_balances.get(currency, Decimal("0")) + delta
+                    )
 
-            # To avoid rendering a long empty stretch at the beginning of the timeframe,
-            # only emit the first day if there is an actual balance change versus the
-            # previous day. This keeps the chart aligned with other stats charts that
-            # naturally begin at the first available datapoint.
-            previous_day = start_day - timedelta(days=1)
-            previous_balances = self._balance_service.get_balances(
-                entity_id, end_date=previous_day
-            )
-            previous_completed = self._normalize_currency_mapping(
-                previous_balances.completed
-            )
-
-            while current_day <= timeframe_to:
-                balances = self._balance_service.get_balances(
-                    entity_id, end_date=current_day
-                )
-                completed_balances = self._normalize_currency_mapping(
-                    balances.completed
-                )
-
-                if current_day == start_day:
-                    # Emit start_day only if it differs from the previous day.
-                    if completed_balances == previous_completed:
-                        last_completed_balances = completed_balances.copy()
-                        current_day += timedelta(days=1)
-                        continue
-
-                if (
-                    last_completed_balances is not None
-                    and completed_balances == last_completed_balances
-                ):
-                    current_day += timedelta(days=1)
+                if completed_balances == last_completed_balances:
                     continue
-
                 last_completed_balances = completed_balances.copy()
-
-                balances_float = {
-                    currency: float(amount)
-                    for currency, amount in completed_balances.items()
-                }
-                total_usd = self._sum_amounts_usd(completed_balances)
                 result.append(
                     {
                         "day": current_day,
-                        "balance_changes": balances_float,
-                        "total_usd": total_usd,
+                        "balance_changes": {
+                            currency: float(amount)
+                            for currency, amount in completed_balances.items()
+                        },
+                        "total_usd": self._sum_amounts_usd(completed_balances),
                     }
                 )
-                current_day += timedelta(days=1)
 
             return result
 
@@ -736,22 +722,6 @@ class StatsService(BaseService):
         day = min(dt.day, last_day)
         return date(year, month, day)
 
-    def _normalize_currency_mapping(
-        self, values: Mapping[str, Any]
-    ) -> dict[str, Decimal]:
-        normalized: dict[str, Decimal] = {}
-        for currency, amount in values.items():
-            if isinstance(amount, Decimal):
-                normalized[currency] = amount
-            elif hasattr(amount, "to_decimal"):
-                normalized[currency] = amount.to_decimal()  # type: ignore[attr-defined]
-            else:
-                try:
-                    normalized[currency] = Decimal(str(amount))
-                except Exception:
-                    normalized[currency] = Decimal("0")
-        return normalized
-
     def _calculate_timeframe_bounds(
         self, months: int, timeframe_to: date | None
     ) -> tuple[datetime, datetime]:
@@ -767,64 +737,217 @@ class StatsService(BaseService):
         end_dt = datetime.combine(timeframe_to, time.max)
         return start_dt, end_dt
 
+    def _get_entity_activity(
+        self,
+        entity_id: int,
+        incoming: bool,
+        months: int,
+        timeframe_to: date | None,
+    ) -> dict[int, dict[str, Any]]:
+        """Aggregate entity activity once for both top and monthly charts."""
+
+        cache_args = (int(entity_id), incoming, months, timeframe_to)
+
+        def builder() -> dict[int, dict[str, Any]]:
+            start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+            other_entity_column = (
+                Transaction.from_entity_id if incoming else Transaction.to_entity_id
+            )
+            filter_condition = (
+                Transaction.to_entity_id == entity_id
+                if incoming
+                else Transaction.from_entity_id == entity_id
+            )
+            year = extract("year", Transaction.created_at)
+            month = extract("month", Transaction.created_at)
+
+            rows = self.db.execute(
+                select(
+                    year.label("year"),
+                    month.label("month"),
+                    other_entity_column.label("entity_id"),
+                    Entity.name.label("entity_name"),
+                    Transaction.currency,
+                    func.sum(Transaction.amount).label("total_amount"),
+                )
+                .select_from(Transaction)
+                .join(Entity, Entity.id == other_entity_column)
+                .where(
+                    Transaction.created_at >= start_dt,
+                    Transaction.created_at <= end_dt,
+                    filter_condition,
+                )
+                .group_by(
+                    year,
+                    month,
+                    other_entity_column,
+                    Entity.name,
+                    Transaction.currency,
+                )
+            ).all()
+
+            activity: dict[int, dict[str, Any]] = {}
+            for row in rows:
+                other_entity_id = int(row.entity_id)
+                entity_data = activity.setdefault(
+                    other_entity_id,
+                    {"name": row.entity_name, "by_month": {}},
+                )
+                ym = (int(row.year), int(row.month))
+                currency_totals = entity_data["by_month"].setdefault(ym, {})
+                currency_totals[row.currency] = row.total_amount
+            return activity
+
+        return self._cached_result(
+            "_get_entity_activity",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
+        )
+
+    def _get_tag_activity(
+        self,
+        entity_id: int,
+        incoming: bool,
+        months: int,
+        timeframe_to: date | None,
+    ) -> dict[int, dict[str, Any]]:
+        """Aggregate direct/fallback tags once for top and monthly charts.
+
+        Transaction tags take precedence. Entity tags are used only when a
+        transaction has no direct tags, matching the previous ORM-loading logic.
+        """
+
+        cache_args = (int(entity_id), incoming, months, timeframe_to)
+
+        def builder() -> dict[int, dict[str, Any]]:
+            start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+            entity_filter = (
+                Transaction.to_entity_id == entity_id
+                if incoming
+                else Transaction.from_entity_id == entity_id
+            )
+            fallback_entity_column = (
+                Transaction.from_entity_id if incoming else Transaction.to_entity_id
+            )
+            year = extract("year", Transaction.created_at)
+            month = extract("month", Transaction.created_at)
+
+            def aggregate_tag_query(*, fallback: bool):
+                if fallback:
+                    tag_id = entities_tags.c.tag_id
+                    query = (
+                        select(
+                            year.label("year"),
+                            month.label("month"),
+                            tag_id.label("tag_id"),
+                            Tag.name.label("tag_name"),
+                            Transaction.currency.label("currency"),
+                            func.sum(Transaction.amount).label("total_amount"),
+                        )
+                        .select_from(Transaction)
+                        .join(
+                            entities_tags,
+                            entities_tags.c.entity_id == fallback_entity_column,
+                        )
+                        .join(Tag, Tag.id == tag_id)
+                        .where(
+                            ~select(transactions_tags.c.transaction_id)
+                            .where(transactions_tags.c.transaction_id == Transaction.id)
+                            .exists()
+                        )
+                    )
+                else:
+                    tag_id = transactions_tags.c.tag_id
+                    query = (
+                        select(
+                            year.label("year"),
+                            month.label("month"),
+                            tag_id.label("tag_id"),
+                            Tag.name.label("tag_name"),
+                            Transaction.currency.label("currency"),
+                            func.sum(Transaction.amount).label("total_amount"),
+                        )
+                        .select_from(Transaction)
+                        .join(
+                            transactions_tags,
+                            transactions_tags.c.transaction_id == Transaction.id,
+                        )
+                        .join(Tag, Tag.id == tag_id)
+                    )
+
+                return query.where(
+                    Transaction.created_at >= start_dt,
+                    Transaction.created_at <= end_dt,
+                    entity_filter,
+                ).group_by(
+                    year,
+                    month,
+                    tag_id,
+                    Tag.name,
+                    Transaction.currency,
+                )
+
+            rows = self.db.execute(
+                union_all(
+                    aggregate_tag_query(fallback=False),
+                    aggregate_tag_query(fallback=True),
+                )
+            ).all()
+
+            activity: dict[int, dict[str, Any]] = {}
+            for row in rows:
+                tag_id = int(row.tag_id)
+                tag_data = activity.setdefault(
+                    tag_id,
+                    {"name": row.tag_name, "by_month": {}},
+                )
+                ym = (int(row.year), int(row.month))
+                currency_totals = tag_data["by_month"].setdefault(ym, {})
+                currency_totals[row.currency] = (
+                    currency_totals.get(row.currency, Decimal("0")) + row.total_amount
+                )
+            return activity
+
+        return self._cached_result(
+            "_get_tag_activity",
+            [entity_id],
+            cache_args,
+            {},
+            builder,
+        )
+
     def _get_top_entities(
         self,
-        entity_column,
+        entity_id: int,
+        incoming: bool,
         limit: int,
         months: int,
         timeframe_to: date | None,
-        *additional_filters,
     ) -> list[dict[str, Any]]:
         if limit <= 0:
             return []
 
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
-
-        labeled_entity_col = entity_column.label("entity_id")
-        rows = (
-            self.db.query(
-                labeled_entity_col,
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total_amount"),
-            )
-            .filter(
-                Transaction.created_at >= start_dt,
-                Transaction.created_at <= end_dt,
-                *additional_filters,
-            )
-            .group_by(labeled_entity_col, Transaction.currency)
-            .all()
-        )
-
-        if not rows:
-            return []
-
+        activity = self._get_entity_activity(entity_id, incoming, months, timeframe_to)
         totals: dict[int, dict[str, Decimal]] = defaultdict(
             lambda: defaultdict(Decimal)
         )
-        for row in rows:
-            totals[int(row.entity_id)][row.currency] += row.total_amount
-
-        entity_ids = list(totals.keys())
-        entity_names = {}
-        if entity_ids:
-            for entity_id, name in (
-                self.db.query(Entity.id, Entity.name)
-                .filter(Entity.id.in_(entity_ids))
-                .all()
-            ):
-                entity_names[int(entity_id)] = name
+        for other_entity_id, entity_data in activity.items():
+            for currency_map in entity_data["by_month"].values():
+                for currency, amount in currency_map.items():
+                    totals[other_entity_id][currency] += amount
 
         results = []
-        for entity_id, amounts in totals.items():
+        for other_entity_id, amounts in totals.items():
             amounts_float = {
                 currency: float(amount) for currency, amount in amounts.items()
             }
             total_usd = self._sum_amounts_usd(amounts)
             results.append(
                 {
-                    "entity_id": entity_id,
-                    "entity_name": entity_names.get(entity_id, "Unknown"),
+                    "entity_id": other_entity_id,
+                    "entity_name": activity[other_entity_id]["name"],
                     "amounts": amounts_float,
                     "total_usd": total_usd,
                 }
@@ -835,64 +958,23 @@ class StatsService(BaseService):
 
     def _get_top_tags(
         self,
+        entity_id: int,
+        incoming: bool,
         limit: int,
         months: int,
         timeframe_to: date | None,
-        entity_filter,
-        fallback_entity_attr: str,
     ) -> list[dict[str, Any]]:
         if limit <= 0:
             return []
 
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
-
-        transactions = (
-            self.db.query(Transaction)
-            .options(
-                selectinload(Transaction.tags),
-                selectinload(Transaction.from_entity).selectinload(Entity.tags),
-                selectinload(Transaction.to_entity).selectinload(Entity.tags),
-            )
-            .filter(
-                Transaction.created_at >= start_dt,
-                Transaction.created_at <= end_dt,
-                entity_filter,
-            )
-            .all()
-        )
-
-        if not transactions:
-            return []
-
+        activity = self._get_tag_activity(entity_id, incoming, months, timeframe_to)
         totals: dict[int, dict[str, Decimal]] = defaultdict(
             lambda: defaultdict(Decimal)
         )
-        tag_names: dict[int, str] = {}
-
-        for tx in transactions:
-            tags = tx.tags if tx.tags else []
-            if not tags:
-                fallback_entity = getattr(tx, fallback_entity_attr, None)
-                if fallback_entity:
-                    tags = fallback_entity.tags
-
-            if not tags:
-                continue
-
-            unique_tags: dict[int, Tag] = {}
-            for tag in tags:
-                if tag and tag.id is not None:
-                    unique_tags[int(tag.id)] = tag
-
-            if not unique_tags:
-                continue
-
-            for tag_id, tag in unique_tags.items():
-                totals[tag_id][tx.currency] += tx.amount
-                tag_names[tag_id] = tag.name
-
-        if not totals:
-            return []
+        for tag_id, tag_data in activity.items():
+            for currency_map in tag_data["by_month"].values():
+                for currency, amount in currency_map.items():
+                    totals[tag_id][currency] += amount
 
         results = []
         for tag_id, amounts in totals.items():
@@ -903,7 +985,7 @@ class StatsService(BaseService):
             results.append(
                 {
                     "tag_id": tag_id,
-                    "tag_name": tag_names.get(tag_id, "Unknown"),
+                    "tag_name": activity[tag_id]["name"],
                     "amounts": amounts_float,
                     "total_usd": total_usd,
                 }
@@ -930,11 +1012,11 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_top_entities(
-                Transaction.from_entity_id,
+                entity_id,
+                True,
                 limit,
                 months,
                 timeframe_to,
-                Transaction.to_entity_id == entity_id,
             ),
         )
 
@@ -956,11 +1038,11 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_top_entities(
-                Transaction.to_entity_id,
+                entity_id,
+                False,
                 limit,
                 months,
                 timeframe_to,
-                Transaction.from_entity_id == entity_id,
             ),
         )
 
@@ -982,11 +1064,11 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_top_tags(
+                entity_id,
+                True,
                 limit,
                 months,
                 timeframe_to,
-                Transaction.to_entity_id == entity_id,
-                "from_entity",
             ),
         )
 
@@ -1008,11 +1090,11 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_top_tags(
+                entity_id,
+                False,
                 limit,
                 months,
                 timeframe_to,
-                Transaction.from_entity_id == entity_id,
-                "to_entity",
             ),
         )
 
@@ -1043,16 +1125,28 @@ class StatsService(BaseService):
             else:
                 current = current.replace(month=current.month + 1)
 
-        # fetch all tagged transactions, then filter dates in Python to avoid datetime-vs-date issues
-        transactions = (
-            self.db.query(Transaction)
+        start_dt = datetime.combine(timeframe_from, time.min)
+        end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
+
+        # Aggregate only the requested range in the database. The previous version
+        # materialized every matching Transaction ORM object from all history.
+        rows = (
+            self.db.query(
+                extract("year", Transaction.created_at).label("year"),
+                extract("month", Transaction.created_at).label("month"),
+                Transaction.currency,
+                func.sum(Transaction.amount).label("total_amount"),
+            )
             .filter(
+                Transaction.created_at >= start_dt,
+                Transaction.created_at < end_dt,
                 or_(
                     Transaction.tags.any(Tag.id == tag_id),
                     Transaction.from_entity.has(Entity.tags.any(Tag.id == tag_id)),
                     Transaction.to_entity.has(Entity.tags.any(Tag.id == tag_id)),
-                )
+                ),
             )
+            .group_by("year", "month", Transaction.currency)
             .all()
         )
 
@@ -1061,14 +1155,10 @@ class StatsService(BaseService):
             m: defaultdict(Decimal) for m in months
         }
 
-        # accumulate sums, filtering dates in Python to cover full days
-        for t in transactions:
-            t_date = t.created_at.date()
-            if not (timeframe_from <= t_date <= timeframe_to):
-                continue
-            ym = (t_date.year, t_date.month)
+        for row in rows:
+            ym = (int(row.year), int(row.month))
             if ym in monthly_totals:
-                monthly_totals[ym][t.currency] += t.amount
+                monthly_totals[ym][row.currency] += row.total_amount
 
         # format result preserving month order
         result = []
@@ -1106,46 +1196,21 @@ class StatsService(BaseService):
 
     def _get_activity_by_entity_by_month(
         self,
-        entity_column,
-        filter_condition,
+        entity_id: int,
+        incoming: bool,
         limit: int,
         months: int,
         timeframe_to: date | None,
     ) -> list[dict[str, Any]]:
         """Return top-N entities with their USD totals per month."""
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        start_dt, _ = self._calculate_timeframe_bounds(months, timeframe_to)
         month_list = self._build_months_list(start_dt, timeframe_to)
-
-        rows = (
-            self.db.query(
-                func.extract("year", Transaction.created_at).label("yr"),
-                func.extract("month", Transaction.created_at).label("mo"),
-                entity_column.label("other_entity_id"),
-                Transaction.currency,
-                func.sum(Transaction.amount).label("total_amount"),
-            )
-            .filter(
-                Transaction.created_at >= start_dt,
-                Transaction.created_at <= end_dt,
-                filter_condition,
-            )
-            .group_by("yr", "mo", entity_column, Transaction.currency)
-            .all()
-        )
-
-        totals_by_entity: dict[int, dict[tuple[int, int], dict[str, Decimal]]] = (
-            defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
-        )
-        for row in rows:
-            ym = (int(row.yr), int(row.mo))
-            totals_by_entity[int(row.other_entity_id)][ym][
-                row.currency
-            ] += row.total_amount
+        activity = self._get_entity_activity(entity_id, incoming, months, timeframe_to)
 
         entity_period_totals: dict[int, float] = {}
-        for eid, ym_data in totals_by_entity.items():
+        for eid, entity_data in activity.items():
             combined: dict[str, Decimal] = defaultdict(Decimal)
-            for currency_map in ym_data.values():
+            for currency_map in entity_data["by_month"].values():
                 for cur, amt in currency_map.items():
                     combined[cur] += amt
             entity_period_totals[eid] = float(self._sum_amounts_usd(combined))
@@ -1154,19 +1219,10 @@ class StatsService(BaseService):
             entity_period_totals, key=entity_period_totals.__getitem__, reverse=True
         )[:limit]
 
-        entity_names: dict[int, str] = {}
-        if top_entity_ids:
-            for eid, name in (
-                self.db.query(Entity.id, Entity.name)
-                .filter(Entity.id.in_(top_entity_ids))
-                .all()
-            ):
-                entity_names[int(eid)] = name
-
         result: list[dict[str, Any]] = []
         for eid in top_entity_ids:
             by_month = []
-            ym_data = totals_by_entity[eid]
+            ym_data = activity[eid]["by_month"]
             for ym in month_list:
                 currency_map = ym_data.get(ym, {})
                 total_usd = (
@@ -1176,7 +1232,7 @@ class StatsService(BaseService):
             result.append(
                 {
                     "entity_id": eid,
-                    "entity_name": entity_names.get(eid, "Unknown"),
+                    "entity_name": activity[eid]["name"],
                     "by_month": by_month,
                 }
             )
@@ -1184,64 +1240,21 @@ class StatsService(BaseService):
 
     def _get_activity_by_tag_by_month(
         self,
-        entity_filter,
-        fallback_entity_attr: str,
+        entity_id: int,
+        incoming: bool,
         limit: int,
         months: int,
         timeframe_to: date | None,
     ) -> list[dict[str, Any]]:
         """Return top-N tags with their USD totals per month."""
-        start_dt, end_dt = self._calculate_timeframe_bounds(months, timeframe_to)
+        start_dt, _ = self._calculate_timeframe_bounds(months, timeframe_to)
         month_list = self._build_months_list(start_dt, timeframe_to)
-
-        transactions = (
-            self.db.query(Transaction)
-            .options(
-                selectinload(Transaction.tags),
-                selectinload(Transaction.from_entity).selectinload(Entity.tags),
-                selectinload(Transaction.to_entity).selectinload(Entity.tags),
-            )
-            .filter(
-                Transaction.created_at >= start_dt,
-                Transaction.created_at <= end_dt,
-                entity_filter,
-            )
-            .all()
-        )
-
-        totals_by_tag: dict[int, dict[tuple[int, int], dict[str, Decimal]]] = (
-            defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
-        )
-        tag_names: dict[int, str] = {}
-
-        for tx in transactions:
-            tags = tx.tags if tx.tags else []
-            if not tags:
-                fallback_entity = getattr(tx, fallback_entity_attr, None)
-                if fallback_entity:
-                    tags = fallback_entity.tags
-
-            if not tags:
-                continue
-
-            unique_tags: dict[int, Tag] = {}
-            for tag in tags:
-                if tag and tag.id is not None:
-                    unique_tags[int(tag.id)] = tag
-
-            if not unique_tags:
-                continue
-
-            t_date = tx.created_at.date()
-            ym = (t_date.year, t_date.month)
-            for tag_id, tag in unique_tags.items():
-                totals_by_tag[tag_id][ym][tx.currency] += tx.amount
-                tag_names[tag_id] = tag.name
+        activity = self._get_tag_activity(entity_id, incoming, months, timeframe_to)
 
         tag_period_totals: dict[int, float] = {}
-        for tid, ym_data in totals_by_tag.items():
+        for tid, tag_data in activity.items():
             combined: dict[str, Decimal] = defaultdict(Decimal)
-            for currency_map in ym_data.values():
+            for currency_map in tag_data["by_month"].values():
                 for cur, amt in currency_map.items():
                     combined[cur] += amt
             tag_period_totals[tid] = float(self._sum_amounts_usd(combined))
@@ -1253,7 +1266,7 @@ class StatsService(BaseService):
         result: list[dict[str, Any]] = []
         for tid in top_tag_ids:
             by_month = []
-            ym_data = totals_by_tag[tid]
+            ym_data = activity[tid]["by_month"]
             for ym in month_list:
                 currency_map = ym_data.get(ym, {})
                 total_usd = (
@@ -1263,7 +1276,7 @@ class StatsService(BaseService):
             result.append(
                 {
                     "tag_id": tid,
-                    "tag_name": tag_names.get(tid, "Unknown"),
+                    "tag_name": activity[tid]["name"],
                     "by_month": by_month,
                 }
             )
@@ -1285,8 +1298,8 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_activity_by_entity_by_month(
-                Transaction.to_entity_id,
-                Transaction.from_entity_id == entity_id,
+                entity_id,
+                False,
                 limit,
                 months,
                 timeframe_to,
@@ -1309,8 +1322,8 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_activity_by_entity_by_month(
-                Transaction.from_entity_id,
-                Transaction.to_entity_id == entity_id,
+                entity_id,
+                True,
                 limit,
                 months,
                 timeframe_to,
@@ -1333,8 +1346,8 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_activity_by_tag_by_month(
-                Transaction.from_entity_id == entity_id,
-                "to_entity",
+                entity_id,
+                False,
                 limit,
                 months,
                 timeframe_to,
@@ -1357,8 +1370,8 @@ class StatsService(BaseService):
             cache_args,
             {},
             lambda: self._get_activity_by_tag_by_month(
-                Transaction.to_entity_id == entity_id,
-                "from_entity",
+                entity_id,
+                True,
                 limit,
                 months,
                 timeframe_to,

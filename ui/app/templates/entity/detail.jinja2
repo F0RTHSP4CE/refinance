@@ -319,18 +319,49 @@
         <section class="entity-card entity-stats-card">
             <div class="entity-card-header">
                 <h3 class="entity-card-title">Statistics</h3>
-                {% if not stats_loaded %}
-                <a href="{{ url_for('entity.stats', id=entity.id, page=page, limit=limit, stats_months=stats_months, stats_limit=stats_limit) }}"
-                    class="big-button big-button-inline">
-                    Calculate Statistics
-                </a>
-                {% endif %}
             </div>
 
             {% if not stats_loaded %}
-            <p class="entity-empty-state">
-                Generate statistics to unlock trends, top counterparties, and tag activity insights.
+            <p id="entity-stats-status" class="entity-empty-state" role="status">
+                Calculating statistics in the background&hellip;
             </p>
+            <script>
+                (() => {
+                    const status = document.getElementById('entity-stats-status');
+                    const calculateUrl = {{ url_for(
+                        'entity.stats',
+                        id=entity.id,
+                        stats_months=stats_months,
+                        stats_limit=stats_limit,
+                    ) | tojson }};
+
+                    const calculateStatistics = async () => {
+                        try {
+                            const response = await fetch(calculateUrl, {
+                                cache: 'no-store',
+                                headers: { 'Accept': 'application/json' },
+                            });
+                            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                            const result = await response.json();
+                            if (!result.loaded) throw new Error('Statistics were not loaded');
+
+                            window.location.reload();
+                        } catch (error) {
+                            console.error('Could not calculate entity statistics', error);
+                            if (status) {
+                                status.textContent = 'Statistics could not be loaded. Refresh the page to try again.';
+                            }
+                        }
+                    };
+
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', calculateStatistics, { once: true });
+                    } else {
+                        calculateStatistics();
+                    }
+                })();
+            </script>
             {% else %}
             <!-- Entity stats charts -->
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

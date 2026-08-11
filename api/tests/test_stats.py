@@ -6,7 +6,10 @@ from app.app import app
 from app.config import get_config
 from app.db import DatabaseConnection
 from app.models.transaction import Transaction
+from app.services.stats import StatsService
 from fastapi.testclient import TestClient
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
 
 
 def test_entity_money_flow_by_day(test_app: TestClient, token):
@@ -67,6 +70,40 @@ def test_entity_money_flow_by_day(test_app: TestClient, token):
     body = bundle.json()
     assert "money_flow_by_day" in body
     assert isinstance(body["money_flow_by_day"], list)
+    balance_row = next(row for row in body["balance_changes"] if row["day"] == today)
+    assert balance_row["balance_changes"]["usd"] == pytest.approx(5.25)
+    transaction_row = next(
+        row for row in body["transactions_by_day"] if row["day"] == today
+    )
+    assert transaction_row["transaction_count"] == 3
+
+
+def test_entity_stats_bundle_has_bounded_query_count(test_app: TestClient, token):
+    """A longer chart range must not issue one balance query per day."""
+
+    with StatsService._cache_lock:
+        StatsService._cache.clear()
+        StatsService._entity_cache_index.clear()
+
+    select_count = 0
+
+    def count_selects(conn, cursor, statement, parameters, context, executemany):
+        nonlocal select_count
+        if statement.lstrip().upper().startswith(("SELECT", "WITH")):
+            select_count += 1
+
+    event.listen(Engine, "before_cursor_execute", count_selects)
+    try:
+        response = test_app.get(
+            "/stats/entity/1",
+            params={"months": 12, "limit": 5},
+            headers={"x-token": token},
+        )
+    finally:
+        event.remove(Engine, "before_cursor_execute", count_selects)
+
+    assert response.status_code == 200, response.text
+    assert select_count <= 8
 
 
 def test_monthly_fee_stats_include_f0_share_of_multi_recipient_invoice(

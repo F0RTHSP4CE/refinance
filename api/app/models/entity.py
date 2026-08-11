@@ -4,7 +4,7 @@ from typing import List
 
 from app.models.base import BaseModel
 from app.models.tag import Tag
-from sqlalchemy import JSON, Column, ForeignKey, Table
+from sqlalchemy import JSON, Column, ForeignKey, Index, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 entities_tags = Table(
@@ -12,6 +12,8 @@ entities_tags = Table(
     BaseModel.metadata,
     Column("entity_id", ForeignKey("entities.id")),
     Column("tag_id", ForeignKey("tags.id")),
+    Index("ix_entities_tags_entity_tag", "entity_id", "tag_id"),
+    Index("ix_entities_tags_tag_entity", "tag_id", "entity_id"),
 )
 
 
