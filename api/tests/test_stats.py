@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -78,12 +78,173 @@ def test_entity_money_flow_by_day(test_app: TestClient, token):
     assert transaction_row["transaction_count"] == 3
 
 
+def test_treasury_history_stats_and_cache_invalidation(test_app: TestClient, token):
+    def create_entity(name: str) -> int:
+        response = test_app.post(
+            "/entities", json={"name": name}, headers={"x-token": token}
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    treasury_response = test_app.post(
+        "/treasuries",
+        json={"name": "Stats Test Treasury"},
+        headers={"x-token": token},
+    )
+    assert treasury_response.status_code == 200
+    treasury_id = treasury_response.json()["id"]
+    source = create_entity("Treasury Stats Source")
+    holder = create_entity("Treasury Stats Holder")
+    destination = create_entity("Treasury Stats Destination")
+
+    def create_transaction(
+        from_id: int, to_id: int, amount: str, *, incoming: bool
+    ) -> None:
+        treasury_field = "to_treasury_id" if incoming else "from_treasury_id"
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": from_id,
+                "to_entity_id": to_id,
+                "amount": amount,
+                "currency": "usd",
+                "status": "completed",
+                treasury_field: treasury_id,
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200, response.text
+
+    create_transaction(source, holder, "12.50", incoming=True)
+    create_transaction(holder, destination, "7.25", incoming=False)
+    today = date.today().isoformat()
+
+    bundle_response = test_app.get(
+        f"/stats/treasury/{treasury_id}",
+        params={"months": 1, "timeframe_to": today},
+        headers={"x-token": token},
+    )
+    assert bundle_response.status_code == 200, bundle_response.text
+    bundle = bundle_response.json()
+    balance_row = next(row for row in bundle["balance_changes"] if row["day"] == today)
+    flow_row = next(row for row in bundle["money_flow_by_day"] if row["day"] == today)
+    assert balance_row["balance_changes"]["usd"] == pytest.approx(5.25)
+    assert flow_row["incoming_total_usd"] == pytest.approx(12.50)
+    assert flow_row["outgoing_total_usd"] == pytest.approx(7.25)
+
+    cached_response = test_app.get(
+        f"/stats/treasury/{treasury_id}",
+        params={"months": 1, "timeframe_to": today, "cached_only": True},
+        headers={"x-token": token},
+    )
+    assert cached_response.status_code == 200
+    assert cached_response.json()["cached"] is True
+
+    create_transaction(source, holder, "1.00", incoming=True)
+    invalidated_response = test_app.get(
+        f"/stats/treasury/{treasury_id}",
+        params={"months": 1, "timeframe_to": today, "cached_only": True},
+        headers={"x-token": token},
+    )
+    assert invalidated_response.status_code == 200
+    assert invalidated_response.json()["cached"] is False
+
+
+def test_system_balance_history_compares_real_and_positive_virtual_balances(
+    test_app: TestClient, token
+):
+    def create_entity(name: str, tag_ids: list[int] | None = None) -> int:
+        response = test_app.post(
+            "/entities",
+            json={"name": name, "tag_ids": tag_ids or []},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["id"]
+
+    def create_treasury(name: str) -> int:
+        response = test_app.post(
+            "/treasuries", json={"name": name}, headers={"x-token": token}
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["id"]
+
+    deposit = create_entity("System Balance Deposit", [9])
+    withdrawal = create_entity("System Balance Withdrawal", [10])
+    exchange = create_entity("System Balance Exchange", [12])
+    creditor = create_entity("System Balance Creditor")
+    second_creditor = create_entity("System Balance Second Creditor")
+    debtor = create_entity("System Balance Debtor")
+    first_treasury = create_treasury("System Balance Treasury One")
+    second_treasury = create_treasury("System Balance Treasury Two")
+
+    def create_transaction(
+        from_entity_id: int,
+        to_entity_id: int,
+        amount: str,
+        to_treasury_id: int | None = None,
+    ) -> None:
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": from_entity_id,
+                "to_entity_id": to_entity_id,
+                "amount": amount,
+                "currency": "usd",
+                "status": "completed",
+                "to_treasury_id": to_treasury_id,
+            },
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200, response.text
+
+    create_transaction(deposit, creditor, "100.00")
+    create_transaction(deposit, second_creditor, "60.00", first_treasury)
+    create_transaction(deposit, second_creditor, "10.00", second_treasury)
+    create_transaction(debtor, creditor, "25.00")
+    # Positive balances on boundary entities must not count as virtual liabilities.
+    create_transaction(deposit, withdrawal, "40.00")
+    create_transaction(deposit, exchange, "30.00")
+
+    today = date.today().isoformat()
+    response = test_app.get(
+        "/stats/system-balance-history",
+        params={"timeframe_from": today, "timeframe_to": today},
+        headers={"x-token": token},
+    )
+    assert response.status_code == 200, response.text
+    latest = response.json()[-1]
+    assert latest["day"] == today
+    assert latest["real_funds_usd"] == pytest.approx(70.00)
+    # creditor=125, second_creditor=70, debtor=-25 (discarded)
+    assert latest["positive_entity_balances_usd"] == pytest.approx(195.00)
+    assert latest["deficit_usd"] == pytest.approx(125.00)
+
+    today_date = date.today()
+    previous_month_end = today_date.replace(day=1) - timedelta(days=1)
+    previous_month_start = previous_month_end.replace(day=1)
+    monthly_response = test_app.get(
+        "/stats/system-balance-history",
+        params={
+            "timeframe_from": previous_month_start.isoformat(),
+            "timeframe_to": today,
+        },
+        headers={"x-token": token},
+    )
+    assert monthly_response.status_code == 200, monthly_response.text
+    assert [row["day"] for row in monthly_response.json()] == [
+        previous_month_end.isoformat(),
+        today,
+    ]
+
+
 def test_entity_stats_bundle_has_bounded_query_count(test_app: TestClient, token):
     """A longer chart range must not issue one balance query per day."""
 
     with StatsService._cache_lock:
         StatsService._cache.clear()
         StatsService._entity_cache_index.clear()
+        StatsService._treasury_cache_index.clear()
 
     select_count = 0
 

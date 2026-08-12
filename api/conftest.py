@@ -22,7 +22,7 @@ _original_request = TestClient.request
 def logging_request(self, *args, **kwargs):
     try:
         response = _original_request(self, *args, **kwargs)
-    except Exception as exc:
+    except Exception:
         # Print request details on exception
         print("\n=== Exception in TestClient.request ===")
         print("Request args:", args)
@@ -117,9 +117,14 @@ def test_app():
             # Clear in-memory caches so stale data from one test class
             # does not bleed into the next (each class uses its own DB).
             from app.services.balance import BalanceService
+            from app.services.stats import StatsService
 
             BalanceService._cache.clear()
             BalanceService._treasury_cache.clear()
+            with StatsService._cache_lock:
+                StatsService._cache.clear()
+                StatsService._entity_cache_index.clear()
+                StatsService._treasury_cache_index.clear()
 
 
 # general fixture to get the token of any entity

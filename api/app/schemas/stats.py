@@ -38,6 +38,13 @@ class DonationsByMonthSchema(BaseModel):
     general_donation_total_usd: float
 
 
+class SystemBalanceHistorySchema(BaseModel):
+    day: date
+    real_funds_usd: float
+    positive_entity_balances_usd: float
+    deficit_usd: float
+
+
 class EntityBalanceChangeByDaySchema(BaseModel):
     day: date
     balance_changes: dict[str, float]
@@ -83,13 +90,20 @@ class TopTagByMonthSchema(BaseModel):
     by_month: list[ActivityByMonthItemSchema]
 
 
-class EntityStatsBundleSchema(BaseModel):
+class HistoryStatsBundleSchema(BaseModel):
     cached: bool = True
     balance_changes: list[EntityBalanceChangeByDaySchema] = Field(default_factory=list)
+    money_flow_by_day: list[EntityMoneyFlowByDaySchema] = Field(default_factory=list)
+
+
+class TreasuryStatsBundleSchema(HistoryStatsBundleSchema):
+    pass
+
+
+class EntityStatsBundleSchema(HistoryStatsBundleSchema):
     transactions_by_day: list[EntityTransactionsByDaySchema] = Field(
         default_factory=list
     )
-    money_flow_by_day: list[EntityMoneyFlowByDaySchema] = Field(default_factory=list)
     top_incoming: list[TopEntityStatSchema] = Field(default_factory=list)
     top_outgoing: list[TopEntityStatSchema] = Field(default_factory=list)
     top_incoming_tags: list[TopTagStatSchema] = Field(default_factory=list)

@@ -43,53 +43,119 @@
 
 <div class="charts">
     <div class="chart-container">
-        <h2>Fee Transactions per Month</h2>
+        <h2>Fee Transactions</h2>
         <canvas id="fee-month-chart"></canvas>
     </div>
     <div class="chart-container">
-        <h2>Monthly Fee Sum by Month</h2>
+        <h2>Monthly Fee Sum</h2>
         <canvas id="monthly-fee-chart"></canvas>
     </div>
     <div class="chart-container">
-        <h2>Donations per Month</h2>
+        <h2>Donations</h2>
         <canvas id="donations-month-chart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h2>Treasury Funds vs Entity Balances</h2>
+        <canvas id="system-balance-chart"></canvas>
     </div>
 </div>
 
 <script>
+    const systemBalanceData = {{ system_balance_history | tojson }};
+    const formatUSD = (value) => `$${Number(value || 0).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+    new Chart(document.getElementById('system-balance-chart'), {
+        type: 'line',
+        data: {
+            labels: systemBalanceData.map(item => item.day.slice(0, 7)),
+            datasets: [
+                {
+                    label: 'Real treasury funds (USD)',
+                    data: systemBalanceData.map(item => item.real_funds_usd || 0),
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 3,
+                    tension: 0.15,
+                },
+                {
+                    label: 'Positive entity balances (USD)',
+                    data: systemBalanceData.map(item => item.positive_entity_balances_usd || 0),
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 3,
+                    tension: 0.15,
+                },
+                {
+                    label: 'Deficit (USD)',
+                    data: systemBalanceData.map(item => item.deficit_usd || 0),
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.15,
+                    fill: true,
+                },
+            ],
+        },
+        options: {
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'USD' },
+                    ticks: { callback: value => formatUSD(value) },
+                },
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: context => `${context.dataset.label}: ${formatUSD(context.parsed.y)}`,
+                    },
+                },
+            },
+        },
+    });
+
     const monthlyFeeData = {{ monthly_fee_sum | tojson }};
 
     const monthlyFeeLabels = monthlyFeeData.map(item => `${item.year}-${item.month.toString().padStart(2, '0')}`);
 
-    // Paid total USD (solid line)
+    // Paid total USD (bars)
     const paidData = monthlyFeeData.map(item => item.total_usd || 0);
 
-    // Expected total USD (dashed line - ceiling)
+    // Expected total USD (target caps)
     const expectedData = monthlyFeeData.map(item => item.expected_total_usd || 0);
 
     new Chart(document.getElementById('monthly-fee-chart'), {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: monthlyFeeLabels,
             datasets: [
                 {
                     label: 'Paid Fees (USD)',
                     data: paidData,
-                    borderWidth: 3,
+                    borderWidth: 2,
                     borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    tension: 0.2,
-                    fill: true
+                    backgroundColor: 'rgba(75, 192, 192, 0.65)',
+                    barPercentage: 0.45,
+                    categoryPercentage: 0.8,
+                    maxBarThickness: 24
                 },
                 {
+                    type: 'line',
                     label: 'Expected Fees (USD)',
                     data: expectedData,
-                    borderWidth: 2,
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.05)',
-                    borderDash: [5, 5],
-                    tension: 0.2,
-                    fill: false
+                    borderColor: 'rgb(255, 159, 64)',
+                    backgroundColor: 'rgb(255, 159, 64)',
+                    showLine: false,
+                    pointStyle: 'line',
+                    pointRadius: 14,
+                    pointHoverRadius: 16,
+                    pointBorderWidth: 4
                 }
             ]
         },

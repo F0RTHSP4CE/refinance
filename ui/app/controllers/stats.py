@@ -12,10 +12,15 @@ def index():
         "GET", "stats/fee-transactions-by-month"
     ).json()[1:]
     donations_by_month = api.http("GET", "stats/donations-by-month").json()
+    system_balance_history = api.http(
+        "GET",
+        "stats/system-balance-history",
+    ).json()
 
     return render_template(
         "stats/index.jinja2",
         monthly_fee_sum=monthly_fee_sum,
         fee_transactions_by_month=fee_transactions_by_month,
         donations_by_month=donations_by_month,
+        system_balance_history=system_balance_history,
     )

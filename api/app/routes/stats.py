@@ -1,7 +1,7 @@
 """Routes for stats"""
 
-from datetime import date, timedelta
-from typing import List, Optional
+from datetime import date
+from typing import List, Literal, Optional
 
 from app.dependencies.services import get_stats_service
 from app.schemas.stats import (
@@ -12,16 +12,71 @@ from app.schemas.stats import (
     EntityTransactionsByDaySchema,
     FeeTransactionsByMonthSchema,
     MonthlyFeeSumByMonthSchema,
+    SystemBalanceHistorySchema,
     TopEntityByMonthSchema,
     TopEntityStatSchema,
     TopTagByMonthSchema,
     TopTagStatSchema,
     TransactionsSumByTagByMonthSchema,
+    TreasuryStatsBundleSchema,
 )
 from app.services.stats import StatsService
 from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/stats", tags=["Stats"])
+
+
+def _normalize_history_timeframe(
+    stats_service: StatsService,
+    months: int,
+    timeframe_from: Optional[date],
+    timeframe_to: Optional[date],
+) -> tuple[int, date, date]:
+    normalized_months = max(1, int(months))
+    normalized_timeframe_to = timeframe_to or date.today()
+    normalized_timeframe_from = timeframe_from
+    if normalized_timeframe_from is None:
+        normalized_timeframe_from = normalized_timeframe_to.replace(day=1)
+        if normalized_months > 1:
+            normalized_timeframe_from = stats_service._subtract_months(
+                normalized_timeframe_from, normalized_months - 1
+            )
+    if normalized_timeframe_from > normalized_timeframe_to:
+        normalized_timeframe_from = normalized_timeframe_to
+    return normalized_months, normalized_timeframe_from, normalized_timeframe_to
+
+
+def _get_history_stats_bundle(
+    stats_service: StatsService,
+    subject_type: Literal["entity", "treasury"],
+    subject_id: int,
+    timeframe_from: date,
+    timeframe_to: date,
+    *,
+    cached_only: bool,
+) -> dict:
+    cache_args = (int(subject_id), timeframe_from, timeframe_to)
+    if cached_only:
+        balance_changes = StatsService._get_cached_value(
+            f"get_{subject_type}_balance_history", cache_args, {}
+        )
+        money_flow_by_day = StatsService._get_cached_value(
+            f"get_{subject_type}_money_flow_by_day", cache_args, {}
+        )
+        if balance_changes is None or money_flow_by_day is None:
+            return {"cached": False}
+    else:
+        balance_changes = stats_service.get_balance_history(
+            subject_type, subject_id, timeframe_from, timeframe_to
+        )
+        money_flow_by_day = stats_service.get_money_flow_by_day(
+            subject_type, subject_id, timeframe_from, timeframe_to
+        )
+    return {
+        "cached": True,
+        "balance_changes": balance_changes,
+        "money_flow_by_day": money_flow_by_day,
+    }
 
 
 @router.get(
@@ -53,6 +108,19 @@ def get_donations_by_month(
     stats_service: StatsService = Depends(get_stats_service),
 ):
     return stats_service.get_donations_by_month(timeframe_from, timeframe_to)
+
+
+@router.get("/system-balance-history", response_model=List[SystemBalanceHistorySchema])
+def get_system_balance_history(
+    months: int = 12,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    _, normalized_from, normalized_to = _normalize_history_timeframe(
+        stats_service, months, timeframe_from, timeframe_to
+    )
+    return stats_service.get_system_balance_history(normalized_from, normalized_to)
 
 
 @router.get(
@@ -97,6 +165,36 @@ def get_entity_money_flow_by_day(
 ):
     return stats_service.get_entity_money_flow_by_day(
         entity_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get(
+    "/treasury/{treasury_id}/balance-change-by-day",
+    response_model=List[EntityBalanceChangeByDaySchema],
+)
+def get_treasury_balance_history(
+    treasury_id: int,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_treasury_balance_history(
+        treasury_id, timeframe_from, timeframe_to
+    )
+
+
+@router.get(
+    "/treasury/{treasury_id}/money-flow-by-day/",
+    response_model=List[EntityMoneyFlowByDaySchema],
+)
+def get_treasury_money_flow_by_day(
+    treasury_id: int,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    return stats_service.get_treasury_money_flow_by_day(
+        treasury_id, timeframe_from, timeframe_to
     )
 
 
@@ -243,6 +341,29 @@ def get_incoming_by_tag_by_month(
     )
 
 
+@router.get("/treasury/{treasury_id}", response_model=TreasuryStatsBundleSchema)
+def get_treasury_stats_bundle(
+    treasury_id: int,
+    months: int = 6,
+    timeframe_from: Optional[date] = None,
+    timeframe_to: Optional[date] = None,
+    cached_only: bool = False,
+    stats_service: StatsService = Depends(get_stats_service),
+):
+    """Return the two account-history graphs for a treasury."""
+    _, normalized_from, normalized_to = _normalize_history_timeframe(
+        stats_service, months, timeframe_from, timeframe_to
+    )
+    return _get_history_stats_bundle(
+        stats_service,
+        "treasury",
+        treasury_id,
+        normalized_from,
+        normalized_to,
+        cached_only=cached_only,
+    )
+
+
 @router.get("/entity/{entity_id}", response_model=EntityStatsBundleSchema)
 def get_entity_stats_bundle(
     entity_id: int,
@@ -257,32 +378,16 @@ def get_entity_stats_bundle(
 
     This endpoint is intended for UI usage and benefits from StatsService's in-memory caching.
     """
+    normalized_months, bundle_timeframe_from, normalized_timeframe_to = (
+        _normalize_history_timeframe(
+            stats_service, months, timeframe_from, timeframe_to
+        )
+    )
+    normalized_limit = max(1, int(limit))
 
     if cached_only:
-        # Compute the same normalized cache args as the underlying service methods,
-        # but do not call them (to avoid doing DB work on cache misses).
-        normalized_timeframe_to = timeframe_to or date.today()
-
-        normalized_months = max(1, int(months))
-        normalized_limit = max(1, int(limit))
-
-        # Bundle timeframe: if timeframe_from is not provided, use the selected
-        # months window aligned to month boundaries (same as the UI control).
-        bundle_timeframe_from = timeframe_from
-        if bundle_timeframe_from is None:
-            bundle_timeframe_from = normalized_timeframe_to.replace(day=1)
-            if normalized_months > 1:
-                bundle_timeframe_from = stats_service._subtract_months(
-                    bundle_timeframe_from, normalized_months - 1
-                )
-
-        if bundle_timeframe_from > normalized_timeframe_to:
-            bundle_timeframe_from = normalized_timeframe_to
-
         # Keep cache args consistent with the non-cached path below.
-        balance_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
         tx_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
-        flow_args = (int(entity_id), bundle_timeframe_from, normalized_timeframe_to)
         top_args = (
             int(entity_id),
             int(normalized_limit),
@@ -290,14 +395,16 @@ def get_entity_stats_bundle(
             normalized_timeframe_to,
         )
 
-        balance_changes = StatsService._get_cached_value(
-            "get_entity_balance_history", balance_args, {}
+        history_stats = _get_history_stats_bundle(
+            stats_service,
+            "entity",
+            entity_id,
+            bundle_timeframe_from,
+            normalized_timeframe_to,
+            cached_only=True,
         )
         transactions_by_day = StatsService._get_cached_value(
             "get_entity_transactions_by_day", tx_args, {}
-        )
-        money_flow_by_day = StatsService._get_cached_value(
-            "get_entity_money_flow_by_day", flow_args, {}
         )
         top_incoming = StatsService._get_cached_value(
             "get_top_incoming_entities", top_args, {}
@@ -327,9 +434,7 @@ def get_entity_stats_bundle(
         all_present = all(
             x is not None
             for x in (
-                balance_changes,
                 transactions_by_day,
-                money_flow_by_day,
                 top_incoming,
                 top_outgoing,
                 top_incoming_tags,
@@ -341,14 +446,12 @@ def get_entity_stats_bundle(
             )
         )
 
-        if not all_present:
+        if history_stats.get("cached") is False or not all_present:
             return {"cached": False}
 
         return {
-            "cached": True,
-            "balance_changes": balance_changes,
+            **history_stats,
             "transactions_by_day": transactions_by_day,
-            "money_flow_by_day": money_flow_by_day,
             "top_incoming": top_incoming,
             "top_outgoing": top_outgoing,
             "top_incoming_tags": top_incoming_tags,
@@ -359,35 +462,18 @@ def get_entity_stats_bundle(
             "outgoing_by_tag_by_month": outgoing_by_tag_by_month,
         }
 
-    normalized_timeframe_to = timeframe_to or date.today()
-
-    normalized_months = max(1, int(months))
-    normalized_limit = max(1, int(limit))
-    bundle_timeframe_from = timeframe_from
-    if bundle_timeframe_from is None:
-        bundle_timeframe_from = normalized_timeframe_to.replace(day=1)
-        if normalized_months > 1:
-            bundle_timeframe_from = stats_service._subtract_months(
-                bundle_timeframe_from, normalized_months - 1
-            )
-    if bundle_timeframe_from > normalized_timeframe_to:
-        bundle_timeframe_from = normalized_timeframe_to
-
     # Use the same bundle timeframe for all time-series charts.
-    balance_changes = stats_service.get_entity_balance_history(
+    history_stats = _get_history_stats_bundle(
+        stats_service,
+        "entity",
         entity_id,
         bundle_timeframe_from,
         normalized_timeframe_to,
+        cached_only=False,
     )
     transactions_by_day = stats_service.get_entity_transactions_by_day(
         entity_id,
         bundle_timeframe_from,
-        normalized_timeframe_to,
-    )
-    flow_timeframe_from = bundle_timeframe_from
-    money_flow_by_day = stats_service.get_entity_money_flow_by_day(
-        entity_id,
-        flow_timeframe_from,
         normalized_timeframe_to,
     )
     top_incoming = stats_service.get_top_incoming_entities(
@@ -440,10 +526,8 @@ def get_entity_stats_bundle(
     )
 
     return {
-        "cached": True,
-        "balance_changes": balance_changes,
+        **history_stats,
         "transactions_by_day": transactions_by_day,
-        "money_flow_by_day": money_flow_by_day,
         "top_incoming": top_incoming,
         "top_outgoing": top_outgoing,
         "top_incoming_tags": top_incoming_tags,

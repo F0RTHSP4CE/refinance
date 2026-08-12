@@ -2,6 +2,7 @@
 {% from 'transaction/macro_list.jinja2' import transaction_list with context %}
 {% from 'widgets/pagination.jinja2' import pagination_control %}
 {% from 'widgets/treasury_inline.jinja2' import treasury_inline %}
+{% from 'widgets/history_stats.jinja2' import history_stats, stats_loader with context %}
 
 {% block title %}Treasury{% endblock %}
 {% block heading %}{% endblock %}
@@ -81,6 +82,20 @@
         {{ pagination_control(page, total, limit) }}
         {% else %}
         <p class="treasury-empty-state">No transactions for this treasury yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="treasury-card entity-stats-card">
+        <div class="treasury-card-header">
+            <h3 class="treasury-card-title">Statistics</h3>
+        </div>
+        {% if not stats_loaded %}
+        {{ stats_loader(
+            url_for('treasury.stats', id=treasury.id, stats_months=stats_months),
+            'treasury'
+        ) }}
+        {% else %}
+        {% call history_stats(balance_changes, money_flow_by_day, stats_months, 'treasury-history') %}{% endcall %}
         {% endif %}
     </section>
 </div>

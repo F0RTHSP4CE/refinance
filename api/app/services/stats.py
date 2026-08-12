@@ -8,7 +8,7 @@ from copy import deepcopy
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from threading import Lock
-from typing import Any, Callable, Iterable, Mapping
+from typing import Any, Callable, Iterable, Literal, Mapping
 
 from app.dependencies.services import (
     get_currency_exchange_service,
@@ -19,12 +19,16 @@ from app.models.invoice import Invoice, InvoiceStatus
 from app.models.invoice_item import InvoiceItem
 from app.models.tag import Tag
 from app.models.transaction import Transaction, TransactionStatus, transactions_tags
+from app.models.treasury import Treasury
 from app.seeding import (
+    currency_exchange_tag,
+    deposit_tag,
     donation_tag,
     f0_entity,
     fee_tag,
     rent_tag,
     utilities_tag,
+    withdrawal_tag,
 )
 from app.services.base import BaseService
 from app.services.currency_exchange import CurrencyExchangeService
@@ -38,6 +42,7 @@ from sqlalchemy.orm import Session, selectinload
 class StatsService(BaseService):
     _cache: dict[str, Any] = {}
     _entity_cache_index: defaultdict[int, set[str]] = defaultdict(set)
+    _treasury_cache_index: defaultdict[int, set[str]] = defaultdict(set)
     _cache_lock: Lock = Lock()
 
     def __init__(
@@ -55,17 +60,29 @@ class StatsService(BaseService):
     # --- cache management -------------------------------------------------
     @classmethod
     def invalidate_entity_cache(cls, *entity_ids: int | None) -> None:
-        entity_ids_set = {
-            int(entity_id) for entity_id in entity_ids if entity_id is not None
+        cls._invalidate_cache_index(cls._entity_cache_index, entity_ids)
+
+    @classmethod
+    def invalidate_treasury_cache(cls, *treasury_ids: int | None) -> None:
+        cls._invalidate_cache_index(cls._treasury_cache_index, treasury_ids)
+
+    @classmethod
+    def _invalidate_cache_index(
+        cls,
+        cache_index: defaultdict[int, set[str]],
+        subject_ids: Iterable[int | None],
+    ) -> None:
+        subject_ids_set = {
+            int(subject_id) for subject_id in subject_ids if subject_id is not None
         }
-        if not entity_ids_set:
+        if not subject_ids_set:
             return
 
         with cls._cache_lock:
             keys_to_remove = {
                 key
-                for entity_id in entity_ids_set
-                for key in cls._entity_cache_index.pop(entity_id, set())
+                for subject_id in subject_ids_set
+                for key in cache_index.pop(subject_id, set())
             }
 
             if not keys_to_remove:
@@ -74,8 +91,9 @@ class StatsService(BaseService):
             for key in keys_to_remove:
                 cls._cache.pop(key, None)
 
-            for tracked_keys in cls._entity_cache_index.values():
-                tracked_keys.difference_update(keys_to_remove)
+            for index in (cls._entity_cache_index, cls._treasury_cache_index):
+                for tracked_keys in index.values():
+                    tracked_keys.difference_update(keys_to_remove)
 
     @staticmethod
     def _serialize_cache_value(value: Any) -> Any:
@@ -110,12 +128,17 @@ class StatsService(BaseService):
         args: tuple[Any, ...],
         kwargs: dict[str, Any],
         builder: Callable[[], Any],
+        *,
+        treasury_ids: Iterable[int | None] = (),
     ) -> Any:
         cls = type(self)
         cache_key = cls._build_cache_key(cache_name, args, kwargs)
 
         entity_ids_set = {
             int(entity_id) for entity_id in entity_ids if entity_id is not None
+        }
+        treasury_ids_set = {
+            int(treasury_id) for treasury_id in treasury_ids if treasury_id is not None
         }
 
         with cls._cache_lock:
@@ -129,8 +152,38 @@ class StatsService(BaseService):
             cls._cache[cache_key] = deepcopy(result)
             for entity_id in entity_ids_set:
                 cls._entity_cache_index.setdefault(entity_id, set()).add(cache_key)
+            for treasury_id in treasury_ids_set:
+                cls._treasury_cache_index.setdefault(treasury_id, set()).add(cache_key)
 
         return result
+
+    def _subject_transaction_columns(self, subject_type: Literal["entity", "treasury"]):
+        """Return incoming/outgoing transaction columns for a balance-bearing subject."""
+        if subject_type == "entity":
+            return Transaction.to_entity_id, Transaction.from_entity_id
+        if subject_type == "treasury":
+            return Transaction.to_treasury_id, Transaction.from_treasury_id
+        raise ValueError(f"Unsupported stats subject type: {subject_type}")
+
+    def _validate_stats_subject(
+        self, subject_type: Literal["entity", "treasury"], subject_id: int
+    ) -> None:
+        if subject_type == "entity":
+            self._entity_service.get(subject_id)
+            return
+        treasury = self.db.query(Treasury).filter(Treasury.id == subject_id).first()
+        if treasury is None:
+            from app.errors.common import NotFoundError
+
+            raise NotFoundError(f"Treasury id={subject_id}")
+
+    @staticmethod
+    def _subject_cache_dependencies(
+        subject_type: Literal["entity", "treasury"], subject_id: int
+    ) -> tuple[list[int], list[int]]:
+        if subject_type == "entity":
+            return [subject_id], []
+        return [], [subject_id]
 
     @classmethod
     def _get_cached_value(
@@ -367,23 +420,48 @@ class StatsService(BaseService):
         timeframe_from: date | None = None,
         timeframe_to: date | None = None,
     ) -> list[dict[str, Any]]:
+        return self.get_money_flow_by_day(
+            "entity", entity_id, timeframe_from, timeframe_to
+        )
+
+    def get_treasury_money_flow_by_day(
+        self,
+        treasury_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        return self.get_money_flow_by_day(
+            "treasury", treasury_id, timeframe_from, timeframe_to
+        )
+
+    def get_money_flow_by_day(
+        self,
+        subject_type: Literal["entity", "treasury"],
+        subject_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
         """Return incoming vs outgoing totals (USD) per day.
 
         Both totals are always positive and represent the sum of transactions where
-        the entity is the receiver (incoming) or sender (outgoing), converted to USD.
+        the subject is the receiver (incoming) or sender (outgoing), converted to USD.
         """
 
         timeframe_to = timeframe_to or date.today()
         timeframe_from = timeframe_from or timeframe_to - timedelta(days=365)
-        cache_args = (int(entity_id), timeframe_from, timeframe_to)
+        cache_name = f"get_{subject_type}_money_flow_by_day"
+        cache_args = (int(subject_id), timeframe_from, timeframe_to)
 
         def builder() -> list[dict[str, Any]]:
+            incoming_column, outgoing_column = self._subject_transaction_columns(
+                subject_type
+            )
             day_col = func.date(Transaction.created_at)
             start_dt = datetime.combine(timeframe_from, time.min)
             end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
             direction = case(
-                (Transaction.to_entity_id == entity_id, "incoming"),
-                (Transaction.from_entity_id == entity_id, "outgoing"),
+                (incoming_column == subject_id, "incoming"),
+                (outgoing_column == subject_id, "outgoing"),
                 else_="other",
             ).label("direction")
 
@@ -398,8 +476,8 @@ class StatsService(BaseService):
                     and_(
                         Transaction.created_at >= start_dt,
                         Transaction.created_at < end_dt,
-                        (Transaction.from_entity_id == entity_id)
-                        | (Transaction.to_entity_id == entity_id),
+                        (outgoing_column == subject_id)
+                        | (incoming_column == subject_id),
                     )
                 )
                 .group_by("day", "direction", "currency")
@@ -440,12 +518,16 @@ class StatsService(BaseService):
                 )
             return result
 
+        entity_ids, treasury_ids = self._subject_cache_dependencies(
+            subject_type, subject_id
+        )
         return self._cached_result(
-            "get_entity_money_flow_by_day",
-            [entity_id],
+            cache_name,
+            entity_ids,
             cache_args,
             {},
             builder,
+            treasury_ids=treasury_ids,
         )
 
     def get_fee_transactions_by_month(
@@ -597,9 +679,210 @@ class StatsService(BaseService):
             for year, month in sorted(all_months)
         ]
 
+    def get_system_balance_history(
+        self,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Compare physical treasury funds with positive virtual balances monthly.
+
+        Entity balances are calculated independently so a debtor's negative balance
+        cannot cancel money owed to another entity. Deposit, withdrawal, and exchange
+        entities are excluded because they model the boundary of the accounting system.
+        """
+        timeframe_to = timeframe_to or date.today()
+        start_day = timeframe_from or self._subtract_months(timeframe_to, 12)
+        if start_day > timeframe_to:
+            start_day = timeframe_to
+
+        start_dt = datetime.combine(start_day, time.min)
+        end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
+        initial_day = start_day - timedelta(days=1)
+        excluded_entity_ids = select(entities_tags.c.entity_id).where(
+            entities_tags.c.tag_id.in_(
+                (deposit_tag.id, withdrawal_tag.id, currency_exchange_tag.id)
+            )
+        )
+
+        def balance_leg(
+            *,
+            subject_type: Literal["treasury", "entity"],
+            incoming: bool,
+            initial: bool,
+        ):
+            incoming_column, outgoing_column = self._subject_transaction_columns(
+                subject_type
+            )
+            subject_column = incoming_column if incoming else outgoing_column
+            subject_id = literal(0) if subject_type == "treasury" else subject_column
+            amount = Transaction.amount if incoming else -Transaction.amount
+            if initial:
+                day = literal(initial_day, type_=Date)
+                date_filter = Transaction.created_at < start_dt
+            else:
+                day = func.date(Transaction.created_at)
+                date_filter = and_(
+                    Transaction.created_at >= start_dt,
+                    Transaction.created_at < end_dt,
+                )
+
+            subject_filter = subject_column.is_not(None)
+            if subject_type == "entity":
+                subject_filter = and_(
+                    subject_filter,
+                    ~subject_column.in_(excluded_entity_ids),
+                )
+
+            group_columns = [Transaction.currency]
+            if subject_type == "entity":
+                group_columns.append(subject_column)
+            if not initial:
+                group_columns.append(day)
+
+            return (
+                select(
+                    literal(subject_type).label("subject_type"),
+                    subject_id.label("subject_id"),
+                    day.label("day"),
+                    Transaction.currency.label("currency"),
+                    func.sum(amount).label("delta"),
+                )
+                .where(
+                    Transaction.status == TransactionStatus.COMPLETED,
+                    subject_filter,
+                    date_filter,
+                )
+                .group_by(*group_columns)
+            )
+
+        balance_legs = union_all(
+            *(
+                balance_leg(
+                    subject_type=subject_type,
+                    incoming=incoming,
+                    initial=initial,
+                )
+                for subject_type in ("treasury", "entity")
+                for incoming in (True, False)
+                for initial in (True, False)
+            )
+        ).subquery()
+        rows = self.db.execute(
+            select(
+                balance_legs.c.subject_type,
+                balance_legs.c.subject_id,
+                balance_legs.c.day,
+                balance_legs.c.currency,
+                func.sum(balance_legs.c.delta).label("delta"),
+            )
+            .group_by(
+                balance_legs.c.subject_type,
+                balance_legs.c.subject_id,
+                balance_legs.c.day,
+                balance_legs.c.currency,
+            )
+            .order_by(balance_legs.c.day)
+        ).all()
+
+        treasury_balances: defaultdict[str, Decimal] = defaultdict(Decimal)
+        entity_balances: defaultdict[int, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        treasury_deltas: defaultdict[date, defaultdict[str, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal)
+        )
+        entity_deltas: defaultdict[
+            date, defaultdict[int, defaultdict[str, Decimal]]
+        ] = defaultdict(lambda: defaultdict(lambda: defaultdict(Decimal)))
+
+        for row in rows:
+            delta = row.delta or Decimal("0")
+            if row.subject_type == "treasury":
+                target = (
+                    treasury_balances
+                    if row.day == initial_day
+                    else treasury_deltas[row.day]
+                )
+                target[row.currency] += delta
+                continue
+
+            target = (
+                entity_balances[row.subject_id]
+                if row.day == initial_day
+                else entity_deltas[row.day][row.subject_id]
+            )
+            target[row.currency] += delta
+
+        checkpoint_days: set[date] = set()
+        checkpoint_month = start_day.replace(day=1)
+        while checkpoint_month <= timeframe_to:
+            month_end = checkpoint_month.replace(
+                day=calendar.monthrange(checkpoint_month.year, checkpoint_month.month)[
+                    1
+                ]
+            )
+            checkpoint_days.add(min(month_end, timeframe_to))
+            checkpoint_month = month_end + timedelta(days=1)
+
+        result: list[dict[str, Any]] = []
+        timeline = sorted(checkpoint_days | set(treasury_deltas) | set(entity_deltas))
+        for current_day in timeline:
+            for currency, delta in treasury_deltas[current_day].items():
+                treasury_balances[currency] += delta
+            for entity_id, currency_deltas in entity_deltas[current_day].items():
+                for currency, delta in currency_deltas.items():
+                    entity_balances[entity_id][currency] += delta
+
+            if current_day not in checkpoint_days:
+                continue
+
+            positive_entity_balances: defaultdict[str, Decimal] = defaultdict(Decimal)
+            for balances in entity_balances.values():
+                for currency, amount in balances.items():
+                    if amount > 0:
+                        positive_entity_balances[currency] += amount
+
+            real_funds_usd = self._sum_amounts_usd(treasury_balances)
+            positive_entity_balances_usd = self._sum_amounts_usd(
+                positive_entity_balances
+            )
+            result.append(
+                {
+                    "day": current_day,
+                    "real_funds_usd": real_funds_usd,
+                    "positive_entity_balances_usd": positive_entity_balances_usd,
+                    "deficit_usd": max(
+                        positive_entity_balances_usd - real_funds_usd, 0.0
+                    ),
+                }
+            )
+
+        return result
+
     def get_entity_balance_history(
         self,
         entity_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ):
+        return self.get_balance_history(
+            "entity", entity_id, timeframe_from, timeframe_to
+        )
+
+    def get_treasury_balance_history(
+        self,
+        treasury_id: int,
+        timeframe_from: date | None = None,
+        timeframe_to: date | None = None,
+    ):
+        return self.get_balance_history(
+            "treasury", treasury_id, timeframe_from, timeframe_to
+        )
+
+    def get_balance_history(
+        self,
+        subject_type: Literal["entity", "treasury"],
+        subject_id: int,
         timeframe_from: date | None = None,
         timeframe_to: date | None = None,
     ):
@@ -610,21 +893,21 @@ class StatsService(BaseService):
         if start_day > timeframe_to:
             start_day = timeframe_to
 
-        cache_args = (int(entity_id), start_day, timeframe_to)
+        cache_name = f"get_{subject_type}_balance_history"
+        cache_args = (int(subject_id), start_day, timeframe_to)
 
         def builder() -> list[dict[str, Any]]:
-            # Preserve the old missing-entity behavior while avoiding one lookup per
-            # chart day.
-            self._entity_service.get(entity_id)
+            self._validate_stats_subject(subject_type, subject_id)
+            incoming_column, outgoing_column = self._subject_transaction_columns(
+                subject_type
+            )
 
             start_dt = datetime.combine(start_day, time.min)
             end_dt = datetime.combine(timeframe_to + timedelta(days=1), time.min)
             initial_day = start_day - timedelta(days=1)
 
             def balance_leg(*, incoming: bool, initial: bool):
-                entity_column = (
-                    Transaction.to_entity_id if incoming else Transaction.from_entity_id
-                )
+                subject_column = incoming_column if incoming else outgoing_column
                 amount = Transaction.amount if incoming else -Transaction.amount
                 if initial:
                     day = literal(initial_day, type_=Date)
@@ -643,7 +926,7 @@ class StatsService(BaseService):
                         func.sum(amount).label("delta"),
                     )
                     .where(
-                        entity_column == entity_id,
+                        subject_column == subject_id,
                         Transaction.status == TransactionStatus.COMPLETED,
                         date_filter,
                     )
@@ -704,12 +987,16 @@ class StatsService(BaseService):
 
             return result
 
+        entity_ids, treasury_ids = self._subject_cache_dependencies(
+            subject_type, subject_id
+        )
         return self._cached_result(
-            "get_entity_balance_history",
-            [entity_id],
+            cache_name,
+            entity_ids,
             cache_args,
             {},
             builder,
+            treasury_ids=treasury_ids,
         )
 
     def _subtract_months(self, dt: date, months: int) -> date:

@@ -1,7 +1,8 @@
 from app.external.refinance import get_refinance_api_client
 from app.middlewares.auth import token_required
 from app.schemas import Transaction, Treasury
-from flask import Blueprint, redirect, render_template, request, url_for
+from app.stats_helpers import fetch_stats_bundle
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, StringField, SubmitField
 from wtforms.validators import DataRequired
@@ -67,6 +68,7 @@ def detail(id):
     page = request.args.get("page", 1, type=int)
     limit = request.args.get("limit", 20, type=int)
     skip = (page - 1) * limit
+    stats_months = max(1, request.args.get("stats_months", 6, type=int))
 
     api = get_refinance_api_client()
     t_data = api.http("GET", f"treasuries/{id}").json()
@@ -79,6 +81,14 @@ def detail(id):
         params={"skip": skip, "limit": limit, "treasury_id": id},
     ).json()
     total = tx_page.get("total", 0)
+    stats_bundle = fetch_stats_bundle(
+        api,
+        "treasury",
+        id,
+        months=stats_months,
+        cached_only=True,
+    )
+    stats_loaded = bool(stats_bundle and stats_bundle.get("cached") is not False)
 
     return render_template(
         "treasury/detail.jinja2",
@@ -88,7 +98,22 @@ def detail(id):
         total=total,
         page=page,
         limit=limit,
+        stats_loaded=stats_loaded,
+        stats_months=stats_months,
+        balance_changes=stats_bundle.get("balance_changes", []),
+        money_flow_by_day=stats_bundle.get("money_flow_by_day", []),
     )
+
+
+@treasury_bp.route("/<int:id>/stats")
+@token_required
+def stats(id):
+    """Calculate treasury statistics without delaying the detail page response."""
+    stats_months = max(1, request.args.get("stats_months", 6, type=int))
+    stats_bundle = fetch_stats_bundle(
+        get_refinance_api_client(), "treasury", id, months=stats_months
+    )
+    return jsonify({"loaded": stats_bundle.get("cached", True)})
 
 
 @treasury_bp.route("/<int:id>/edit", methods=["GET", "POST"])

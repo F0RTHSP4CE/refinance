@@ -1,5 +1,3 @@
-from datetime import date
-
 from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import get_refinance_api_client
@@ -14,11 +12,11 @@ from app.schemas import (
     Tag,
     Transaction,
 )
+from app.stats_helpers import fetch_stats_bundle
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
-    FormField,
     SelectMultipleField,
     StringField,
     SubmitField,
@@ -541,16 +539,14 @@ def detail(id):
     outgoing_by_tag_by_month = []
 
     # Always try to preload from cache (fast on hit, no DB work on miss).
-    cached_bundle = api.http(
-        "GET",
-        f"stats/entity/{id}",
-        params={
-            "limit": stats_limit,
-            "months": stats_months,
-            "timeframe_to": date.today().isoformat(),
-            "cached_only": 1,
-        },
-    ).json()
+    cached_bundle = fetch_stats_bundle(
+        api,
+        "entity",
+        id,
+        months=stats_months,
+        limit=stats_limit,
+        cached_only=True,
+    )
 
     (
         stats_loaded,
@@ -610,14 +606,8 @@ def stats(id):
     stats_limit = max(1, stats_limit)
 
     api = get_refinance_api_client()
-    stats_bundle = api.http(
-        "GET",
-        f"stats/entity/{id}",
-        params={
-            "limit": stats_limit,
-            "months": stats_months,
-            "timeframe_to": date.today().isoformat(),
-        },
-    ).json()
+    stats_bundle = fetch_stats_bundle(
+        api, "entity", id, months=stats_months, limit=stats_limit
+    )
 
     return jsonify({"loaded": stats_bundle.get("cached", True)})

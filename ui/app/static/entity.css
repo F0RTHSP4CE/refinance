@@ -499,7 +499,7 @@
   max-width: 480px;
 }
 
-#balance-change-chart {
+.balance-change-chart {
   width: 100%;
   height: 100%;
 }

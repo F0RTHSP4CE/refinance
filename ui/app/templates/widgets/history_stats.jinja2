@@ -1,0 +1,76 @@
+{% macro stats_loader(calculate_url, subject_label) %}
+<p id="history-stats-status" class="entity-empty-state" role="status">
+    Calculating statistics in the background&hellip;
+</p>
+<script>
+    (() => {
+        const status = document.getElementById('history-stats-status');
+        const calculateStatistics = async () => {
+            try {
+                const response = await fetch({{ calculate_url | tojson }}, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const result = await response.json();
+                if (!result.loaded) throw new Error('Statistics were not loaded');
+                window.location.reload();
+            } catch (error) {
+                console.error({{ ('Could not calculate ' ~ subject_label ~ ' statistics') | tojson }}, error);
+                if (status) {
+                    status.textContent = 'Statistics could not be loaded. Refresh the page to try again.';
+                }
+            }
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', calculateStatistics, { once: true });
+        } else {
+            calculateStatistics();
+        }
+    })();
+</script>
+{% endmacro %}
+
+{% macro history_stats(balance_changes, money_flow_by_day, stats_months, chart_prefix='history') %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="{{ url_for('static', filename='history-stats.js') }}"></script>
+<div class="stats-controls">
+    <span>Timeframe:</span>
+    {% for months_option in [3, 6, 12] %}
+    <a href="{{ update_query_params(stats_months=months_option) }}"
+        class="{% if stats_months == months_option %}active{% endif %}">{{ months_option }}m</a>
+    {% endfor %}
+    <span class="divider">|</span>
+    <span>Scale:</span>
+    <button id="{{ chart_prefix }}-scale-linear" type="button" class="active">Linear</button>
+    <button id="{{ chart_prefix }}-scale-log" type="button">Log</button>
+    <span class="divider">|</span>
+    <span>Width:</span>
+    <button id="{{ chart_prefix }}-width-one" type="button" class="active">1 Column</button>
+    <button id="{{ chart_prefix }}-width-full" type="button">Full Size</button>
+</div>
+<div id="{{ chart_prefix }}-charts-grid" class="charts-grid balance-width-one">
+    <div class="chart-cell">
+        <h2>Balance Change by Day</h2>
+        <div class="balance-chart-container">
+            <div id="{{ chart_prefix }}-balance-chart" class="balance-change-chart"></div>
+        </div>
+    </div>
+    <div class="chart-cell">
+        <h2>Income / Spending (USD) by Day / Month</h2>
+        <div class="money-flow-chart-container">
+            <canvas id="{{ chart_prefix }}-money-flow-chart"></canvas>
+        </div>
+    </div>
+    {% if caller is defined %}{{ caller() }}{% endif %}
+</div>
+<script>
+    window.StatsCharts.renderHistoryStats({
+        prefix: {{ chart_prefix | tojson }},
+        balanceData: {{ balance_changes | tojson }},
+        moneyFlowData: {{ money_flow_by_day | tojson }},
+    });
+</script>
+{% endmacro %}

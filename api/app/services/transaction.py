@@ -13,7 +13,6 @@ from app.errors.transaction import (
     CompletedTransactionNotEditable,
     TransactionWillOverdraftTreasury,
 )
-from app.models.entity import Entity
 from app.models.transaction import Transaction, TransactionStatus
 from app.schemas.transaction import (
     TransactionCreateSchema,
@@ -32,7 +31,6 @@ from sqlalchemy.orm import Query, Session
 
 if TYPE_CHECKING:
     from app.services.invoice import InvoiceService
-    from app.services.stats import StatsService
 
 
 class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transaction]):
@@ -72,6 +70,7 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         """Invalidate cache entries for affected entities and treasuries."""
 
         entity_ids: set[int] = set()
+        affected_treasury_ids: set[int] = set()
         for entity_id in (from_entity_id, to_entity_id):
             if entity_id is None:
                 continue
@@ -81,11 +80,13 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
         for tid in treasury_ids:
             if tid is not None:
                 self._balance_service.invalidate_treasury_cache_entry(tid)
+                affected_treasury_ids.add(tid)
 
-        if invalidate_stats and entity_ids:
+        if invalidate_stats and (entity_ids or affected_treasury_ids):
             from app.services.stats import StatsService
 
             StatsService.invalidate_entity_cache(*entity_ids)
+            StatsService.invalidate_treasury_cache(*affected_treasury_ids)
 
     def _apply_filters(  # type: ignore[override]
         self, query: Query[Transaction], filters: TransactionFiltersSchema
