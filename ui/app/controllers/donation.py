@@ -68,8 +68,54 @@ def _submitted_amount(form_data: dict[str, str]) -> Decimal:
     return _parse_amount(preset_amount)
 
 
+def _slugify(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def _fetch_recipients() -> list[dict]:
+    """Public list of donation destinations: F0 (general) first, then rooms."""
+    try:
+        api = RefinanceAPI(token=None)
+        raw = api.http("GET", "donations/recipients").json()
+    except Exception:
+        return []  # selector is hidden; the API falls back to the general space
+    return [
+        {**r, "label": f"{r['name']} (general)" if r.get("general") else r["name"]}
+        for r in raw
+    ]
+
+
+def _match_recipient(recipients: list[dict], raw: str | None) -> dict | None:
+    """Match a recipient by numeric id or slugified name (e.g. 'music-studio')."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    if raw.isdigit():
+        entity_id = int(raw)
+        return next((r for r in recipients if r["id"] == entity_id), None)
+    slug = _slugify(raw)
+    return next((r for r in recipients if _slugify(r["name"]) == slug), None)
+
+
+def _recipient_payload(recipients: list[dict], raw_value: str) -> dict:
+    """API payload fragment for the submitted recipient field."""
+    raw_value = (raw_value or "").strip()
+    if not raw_value:
+        return {}
+    selected = _match_recipient(recipients, raw_value)
+    if selected:
+        return {"recipient_entity_id": selected["id"]}
+    if raw_value.isdigit():
+        # unknown id (e.g. recipients list unavailable) — let the API validate it
+        return {"recipient_entity_id": int(raw_value)}
+    raise ValueError("Select a valid donation destination.")
+
+
 @donation_bp.route("/", methods=["GET", "POST"])
 def donate():
+    recipients = _fetch_recipients()
+    default_recipient = str(recipients[0]["id"]) if recipients else ""
+
     form_data = {
         "comment": "",
         "recurring_comment": "",
@@ -80,7 +126,15 @@ def donate():
         "recurring_preset_amount": "10",
         "recurring_custom_amount": "",
         "recurring_currency": "USD",
+        "onetime_recipient": default_recipient,
+        "recurring_recipient": default_recipient,
     }
+
+    # deep links: /donate?to=<room id or slug> preselects the destination
+    preselected = _match_recipient(recipients, request.args.get("to"))
+    if preselected:
+        form_data["onetime_recipient"] = str(preselected["id"])
+        form_data["recurring_recipient"] = str(preselected["id"])
 
     if request.method == "POST":
         donation_type = (request.form.get("type") or "onetime").strip().lower()
@@ -102,6 +156,12 @@ def donate():
             "recurring_currency": (request.form.get("recurring_currency") or "USD")
             .strip()
             .upper(),
+            "onetime_recipient": (
+                request.form.get("onetime_recipient") or default_recipient
+            ).strip(),
+            "recurring_recipient": (
+                request.form.get("recurring_recipient") or default_recipient
+            ).strip(),
         }
 
         if donation_type == "recurring":
@@ -119,6 +179,9 @@ def donate():
                 currency = form_data["recurring_currency"]
                 if currency not in RECURRING_CURRENCIES:
                     raise ValueError("Select a valid currency.")
+                recipient = _recipient_payload(
+                    recipients, form_data["recurring_recipient"]
+                )
 
                 success_url = (
                     url_for("donation.subscribed", _external=True)
@@ -136,6 +199,7 @@ def donate():
                         "comment": form_data["recurring_comment"],
                         "success_url": success_url,
                         "cancel_url": cancel_url,
+                        **recipient,
                     },
                 ).json()
                 checkout_url = response.get("checkout_session_url")
@@ -154,6 +218,9 @@ def donate():
                 currency = form_data["onetime_currency"]
                 if currency not in RECURRING_CURRENCIES:
                     raise ValueError("Select a valid currency.")
+                recipient = _recipient_payload(
+                    recipients, form_data["onetime_recipient"]
+                )
                 api = RefinanceAPI(token=None)
                 response = api.http(
                     "POST",
@@ -162,6 +229,7 @@ def donate():
                         "amount": str(amount),
                         "currency": currency,
                         "comment": form_data["comment"],
+                        **recipient,
                     },
                 )
                 result = response.json()
@@ -184,6 +252,7 @@ def donate():
         donation_min_amount=Config.DONATION_MIN_AMOUNT,
         donation_max_amount=Config.DONATION_MAX_AMOUNT,
         stripe_configured=Config.STRIPE_CONFIGURED,
+        recipients=recipients,
     )
 
 

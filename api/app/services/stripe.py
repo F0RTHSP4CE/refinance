@@ -170,6 +170,8 @@ class StripeService:
         amount: Decimal,
         currency: str,
         donation_comment: str | None = None,
+        donation_recipient_entity_id: int | None = None,
+        donation_recipient_name: str | None = None,
         success_url: str,
         cancel_url: str,
     ) -> stripe.checkout.Session:
@@ -184,6 +186,11 @@ class StripeService:
         }
         if donation_comment:
             metadata["donation_comment"] = donation_comment
+        if donation_recipient_entity_id:
+            metadata["donation_recipient_entity_id"] = str(donation_recipient_entity_id)
+        product_name = "Monthly donation — F0RTHSP4CE"
+        if donation_recipient_name:
+            product_name += f" · {donation_recipient_name}"
         with self._stripe_call():
             return stripe.checkout.Session.create(
                 mode="subscription",
@@ -196,7 +203,7 @@ class StripeService:
                             "unit_amount": unit_amount,
                             "recurring": {"interval": "month"},
                             "product_data": {
-                                "name": "Monthly donation — F0RTHSP4CE",
+                                "name": product_name,
                             },
                         },
                     }

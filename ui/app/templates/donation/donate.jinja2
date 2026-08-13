@@ -1,22 +1,8 @@
 {% extends "donation/base.jinja2" %}
 
-{% block title %}Donate to F0RTHSP4CE{% endblock %}
+{% block title %}Give to F0RTHSP4CE{% endblock %}
 
 {% block extra_styles %}
-:root {
---muted: #2c2c2c;
---muted-light: #dddddd;
---submit-stripe-shift: 33.941px;
-}
-
-#donation-js-error:not([hidden]) {
-margin-bottom: 20px;
-}
-
-.donation-form {
-margin-top: 6rem;
-}
-
 .sr-only {
 position: absolute;
 width: 1px;
@@ -29,750 +15,582 @@ white-space: nowrap;
 border: 0;
 }
 
-.donation-name {
-width: 100%;
-margin-top: 12px;
-border: 2px solid var(--surface-border);
-background: #000000;
-color: #ffffff;
-font-family: "Geist Mono", monospace;
-font-size: clamp(25px, 4.2vw, 45px);
+.middle {
+align-self: center;
+}
+
+/* ── the form is one sentence; every slot is a field ── */
+.line {
+margin: 0;
+font-size: var(--fs-line);
 font-weight: 700;
-line-height: 1;
-text-align: center;
-padding: 8px 28px;
-outline: none;
-height: 64px;
+line-height: 1.5;
+letter-spacing: -0.01em;
 }
 
-.donation-name:focus-visible {
-outline: 4px solid var(--accent);
-outline-offset: 4px;
-}
-
-.donation-name::placeholder {
-color: #4e4e4e;
-opacity: 1;
-font-size: 0.7em;
-}
-
-.preset-grid {
-display: grid;
-grid-template-columns: repeat(3, 1fr);
-gap: 12px;
-}
-
-.preset-option {
---button-hover-border: var(--accent);
-border: 2px solid var(--surface-border);
-background: #000000;
-color: #ffffff;
-height: 64px;
-padding: 0;
-display: flex;
-align-items: center;
-justify-content: center;
-font-family: "Geist Mono", monospace;
-font-size: clamp(28px, 4.5vw, 46px);
-font-weight: 700;
-line-height: 1;
-box-shadow: 0 0 0 0 transparent;
-transition: box-shadow 0.15s ease;
-}
-
-.preset-option:focus-visible {
-outline: 4px solid var(--accent);
-outline-offset: 4px;
-}
-
-.preset-option:disabled,
-.preset-option.is-inactive {
-opacity: 0.15;
-cursor: default;
-}
-
-.preset-option.is-selected {
---button-hover-border: #ffffff;
-background: var(--accent);
-border-color: var(--accent);
-color: #000000;
-}
-
-.preset-option-label {
-display: inline-flex;
-align-items: baseline;
-gap: 16px;
-}
-
-.preset-option-currency {
-font-size: 0.75em;
-letter-spacing: 0;
-}
-
-.donation-submit {
---button-hover-border: #ffffff;
-width: 100%;
-height: 62px;
-margin-top: 2rem;
-border: 0;
-background: var(--accent);
-color: #ffffff;
-font-family: "Geist Mono", monospace;
-font-size: clamp(30px, 4.8vw, 48px);
-font-weight: 700;
-line-height: 1;
-text-transform: uppercase;
-position: relative;
-overflow: hidden;
-isolation: isolate;
-box-shadow: 0 0 0 0 transparent;
-}
-
-@media (hover: hover) {
-
-.preset-option:not(:disabled):hover,
-.custom-amount-shell:hover,
-.donation-submit:not(:disabled):hover {
-box-shadow: 0 0 0 4px var(--button-hover-border);
-}
-}
-
-.donation-submit-label {
-position: relative;
-z-index: 1;
-}
-
-.donation-submit::before {
-content: "";
-position: absolute;
-top: 0;
-bottom: 0;
-left: -100%;
-width: 300%;
-z-index: 0;
-opacity: 0;
-background-image: repeating-linear-gradient(45deg,
-rgba(255, 255, 255, 0.16) 0,
-rgba(255, 255, 255, 0.16) 12px,
-rgba(0, 0, 0, 0.12) 12px,
-rgba(0, 0, 0, 0.12) 24px);
-background-repeat: repeat;
-transform: translate3d(0, 0, 0);
-will-change: transform;
-pointer-events: none;
-}
-
-.donation-submit:focus-visible {
-outline: 4px solid #000000;
-outline-offset: 4px;
-}
-
-.donation-submit.is-loading,
-.donation-submit:disabled {
-cursor: progress;
-opacity: 1;
-background-color: var(--accent);
-}
-
-.donation-submit.is-loading::before,
-.donation-submit:disabled::before {
-opacity: 1;
-animation: donation-submit-stripes 1.1s linear infinite;
-}
-
-@keyframes donation-submit-stripes {
-from {
-transform: translate3d(calc(-1 * var(--submit-stripe-shift)), 0, 0);
-}
-
-to {
-transform: translate3d(0, 0, 0);
-}
-}
-
-.custom-amount-shell {
---button-hover-border: var(--accent);
-border: 2px solid var(--surface-border);
-background: #000000;
-height: 64px;
-display: flex;
-align-items: center;
-justify-content: center;
-position: relative;
-box-shadow: 0 0 0 0 transparent;
-transition: box-shadow 0.15s ease;
-}
-
-.custom-amount-shell:focus-within {
-outline: 4px solid var(--accent);
-outline-offset: 4px;
-}
-
-.custom-amount-shell.has-value {
---button-hover-border: #ffffff;
-border-color: var(--accent);
-}
-
-.custom-amount-field {
-width: 100%;
-height: 100%;
-background: transparent;
-border: 0;
-color: #ffffff;
-font-family: "Geist Mono", monospace;
-font-size: clamp(28px, 4.5vw, 46px);
-font-weight: 700;
-line-height: 1;
-text-align: center;
-padding: 0 6px;
-outline: none;
-}
-
-.custom-amount-field::placeholder {
-color: #4e4e4e;
-opacity: 1;
-font-size: 0.75em;
-}
-
-.custom-amount-sizer {
-position: absolute;
-visibility: hidden;
-white-space: pre;
-pointer-events: none;
-font-family: "Geist Mono", monospace;
-font-size: clamp(28px, 4.5vw, 46px);
-font-weight: 700;
-line-height: 1;
-padding: 0 6px;
-}
-
-.custom-amount-suffix {
-display: none;
-color: #ffffff;
-font-family: "Geist Mono", monospace;
-font-size: clamp(28px, 4.5vw, 46px);
-font-weight: 700;
-line-height: 1;
-flex-shrink: 0;
-padding-right: 1em;
-}
-
-.custom-amount-shell.has-value .custom-amount-suffix {
+/* one clause per line, so the sentence never breaks on a connector */
+.clause {
 display: block;
 }
 
-/* ── type toggle ── */
-.donation-type-toggle {
-display: flex;
-gap: 0;
-margin-bottom: 0;
+.slot {
+font: inherit;
+letter-spacing: inherit;
+color: var(--fg);
+background: none;
+border: 0;
+border-bottom: 2px solid var(--accent);
+border-radius: 0;
+padding: 0;
+cursor: pointer;
+transition: color 0.1s;
 }
 
-.type-tab {
-flex: 1;
-height: 52px;
-border: 2px solid var(--surface-border);
-background: #000000;
-color: #4e4e4e;
-font-family: "Geist Mono", monospace;
-font-size: clamp(14px, 2.2vw, 22px);
+.slot:hover,
+.slot:focus-visible {
+color: var(--accent);
+}
+
+.slot:focus-visible {
+outline: 0;
+}
+
+input.slot {
+cursor: text;
+outline: 0;
+caret-color: var(--accent);
+min-width: 1ch;
+}
+
+input.slot::placeholder {
+color: var(--dim);
+opacity: 1;
+}
+
+input.slot:focus {
+color: var(--accent);
+}
+
+/* the handle and the number are one control, so they share one unbroken rule */
+.counter {
+white-space: nowrap;
+border-bottom: 2px solid var(--accent);
+}
+
+.counter > .slot {
+border-bottom: 0;
+}
+
+.line.is-error .counter {
+border-bottom-color: var(--error);
+}
+
+/* ── picking a place takes over: the whole list at once, at full size ── */
+.picker-key {
+margin: 0 0 1.5rem;
+color: var(--dim);
+font-size: var(--fs-meta);
+letter-spacing: 0.06em;
+}
+
+.rooms {
+margin: 0;
+padding: 0;
+list-style: none;
+}
+
+.room {
+display: block;
+background: none;
+border: 0;
+padding: 0;
+font: inherit;
+font-size: var(--fs-line);
 font-weight: 700;
-line-height: 1;
-text-transform: uppercase;
+line-height: 1.35;
+letter-spacing: -0.01em;
+color: var(--dim);
+text-align: left;
+cursor: pointer;
+transition: color 0.1s;
+}
+
+.room.is-on {
+color: var(--accent);
+}
+
+.room:hover {
+color: var(--fg);
+}
+
+/* an eyebrow: it explains the sentence before you read it, and stays out of the
+   way of the sentence → action bond below */
+.hint {
+margin: 0 0 1.3rem;
+color: var(--dim);
+font-size: var(--fs-meta);
+letter-spacing: 0.06em;
+}
+
+/* ── the one action ── */
+.send {
+display: inline-block;
+margin: 2.4rem 0 0;
+padding: 6px 0;
+background: none;
+border: 0;
+border-bottom: 2px solid var(--accent);
+font: inherit;
+font-size: var(--fs-cta);
+font-weight: 700;
+color: var(--accent);
 letter-spacing: 0.02em;
 cursor: pointer;
-transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
 
-.type-tab:first-child {
-border-right-width: 1px;
+.send:hover {
+color: var(--fg);
+border-bottom-color: var(--fg);
 }
 
-.type-tab:last-child {
-border-left-width: 1px;
+.send:disabled {
+cursor: progress;
+color: var(--dim);
+border-bottom-color: var(--dim);
 }
 
-.type-tab.is-active {
-background: var(--surface-border);
-color: #ffffff;
-border-color: var(--surface-border);
-}
-
-.type-tab:focus-visible {
-outline: 4px solid var(--accent);
-outline-offset: 4px;
-}
-
-/* ── tab sections ── */
-.donation-sections {
-display: grid;
-grid-template-columns: 1fr;
-}
-
-.donation-sections > #onetime-section,
-.donation-sections > #recurring-section {
-grid-area: 1 / 1;
-min-width: 0;
-margin-top: 2.5rem;
-}
-
-.donation-sections > [hidden] {
-display: block;
-visibility: hidden;
-pointer-events: none;
-}
-
-#onetime-section .preset-grid,
-#recurring-section .preset-grid {
-grid-template-columns: repeat(4, 1fr);
-}
-
-.recurring-hint {
-margin-top: 2rem;
-color: #4e4e4e;
-font-size: clamp(14px, 2vw, 18px);
-line-height: 1.4;
-text-align: center;
-}
-
-.donation-faq {
-margin-top: 1.5rem;
-font-size: clamp(12px, 1.8vw, 16px);
-line-height: 1.4;
-text-align: center;
-}
-
-.donation-faq details,
-.donation-faq-link {
-margin-top: 0.75rem;
-display: inline-block;
-}
-
-.donation-faq summary,
-.donation-faq-link {
-color: #4e4e4e;
-cursor: pointer;
-list-style: none;
-text-decoration: none;
-}
-
-.donation-faq summary::-webkit-details-marker {
+.send .caret {
 display: none;
+width: 0.5ch;
+height: 0.85em;
+margin-left: 0.4ch;
+background: var(--accent);
+vertical-align: -0.1em;
 }
 
-@media (hover: hover) {
-.donation-faq summary:hover,
-.donation-faq-link:hover {
-color: #888;
-text-decoration: underline;
-}
-}
-
-.donation-faq details[open] summary {
-margin-bottom: 0.5rem;
-}
-
-.donation-faq p {
-color: #4e4e4e;
-margin: 0 auto;
-max-width: 90%;
-}
-
-@media (min-width: 701px) {
-.donation-faq {
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 0.75rem;
-font-size: 13px;
-}
-
-.donation-faq details,
-.donation-faq-link {
-position: relative;
-margin-top: 0;
-}
-
-.donation-faq details[open] summary {
-margin-bottom: 0;
-position: relative;
-z-index: 101;
-}
-
-.donation-faq details[open]::before {
-content: "";
-position: fixed;
-inset: 0;
-background: rgba(0, 0, 0, 0.7);
-z-index: 99;
-}
-
-.donation-faq details[open] > :not(summary) {
-position: absolute;
-bottom: calc(100% + 14px);
-left: 50%;
-transform: translateX(-50%);
-width: 400px;
-max-width: calc(100vw - 64px);
-margin: 0;
-padding: 20px 24px;
-background: #000;
-border: 2px solid var(--surface-border);
-color: #ffffff;
-text-align: left;
-font-size: 15px;
-line-height: 1.5;
-z-index: 100;
-}
-
-.donation-faq details[open] > :not(summary)::before {
-content: "";
-position: absolute;
-bottom: -9px;
-left: 50%;
-width: 14px;
-height: 14px;
-background: #000;
-border-right: 2px solid var(--surface-border);
-border-bottom: 2px solid var(--surface-border);
-transform: translateX(-50%) rotate(45deg);
-}
-}
-
-{% endblock %}
-
-{% block extra_mobile_styles %}
-.donation-form {
-margin-top: 4rem;
-}
-
-.donation-name {
-height: 58px;
-}
-
-.preset-grid {
-gap: 8px;
-margin-top: 8px;
-}
-
-.preset-option {
-height: 58px;
-}
-.preset-option-label {
-gap: 0.25em;
-}
-.preset-option-currency {
-font-size: 1em;
-}
-.donation-submit {
-margin-top: 2rem;
-height: 58px;
-}
-
-.custom-amount-shell {
-height: 58px;
-}
-
-.donation-name::placeholder,
-.custom-amount-field::placeholder {
-font-size: 1em;
-}
-
-.donation-faq summary::before {
-content: "▶";
+.send.is-sending .caret {
 display: inline-block;
-margin-right: 0.5em;
-font-size: 0.7em;
-transition: transform 0.15s ease;
+animation: blink 1s steps(1) infinite;
 }
 
-.donation-faq details[open] summary::before {
-transform: rotate(90deg);
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0; }
+}
+
+#donation-js-error:not([hidden]) {
+margin: 1.6rem 0 0;
+}
+
+/* ── fee note: a full-bleed sheet, no box ── */
+.fee {
+width: 100%;
+max-width: none;
+max-height: none;
+height: 100%;
+margin: 0;
+padding: 26px 22px 22px;
+border: 0;
+background: var(--bg);
+color: var(--fg);
+font-family: inherit;
+}
+
+.fee::backdrop {
+background: var(--bg);
+}
+
+.fee-body {
+max-width: 860px;
+margin: 0 auto;
+height: 100%;
+display: grid;
+align-content: center;
+}
+
+.fee-text {
+margin: 0;
+max-width: min(26ch, 100%);
+font-size: var(--fs-line);
+font-weight: 700;
+line-height: 1.42;
+letter-spacing: -0.01em;
+}
+
+.fee-text b {
+color: var(--accent);
+font-weight: inherit;
+}
+
+.fee-acts {
+display: flex;
+flex-wrap: wrap;
+gap: 1.6em 2.4em;
+margin-top: 2.4rem;
+}
+
+.fee-acts .send {
+margin: 0;
+}
+
+.fee-keep {
+background: none;
+border: 0;
+border-bottom: 1px solid var(--dim);
+padding: 6px 0;
+font: inherit;
+font-size: var(--fs-cta);
+color: var(--dim);
+cursor: pointer;
+}
+
+.fee-keep:hover {
+color: var(--fg);
+border-bottom-color: var(--fg);
 }
 {% endblock %}
 
-{% macro donation_faq(processor) %}
-<div class="donation-faq">
-    <details>
-        <summary>Is my donation secure?</summary>
-        <p>Yes, we use industry-standard SSL technology to keep your information secure.<br><br>We partner
-            with {{ processor }}, the industry's established payment processor trusted by some of the world's largest
-            companies.<br><br>Your sensitive financial information never touches our servers. We send all
-            data directly to {{ processor }}'s PCI-compliant servers through SSL.</p>
-    </details>
-    <details>
-        <summary>Can I cancel my recurring donation?</summary>
-        <p>Of course. You always remain in full control of your recurring donation, and you're free to
-            change or cancel it at any time.
-            &gt;&gt;&gt; <a href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00" target="_blank"
-                rel="noopener noreferrer">Manage subscription</a>
-        </p>
-    </details>
-</div>
-{% endmacro %}
-
-{% macro donation_section(
-section_id, hidden,
-preset_field, preset_value,
-currency_id, currency_name, currency_value,
-custom_field, custom_value, custom_shell_id, sizer_id,
-grid_label, custom_label,
-comment_id, comment_name, comment_value,
-submit_label, hint, processor
-) %}
-<div id="{{ section_id }}" {% if hidden %} hidden{% endif %}>
-    <input id="{{ preset_field }}" name="{{ preset_field }}" type="hidden" value="{{ preset_value }}">
-    <input id="{{ currency_id }}" name="{{ currency_name }}" type="hidden" value="{{ currency_value }}">
-
-    <div class="preset-grid" role="group" aria-label="{{ grid_label }}">
-        {% for preset in donation_presets %}
-        <button type="button"
-            class="preset-option{% if preset_value == preset and not custom_value %} is-selected{% endif %}{% if custom_value %} is-inactive{% endif %}"
-            data-amount="{{ preset }}"
-            aria-pressed="{{ 'true' if preset_value == preset and not custom_value else 'false' }}" {% if custom_value
-            %}disabled{% endif %}>
-            <span class="preset-option-label">{{ preset }}<span class="preset-option-currency">$</span></span>
-        </button>
-        {% endfor %}
-        <div class="custom-amount-shell{% if custom_value %} has-value{% endif %}" id="{{ custom_shell_id }}">
-            <label class="sr-only" for="{{ custom_field }}">{{ custom_label }}</label>
-            <span id="{{ sizer_id }}" class="custom-amount-sizer" aria-hidden="true"></span>
-            <input id="{{ custom_field }}" name="{{ custom_field }}" class="custom-amount-field" type="text"
-                inputmode="decimal" autocomplete="off" value="{{ custom_value }}" pattern="\d+(?:[\.,]\d{1,2})?"
-                maxlength="10" title="Enter a positive amount with up to 2 decimal places" placeholder="_ $">
-            <span class="custom-amount-suffix" aria-hidden="true">$</span>
-        </div>
-    </div>
-
-    <label class="sr-only" for="{{ comment_id }}">Your name</label>
-    <input id="{{ comment_id }}" name="{{ comment_name }}" class="donation-name" type="text" maxlength="120"
-        value="{{ comment_value }}" placeholder="name / comment (optional)" autocomplete="off">
-
-    <button type="submit" class="donation-submit"><span class="donation-submit-label">{{ submit_label }}</span></button>
-
-    <p class="recurring-hint">{{ hint }}</p>
-
-    {{ donation_faq(processor) }}
-</div>
-{% endmacro %}
-
-{% block pre_brand %}
-<div id="donation-js-error" class="donation-message error" hidden></div>
-{% endblock %}
+{% set is_recurring = form_data.type == 'recurring' and stripe_configured %}
+{% set amount = (form_data.recurring_custom_amount or form_data.recurring_preset_amount) if is_recurring else
+(form_data.custom_amount or form_data.preset_amount) %}
+{% set currency = form_data.recurring_currency if is_recurring else form_data.onetime_currency %}
+{% set comment = form_data.recurring_comment if is_recurring else form_data.comment %}
+{% set recipient = form_data.recurring_recipient if is_recurring else form_data.onetime_recipient %}
+{% set symbols = {"USD": "$", "EUR": "€", "GEL": "₾"} %}
+{% set ns = namespace(room="the whole space") %}
+{% for r in recipients %}{% if recipient == r.id|string and not r.general %}{% set ns.room = r.name %}{% endif %}{%
+endfor %}
 
 {% block content %}
+<div class="middle">
+    <form method="post" novalidate>
+        <input type="hidden" name="type" value="{{ 'recurring' if is_recurring else 'onetime' }}" data-role="type">
+        <input type="hidden" name="custom_amount" data-mirror="amount">
+        <input type="hidden" name="recurring_custom_amount" data-mirror="amount">
+        <input type="hidden" name="onetime_currency" data-mirror="currency">
+        <input type="hidden" name="recurring_currency" data-mirror="currency">
+        <input type="hidden" name="comment" data-mirror="name">
+        <input type="hidden" name="recurring_comment" data-mirror="name">
+        <input type="hidden" name="onetime_recipient" data-mirror="recipient">
+        <input type="hidden" name="recurring_recipient" data-mirror="recipient">
 
-<form method="post" class="donation-form" novalidate>
-    <input type="hidden" id="donation-type" name="type" value="{{ form_data.type }}">
+        <div data-role="compose">
+            <p class="hint">click anything underlined to change it</p>
 
-    {% if stripe_configured %}
-    <div class="donation-type-toggle" role="group" aria-label="Donation type">
-        <button type="button" class="type-tab{% if form_data.type != 'recurring' %} is-active{% endif %}"
-            data-type="onetime">One-time</button>
-        <button type="button" class="type-tab{% if form_data.type == 'recurring' %} is-active{% endif %}"
-            data-type="recurring">Monthly</button>
+            <p class="line" data-role="line">
+            <span class="clause"><span class="counter"><button type="button" class="slot" data-role="step"
+                        aria-label="Suggest another amount" title="Another amount">give</button>
+                    <label class="sr-only" for="amount">Amount</label><input id="amount" class="slot amount"
+                        data-role="amount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="go"
+                        value="{{ amount }}" placeholder="0" maxlength="8"
+                        style="width: {{ [amount|length, 2] | max }}ch"></span>
+                <button type="button" class="slot" data-role="currency"
+                    aria-label="Currency: {{ currency }}. Change.">{{ symbols.get(currency, "$") }}</button>
+                {% if stripe_configured %}<span data-role="freq-lead">{{ 'each' if is_recurring else 'just'
+                    }}</span> <button type="button" class="slot" data-role="freq"
+                    aria-label="How often. Change.">{{ 'month' if is_recurring else 'once' }}</button>{% else %}just
+                once{% endif %}</span>
+            <span class="clause">to <button type="button" class="slot" data-role="dest" aria-expanded="false"
+                    aria-controls="rooms">{{ ns.room }}</button></span>
+            <span class="clause">from
+                <label class="sr-only" for="name">Your name</label><input id="name" class="slot name" data-role="name"
+                    type="text" maxlength="120" value="{{ comment }}" placeholder="anonymous" autocomplete="off"
+                    style="width: {{ [comment|length, 9] | max }}ch"></span>
+            </p>
+
+            <p id="donation-js-error" class="notice" role="alert" hidden></p>
+
+            <button type="submit" class="send" data-role="send">send it → <span class="caret"
+                    aria-hidden="true"></span></button>
+        </div>
+
+        <div id="rooms" data-role="picker" hidden>
+            <p class="picker-key">where it goes</p>
+            <ul class="rooms">
+                {% for r in recipients %}
+                <li><button type="button" class="room{% if recipient == r.id|string %} is-on{% endif %}"
+                        data-id="{{ r.id }}" data-general="{{ '1' if r.general else '0' }}"
+                        data-label="{{ 'the whole space' if r.general else r.name }}">{{ 'the whole space' if r.general
+                        else r.name }}</button></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </form>
+</div>
+
+{% if stripe_configured %}
+<dialog id="fee" class="fee" aria-labelledby="fee-text">
+    <div class="fee-body">
+        <p id="fee-text" class="fee-text">under <b data-role="fee-threshold">10 ₾</b> a month, fees eat most of it.</p>
+        <div class="fee-acts">
+            <button type="button" class="send" data-role="fee-raise" autofocus>give <span
+                    data-role="fee-threshold">10 ₾</span> instead</button>
+            <button type="button" class="fee-keep" data-role="fee-keep">keep <span
+                    data-role="fee-keep-amount">5 ₾</span></button>
+        </div>
     </div>
-    {% endif %}
+</dialog>
+{% endif %}
+{% endblock %}
 
-    <div class="donation-sections">
-        {{ donation_section(
-        section_id="onetime-section",
-        hidden=(stripe_configured and form_data.type == "recurring"),
-        preset_field="preset_amount", preset_value=form_data.preset_amount,
-        currency_id="onetime_currency_value", currency_name="onetime_currency",
-        currency_value=form_data.onetime_currency,
-        custom_field="custom_amount", custom_value=form_data.custom_amount, custom_shell_id="custom-amount-shell",
-        sizer_id="custom-amount-sizer",
-        grid_label="Donation amount presets", custom_label="Other amount",
-        comment_id="comment", comment_name="comment", comment_value=form_data.comment,
-        submit_label="Donate", hint="We accept any cards and Apple Pay.", processor="Keepz"
-        ) }}
-
-        {% if stripe_configured %}
-        {{ donation_section(
-        section_id="recurring-section",
-        hidden=(form_data.type != "recurring"),
-        preset_field="recurring_preset_amount", preset_value=form_data.recurring_preset_amount,
-        currency_id="recurring_currency_value", currency_name="recurring_currency",
-        currency_value=form_data.recurring_currency,
-        custom_field="recurring_custom_amount", custom_value=form_data.recurring_custom_amount,
-        custom_shell_id="recurring-custom-amount-shell", sizer_id="recurring-custom-amount-sizer",
-        grid_label="Monthly donation amount presets", custom_label="Other monthly amount",
-        comment_id="recurring-comment", comment_name="recurring_comment", comment_value=form_data.recurring_comment,
-        submit_label="Subscribe", hint="Your card will be charged every month.", processor="Stripe"
-        ) }}
-        {% endif %}
-    </div>
-</form>
+{% block foot %}
+<p class="foot" data-role="foot"></p>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    const DONATION_MIN_AMOUNT = {{ donation_min_amount | tojson }};
-    const DONATION_MAX_AMOUNT = {{ donation_max_amount | tojson }};
+    (function () {
+        "use strict";
 
-    const donationForm = document.querySelector(".donation-form");
-    const donationTypeInput = document.getElementById("donation-type");
-    const presetInput = document.getElementById("preset_amount");
-    const customAmountInput = document.getElementById("custom_amount");
-    const customAmountShell = document.getElementById("custom-amount-shell");
-    const customAmountSizer = document.getElementById("custom-amount-sizer");
-    const presetButtons = Array.from(document.querySelectorAll("#onetime-section .preset-option"));
-    const submitButtons = Array.from(document.querySelectorAll(".donation-submit"));
-    const jsErrorContainer = document.getElementById("donation-js-error");
-    const onetimeSectionEl = document.getElementById("onetime-section");
-    const recurringSectionEl = document.getElementById("recurring-section");
-    const typeTabs = Array.from(document.querySelectorAll(".type-tab"));
-    const recurringPresetInput = document.getElementById("recurring_preset_amount");
-    const recurringPresetButtons = Array.from(document.querySelectorAll("#recurring-section .preset-option"));
-    const recurringCustomAmountInput = document.getElementById("recurring_custom_amount");
-    const recurringCustomAmountShell = document.getElementById("recurring-custom-amount-shell");
-    const recurringCustomAmountSizer = document.getElementById("recurring-custom-amount-sizer");
-    let isSubmitting = false;
+        const MIN = parseFloat({{ donation_min_amount | string | tojson }});
+        const MAX = parseFloat({{ donation_max_amount | string | tojson }});
+        const STRIPE = {{ 'true' if stripe_configured else 'false' }};
+        const PRESETS = { USD: ["5", "10", "25"], EUR: ["5", "10", "25"], GEL: ["10", "25", "50"] };
+        const SYMBOLS = { USD: "$", EUR: "€", GEL: "₾" };
+        const ORDER = ["GEL", "USD", "EUR"];
+        // ~10 GEL equivalents: below this, payout fees eat most of a monthly gift
+        const THRESHOLDS = { GEL: 10, USD: 4, EUR: 4 };
+        const FOOT = {
+            recurring: 'stripe · cancel any time · <a href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00" target="_blank" rel="noopener noreferrer">manage yours</a>',
+            onetime: "keepz · card or apple pay · no account"
+        };
 
-    function showJsError(message) {
-        jsErrorContainer.textContent = message;
-        jsErrorContainer.hidden = false;
-    }
+        const form = document.querySelector("form");
+        const line = document.querySelector('[data-role="line"]');
+        const typeInput = document.querySelector('[data-role="type"]');
+        const amountInput = document.querySelector('[data-role="amount"]');
+        const stepBtn = document.querySelector('[data-role="step"]');
+        const nameInput = document.querySelector('[data-role="name"]');
+        const currencyBtn = document.querySelector('[data-role="currency"]');
+        const freqBtn = document.querySelector('[data-role="freq"]');
+        const freqLead = document.querySelector('[data-role="freq-lead"]');
+        const destBtn = document.querySelector('[data-role="dest"]');
+        const compose = document.querySelector('[data-role="compose"]');
+        const picker = document.querySelector('[data-role="picker"]');
+        const sendBtn = document.querySelector('[data-role="send"]');
+        const errorBox = document.getElementById("donation-js-error");
+        const foot = document.querySelector('[data-role="foot"]');
+        const mirrors = Array.from(document.querySelectorAll("[data-mirror]"));
 
-    function clearJsError() {
-        jsErrorContainer.hidden = true;
-        jsErrorContainer.textContent = "";
-    }
+        const state = {
+            type: typeInput.value,
+            currency: (document.querySelector('[name="recurring_currency"]').value || "USD"),
+            recipient: (picker.querySelector(".room.is-on") || { dataset: {} }).dataset.id || ""
+        };
+        // the server rendered the symbol, not the code — read the code back from it
+        state.currency = Object.keys(SYMBOLS).find((c) => SYMBOLS[c] === currencyBtn.textContent.trim()) || "USD";
+        let sending = false;
 
-    function formatAmount(n) {
-        return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
-    }
-
-    function updatePresetSelection(buttons, selectedAmount) {
-        buttons.forEach((button) => {
-            const isSelected = button.dataset.amount === selectedAmount;
-            button.classList.toggle("is-selected", isSelected);
-            button.setAttribute("aria-pressed", isSelected ? "true" : "false");
-        });
-    }
-
-    function updatePresetAvailability(buttons, isInactive) {
-        buttons.forEach((button) => {
-            button.disabled = isInactive;
-            button.classList.toggle("is-inactive", isInactive);
-        });
-    }
-
-    function makeAmountSection(cfg) {
-        function resize() {
-            if (!cfg.customInput || !cfg.customSizer) return;
-            if (!cfg.customInput.value.trim()) { cfg.customInput.style.width = ""; return; }
-            cfg.customSizer.textContent = cfg.customInput.value;
-            const measured = Math.ceil(cfg.customSizer.getBoundingClientRect().width) + 8;
-            cfg.customInput.style.width = `${Math.min(Math.max(measured, 96), window.innerWidth <= 700 ? 280 : 320)}px`;
+        function num(raw) {
+            return parseFloat(String(raw).replace(",", "."));
         }
-        function updateState() {
-            if (!cfg.customInput || !cfg.customShell) return;
-            const hasValue = cfg.customInput.value.trim() !== "";
-            cfg.customShell.classList.toggle("has-value", hasValue);
-            if (hasValue) { cfg.presetInput.value = ""; updatePresetSelection(cfg.presetButtons, ""); }
-            updatePresetAvailability(cfg.presetButtons, hasValue);
-            resize();
+
+        function fmt(n) {
+            return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
         }
-        cfg.presetButtons.forEach((btn) => {
-            btn.addEventListener("click", () => {
-                const amount = btn.dataset.amount;
-                cfg.presetInput.value = amount;
-                if (cfg.customInput) cfg.customInput.value = "";
-                if (cfg.customShell) cfg.customShell.classList.remove("has-value");
-                updatePresetSelection(cfg.presetButtons, amount);
-                updatePresetAvailability(cfg.presetButtons, false);
-                resize();
+
+        function symbol() {
+            return SYMBOLS[state.currency] || "$";
+        }
+
+        function presets() {
+            return PRESETS[state.currency] || PRESETS.USD;
+        }
+
+        function isRecurring() {
+            return STRIPE && state.type === "recurring";
+        }
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.hidden = false;
+            line.classList.add("is-error");
+        }
+
+        function clearError() {
+            errorBox.hidden = true;
+            errorBox.textContent = "";
+            line.classList.remove("is-error");
+        }
+
+        function fitInput(input, min) {
+            const len = (input.value || input.placeholder || "").length;
+            input.style.width = Math.max(len, min) + "ch";
+        }
+
+        function render() {
+            fitInput(amountInput, 2);
+            fitInput(nameInput, 9);
+            currencyBtn.textContent = symbol();
+            currencyBtn.setAttribute("aria-label", "Currency: " + state.currency + ". Change.");
+            // the lead word stays plain white, so the run of rules is broken mid-line.
+            // keep the two lead words the same length — the font is monospaced, so
+            // equal length is what stops the slot beside them from sliding on a swap
+            if (freqBtn) {
+                freqBtn.textContent = isRecurring() ? "month" : "once";
+                if (freqLead) freqLead.textContent = isRecurring() ? "each" : "just";
+            }
+            typeInput.value = state.type;
+            picker.querySelectorAll(".room").forEach((room) => {
+                const on = room.dataset.id === state.recipient;
+                room.classList.toggle("is-on", on);
+                if (on) destBtn.textContent = room.dataset.label;
             });
+            mirrors.forEach((el) => {
+                const key = el.dataset.mirror;
+                if (key === "amount") el.value = amountInput.value.trim();
+                if (key === "currency") el.value = state.currency;
+                if (key === "name") el.value = nameInput.value.trim();
+                if (key === "recipient") el.value = state.recipient;
+            });
+            if (foot) foot.innerHTML = isRecurring() ? FOOT.recurring : FOOT.onetime;
+        }
+
+        // "give" never changes its label, so it stays a target you can hit at any
+        // time — including when the slot holds a number of your own, which restarts
+        // the cycle from the first suggestion
+        stepBtn.addEventListener("click", () => {
+            const list = presets();
+            const at = list.findIndex((p) => num(p) === num(amountInput.value));
+            amountInput.value = list[(at + 1) % list.length];
+            clearError();
+            render();
         });
-        if (cfg.customInput) cfg.customInput.addEventListener("input", updateState);
-        window.addEventListener("resize", resize);
-        return { resize, updateState };
-    }
 
-    function validateAmount(raw, emptyMsg) {
-        if (!raw) return emptyMsg;
-        const amount = parseFloat(raw);
-        if (isNaN(amount) || amount <= 0) return "Enter a valid donation amount.";
-        if (amount < DONATION_MIN_AMOUNT) return `Donation amount must be at least ${formatAmount(DONATION_MIN_AMOUNT)}.`;
-        if (amount > DONATION_MAX_AMOUNT) return `Donation amount must be at most ${formatAmount(DONATION_MAX_AMOUNT)}.`;
-        return null;
-    }
-
-    const onetime = makeAmountSection({
-        presetInput,
-        presetButtons,
-        customInput: customAmountInput,
-        customShell: customAmountShell,
-        customSizer: customAmountSizer,
-    });
-
-    const recurring = makeAmountSection({
-        presetInput: recurringPresetInput,
-        presetButtons: recurringPresetButtons,
-        customInput: recurringCustomAmountInput,
-        customShell: recurringCustomAmountShell,
-        customSizer: recurringCustomAmountSizer,
-    });
-
-    function switchTab(type) {
-        donationTypeInput.value = type;
-        typeTabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.type === type));
-        if (onetimeSectionEl) onetimeSectionEl.hidden = (type === "recurring");
-        if (recurringSectionEl) recurringSectionEl.hidden = (type !== "recurring");
-        if (type === "recurring") recurring.resize();
-        clearJsError();
-    }
-
-    typeTabs.forEach((tab) => {
-        tab.addEventListener("click", () => switchTab(tab.dataset.type));
-    });
-
-    donationForm.addEventListener("submit", (event) => {
-        clearJsError();
-        const isRecurring = (donationTypeInput ? donationTypeInput.value : "onetime") === "recurring";
-        const customRaw = isRecurring
-            ? (recurringCustomAmountInput ? recurringCustomAmountInput.value.trim() : "")
-            : (customAmountInput ? customAmountInput.value.trim() : "");
-        const presetRaw = isRecurring
-            ? (recurringPresetInput ? recurringPresetInput.value.trim() : "")
-            : presetInput.value.trim();
-        const raw = (customRaw || presetRaw).replace(",", ".");
-        const emptyMsg = isRecurring
-            ? "Select a monthly amount or enter another amount."
-            : "Select a donation amount or enter another amount.";
-        const error = validateAmount(raw, emptyMsg);
-        if (error) { event.preventDefault(); showJsError(error); return; }
-
-        if (isSubmitting) { event.preventDefault(); return; }
-        isSubmitting = true;
-        donationForm.setAttribute("aria-busy", "true");
-        submitButtons.forEach((btn) => { btn.disabled = true; btn.classList.add("is-loading"); });
-    });
-
-    updatePresetSelection(presetButtons, presetInput.value);
-    onetime.updateState();
-    if (recurringPresetInput) updatePresetSelection(recurringPresetButtons, recurringPresetInput.value);
-    if (recurringCustomAmountInput) recurring.updateState();
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => { onetime.resize(); recurring.resize(); });
-    }
-
-    const faqDetails = Array.from(document.querySelectorAll(".donation-faq details"));
-    faqDetails.forEach((d) => {
-        d.addEventListener("toggle", () => {
-            if (d.open) { faqDetails.forEach((other) => { if (other !== d) other.open = false; }); }
+        amountInput.addEventListener("input", () => {
+            let clean = amountInput.value.replace(/[^0-9.,]/g, "");
+            const sep = clean.search(/[.,]/);
+            if (sep !== -1) clean = clean.slice(0, sep + 1) + clean.slice(sep + 1).replace(/[.,]/g, "");
+            clean = clean.replace(/([.,]\d{2})\d+$/, "$1");
+            if (clean !== amountInput.value) amountInput.value = clean;
+            clearError();
+            render();
         });
-    });
-    document.addEventListener("click", (event) => {
-        faqDetails.forEach((d) => {
-            if (!d.open) return;
-            if (event.target === d || !d.contains(event.target)) d.open = false;
+
+        amountInput.addEventListener("blur", () => {
+            amountInput.value = amountInput.value.trim().replace(/[.,]$/, "");
+            render();
         });
-    });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") faqDetails.forEach((d) => { d.open = false; });
-    });
+
+        nameInput.addEventListener("input", render);
+
+        // switching currency keeps the chosen tier (10 $ → 25 ₾)
+        currencyBtn.addEventListener("click", () => {
+            const tier = presets().findIndex((p) => num(p) === num(amountInput.value));
+            state.currency = ORDER[(ORDER.indexOf(state.currency) + 1) % ORDER.length];
+            if (tier >= 0) amountInput.value = presets()[tier];
+            clearError();
+            render();
+        });
+
+        if (freqBtn) {
+            freqBtn.addEventListener("click", () => {
+                state.type = isRecurring() ? "onetime" : "recurring";
+                clearError();
+                render();
+            });
+        }
+
+        // choosing a place is its own view: the sentence steps aside and the whole
+        // list stands in its place, so nothing hangs off the end of a line
+        function showPicker(open) {
+            compose.hidden = open;
+            picker.hidden = !open;
+            destBtn.setAttribute("aria-expanded", open ? "true" : "false");
+            if (open) {
+                const current = picker.querySelector(".room.is-on") || picker.querySelector(".room");
+                if (current) current.focus();
+            } else {
+                destBtn.focus();
+            }
+        }
+
+        destBtn.addEventListener("click", () => showPicker(true));
+
+        picker.addEventListener("click", (event) => {
+            const room = event.target.closest(".room");
+            if (!room) return;
+            state.recipient = room.dataset.id;
+            render();
+            showPicker(false);
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !picker.hidden) showPicker(false);
+        });
+
+        const fee = document.getElementById("fee");
+        let feeAccepted = false;
+
+        function threshold() {
+            return THRESHOLDS[state.currency];
+        }
+
+        function resubmit() {
+            if (form.requestSubmit) form.requestSubmit();
+            else form.submit();
+        }
+
+        if (fee) {
+            fee.querySelector('[data-role="fee-raise"]').addEventListener("click", () => {
+                amountInput.value = String(threshold());
+                render();
+                fee.close();
+                resubmit();
+            });
+            fee.querySelector('[data-role="fee-keep"]').addEventListener("click", () => {
+                feeAccepted = true;
+                fee.close();
+                resubmit();
+            });
+        }
+
+        function openFee() {
+            const label = threshold() + " " + symbol();
+            fee.querySelectorAll('[data-role="fee-threshold"]').forEach((el) => {
+                el.textContent = label;
+            });
+            const keep = fee.querySelector('[data-role="fee-keep-amount"]');
+            if (keep) keep.textContent = amountInput.value.trim() + " " + symbol();
+            fee.showModal();
+        }
+
+        function validate() {
+            const raw = amountInput.value.trim();
+            if (!raw) return "pick an amount, or type one";
+            if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return "numbers only, up to 2 decimals";
+            const value = num(raw);
+            if (isNaN(value) || value <= 0) return "more than zero, please";
+            if (value < MIN) return "the smallest we can take is " + fmt(MIN);
+            if (value > MAX) return "the largest we can take here is " + fmt(MAX);
+            return null;
+        }
+
+        form.addEventListener("submit", (event) => {
+            clearError();
+            const error = validate();
+            if (error) {
+                event.preventDefault();
+                showError(error);
+                amountInput.focus();
+                return;
+            }
+            if (isRecurring() && fee && !feeAccepted && threshold() && num(amountInput.value) < threshold()) {
+                event.preventDefault();
+                openFee();
+                return;
+            }
+            if (sending) {
+                event.preventDefault();
+                return;
+            }
+            sending = true;
+            sendBtn.disabled = true;
+            sendBtn.classList.add("is-sending");
+            sendBtn.firstChild.textContent = "sending ";
+        });
+
+        render();
+    })();
 </script>
 {% endblock %}

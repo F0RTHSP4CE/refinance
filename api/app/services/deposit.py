@@ -13,6 +13,7 @@ from app.dependencies.services import (
 from app.errors.common import NotFoundError
 from app.errors.deposit import DepositAlreadyCompleted, DepositCannotBeEdited
 from app.models.deposit import Deposit, DepositStatus
+from app.models.entity import Entity
 from app.models.transaction import TransactionStatus
 from app.schemas.deposit import DepositFiltersSchema, DepositUpdateSchema
 from app.schemas.transaction import TransactionCreateSchema
@@ -118,21 +119,45 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
         else:
             raise DepositAlreadyCompleted
 
+    def _donation_recipient(self, details: dict) -> Entity:
+        """Resolve the entity a donation is routed to (a room or F0 by default)."""
+        recipient_id = details.get("donation_recipient_id")
+        if recipient_id:
+            try:
+                recipient_id = int(recipient_id)
+            except (TypeError, ValueError):
+                recipient_id = None
+            if recipient_id and recipient_id != f0_entity.id:
+                recipient = (
+                    self.db.query(Entity).filter(Entity.id == recipient_id).first()
+                )
+                if recipient is not None and recipient.active:
+                    return recipient
+                logger.warning(
+                    "Donation recipient id=%s not found or inactive, "
+                    "falling back to F0",
+                    recipient_id,
+                )
+        return self.db.query(Entity).filter(Entity.id == f0_entity.id).one()
+
     def _complete_donation(self, deposit: Deposit) -> None:
-        """After a guest donation deposit completes, transfer funds to F0 and notify."""
-        comment = (deposit.details or {}).get("donation_comment", "")
-        stripe_details = (deposit.details or {}).get("stripe", {})
+        """After a guest donation deposit completes, transfer funds to the chosen
+        recipient (F0 or one of its rooms) and notify."""
+        details = deposit.details or {}
+        comment = details.get("donation_comment", "")
+        stripe_details = details.get("stripe", {})
         is_recurring = (
             stripe_details.get("charge_mode") == "guest_static"
             or stripe_details.get("mode") == "subscription_invoice"
         )
+        recipient = self._donation_recipient(details)
         try:
             self._transaction_service.create(
                 TransactionCreateSchema(
                     amount=deposit.amount,
                     currency=deposit.currency,
                     from_entity_id=anonymous_entity.id,
-                    to_entity_id=f0_entity.id,
+                    to_entity_id=recipient.id,
                     status=TransactionStatus.COMPLETED,
                     tag_ids=[donation_tag.id],
                     comment=comment,
@@ -149,10 +174,11 @@ class DepositService(TaggableServiceMixin[Deposit], BaseService[Deposit]):
             chat_id = self._notification_service.config.donation_notification_chat_id
             if chat_id:
                 amount_str = f"{deposit.amount} {deposit.currency.upper()}"
-                if is_recurring:
-                    message = f"🎁 Subscription donation: <b>{amount_str}</b>"
-                else:
-                    message = f"🎁 New donation: <b>{amount_str}</b>"
+                label = "Subscription donation" if is_recurring else "New donation"
+                message = (
+                    f"🎁 {label} → <b>{escape(recipient.name)}</b>: "
+                    f"<b>{amount_str}</b>"
+                )
                 if comment:
                     message += f"\n<i>{escape(comment)}</i>"
                 topic_id = (

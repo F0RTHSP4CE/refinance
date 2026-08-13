@@ -69,6 +69,11 @@ class StripeAuthorization(BaseModel):
     )
     static_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
+    # guest_static donations only: entity the donation is routed to (room or F0)
+    donation_recipient_entity_id: Mapped[int | None] = mapped_column(
+        ForeignKey("entities.id"), nullable=True
+    )
+
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
     consecutive_error_count: Mapped[int] = mapped_column(
