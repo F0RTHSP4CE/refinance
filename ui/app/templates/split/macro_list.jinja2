@@ -50,7 +50,7 @@
 
         {% if not split.performed %}
             {% if is_joined %}
-            <div class="split-card-joined-badge">You're in</div>
+            <a href="{{ url_for('split.remove_participant', id=split.id, entity_id=g.actor_entity.id) }}" class="big-button big-button-outline big-button-danger-outline">Exit</a>
             {% else %}
             <a href="{{ url_for('split.add_participant', id=split.id) }}" class="big-button">Join</a>
             {% endif %}
