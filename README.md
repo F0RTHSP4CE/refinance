@@ -95,12 +95,10 @@ make test
 - [x] pass tags as a list, not as add/delete operations
     - [x] fix ui tag management
 - [x] misc validation of amounts (>0.00)
-- [ ] improve split ux
+- [x] improve split ux
 - [x] make a uniform deposit api CRUD, provider should be enum
 - [ ] update all boolean attrs to status enums
-- [ ] mobile ui
-- [ ] rename base to common where applicable
-- [ ] remove base service class
+- [x] mobile ui
 
 ## todo future features
 - [ ] permissions?
