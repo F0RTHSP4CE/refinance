@@ -121,7 +121,7 @@ def donate():
         "recurring_comment": "",
         "preset_amount": "10",
         "custom_amount": "",
-        "type": "recurring",
+        "type": "onetime",
         "onetime_currency": "USD",
         "recurring_preset_amount": "10",
         "recurring_custom_amount": "",
