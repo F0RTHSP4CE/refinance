@@ -58,6 +58,10 @@
   position: relative;
 }
 
+iframe[id^="telegram-login-"] {
+  clip-path: inset(1px round 20px);
+}
+
 .form-label {
   display: block;
   font-weight: 600;
