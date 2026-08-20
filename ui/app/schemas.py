@@ -161,6 +161,7 @@ class StripeAuthorization(Base):
     active: bool
     priority: int
     consecutive_error_count: int
+    donation_recipient_entity_id: int | None = None
     last_error: str | None = None
     last_attempt_at: datetime | None = None
     last_success_at: datetime | None = None
