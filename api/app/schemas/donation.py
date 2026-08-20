@@ -12,6 +12,7 @@ class DonationCreateSchema(BaseModel):
     amount: Decimal
     currency: str = Field(min_length=1, max_length=10)
     comment: str = Field(default="", max_length=500)
+    recipient_entity_id: int | None = None
 
     @field_validator("amount")
     def amount_must_be_positive(cls, v):
@@ -30,12 +31,21 @@ class DonationResponseSchema(BaseModel):
     payment_url: str | None
     amount: str
     currency: str
+    recipient_name: str | None = None
+
+
+class DonationRecipientSchema(BaseModel):
+    id: int
+    name: str
+    general: bool = False
+    balance_usd: float | None = None
 
 
 class DonationSubscribeSchema(BaseModel):
     amount: Decimal
     currency: str = Field(min_length=1, max_length=10)
     comment: str = Field(default="", max_length=500)
+    recipient_entity_id: int | None = None
     success_url: str = Field(min_length=1)
     cancel_url: str = Field(min_length=1)
 

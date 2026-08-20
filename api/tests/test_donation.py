@@ -8,11 +8,32 @@ from app.app import app
 from app.config import get_config
 from app.db import DatabaseConnection
 from app.dependencies.services import ServiceContainer
+from app.routes.donation import _balance_total_usd
 from app.seeding import anonymous_entity, f0_entity
 from app.uow import UnitOfWork
 from fastapi.testclient import TestClient
 
 FAKE_PAYMENT_URL = "https://keepz.me/pay/testtoken123"
+
+
+def test_balance_total_usd_converts_completed_currency_balances():
+    class FakeCurrencyExchangeService:
+        rates = {"GEL": Decimal("0.4"), "EUR": Decimal("1.2")}
+
+        def calculate_conversion(
+            self, source_amount, target_amount, source_currency, target_currency
+        ):
+            assert target_amount is None
+            assert target_currency == "USD"
+            converted = source_amount * self.rates[source_currency]
+            return source_amount, converted, self.rates[source_currency]
+
+    total = _balance_total_usd(
+        {"USD": Decimal("10"), "GEL": Decimal("20"), "EUR": Decimal("-5")},
+        FakeCurrencyExchangeService(),
+    )
+
+    assert total == 12.0
 
 
 def _patch_keepz(monkeypatch):
@@ -293,3 +314,232 @@ class TestDonationCompletion:
 
         # No notification should fire for a non-anonymous deposit
         assert self.sent_notifications == []
+
+
+class TestDonationRecipients:
+    """Tests for routing donations to rooms (public recipient selection)."""
+
+    @pytest.fixture(autouse=True)
+    def patch_keepz(self, monkeypatch):
+        _patch_keepz(monkeypatch)
+
+    @pytest.fixture(autouse=True)
+    def capture_notifications(self, monkeypatch):
+        self.sent_notifications = []
+        from app.services.notification import NotificationService
+
+        def _fake_send_to_chat(svc, chat_id, message, *, topic_id=None):
+            self.sent_notifications.append(
+                {"chat_id": chat_id, "message": message, "topic_id": topic_id}
+            )
+            return True
+
+        monkeypatch.setattr(NotificationService, "send_to_chat", _fake_send_to_chat)
+
+    @staticmethod
+    def _room(test_app: TestClient, name: str = "music studio") -> dict:
+        recipients = test_app.get("/donations/recipients").json()
+        return next(r for r in recipients if r["name"] == name)
+
+    def test_list_recipients_requires_no_auth(self, test_app: TestClient):
+        """GET /donations/recipients returns F0 first, then all room entities."""
+        response = test_app.get("/donations/recipients")
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["id"] == f0_entity.id
+        assert data[0]["name"] == "F0"
+        assert data[0]["general"] is True
+        assert "balance_usd" in data[0]
+        room_names = [r["name"] for r in data[1:]]
+        assert "music studio" in room_names
+        assert "kitchen" in room_names
+        assert all(r["general"] is False for r in data[1:])
+
+    def test_recipients_exclude_inactive_rooms(self, test_app: TestClient, token):
+        room = self._room(test_app, "chill zone")
+        response = test_app.patch(
+            f"/entities/{room['id']}",
+            json={"active": False},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+        names = [r["name"] for r in test_app.get("/donations/recipients").json()]
+        assert room["name"] not in names
+
+        # restore for the rest of the class (the DB is shared within a test class)
+        response = test_app.patch(
+            f"/entities/{room['id']}",
+            json={"active": True},
+            headers={"x-token": token},
+        )
+        assert response.status_code == 200
+
+    def test_create_donation_with_room_recipient(self, test_app: TestClient):
+        """Recipient is stored on the deposit and echoed back by the API."""
+        room = self._room(test_app)
+        response = test_app.post(
+            "/donations",
+            json={
+                "amount": "10.00",
+                "currency": "GEL",
+                "recipient_entity_id": room["id"],
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["recipient_name"] == room["name"]
+
+        fetched = test_app.get(f"/donations/{data['deposit_uuid']}").json()
+        assert fetched["recipient_name"] == room["name"]
+
+    def test_create_donation_defaults_to_f0(self, test_app: TestClient):
+        response = test_app.post(
+            "/donations", json={"amount": "10.00", "currency": "GEL"}
+        )
+        assert response.status_code == 200
+        assert response.json()["recipient_name"] == "F0"
+
+    def test_create_donation_rejects_non_room_recipient(self, test_app: TestClient):
+        """Seeded entity 2 (cash_in) is not a room, so it cannot receive donations."""
+        response = test_app.post(
+            "/donations",
+            json={"amount": "10.00", "currency": "GEL", "recipient_entity_id": 2},
+        )
+        assert response.status_code == 422
+
+    def test_create_donation_rejects_unknown_recipient(self, test_app: TestClient):
+        response = test_app.post(
+            "/donations",
+            json={"amount": "10.00", "currency": "GEL", "recipient_entity_id": 999999},
+        )
+        assert response.status_code == 422
+
+    def test_completion_routes_transfer_to_room(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        """Completing a room donation transfers anonymous→room and notifies with the room name."""
+        room = self._room(test_app)
+        create = test_app.post(
+            "/donations",
+            json={
+                "amount": "12.00",
+                "currency": "GEL",
+                "comment": "for the drums",
+                "recipient_entity_id": room["id"],
+            },
+        )
+        assert create.status_code == 200
+        deposit_uuid = create.json()["deposit_uuid"]
+
+        config = _active_config()
+        monkeypatch.setattr(config, "donation_notification_chat_id", 99999)
+        _complete_deposit(deposit_uuid, config)
+
+        tx_resp = test_app.get(
+            "/transactions",
+            params={
+                "from_entity_id": anonymous_entity.id,
+                "to_entity_id": room["id"],
+            },
+            headers={"x-token": token},
+        )
+        assert tx_resp.status_code == 200
+        items = tx_resp.json()["items"]
+        assert len(items) == 1
+        assert Decimal(items[0]["amount"]) == Decimal("12.00")
+        assert "donation" in [t["name"] for t in items[0]["tags"]]
+
+        assert len(self.sent_notifications) == 1
+        message = self.sent_notifications[0]["message"]
+        assert room["name"] in message
+        assert "for the drums" in message
+
+    def test_subscription_invoice_routes_to_room(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        """Recipient survives the Stripe subscription round-trip: checkout metadata →
+        StripeAuthorization → monthly invoice deposit → anonymous→room transfer."""
+        from app.errors.stripe import StripeRequestError
+        from app.models.stripe_authorization import StripeAuthorization
+        from app.services.stripe import StripeInvoiceData, StripeService
+
+        # a room not used by other tests in this class (the DB is shared within it)
+        room = self._room(test_app, "electronics lab")
+        fake_session = {
+            "id": "cs_test_room",
+            "mode": "subscription",
+            "subscription": "sub_test_room",
+            "customer": "cus_test_room",
+            "metadata": {
+                "entity_id": str(anonymous_entity.id),
+                "mode": "guest_static",
+                "static_amount": "10.00",
+                "static_currency": "GEL",
+                "donation_comment": "monthly for music",
+                "donation_recipient_entity_id": str(room["id"]),
+            },
+        }
+        monkeypatch.setattr(
+            StripeService,
+            "retrieve_checkout_session",
+            lambda self, session_id, expand_setup_intent=False: fake_session,
+        )
+
+        def _no_subscription(self, subscription_id):
+            raise StripeRequestError("not available in tests")
+
+        monkeypatch.setattr(StripeService, "retrieve_subscription", _no_subscription)
+
+        sync = test_app.post(
+            "/donations/subscribe/sync",
+            params={"checkout_session_id": "cs_test_room"},
+        )
+        assert sync.status_code == 200, sync.text
+
+        config = _active_config()
+        db_conn = DatabaseConnection(config=config)
+        session = db_conn.get_session()
+        try:
+            auth = (
+                session.query(StripeAuthorization)
+                .filter_by(stripe_subscription_id="sub_test_room")
+                .one()
+            )
+            assert auth.donation_recipient_entity_id == room["id"]
+        finally:
+            session.close()
+
+        monkeypatch.setattr(config, "donation_notification_chat_id", 99999)
+        invoice = StripeInvoiceData(
+            id="in_test_room",
+            subscription_id="sub_test_room",
+            amount_paid=1000,
+            currency="gel",
+            billing_reason="subscription_cycle",
+        )
+        session = db_conn.get_session()
+        with UnitOfWork(session) as uow:
+            container = ServiceContainer(uow, config)
+            created = (
+                container.stripe_authorization_service.handle_subscription_invoice_paid(
+                    invoice
+                )
+            )
+        assert created is True
+
+        tx_resp = test_app.get(
+            "/transactions",
+            params={
+                "from_entity_id": anonymous_entity.id,
+                "to_entity_id": room["id"],
+            },
+            headers={"x-token": token},
+        )
+        items = tx_resp.json()["items"]
+        assert len(items) == 1
+        assert Decimal(items[0]["amount"]) == Decimal("10.00")
+
+        assert len(self.sent_notifications) == 1
+        message = self.sent_notifications[0]["message"]
+        assert "Subscription donation" in message
+        assert room["name"] in message

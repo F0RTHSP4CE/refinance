@@ -27,6 +27,7 @@ from app.schemas.deposit import (
 from app.schemas.stripe_authorization import StripeAuthorizationSetupSchema
 from app.seeding import (
     automatic_tag,
+    f0_entity,
     member_tag,
     resident_tag,
     stripe_deposit_provider,
@@ -62,6 +63,14 @@ def _resolved_static(
     if mode == StripeAuthorizationMode.GUEST_STATIC:
         return static_amount, static_currency
     return Decimal("0.00"), None
+
+
+def _metadata_recipient_id(metadata: dict) -> int | None:
+    raw = metadata.get("donation_recipient_entity_id")
+    try:
+        return int(raw) if raw else None
+    except (TypeError, ValueError):
+        return None
 
 
 class StripeAuthorizationService:
@@ -130,11 +139,20 @@ class StripeAuthorizationService:
         static_currency = (schema.static_currency or "").upper().strip() or None
 
         if mode == StripeAuthorizationMode.GUEST_STATIC:
+            recipient_id = schema.donation_recipient_entity_id
+            recipient_name = None
+            if recipient_id and recipient_id != f0_entity.id:
+                recipient = (
+                    self.db.query(Entity).filter(Entity.id == recipient_id).first()
+                )
+                recipient_name = recipient.name if recipient else None
             session = self.stripe_service.create_subscription_checkout_session(
                 entity_id=target_entity_id,
                 amount=static_amount,
                 currency=static_currency or "",
                 donation_comment=schema.donation_comment or None,
+                donation_recipient_entity_id=recipient_id,
+                donation_recipient_name=recipient_name,
                 success_url=self._resolve_setup_success_url(
                     schema.success_url, target_entity_id
                 ),
@@ -234,6 +252,7 @@ class StripeAuthorizationService:
 
         now = datetime.datetime.now()
         donation_comment = metadata.get("donation_comment") or None
+        donation_recipient_id = _metadata_recipient_id(metadata)
         if auth is None:
             auth = StripeAuthorization(
                 entity_id=entity_id,
@@ -249,6 +268,7 @@ class StripeAuthorizationService:
                 last_success_at=None,
                 last_attempt_at=now,
                 comment=donation_comment or None,
+                donation_recipient_entity_id=donation_recipient_id,
                 **card_fields,
             )
             self.db.add(auth)
@@ -265,6 +285,8 @@ class StripeAuthorizationService:
             auth.modified_at = now
             if donation_comment:
                 auth.comment = donation_comment
+            if donation_recipient_id is not None:
+                auth.donation_recipient_entity_id = donation_recipient_id
             for k, v in card_fields.items():
                 setattr(auth, k, v)
 
@@ -323,6 +345,7 @@ class StripeAuthorizationService:
         if static_currency:
             static_currency = str(static_currency).upper().strip()
         donation_comment = metadata.get("donation_comment") or None
+        donation_recipient_id = _metadata_recipient_id(metadata)
 
         # Retrieve subscription to get the default payment method for card details.
         card_fields: dict = {}
@@ -381,6 +404,7 @@ class StripeAuthorizationService:
                 last_success_at=None,
                 last_attempt_at=now,
                 comment=donation_comment or None,
+                donation_recipient_entity_id=donation_recipient_id,
                 **card_fields,
             )
             self.db.add(auth)
@@ -397,6 +421,8 @@ class StripeAuthorizationService:
             auth.modified_at = now
             if donation_comment:
                 auth.comment = donation_comment
+            if donation_recipient_id is not None:
+                auth.donation_recipient_entity_id = donation_recipient_id
             for k, v in card_fields.items():
                 setattr(auth, k, v)
 
@@ -450,6 +476,7 @@ class StripeAuthorizationService:
             currency=invoice.currency,
             details={
                 "donation_comment": auth.comment or None,
+                "donation_recipient_id": auth.donation_recipient_entity_id,
                 "stripe": {
                     "mode": "subscription_invoice",
                     "subscription_id": invoice.subscription_id,
@@ -839,6 +866,7 @@ class StripeAuthorizationService:
             currency=currency,
             details={
                 "donation_comment": auth.comment or None,
+                "donation_recipient_id": auth.donation_recipient_entity_id,
                 "stripe": {
                     "mode": "authorization_charge",
                     "charge_mode": StripeAuthorizationMode.GUEST_STATIC.value,

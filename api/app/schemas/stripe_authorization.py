@@ -21,6 +21,7 @@ class StripeAuthorizationSchema(BaseReadSchema):
     mode: StripeAuthorizationMode
     static_amount: CurrencyDecimal
     static_currency: str | None = None
+    donation_recipient_entity_id: int | None = None
     active: bool
     priority: int
     consecutive_error_count: int
@@ -41,6 +42,7 @@ class StripeAuthorizationSetupSchema(BaseSchema):
     success_url: str | None = None
     cancel_url: str | None = None
     donation_comment: str | None = None
+    donation_recipient_entity_id: int | None = None
 
     @field_validator("static_currency")
     def normalize_currency(cls, v):

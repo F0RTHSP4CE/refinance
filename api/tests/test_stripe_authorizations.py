@@ -29,6 +29,8 @@ def patch_setup_session(monkeypatch):
         amount,
         currency,
         donation_comment=None,
+        donation_recipient_entity_id=None,
+        donation_recipient_name=None,
         success_url,
         cancel_url,
     ):

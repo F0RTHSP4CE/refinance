@@ -10,6 +10,9 @@
                 <div class="deposit-detail-amount">{{ donation.amount }} {{ donation.currency }}</div>
                 <div class="deposit-detail-subtitle">
                     <span class="secondary">Status:</span> {{ donation.status }}
+                    {% if donation.recipient_name %}
+                    <span class="secondary">· →</span> {{ donation.recipient_name }}
+                    {% endif %}
                     <span class="secondary">· Thank you for supporting F0RTHSP4CE! 🎁</span>
                 </div>
             </div>
