@@ -14,6 +14,7 @@
 } %}
 {% set month_count = fees[0].fees|length if fees else 0 %}
 {% set total_columns = 2 + month_count %}
+{% set collapsed_groups = ["ex-resident", "ex-member"] %}
 <div class="fee-table-wrap">
     <table class="fee-table">
         <tbody>
@@ -24,7 +25,8 @@
             {% set next_group = fee_rows[loop.index].group if not loop.last else None %}
             {% if state.prev_group is not none and state.prev_group != row.group %}
             {% if state.prev_group in group_unpaid_totals %}
-            <tr class="fee-group-total-row">
+            <tr class="fee-group-total-row{% if state.prev_group in collapsed_groups %} fee-spoiler-row{% endif %}"
+                {% if state.prev_group in collapsed_groups %}data-fee-group="{{ state.prev_group }}" hidden{% endif %}>
                 <td></td>
                 <td class="fee-group-total-label">
                     Total unpaid:
@@ -44,10 +46,21 @@
             {% if state.prev_group != row.group %}
             <tr class="fee-category-row fee-category-row--{{ row.group }}">
                 <td colspan="{{ total_columns }}">
-                    <h2 class="fee-category-title">{{ group_titles.get(row.group, row.group|capitalize) }}</h2>
+                    <h2 class="fee-category-title">
+                        {% if row.group in collapsed_groups %}
+                        <button type="button" class="fee-spoiler-toggle" data-fee-group="{{ row.group }}"
+                            aria-expanded="false">
+                            <span class="fee-spoiler-icon" aria-hidden="true">▶</span>
+                            {{ group_titles.get(row.group, row.group|capitalize) }}
+                        </button>
+                        {% else %}
+                        {{ group_titles.get(row.group, row.group|capitalize) }}
+                        {% endif %}
+                    </h2>
                 </td>
             </tr>
-            <tr class="fee-category-arrow fee-category-arrow--{{ row.group }}">
+            <tr class="fee-category-arrow fee-category-arrow--{{ row.group }}{% if row.group in collapsed_groups %} fee-spoiler-row{% endif %}"
+                {% if row.group in collapsed_groups %}data-fee-group="{{ row.group }}" hidden{% endif %}>
                 <th></th>
                 <th></th>
                 {% if fees %}
@@ -60,7 +73,8 @@
                 {% endfor %}
                 {% endif %}
             </tr>
-            <tr class="fee-category-header fee-category-header--{{ row.group }}">
+            <tr class="fee-category-header fee-category-header--{{ row.group }}{% if row.group in collapsed_groups %} fee-spoiler-row{% endif %}"
+                {% if row.group in collapsed_groups %}data-fee-group="{{ row.group }}" hidden{% endif %}>
                 <th>#</th>
                 <th>Entity</th>
                 {% if fees %}
@@ -73,7 +87,8 @@
                 {% endif %}
             </tr>
             {% endif %}
-            <tr class="fee-row fee-row--{{ row.group }}">
+            <tr class="fee-row fee-row--{{ row.group }}{% if row.group in collapsed_groups %} fee-spoiler-row{% endif %}"
+                {% if row.group in collapsed_groups %}data-fee-group="{{ row.group }}" hidden{% endif %}>
                 <td class="fee-index fee-index--{{ row.group }}">{{ row.index + 1 }}</td>
                 <td class="fee-entity-cell">
                     <a href="{{ url_for('entity.detail', id=monthly_fee.entity.id) }}"
@@ -125,7 +140,8 @@
             </tr>
             {% if is_last or next_group != row.group %}
             {% if row.group in group_unpaid_totals and is_last %}
-            <tr class="fee-group-total-row">
+            <tr class="fee-group-total-row{% if row.group in collapsed_groups %} fee-spoiler-row{% endif %}"
+                {% if row.group in collapsed_groups %}data-fee-group="{{ row.group }}" hidden{% endif %}>
                 <td></td>
                 <td class="fee-group-total-label">
                     Total unpaid:
@@ -144,4 +160,21 @@
         </tbody>
     </table>
 </div>
+<script>
+    document.querySelectorAll('.fee-spoiler-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const group = toggle.dataset.feeGroup;
+            const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+
+            document.querySelectorAll('.fee-spoiler-row').forEach((row) => {
+                if (row.dataset.feeGroup === group) {
+                    row.hidden = !expanded;
+                }
+            });
+
+            toggle.setAttribute('aria-expanded', String(expanded));
+            toggle.querySelector('.fee-spoiler-icon').textContent = expanded ? '▼' : '▶';
+        });
+    });
+</script>
 {% endblock %}

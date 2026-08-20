@@ -58,6 +58,33 @@
     line-height: 1.05;
 }
 
+.fee-spoiler-toggle {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.fee-spoiler-toggle:hover,
+.fee-spoiler-toggle:focus-visible {
+    text-decoration: underline;
+}
+
+.fee-spoiler-icon {
+    display: inline-block;
+    width: 1em;
+    font-size: 0.8em;
+}
+
+.fee-spoiler-row[hidden] {
+    display: none;
+}
+
 .fee-category-gap {
     height: 6px;
     display: block;
