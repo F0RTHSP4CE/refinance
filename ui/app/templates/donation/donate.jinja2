@@ -3,20 +3,9 @@
 {% block title %}Give to F0RTHSP4CE{% endblock %}
 
 {% block extra_styles %}
-.sr-only {
-position: absolute;
-width: 1px;
-height: 1px;
-padding: 0;
-margin: -1px;
-overflow: hidden;
-clip: rect(0, 0, 0, 0);
-white-space: nowrap;
-border: 0;
-}
-
 .middle {
 align-self: center;
+width: 100%;
 }
 
 /* ── the form is one sentence; every slot is a field ── */
@@ -26,6 +15,7 @@ font-size: var(--fs-line);
 font-weight: 700;
 line-height: 1.5;
 letter-spacing: -0.01em;
+color: #9a9a9a;
 }
 
 /* one clause per line, so the sentence never breaks on a connector */
@@ -33,56 +23,183 @@ letter-spacing: -0.01em;
 display: block;
 }
 
-.slot {
+/* Resting values are all the same element: a button with its own rule. Inputs
+only overlay that button while the user is actively typing. This avoids every
+WebKit baseline and paint difference between buttons and text inputs. */
+.field,
+.editor-input {
+-webkit-appearance: none;
+appearance: none;
 font: inherit;
 letter-spacing: inherit;
-color: var(--fg);
-background: none;
 border: 0;
-border-bottom: 2px solid var(--accent);
 border-radius: 0;
-padding: 0;
-cursor: pointer;
-transition: color 0.1s;
+line-height: 1;
 }
 
-.slot:hover,
-.slot:focus-visible {
+.field {
+position: relative;
+display: inline-block;
+padding: 0 0 0.08em;
+background: none;
+color: var(--fg);
+vertical-align: baseline;
+text-align: left;
+cursor: pointer;
+transition: color 0.16s ease, filter 0.16s ease, transform 0.16s ease;
+}
+
+.field::after {
+content: "";
+position: absolute;
+right: 0;
+bottom: 0;
+left: 0;
+height: 2px;
+background: var(--accent);
+pointer-events: none;
+}
+
+button.field:active,
+.amount-option:active,
+.send:active {
+transform: translateY(1px);
+}
+
+.field:hover,
+.field:focus-visible,
+.editor-input:focus {
 color: var(--accent);
 }
 
-.slot:focus-visible {
+.field:focus-visible,
+.editor-input:focus {
 outline: 0;
 }
 
-input.slot {
-cursor: text;
+.editor {
+position: relative;
+display: inline-flex;
+align-items: baseline;
+white-space: nowrap;
+line-height: 1;
+vertical-align: baseline;
+}
+
+.editor > .field {
+vertical-align: baseline;
+}
+
+.editor-input {
+position: absolute;
+z-index: 1;
+inset: 0;
+display: block;
+width: 100%;
+min-width: 0;
+padding: 0 0 0.08em;
 outline: 0;
+background: transparent;
+color: var(--fg);
 caret-color: var(--accent);
-min-width: 1ch;
+cursor: text;
+opacity: 0;
+pointer-events: none;
 }
 
-input.slot::placeholder {
+.editor-input::placeholder {
 color: var(--dim);
 opacity: 1;
 }
 
-input.slot:focus {
+.editor.is-editing > .field,
+.amount-picker.is-open > .field {
+color: transparent;
+pointer-events: none;
+}
+
+.editor.is-editing > .editor-input,
+.amount-picker.is-open > .editor-input {
+opacity: 1;
+pointer-events: auto;
+}
+
+.name-display.is-placeholder {
+color: var(--dim);
+}
+
+.line.is-error .counter > .field::after {
+background: var(--error);
+}
+
+.amount-picker {
+position: relative;
+}
+
+.amount,
+.amount-custom {
+text-align: right;
+}
+
+.amount-menu {
+position: absolute;
+bottom: calc(100% + 0.35em);
+right: 0;
+z-index: 3;
+display: flex;
+min-width: 100%;
+flex-direction: column;
+align-items: stretch;
+background: var(--bg);
+transform-origin: bottom right;
+will-change: clip-path, opacity, transform;
+}
+
+.amount-menu[hidden] {
+display: none;
+}
+
+.amount-option {
+margin: 0;
+padding: 0.08em 0;
+border: 0;
+background: var(--bg);
+color: var(--fg);
+font: inherit;
+line-height: 1;
+text-align: right;
+cursor: pointer;
+}
+
+.amount-option:hover,
+.amount-option:focus-visible,
+.amount-option[aria-pressed="true"] {
 color: var(--accent);
+outline: 0;
 }
 
-/* the handle and the number are one control, so they share one unbroken rule */
-.counter {
+[data-role="compose"].is-amount-open .hint {
+visibility: hidden;
+}
+
+[data-role="compose"],
+[data-role="picker"] {
+will-change: opacity, transform;
+}
+
+.is-text-scrolling {
+display: inline-grid !important;
+height: 1em;
+overflow: hidden;
+line-height: 1;
+vertical-align: -0.04em;
+}
+
+.text-scroll-layer {
+grid-area: 1 / 1;
+display: block;
 white-space: nowrap;
-border-bottom: 2px solid var(--accent);
-}
-
-.counter > .slot {
-border-bottom: 0;
-}
-
-.line.is-error .counter {
-border-bottom-color: var(--error);
+will-change: opacity, transform;
 }
 
 /* ── picking a place takes over: the whole list at once, at full size ── */
@@ -123,29 +240,92 @@ color: var(--accent);
 color: var(--fg);
 }
 
+.room-list-balance {
+margin-left: 0.55em;
+color: var(--accent);
+font-size: 0.55em;
+font-weight: 400;
+letter-spacing: 0.02em;
+vertical-align: 0.12em;
+white-space: nowrap;
+}
+
 /* an eyebrow: it explains the sentence before you read it, and stays out of the
-   way of the sentence → action bond below */
+way of the sentence → action bond below */
 .hint {
 margin: 0 0 1.3rem;
 color: var(--dim);
-font-size: var(--fs-meta);
+font-size: clamp(14px, 1.4vw, 17px);
 letter-spacing: 0.06em;
+}
+
+/* Desktop wordmark beside the form; mobile gets a separate footer placement. */
+.currency-tile,
+.mobile-wordmark {
+text-decoration: none;
+}
+
+.currency-tile {
+display: grid;
+place-items: center;
+margin-top: 3.5rem;
+overflow: hidden;
+background: var(--bg);
+color: var(--accent);
+font-family: "Unbounded", sans-serif;
+font-size: clamp(96px, 34vw, 140px);
+font-weight: 700;
+line-height: 1;
+}
+
+.currency-mark {
+grid-area: 1 / 1;
+}
+
+.currency-mark {
+position: relative;
+color: #000;
+-webkit-text-stroke-width: clamp(4px, 0.5vw, 7px);
+-webkit-text-stroke-color: #242424;
+paint-order: stroke fill;
+}
+
+.currency-tile.is-logo-lighting .currency-mark,
+.mobile-wordmark.is-logo-lighting > span {
+animation: logo-light-fade 1s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+}
+
+@keyframes logo-light-fade {
+from {
+-webkit-text-stroke-color: #242424;
+filter: none;
+}
+to {
+-webkit-text-stroke-color: var(--accent);
+filter: drop-shadow(0 0 0.025em var(--accent)) drop-shadow(0 0 0.09em rgb(0 255 0 / 75%));
+}
+}
+
+.mobile-wordmark {
+display: none;
 }
 
 /* ── the one action ── */
 .send {
 display: inline-block;
 margin: 2.4rem 0 0;
-padding: 6px 0;
+padding: 0 0 0.08em;
 background: none;
 border: 0;
 border-bottom: 2px solid var(--accent);
 font: inherit;
 font-size: var(--fs-cta);
 font-weight: 700;
+line-height: 1;
 color: var(--accent);
 letter-spacing: 0.02em;
 cursor: pointer;
+transition: color 0.16s ease, border-color 0.16s ease, filter 0.16s ease, transform 0.16s ease;
 }
 
 .send:hover {
@@ -248,6 +428,121 @@ cursor: pointer;
 color: var(--fg);
 border-bottom-color: var(--fg);
 }
+
+@media (min-width: 900px) {
+.stage {
+max-width: 1200px;
+}
+
+.middle {
+display: grid;
+grid-template-columns: minmax(0, 1fr) clamp(360px, 38vw, 500px);
+gap: clamp(40px, 6vw, 80px);
+align-items: stretch;
+}
+
+.middle form {
+align-self: center;
+min-width: 0;
+}
+
+.currency-tile {
+margin-top: 0;
+aspect-ratio: 1;
+font-size: clamp(150px, 18vw, 250px);
+}
+}
+
+@media (max-width: 899px) {
+:root {
+--fs-line: clamp(27px, 7.2vw, 32px);
+--fs-cta: clamp(18px, 5vw, 21px);
+--fs-meta: 13px;
+}
+
+.stage {
+position: relative;
+min-height: max(100dvh, 920px);
+grid-template-rows: auto 1fr auto;
+gap: 0;
+padding-block: 48px;
+}
+
+.stage > .mark {
+grid-row: 1;
+grid-column: 1;
+}
+
+.stage > div:last-child {
+grid-row: 3;
+grid-column: 1;
+}
+
+.middle {
+position: absolute;
+top: calc(50dvh - clamp(24px, 4dvh, 40px));
+right: 22px;
+left: 22px;
+display: block;
+width: auto;
+z-index: 1;
+transform: translateY(-50%);
+}
+
+.currency-tile {
+display: none;
+}
+
+.mobile-wordmark {
+display: block;
+margin-bottom: 24px;
+color: var(--accent);
+font-family: "Unbounded", sans-serif;
+font-size: clamp(40px, 14vw, 56px);
+font-weight: 700;
+line-height: 1;
+}
+
+.mobile-wordmark > span {
+position: relative;
+display: inline-block;
+color: #000;
+-webkit-text-stroke-width: 2px;
+-webkit-text-stroke-color: #242424;
+paint-order: stroke fill;
+transform: translateX(-0.055em);
+}
+
+.hint {
+margin-bottom: 24px;
+font-size: 13px;
+letter-spacing: 0.015em;
+}
+
+.room {
+font-size: clamp(25px, 6.7vw, 29px);
+}
+
+.line {
+line-height: 1.5;
+}
+
+.room {
+min-height: 48px;
+padding-block: 0.12em;
+font-size: clamp(30px, 8vw, 42px);
+line-height: 1.25;
+}
+
+.send {
+margin-top: 40px;
+}
+
+.mark,
+.foot {
+letter-spacing: 0.03em;
+}
+}
 {% endblock %}
 
 {% set is_recurring = form_data.type == 'recurring' and stripe_configured %}
@@ -257,7 +552,7 @@ border-bottom-color: var(--fg);
 {% set comment = form_data.recurring_comment if is_recurring else form_data.comment %}
 {% set recipient = form_data.recurring_recipient if is_recurring else form_data.onetime_recipient %}
 {% set symbols = {"USD": "$", "EUR": "€", "GEL": "₾"} %}
-{% set ns = namespace(room="the whole space") %}
+{% set ns = namespace(room="whole hackerspace") %}
 {% for r in recipients %}{% if recipient == r.id|string and not r.general %}{% set ns.room = r.name %}{% endif %}{%
 endfor %}
 
@@ -265,37 +560,48 @@ endfor %}
 <div class="middle">
     <form method="post" novalidate>
         <input type="hidden" name="type" value="{{ 'recurring' if is_recurring else 'onetime' }}" data-role="type">
-        <input type="hidden" name="custom_amount" data-mirror="amount">
-        <input type="hidden" name="recurring_custom_amount" data-mirror="amount">
-        <input type="hidden" name="onetime_currency" data-mirror="currency">
-        <input type="hidden" name="recurring_currency" data-mirror="currency">
-        <input type="hidden" name="comment" data-mirror="name">
-        <input type="hidden" name="recurring_comment" data-mirror="name">
-        <input type="hidden" name="onetime_recipient" data-mirror="recipient">
-        <input type="hidden" name="recurring_recipient" data-mirror="recipient">
+        <input type="hidden" name="amount" value="{{ amount }}" data-mirror="amount">
+        <input type="hidden" name="currency" value="{{ currency }}" data-mirror="currency">
+        <input type="hidden" name="comment" value="{{ comment }}" data-mirror="name">
+        <input type="hidden" name="recipient" value="{{ recipient }}" data-mirror="recipient">
 
         <div data-role="compose">
-            <p class="hint">click anything underlined to change it</p>
+            <p class="hint">click anything to change</p>
 
             <p class="line" data-role="line">
-            <span class="clause"><span class="counter"><button type="button" class="slot" data-role="step"
-                        aria-label="Suggest another amount" title="Another amount">give</button>
-                    <label class="sr-only" for="amount">Amount</label><input id="amount" class="slot amount"
-                        data-role="amount" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="go"
-                        value="{{ amount }}" placeholder="0" maxlength="8"
-                        style="width: {{ [amount|length, 2] | max }}ch"></span>
-                <button type="button" class="slot" data-role="currency"
-                    aria-label="Currency: {{ currency }}. Change.">{{ symbols.get(currency, "$") }}</button>
-                {% if stripe_configured %}<span data-role="freq-lead">{{ 'each' if is_recurring else 'just'
-                    }}</span> <button type="button" class="slot" data-role="freq"
-                    aria-label="How often. Change.">{{ 'month' if is_recurring else 'once' }}</button>{% else %}just
-                once{% endif %}</span>
-            <span class="clause">to <button type="button" class="slot" data-role="dest" aria-expanded="false"
-                    aria-controls="rooms">{{ ns.room }}</button></span>
-            <span class="clause">from
-                <label class="sr-only" for="name">Your name</label><input id="name" class="slot name" data-role="name"
-                    type="text" maxlength="120" value="{{ comment }}" placeholder="anonymous" autocomplete="off"
-                    style="width: {{ [comment|length, 9] | max }}ch"></span>
+                <span class="clause">give <span class="editor counter amount-picker" data-role="amount-picker">
+                        <button id="amount" class="field amount" data-role="amount" type="button"
+                            value="{{ amount }}" aria-label="Donation amount: {{ amount }}. Change."
+                            aria-haspopup="dialog" aria-expanded="false">{{ amount }}</button>
+                        <input class="editor-input amount-custom" data-role="amount-custom" type="text"
+                            inputmode="decimal"
+                            autocomplete="off" enterkeyhint="done" maxlength="8" placeholder="0"
+                            aria-label="Custom donation amount" aria-hidden="true" tabindex="-1">
+                        <span class="amount-menu" data-role="amount-menu" role="dialog" aria-label="Donation amount"
+                            hidden>
+                            {% for option in [20, 10, 5] %}<button type="button" class="amount-option"
+                                data-amount="{{ option }}">{{ option }}</button>{% endfor %}
+                        </span>
+                    </span>
+                    <button type="button" class="field" data-role="currency"
+                        aria-label="Currency: {{ currency }}. Change.">{{ symbols.get(currency, "$")
+                        }}</button>
+                    {% if stripe_configured %}<span data-role="freq-lead">{{ 'each' if is_recurring else 'just'
+                        }}</span> <button type="button" class="field" data-role="freq"
+                        aria-label="How often. Change.">{{ 'month' if is_recurring else 'once' }}</button>{%
+                    else %}just
+                    once{% endif %}</span>
+                <span class="clause">to <button type="button" class="field" data-role="dest"
+                        aria-expanded="false" aria-controls="rooms">{{ ns.room }}</button></span>
+                <span class="clause">from <span class="editor name-editor" data-role="name-editor">
+                        <button type="button"
+                            class="field name-display{% if not comment %} is-placeholder{% endif %}"
+                            data-role="name-display" aria-label="Your name. Change."
+                            aria-expanded="false">{{ comment or 'anonymous' }}</button>
+                        <input id="name" class="editor-input name" data-role="name" type="text" maxlength="120"
+                            value="{{ comment }}" placeholder="anonymous" autocomplete="off" aria-label="Your name"
+                            aria-hidden="true" tabindex="-1">
+                    </span></span>
             </p>
 
             <p id="donation-js-error" class="notice" role="alert" hidden></p>
@@ -310,12 +616,20 @@ endfor %}
                 {% for r in recipients %}
                 <li><button type="button" class="room{% if recipient == r.id|string %} is-on{% endif %}"
                         data-id="{{ r.id }}" data-general="{{ '1' if r.general else '0' }}"
-                        data-label="{{ 'the whole space' if r.general else r.name }}">{{ 'the whole space' if r.general
-                        else r.name }}</button></li>
+                        data-label="{{ 'whole hackerspace' if r.general else r.name }}">{{
+                        'whole hackerspace' if r.general
+                        else r.name }}{% if not r.general and r.get('balance_usd') is not none %}<span
+                            class="room-list-balance">${{ r.get('balance_usd') | round | int }}</span>{% endif
+                        %}</button></li>
                 {% endfor %}
             </ul>
         </div>
     </form>
+
+    <a class="currency-tile" data-role="visual-tile" href="https://f0rth.space"
+        aria-label="Visit F0RTHSP4CE">
+        <span class="currency-mark" data-role="currency-mark">FØ</span>
+    </a>
 </div>
 
 {% if stripe_configured %}
@@ -323,10 +637,10 @@ endfor %}
     <div class="fee-body">
         <p id="fee-text" class="fee-text">under <b data-role="fee-threshold">10 ₾</b> a month, fees eat most of it.</p>
         <div class="fee-acts">
-            <button type="button" class="send" data-role="fee-raise" autofocus>give <span
-                    data-role="fee-threshold">10 ₾</span> instead</button>
-            <button type="button" class="fee-keep" data-role="fee-keep">keep <span
-                    data-role="fee-keep-amount">5 ₾</span></button>
+            <button type="button" class="send" data-role="fee-raise" autofocus>give <span data-role="fee-threshold">10
+                    ₾</span> instead</button>
+            <button type="button" class="fee-keep" data-role="fee-keep">keep <span data-role="fee-keep-amount">5
+                    ₾</span></button>
         </div>
     </div>
 </dialog>
@@ -334,6 +648,8 @@ endfor %}
 {% endblock %}
 
 {% block foot %}
+<a class="mobile-wordmark" data-role="mobile-wordmark" href="https://f0rth.space"
+    aria-label="Visit F0RTHSP4CE"><span>FØ</span></a>
 <p class="foot" data-role="foot"></p>
 {% endblock %}
 
@@ -343,254 +659,512 @@ endfor %}
         "use strict";
 
         const MIN = parseFloat({{ donation_min_amount | string | tojson }});
-        const MAX = parseFloat({{ donation_max_amount | string | tojson }});
-        const STRIPE = {{ 'true' if stripe_configured else 'false' }};
-        const PRESETS = { USD: ["5", "10", "25"], EUR: ["5", "10", "25"], GEL: ["10", "25", "50"] };
-        const SYMBOLS = { USD: "$", EUR: "€", GEL: "₾" };
-        const ORDER = ["GEL", "USD", "EUR"];
-        // ~10 GEL equivalents: below this, payout fees eat most of a monthly gift
-        const THRESHOLDS = { GEL: 10, USD: 4, EUR: 4 };
-        const FOOT = {
-            recurring: 'stripe · cancel any time · <a href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00" target="_blank" rel="noopener noreferrer">manage yours</a>',
-            onetime: "keepz · card or apple pay · no account"
+    const MAX = parseFloat({{ donation_max_amount | string | tojson }});
+    const STRIPE = {{ 'true' if stripe_configured else 'false' }};
+    const PRESETS = {
+        USD: ["5", "10", "15", "20"],
+        EUR: ["5", "10", "15", "20"],
+        GEL: ["5", "10", "15", "20"]
+    };
+    const SYMBOLS = { USD: "$", EUR: "€", GEL: "₾" };
+    const ORDER = ["GEL", "USD", "EUR"];
+    // ~10 GEL equivalents: below this, payout fees eat most of a monthly gift
+    const THRESHOLDS = { GEL: 10, USD: 4, EUR: 4 };
+    const FOOT = {
+        recurring: 'stripe · cancel any time · <a href="https://billing.stripe.com/p/login/dRmdRaerygMda2Gflgbsc00" target="_blank" rel="noopener noreferrer">manage yours</a>',
+        onetime: "keepz · card or apple pay · no account"
+    };
+    const MOTION_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+    const form = document.querySelector("form");
+    const line = document.querySelector('[data-role="line"]');
+    const typeInput = document.querySelector('[data-role="type"]');
+    const amountInput = document.querySelector('[data-role="amount"]');
+    const amountPicker = document.querySelector('[data-role="amount-picker"]');
+    const amountMenu = document.querySelector('[data-role="amount-menu"]');
+    const amountOptions = Array.from(amountMenu.querySelectorAll('[data-amount]'));
+    const amountCustomInput = document.querySelector('[data-role="amount-custom"]');
+    const nameInput = document.querySelector('[data-role="name"]');
+    const nameEditor = document.querySelector('[data-role="name-editor"]');
+    const nameDisplay = document.querySelector('[data-role="name-display"]');
+    const currencyBtn = document.querySelector('[data-role="currency"]');
+    const freqBtn = document.querySelector('[data-role="freq"]');
+    const freqLead = document.querySelector('[data-role="freq-lead"]');
+    const destBtn = document.querySelector('[data-role="dest"]');
+    const compose = document.querySelector('[data-role="compose"]');
+    const picker = document.querySelector('[data-role="picker"]');
+    const sendBtn = document.querySelector('[data-role="send"]');
+    const errorBox = document.getElementById("donation-js-error");
+    const foot = document.querySelector('[data-role="foot"]');
+    const visualTile = document.querySelector('[data-role="visual-tile"]');
+    const mobileWordmark = document.querySelector('[data-role="mobile-wordmark"]');
+    const mirrors = Array.from(document.querySelectorAll("[data-mirror]"));
+
+    const state = {
+        type: typeInput.value,
+        amount: amountInput.value,
+        currency: document.querySelector('[name="currency"]').value || "USD",
+        name: nameInput.value,
+        recipient: document.querySelector('[name="recipient"]').value ||
+            (picker.querySelector(".room.is-on") || { dataset: {} }).dataset.id || ""
+    };
+    // the server rendered the symbol, not the code — read the code back from it
+    state.currency = Object.keys(SYMBOLS).find((c) => SYMBOLS[c] === currencyBtn.textContent.trim()) || "USD";
+    let sending = false;
+    let amountMenuOpen = false;
+    let amountMenuAnimation = null;
+    let pickerOpen = !picker.hidden;
+    let pickerTransition = 0;
+    const textMotionTokens = new WeakMap();
+
+    function motionDuration(ms) {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : ms;
+    }
+
+    function settle(animation) {
+        return animation.finished.catch(() => undefined);
+    }
+
+    function slideText(element, previous, next, direction) {
+        if (!element || previous === next || motionDuration(1) === 0) {
+            if (element) element.textContent = next;
+            return;
+        }
+
+        const token = (textMotionTokens.get(element) || 0) + 1;
+        textMotionTokens.set(element, token);
+        element.getAnimations().forEach((animation) => animation.cancel());
+
+        const oldLayer = document.createElement("span");
+        const newLayer = document.createElement("span");
+        oldLayer.className = "text-scroll-layer";
+        newLayer.className = "text-scroll-layer";
+        oldLayer.textContent = previous;
+        newLayer.textContent = next;
+        oldLayer.setAttribute("aria-hidden", "true");
+        newLayer.setAttribute("aria-hidden", "true");
+        element.replaceChildren(oldLayer, newLayer);
+        element.classList.add("is-text-scrolling");
+
+        const outY = direction > 0 ? "-115%" : "115%";
+        const inY = direction > 0 ? "115%" : "-115%";
+        const options = {
+            duration: motionDuration(280),
+            easing: MOTION_EASE,
+            fill: "both"
         };
+        const oldAnimation = oldLayer.animate([
+            { transform: "translateY(0)", opacity: 1 },
+            { transform: `translateY(${outY})`, opacity: 0.15 }
+        ], options);
+        const newAnimation = newLayer.animate([
+            { transform: `translateY(${inY})`, opacity: 0.15 },
+            { transform: "translateY(0)", opacity: 1 }
+        ], options);
 
-        const form = document.querySelector("form");
-        const line = document.querySelector('[data-role="line"]');
-        const typeInput = document.querySelector('[data-role="type"]');
-        const amountInput = document.querySelector('[data-role="amount"]');
-        const stepBtn = document.querySelector('[data-role="step"]');
-        const nameInput = document.querySelector('[data-role="name"]');
-        const currencyBtn = document.querySelector('[data-role="currency"]');
-        const freqBtn = document.querySelector('[data-role="freq"]');
-        const freqLead = document.querySelector('[data-role="freq-lead"]');
-        const destBtn = document.querySelector('[data-role="dest"]');
-        const compose = document.querySelector('[data-role="compose"]');
-        const picker = document.querySelector('[data-role="picker"]');
-        const sendBtn = document.querySelector('[data-role="send"]');
-        const errorBox = document.getElementById("donation-js-error");
-        const foot = document.querySelector('[data-role="foot"]');
-        const mirrors = Array.from(document.querySelectorAll("[data-mirror]"));
+        Promise.all([settle(oldAnimation), settle(newAnimation)]).then(() => {
+            if (textMotionTokens.get(element) !== token) return;
+            element.classList.remove("is-text-scrolling");
+            element.textContent = next;
+        });
+    }
 
-        const state = {
-            type: typeInput.value,
-            currency: (document.querySelector('[name="recurring_currency"]').value || "USD"),
-            recipient: (picker.querySelector(".room.is-on") || { dataset: {} }).dataset.id || ""
-        };
-        // the server rendered the symbol, not the code — read the code back from it
-        state.currency = Object.keys(SYMBOLS).find((c) => SYMBOLS[c] === currencyBtn.textContent.trim()) || "USD";
-        let sending = false;
+    function num(raw) {
+        return parseFloat(String(raw).replace(",", "."));
+    }
 
-        function num(raw) {
-            return parseFloat(String(raw).replace(",", "."));
+    function fmt(n) {
+        return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+    }
+
+    function symbol() {
+        return SYMBOLS[state.currency] || "$";
+    }
+
+    function presets() {
+        return PRESETS[state.currency] || PRESETS.USD;
+    }
+
+    function startSubmitVisual() {
+        if (visualTile) visualTile.classList.add("is-logo-lighting");
+        if (mobileWordmark) mobileWordmark.classList.add("is-logo-lighting");
+    }
+
+    async function setAmountMenu(open, restoreFocus) {
+        if (open === amountMenuOpen) return;
+        amountMenuOpen = open;
+        if (amountMenuAnimation) amountMenuAnimation.cancel();
+        amountInput.setAttribute("aria-expanded", open ? "true" : "false");
+        amountCustomInput.tabIndex = open ? 0 : -1;
+        amountCustomInput.setAttribute("aria-hidden", open ? "false" : "true");
+
+        if (open) {
+            amountPicker.classList.add("is-open");
+            compose.classList.add("is-amount-open");
+            amountMenu.hidden = false;
+            amountMenuAnimation = amountMenu.animate([
+                {
+                    clipPath: "inset(100% 0 0 0)",
+                    opacity: 0.15,
+                    transform: "translateY(0.35em) scaleY(0.78)"
+                },
+                {
+                    clipPath: "inset(0 0 0 0)",
+                    opacity: 1,
+                    transform: "translateY(0) scaleY(1)"
+                }
+            ], {
+                duration: motionDuration(260),
+                easing: MOTION_EASE,
+                fill: "both"
+            });
+            amountOptions.forEach((option, index) => {
+                option.animate([
+                    { opacity: 0, transform: "translateY(0.28em)" },
+                    { opacity: 1, transform: "translateY(0)" }
+                ], {
+                    duration: motionDuration(190),
+                    delay: motionDuration((amountOptions.length - index - 1) * 22),
+                    easing: MOTION_EASE,
+                    fill: "both"
+                });
+            });
+            const selected = amountOptions.find((option) => num(option.dataset.amount) === num(state.amount));
+            amountCustomInput.value = selected ? "" : state.amount;
+            // iOS only opens the software keyboard when focus remains inside
+            // the original tap event. Deferring this by one frame breaks
+            // repeat entry even though Safari still paints a selection.
+            amountCustomInput.focus();
+            amountCustomInput.select();
+            await settle(amountMenuAnimation);
+            if (amountMenuOpen) amountMenuAnimation = null;
+            return;
         }
 
-        function fmt(n) {
-            return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
-        }
-
-        function symbol() {
-            return SYMBOLS[state.currency] || "$";
-        }
-
-        function presets() {
-            return PRESETS[state.currency] || PRESETS.USD;
-        }
-
-        function isRecurring() {
-            return STRIPE && state.type === "recurring";
-        }
-
-        function showError(message) {
-            errorBox.textContent = message;
-            errorBox.hidden = false;
-            line.classList.add("is-error");
-        }
-
-        function clearError() {
-            errorBox.hidden = true;
-            errorBox.textContent = "";
-            line.classList.remove("is-error");
-        }
-
-        function fitInput(input, min) {
-            const len = (input.value || input.placeholder || "").length;
-            input.style.width = Math.max(len, min) + "ch";
-        }
-
-        function render() {
-            fitInput(amountInput, 2);
-            fitInput(nameInput, 9);
-            currencyBtn.textContent = symbol();
-            currencyBtn.setAttribute("aria-label", "Currency: " + state.currency + ". Change.");
-            // the lead word stays plain white, so the run of rules is broken mid-line.
-            // keep the two lead words the same length — the font is monospaced, so
-            // equal length is what stops the slot beside them from sliding on a swap
-            if (freqBtn) {
-                freqBtn.textContent = isRecurring() ? "month" : "once";
-                if (freqLead) freqLead.textContent = isRecurring() ? "each" : "just";
+        amountMenuAnimation = amountMenu.animate([
+            {
+                clipPath: "inset(0 0 0 0)",
+                opacity: 1,
+                transform: "translateY(0) scaleY(1)"
+            },
+            {
+                clipPath: "inset(100% 0 0 0)",
+                opacity: 0,
+                transform: "translateY(0.28em) scaleY(0.84)"
             }
-            typeInput.value = state.type;
-            picker.querySelectorAll(".room").forEach((room) => {
-                const on = room.dataset.id === state.recipient;
-                room.classList.toggle("is-on", on);
-                if (on) destBtn.textContent = room.dataset.label;
-            });
-            mirrors.forEach((el) => {
-                const key = el.dataset.mirror;
-                if (key === "amount") el.value = amountInput.value.trim();
-                if (key === "currency") el.value = state.currency;
-                if (key === "name") el.value = nameInput.value.trim();
-                if (key === "recipient") el.value = state.recipient;
-            });
-            if (foot) foot.innerHTML = isRecurring() ? FOOT.recurring : FOOT.onetime;
-        }
-
-        // "give" never changes its label, so it stays a target you can hit at any
-        // time — including when the slot holds a number of your own, which restarts
-        // the cycle from the first suggestion
-        stepBtn.addEventListener("click", () => {
-            const list = presets();
-            const at = list.findIndex((p) => num(p) === num(amountInput.value));
-            amountInput.value = list[(at + 1) % list.length];
-            clearError();
-            render();
+        ], {
+            duration: motionDuration(180),
+            easing: "cubic-bezier(0.7, 0, 0.84, 0)",
+            fill: "both"
         });
+        await settle(amountMenuAnimation);
+        if (amountMenuOpen) return;
+        amountMenu.hidden = true;
+        amountPicker.classList.remove("is-open");
+        compose.classList.remove("is-amount-open");
+        amountMenuAnimation = null;
+        if (restoreFocus) amountInput.focus();
+    }
 
-        amountInput.addEventListener("input", () => {
-            let clean = amountInput.value.replace(/[^0-9.,]/g, "");
-            const sep = clean.search(/[.,]/);
-            if (sep !== -1) clean = clean.slice(0, sep + 1) + clean.slice(sep + 1).replace(/[.,]/g, "");
-            clean = clean.replace(/([.,]\d{2})\d+$/, "$1");
-            if (clean !== amountInput.value) amountInput.value = clean;
-            clearError();
-            render();
+    function isRecurring() {
+        return STRIPE && state.type === "recurring";
+    }
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+        line.classList.add("is-error");
+    }
+
+    function clearError() {
+        errorBox.hidden = true;
+        errorBox.textContent = "";
+        line.classList.remove("is-error");
+    }
+
+    function render() {
+        const amount = state.amount || "0";
+        const name = state.name.trim();
+        amountInput.value = state.amount;
+        amountInput.textContent = amount;
+        amountInput.setAttribute("aria-label", "Donation amount: " + amount + ". Change.");
+        if (nameInput.value !== state.name) nameInput.value = state.name;
+        nameDisplay.textContent = name || "anonymous";
+        nameDisplay.classList.toggle("is-placeholder", !name);
+        nameDisplay.setAttribute("aria-label", name ? "Your name: " + name + ". Change." : "Your name. Change.");
+        amountOptions.forEach((option) => {
+            option.setAttribute("aria-pressed", num(option.dataset.amount) === num(state.amount) ? "true" : "false");
         });
-
-        amountInput.addEventListener("blur", () => {
-            amountInput.value = amountInput.value.trim().replace(/[.,]$/, "");
-            render();
-        });
-
-        nameInput.addEventListener("input", render);
-
-        // switching currency keeps the chosen tier (10 $ → 25 ₾)
-        currencyBtn.addEventListener("click", () => {
-            const tier = presets().findIndex((p) => num(p) === num(amountInput.value));
-            state.currency = ORDER[(ORDER.indexOf(state.currency) + 1) % ORDER.length];
-            if (tier >= 0) amountInput.value = presets()[tier];
-            clearError();
-            render();
-        });
-
+        currencyBtn.textContent = symbol();
+        currencyBtn.setAttribute("aria-label", "Currency: " + state.currency + ". Change.");
         if (freqBtn) {
-            freqBtn.addEventListener("click", () => {
-                state.type = isRecurring() ? "onetime" : "recurring";
-                clearError();
-                render();
-            });
+            freqBtn.textContent = isRecurring() ? "month" : "once";
+            if (freqLead) freqLead.textContent = isRecurring() ? "each" : "just";
         }
-
-        // choosing a place is its own view: the sentence steps aside and the whole
-        // list stands in its place, so nothing hangs off the end of a line
-        function showPicker(open) {
-            compose.hidden = open;
-            picker.hidden = !open;
-            destBtn.setAttribute("aria-expanded", open ? "true" : "false");
-            if (open) {
-                const current = picker.querySelector(".room.is-on") || picker.querySelector(".room");
-                if (current) current.focus();
-            } else {
-                destBtn.focus();
-            }
-        }
-
-        destBtn.addEventListener("click", () => showPicker(true));
-
-        picker.addEventListener("click", (event) => {
-            const room = event.target.closest(".room");
-            if (!room) return;
-            state.recipient = room.dataset.id;
-            render();
-            showPicker(false);
+        typeInput.value = state.type;
+        picker.querySelectorAll(".room").forEach((room) => {
+            const on = room.dataset.id === state.recipient;
+            room.classList.toggle("is-on", on);
+            if (on) destBtn.textContent = room.dataset.label;
         });
-
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape" && !picker.hidden) showPicker(false);
+        mirrors.forEach((el) => {
+            const key = el.dataset.mirror;
+            if (key === "amount") el.value = state.amount.trim();
+            if (key === "currency") el.value = state.currency;
+            if (key === "name") el.value = state.name.trim();
+            if (key === "recipient") el.value = state.recipient;
         });
+        if (foot) foot.innerHTML = isRecurring() ? FOOT.recurring : FOOT.onetime;
+    }
 
-        const fee = document.getElementById("fee");
-        let feeAccepted = false;
+    amountInput.addEventListener("click", () => setAmountMenu(true, false));
 
-        function threshold() {
-            return THRESHOLDS[state.currency];
+    amountInput.addEventListener("keydown", (event) => {
+        if (["Enter", " ", "ArrowUp", "ArrowDown"].includes(event.key)) {
+            event.preventDefault();
+            setAmountMenu(true, false);
         }
+    });
 
-        function resubmit() {
-            if (form.requestSubmit) form.requestSubmit();
-            else form.submit();
-        }
-
-        if (fee) {
-            fee.querySelector('[data-role="fee-raise"]').addEventListener("click", () => {
-                amountInput.value = String(threshold());
-                render();
-                fee.close();
-                resubmit();
-            });
-            fee.querySelector('[data-role="fee-keep"]').addEventListener("click", () => {
-                feeAccepted = true;
-                fee.close();
-                resubmit();
-            });
-        }
-
-        function openFee() {
-            const label = threshold() + " " + symbol();
-            fee.querySelectorAll('[data-role="fee-threshold"]').forEach((el) => {
-                el.textContent = label;
-            });
-            const keep = fee.querySelector('[data-role="fee-keep-amount"]');
-            if (keep) keep.textContent = amountInput.value.trim() + " " + symbol();
-            fee.showModal();
-        }
-
-        function validate() {
-            const raw = amountInput.value.trim();
-            if (!raw) return "pick an amount, or type one";
-            if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return "numbers only, up to 2 decimals";
-            const value = num(raw);
-            if (isNaN(value) || value <= 0) return "more than zero, please";
-            if (value < MIN) return "the smallest we can take is " + fmt(MIN);
-            if (value > MAX) return "the largest we can take here is " + fmt(MAX);
-            return null;
-        }
-
-        form.addEventListener("submit", (event) => {
-            clearError();
-            const error = validate();
-            if (error) {
-                event.preventDefault();
-                showError(error);
-                amountInput.focus();
-                return;
-            }
-            if (isRecurring() && fee && !feeAccepted && threshold() && num(amountInput.value) < threshold()) {
-                event.preventDefault();
-                openFee();
-                return;
-            }
-            if (sending) {
-                event.preventDefault();
-                return;
-            }
-            sending = true;
-            sendBtn.disabled = true;
-            sendBtn.classList.add("is-sending");
-            sendBtn.firstChild.textContent = "sending ";
-        });
-
+    amountMenu.addEventListener("click", (event) => {
+        const option = event.target.closest("[data-amount]");
+        if (!option) return;
+        state.amount = option.dataset.amount;
+        clearError();
         render();
-    })();
+        setAmountMenu(false, true);
+    });
+
+    amountMenu.addEventListener("keydown", (event) => {
+        if (!["ArrowUp", "ArrowDown"].includes(event.key)) return;
+        event.preventDefault();
+        const controls = [...amountOptions, amountCustomInput];
+        const at = Math.max(0, controls.indexOf(document.activeElement));
+        const direction = event.key === "ArrowUp" ? -1 : 1;
+        controls[(at + direction + controls.length) % controls.length].focus();
+    });
+
+    amountCustomInput.addEventListener("input", () => {
+        let clean = amountCustomInput.value.replace(/[^0-9.,]/g, "");
+        const sep = clean.search(/[.,]/);
+        if (sep !== -1) clean = clean.slice(0, sep + 1) + clean.slice(sep + 1).replace(/[.,]/g, "");
+        clean = clean.replace(/([.,]\d{2})\d+$/, "$1");
+        if (clean !== amountCustomInput.value) amountCustomInput.value = clean;
+        if (!clean) return;
+        state.amount = clean;
+        clearError();
+        render();
+    });
+
+    amountCustomInput.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        if (amountCustomInput.value) setAmountMenu(false, true);
+    });
+
+    nameInput.addEventListener("input", () => {
+        state.name = nameInput.value;
+        render();
+    });
+
+    function setNameEditing(open, restoreFocus) {
+        nameEditor.classList.toggle("is-editing", open);
+        nameDisplay.setAttribute("aria-expanded", open ? "true" : "false");
+        nameInput.tabIndex = open ? 0 : -1;
+        nameInput.setAttribute("aria-hidden", open ? "false" : "true");
+        if (open) {
+            nameInput.focus();
+            nameInput.select();
+        } else if (restoreFocus) {
+            nameDisplay.focus();
+        }
+    }
+
+    nameDisplay.addEventListener("click", () => setNameEditing(true, false));
+
+    nameInput.addEventListener("blur", () => {
+        state.name = nameInput.value;
+        render();
+        setNameEditing(false, false);
+    });
+
+    nameInput.addEventListener("keydown", (event) => {
+        if (!["Enter", "Escape"].includes(event.key)) return;
+        event.preventDefault();
+        setNameEditing(false, true);
+    });
+
+    // switching currency keeps the chosen tier (10 $ → 25 ₾)
+    currencyBtn.addEventListener("click", () => {
+        const previousSymbol = symbol();
+        const tier = presets().findIndex((p) => num(p) === num(state.amount));
+        state.currency = ORDER[(ORDER.indexOf(state.currency) + 1) % ORDER.length];
+        if (tier >= 0) state.amount = presets()[tier];
+        clearError();
+        render();
+        slideText(currencyBtn, previousSymbol, symbol(), 1);
+    });
+
+    if (freqBtn) {
+        freqBtn.addEventListener("click", () => {
+            // Commit the live editor value before changing cadence. In iOS
+            // Safari the click can run before the input/blur event finishes.
+            state.name = nameInput.value;
+            const wasRecurring = isRecurring();
+            const previousLead = wasRecurring ? "each" : "just";
+            const previousFrequency = wasRecurring ? "month" : "once";
+            state.type = isRecurring() ? "onetime" : "recurring";
+            clearError();
+            render();
+            const direction = isRecurring() ? 1 : -1;
+            slideText(freqLead, previousLead, isRecurring() ? "each" : "just", direction);
+            slideText(freqBtn, previousFrequency, isRecurring() ? "month" : "once", direction);
+        });
+    }
+
+    // choosing a place is its own view: the sentence steps aside and the whole
+    // list stands in its place, so nothing hangs off the end of a line
+    async function showPicker(open) {
+        if (open === pickerOpen) return;
+        pickerOpen = open;
+        const transition = ++pickerTransition;
+        const outgoing = open ? compose : picker;
+        const incoming = open ? picker : compose;
+        const outgoingX = open ? "-14%" : "14%";
+        const incomingX = open ? "18%" : "-18%";
+        destBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open && amountMenuOpen) setAmountMenu(false, false);
+
+        const outgoingAnimation = outgoing.animate([
+            { opacity: 1, transform: "translateX(0)" },
+            { opacity: 0, transform: `translateX(${outgoingX})` }
+        ], {
+            duration: motionDuration(150),
+            easing: "cubic-bezier(0.55, 0, 1, 0.45)",
+            fill: "both"
+        });
+        await settle(outgoingAnimation);
+        outgoingAnimation.cancel();
+        if (transition !== pickerTransition) return;
+        outgoing.hidden = true;
+        incoming.hidden = false;
+
+        const incomingAnimation = incoming.animate([
+            { opacity: 0, transform: `translateX(${incomingX})` },
+            { opacity: 1, transform: "translateX(0)" }
+        ], {
+            duration: motionDuration(240),
+            easing: MOTION_EASE,
+            fill: "both"
+        });
+        await settle(incomingAnimation);
+        incomingAnimation.cancel();
+        if (transition !== pickerTransition) return;
+
+        if (open) {
+            const current = picker.querySelector(".room.is-on") || picker.querySelector(".room");
+            if (current) current.focus();
+        } else destBtn.focus();
+    }
+
+    destBtn.addEventListener("click", () => showPicker(true));
+
+    picker.addEventListener("click", (event) => {
+        const room = event.target.closest(".room");
+        if (!room) return;
+        state.recipient = room.dataset.id;
+        render();
+        showPicker(false);
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") return;
+        if (!amountMenu.hidden) {
+            setAmountMenu(false, true);
+        } else if (pickerOpen) {
+            showPicker(false);
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!amountMenu.hidden && !amountPicker.contains(event.target)) {
+            setAmountMenu(false, false);
+        }
+    });
+
+    const fee = document.getElementById("fee");
+    let feeAccepted = false;
+
+    function threshold() {
+        return THRESHOLDS[state.currency];
+    }
+
+    function resubmit() {
+        if (form.requestSubmit) form.requestSubmit();
+        else form.submit();
+    }
+
+    if (fee) {
+        fee.querySelector('[data-role="fee-raise"]').addEventListener("click", () => {
+            state.amount = String(threshold());
+            render();
+            fee.close();
+            resubmit();
+        });
+        fee.querySelector('[data-role="fee-keep"]').addEventListener("click", () => {
+            feeAccepted = true;
+            fee.close();
+            resubmit();
+        });
+    }
+
+    function openFee() {
+        const label = threshold() + " " + symbol();
+        fee.querySelectorAll('[data-role="fee-threshold"]').forEach((el) => {
+            el.textContent = label;
+        });
+        const keep = fee.querySelector('[data-role="fee-keep-amount"]');
+        if (keep) keep.textContent = state.amount.trim() + " " + symbol();
+        fee.showModal();
+    }
+
+    function validate() {
+        const raw = state.amount.trim();
+        if (!raw) return "pick an amount, or type one";
+        if (!/^\d+(?:[.,]\d{1,2})?$/.test(raw)) return "numbers only, up to 2 decimals";
+        const value = num(raw);
+        if (isNaN(value) || value <= 0) return "more than zero, please";
+        if (value < MIN) return "the smallest we can take is " + fmt(MIN);
+        if (value > MAX) return "the largest we can take here is " + fmt(MAX);
+        return null;
+    }
+
+    form.addEventListener("submit", (event) => {
+        clearError();
+        const error = validate();
+        if (error) {
+            event.preventDefault();
+            showError(error);
+            amountInput.focus();
+            return;
+        }
+        if (isRecurring() && fee && !feeAccepted && threshold() && num(state.amount) < threshold()) {
+            event.preventDefault();
+            openFee();
+            return;
+        }
+        if (sending) {
+            event.preventDefault();
+            return;
+        }
+        sending = true;
+        startSubmitVisual();
+        sendBtn.disabled = true;
+        sendBtn.classList.add("is-sending");
+        sendBtn.firstChild.textContent = "sending ";
+    });
+
+    render();
+    }) ();
 </script>
 {% endblock %}

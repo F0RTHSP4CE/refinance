@@ -8,11 +8,32 @@ from app.app import app
 from app.config import get_config
 from app.db import DatabaseConnection
 from app.dependencies.services import ServiceContainer
+from app.routes.donation import _balance_total_usd
 from app.seeding import anonymous_entity, f0_entity
 from app.uow import UnitOfWork
 from fastapi.testclient import TestClient
 
 FAKE_PAYMENT_URL = "https://keepz.me/pay/testtoken123"
+
+
+def test_balance_total_usd_converts_completed_currency_balances():
+    class FakeCurrencyExchangeService:
+        rates = {"GEL": Decimal("0.4"), "EUR": Decimal("1.2")}
+
+        def calculate_conversion(
+            self, source_amount, target_amount, source_currency, target_currency
+        ):
+            assert target_amount is None
+            assert target_currency == "USD"
+            converted = source_amount * self.rates[source_currency]
+            return source_amount, converted, self.rates[source_currency]
+
+    total = _balance_total_usd(
+        {"USD": Decimal("10"), "GEL": Decimal("20"), "EUR": Decimal("-5")},
+        FakeCurrencyExchangeService(),
+    )
+
+    assert total == 12.0
 
 
 def _patch_keepz(monkeypatch):
@@ -325,7 +346,10 @@ class TestDonationRecipients:
         response = test_app.get("/donations/recipients")
         assert response.status_code == 200
         data = response.json()
-        assert data[0] == {"id": f0_entity.id, "name": "F0", "general": True}
+        assert data[0]["id"] == f0_entity.id
+        assert data[0]["name"] == "F0"
+        assert data[0]["general"] is True
+        assert "balance_usd" in data[0]
         room_names = [r["name"] for r in data[1:]]
         assert "music studio" in room_names
         assert "kitchen" in room_names

@@ -1,8 +1,11 @@
 """Public guest donation endpoints — no authentication required."""
 
+from decimal import Decimal
 from uuid import UUID
 
 from app.dependencies.services import (
+    get_balance_service,
+    get_currency_exchange_service,
     get_deposit_service,
     get_entity_service,
     get_keepz_deposit_provider_service,
@@ -25,6 +28,8 @@ from app.schemas.donation import (
 from app.schemas.entity import EntityFiltersSchema
 from app.schemas.stripe_authorization import StripeAuthorizationSetupSchema
 from app.seeding import anonymous_entity, donation_tag, f0_entity, room_tag
+from app.services.balance import BalanceService
+from app.services.currency_exchange import CurrencyExchangeService
 from app.services.deposit import DepositService
 from app.services.deposit_providers.keepz import KeepzDepositProviderService
 from app.services.entity import EntityService
@@ -67,19 +72,65 @@ def _recipient_name(deposit, entity_service: EntityService) -> str | None:
         return None
 
 
+def _balance_total_usd(
+    completed: dict, currency_exchange_service: CurrencyExchangeService
+) -> float | None:
+    """Return a completed multi-currency balance in USD, or None if rates fail."""
+    total = Decimal("0")
+    for currency, raw_amount in completed.items():
+        amount = (
+            raw_amount.to_decimal()
+            if hasattr(raw_amount, "to_decimal")
+            else Decimal(str(raw_amount))
+        )
+        if amount == 0:
+            continue
+        if currency.upper() == "USD":
+            total += amount
+            continue
+        sign = Decimal("1") if amount > 0 else Decimal("-1")
+        try:
+            _, converted, _ = currency_exchange_service.calculate_conversion(
+                source_amount=abs(amount),
+                target_amount=None,
+                source_currency=currency,
+                target_currency="USD",
+            )
+        except Exception:
+            return None
+        total += converted * sign
+    return float(total)
+
+
 @donation_router.get("/recipients", response_model=list[DonationRecipientSchema])
 def list_donation_recipients(
     entity_service: EntityService = Depends(get_entity_service),
+    balance_service: BalanceService = Depends(get_balance_service),
+    currency_exchange_service: CurrencyExchangeService = Depends(
+        get_currency_exchange_service
+    ),
 ):
     """Public list of entities a guest donation can be routed to: F0 + rooms."""
     f0 = entity_service.get(f0_entity.id)
     rooms = entity_service.get_all(
         EntityFiltersSchema(active=True, tags_ids=[room_tag.id]), skip=0, limit=100
     ).items
-    return [DonationRecipientSchema(id=f0.id, name=f0.name, general=True)] + [
-        DonationRecipientSchema(id=room.id, name=room.name)
+    recipients = [f0] + [
+        room
         for room in sorted(rooms, key=lambda room: room.name.lower())
         if room.id != f0_entity.id
+    ]
+    balances = balance_service.get_balances_many([entity.id for entity in recipients])
+    return [
+        DonationRecipientSchema(
+            id=entity.id,
+            name=entity.name,
+            general=entity.id == f0.id,
+            balance_usd=_balance_total_usd(
+                balances[entity.id].completed, currency_exchange_service
+            ),
+        )
+        for entity in recipients
     ]
 
 

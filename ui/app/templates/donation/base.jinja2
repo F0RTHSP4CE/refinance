@@ -5,13 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000000">
-    <title>{% block title %}F0RTHSP4CE{% endblock %}</title>
+    <title>{% block title %}whole hackerspace{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&family=Unbounded:wght@700&display=swap"
+        rel="stylesheet">
     <style>
-        /* One family, three sizes, four colours. Green marks only what you can
-           change or press — never decoration. */
+        /* One family, three sizes, four colours. Green marks donation controls
+           and the currency artwork. */
         :root {
             --bg: #000000;
             --fg: #ffffff;
@@ -63,7 +64,6 @@
 
         .mark {
             margin: 0;
-            text-transform: lowercase;
         }
 
         .foot {
@@ -93,8 +93,7 @@
             outline-offset: 4px;
         }
 
-        {% block extra_styles %}
-        {% endblock %}
+        {% block extra_styles %}{% endblock %}
 
         @media (prefers-reduced-motion: reduce) {
             * {
@@ -107,7 +106,7 @@
 
 <body>
     <div class="stage">
-        <p class="mark">f0rthsp4ce</p>
+        <p class="mark">F0RTHSP4CE</p>
 
         {% block content %}{% endblock %}
 

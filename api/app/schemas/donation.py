@@ -38,6 +38,7 @@ class DonationRecipientSchema(BaseModel):
     id: int
     name: str
     general: bool = False
+    balance_usd: float | None = None
 
 
 class DonationSubscribeSchema(BaseModel):

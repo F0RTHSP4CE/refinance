@@ -114,14 +114,20 @@ def _recipient_payload(recipients: list[dict], raw_value: str) -> dict:
 @donation_bp.route("/", methods=["GET", "POST"])
 def donate():
     recipients = _fetch_recipients()
-    default_recipient = str(recipients[0]["id"]) if recipients else ""
+    default_destination = _match_recipient(recipients, "hackerspace")
+    default_recipient = (
+        str(default_destination["id"] if default_destination else recipients[0]["id"])
+        if recipients
+        else ""
+    )
+    default_donation_type = "recurring" if Config.STRIPE_CONFIGURED else "onetime"
 
     form_data = {
         "comment": "",
         "recurring_comment": "",
         "preset_amount": "10",
         "custom_amount": "",
-        "type": "onetime",
+        "type": default_donation_type,
         "onetime_currency": "USD",
         "recurring_preset_amount": "10",
         "recurring_custom_amount": "",
@@ -137,32 +143,61 @@ def donate():
         form_data["recurring_recipient"] = str(preselected["id"])
 
     if request.method == "POST":
-        donation_type = (request.form.get("type") or "onetime").strip().lower()
-        form_data = {
-            "comment": (request.form.get("comment") or "").strip(),
-            "recurring_comment": (request.form.get("recurring_comment") or "").strip(),
-            "preset_amount": (request.form.get("preset_amount") or "").strip(),
-            "custom_amount": (request.form.get("custom_amount") or "").strip(),
-            "type": donation_type,
-            "onetime_currency": (request.form.get("onetime_currency") or "USD")
-            .strip()
-            .upper(),
-            "recurring_preset_amount": (
-                request.form.get("recurring_preset_amount") or ""
-            ).strip(),
-            "recurring_custom_amount": (
-                request.form.get("recurring_custom_amount") or ""
-            ).strip(),
-            "recurring_currency": (request.form.get("recurring_currency") or "USD")
-            .strip()
-            .upper(),
-            "onetime_recipient": (
-                request.form.get("onetime_recipient") or default_recipient
-            ).strip(),
-            "recurring_recipient": (
-                request.form.get("recurring_recipient") or default_recipient
-            ).strip(),
-        }
+        donation_type = (
+            (request.form.get("type") or default_donation_type).strip().lower()
+        )
+        if "amount" in request.form:
+            # The current UI is one form with one set of values. Donation type
+            # only selects the payment path; it must not select another copy of
+            # amount, currency, comment, or recipient.
+            shared_amount = (request.form.get("amount") or "").strip()
+            shared_currency = (request.form.get("currency") or "USD").strip().upper()
+            shared_comment = (request.form.get("comment") or "").strip()
+            shared_recipient = (
+                request.form.get("recipient") or default_recipient
+            ).strip()
+            form_data = {
+                "comment": shared_comment,
+                "recurring_comment": shared_comment,
+                "preset_amount": "",
+                "custom_amount": shared_amount,
+                "type": donation_type,
+                "onetime_currency": shared_currency,
+                "recurring_preset_amount": "",
+                "recurring_custom_amount": shared_amount,
+                "recurring_currency": shared_currency,
+                "onetime_recipient": shared_recipient,
+                "recurring_recipient": shared_recipient,
+            }
+        else:
+            # Accept submissions from an already-open copy of the previous UI.
+            form_data = {
+                "comment": (request.form.get("comment") or "").strip(),
+                "recurring_comment": (
+                    request.form.get("recurring_comment") or ""
+                ).strip(),
+                "preset_amount": (request.form.get("preset_amount") or "").strip(),
+                "custom_amount": (request.form.get("custom_amount") or "").strip(),
+                "type": donation_type,
+                "onetime_currency": (request.form.get("onetime_currency") or "USD")
+                .strip()
+                .upper(),
+                "recurring_preset_amount": (
+                    request.form.get("recurring_preset_amount") or ""
+                ).strip(),
+                "recurring_custom_amount": (
+                    request.form.get("recurring_custom_amount") or ""
+                ).strip(),
+                "recurring_currency": (request.form.get("recurring_currency") or "USD")
+                .strip()
+                .upper(),
+                "onetime_recipient": (
+                    request.form.get("onetime_recipient") or default_recipient
+                ).strip(),
+                "recurring_recipient": (
+                    request.form.get("recurring_recipient") or default_recipient
+                ).strip(),
+            }
 
         if donation_type == "recurring":
             try:
