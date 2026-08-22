@@ -140,7 +140,7 @@
             {% endif %}
         </section>
 
-        {% if stripe_configured %}
+        {% if stripe_configured and g.actor_entity and g.actor_entity.id == entity.id %}
         <section class="entity-card entity-stripe-card">
             <h3 class="entity-card-title">Stripe Cards</h3>
 
