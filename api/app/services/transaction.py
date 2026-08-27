@@ -138,8 +138,6 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
             invoice_service = self._get_invoice_service()
             invoice = invoice_service.get(schema.invoice_id)
 
-            # Collect available currencies from invoice amounts
-            available_currencies = set()
             amounts_by_currency: dict[str, Decimal] = {}
             if invoice.amounts:
                 for amount_obj in invoice.amounts:
@@ -155,17 +153,21 @@ class TransactionService(TaggableServiceMixin[Transaction], BaseService[Transact
                         else amount_obj.amount
                     )
                     curr_lower = currency.lower()
-                    available_currencies.add(curr_lower)
                     amounts_by_currency[curr_lower] = Decimal(str(amount))
 
             if not schema.currency:
-                # Use invoice service to select best currency
+                required_amounts = {
+                    currency: (
+                        max(required_amount, schema.amount)
+                        if schema.amount is not None
+                        else required_amount
+                    )
+                    for currency, required_amount in amounts_by_currency.items()
+                }
                 best_currency = invoice_service.select_best_currency(
-                    schema.from_entity_id, available_currencies
+                    schema.from_entity_id, required_amounts
                 )
-                schema.currency = best_currency or (
-                    invoice.amounts[0].get("currency") if invoice.amounts else None
-                )
+                schema.currency = best_currency or next(iter(amounts_by_currency), None)
 
             if schema.amount is None and schema.currency:
                 schema.amount = amounts_by_currency.get(schema.currency.lower())

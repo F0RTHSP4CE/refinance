@@ -270,27 +270,25 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         return value if isinstance(value, Decimal) else Decimal(str(value))
 
     def select_best_currency(
-        self, from_entity_id: int, available_currencies: set[str]
+        self, from_entity_id: int, required_amounts: dict[str, Decimal]
     ) -> str | None:
-        """Select the best currency based on entity balance. Prefers highest positive balance."""
+        """Select the affordable currency with the highest completed balance."""
         balances = self._balance_service.get_balances(from_entity_id)
         completed_balances = balances.completed or {}
 
         best_currency = None
-        best_balance = Decimal("-999999")
+        best_balance = None
 
-        for curr in available_currencies:
+        for curr, required_amount in required_amounts.items():
             curr_lower = curr.lower()
             bal = self._balance_to_decimal(completed_balances.get(curr_lower))
-            if bal > best_balance:
+            if bal < required_amount:
+                continue
+            if best_balance is None or bal > best_balance:
                 best_balance = bal
                 best_currency = curr_lower
 
-        # Only return if balance is positive
-        if best_currency and best_balance > Decimal("0"):
-            return best_currency
-
-        return None
+        return best_currency
 
     def _select_auto_pay_amount(
         self, invoice: Invoice, balances: dict[str, Decimal]
@@ -540,23 +538,28 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
         # Build item lookup
         item_by_id = {item.id: item for item in invoice.items}
 
-        # If currency not specified in request, auto-select best currency
-        # Collect all available currencies from invoice items
-        available_currencies = set()
+        # If currency is omitted, select one that can cover every item.
+        required_amounts_by_currency: dict[str, Decimal] | None = None
         for item in invoice.items:
-            if item.amounts:
-                for amount_obj in item.amounts:
-                    # Handle both dict and object formats
-                    currency = (
-                        amount_obj.get("currency")
-                        if isinstance(amount_obj, dict)
-                        else amount_obj.currency
-                    )
-                    available_currencies.add(currency.lower())
+            item_amounts = {
+                str(amount_obj.get("currency", "")).lower(): Decimal(
+                    str(amount_obj.get("amount", "0"))
+                )
+                for amount_obj in (item.amounts or [])
+                if amount_obj.get("currency")
+            }
+            if required_amounts_by_currency is None:
+                required_amounts_by_currency = item_amounts
+                continue
+            required_amounts_by_currency = {
+                currency: total + item_amounts[currency]
+                for currency, total in required_amounts_by_currency.items()
+                if currency in item_amounts
+            }
 
-        # Use service method to find best currency
+        required_amounts_by_currency = required_amounts_by_currency or {}
         auto_selected_currency = self.select_best_currency(
-            invoice.from_entity_id, available_currencies
+            invoice.from_entity_id, required_amounts_by_currency
         )
 
         # Get running balances for validation

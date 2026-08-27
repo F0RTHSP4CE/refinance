@@ -220,6 +220,61 @@ class TestMultiItemInvoicePay:
         for item in updated["items"]:
             assert item["transaction_id"] is not None
 
+    def test_auto_currency_selection_uses_affordable_total(
+        self, test_app: TestClient, token
+    ):
+        payer = _entity(test_app, token, "mi-payer-affordable-currency")
+        to1 = _entity(test_app, token, "mi-to1-affordable-currency")
+        to2 = _entity(test_app, token, "mi-to2-affordable-currency")
+        _fund(test_app, token, payer, "62.25", "gel")
+        _fund(test_app, token, payer, "42.00", "usd")
+        invoice = _create_multi_invoice(
+            test_app,
+            token,
+            payer,
+            [
+                {
+                    "to_entity_id": to1,
+                    "amounts": [
+                        {"currency": "gel", "amount": "55.00"},
+                        {"currency": "usd", "amount": "20.00"},
+                    ],
+                },
+                {
+                    "to_entity_id": to2,
+                    "amounts": [
+                        {"currency": "gel", "amount": "60.00"},
+                        {"currency": "usd", "amount": "22.00"},
+                    ],
+                },
+            ],
+        ).json()
+
+        response = test_app.post(
+            f"/invoices/{invoice['id']}/pay-items",
+            json={
+                "items": [
+                    {
+                        "item_id": item["id"],
+                        "to_entity_id": item["to_entity_id"],
+                    }
+                    for item in invoice["items"]
+                ]
+            },
+            headers={"x-token": token},
+        )
+
+        assert response.status_code == 200, response.text
+        assert response.json()["status"] == "paid"
+        transaction_ids = [item["transaction_id"] for item in response.json()["items"]]
+        transactions = [
+            test_app.get(
+                f"/transactions/{transaction_id}", headers={"x-token": token}
+            ).json()
+            for transaction_id in transaction_ids
+        ]
+        assert {transaction["currency"] for transaction in transactions} == {"usd"}
+
     def test_pay_partial_items_rejected(self, test_app: TestClient, token):
         payer = _entity(test_app, token, "mi-payer-partial")
         to1 = _entity(test_app, token, "mi-to1-partial")

@@ -173,6 +173,47 @@ class TestInvoiceEndpoints:
         assert amounts["gel"] == Decimal("27.00")
         assert data["status"] == "pending"
 
+    def test_payment_auto_selects_an_affordable_currency(
+        self, test_app: TestClient, token
+    ):
+        payer = test_app.post(
+            "/entities",
+            json={"name": "Invoice Affordable Currency Payer"},
+            headers={"x-token": token},
+        ).json()["id"]
+        payee = test_app.post(
+            "/entities",
+            json={"name": "Invoice Affordable Currency Payee"},
+            headers={"x-token": token},
+        ).json()["id"]
+        _fund_entity(test_app, token, payer, "62.25", "gel")
+        _fund_entity(test_app, token, payer, "42.00", "usd")
+        invoice = _create_invoice_with_amounts(
+            test_app,
+            token,
+            payer,
+            payee,
+            [
+                {"currency": "gel", "amount": "115.00"},
+                {"currency": "usd", "amount": "42.00"},
+            ],
+        ).json()
+
+        response = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": payer,
+                "to_entity_id": payee,
+                "invoice_id": invoice["id"],
+            },
+            headers={"x-token": token},
+        )
+
+        assert response.status_code == 200, response.text
+        transaction = response.json()
+        assert transaction["currency"] == "usd"
+        assert Decimal(transaction["amount"]) == Decimal("42.00")
+
     def test_create_invoice_with_tags(
         self,
         test_app: TestClient,
