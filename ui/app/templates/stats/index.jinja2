@@ -187,13 +187,22 @@
             labels: feeMonthLabels,
             datasets: [
                 {
-                    label: 'Fees (USD)',
-                    data: feeMonthData.map(item => item.fee_total_usd || 0),
+                    label: 'Fees to F0 (USD)',
+                    data: feeMonthData.map(item => item.f0_fee_total_usd || 0),
                     borderWidth: 2,
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.1)',
                     tension: 0.2,
                     fill: true
+                },
+                {
+                    label: 'Fees to rooms (USD)',
+                    data: feeMonthData.map(item => item.room_fee_total_usd || 0),
+                    borderWidth: 2,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                    tension: 0.2,
+                    fill: false
                 },
                 {
                     label: 'F0 Expenses: rent + utilities (USD)',

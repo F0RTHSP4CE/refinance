@@ -27,7 +27,8 @@ class EntityMoneyFlowByDaySchema(BaseModel):
 class FeeTransactionsByMonthSchema(BaseModel):
     year: int
     month: int
-    fee_total_usd: float
+    f0_fee_total_usd: float
+    room_fee_total_usd: float
     expenses_usd: float = 0.0
 
 

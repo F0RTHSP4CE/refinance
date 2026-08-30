@@ -27,6 +27,7 @@ from app.seeding import (
     f0_entity,
     fee_tag,
     rent_tag,
+    room_tag,
     utilities_tag,
     withdrawal_tag,
 )
@@ -543,6 +544,7 @@ class StatsService(BaseService):
             self.db.query(
                 extract("year", Transaction.created_at).label("year"),
                 extract("month", Transaction.created_at).label("month"),
+                Transaction.to_entity_id,
                 Transaction.currency,
                 func.sum(Transaction.amount).label("total_amount"),
             )
@@ -560,16 +562,31 @@ class StatsService(BaseService):
                     ),
                 )
             )
-            .group_by("year", "month", "currency")
+            .group_by("year", "month", Transaction.to_entity_id, "currency")
             .order_by("year", "month")
             .all()
         )
 
-        fee_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = defaultdict(
-            lambda: defaultdict(Decimal)
+        room_entity_ids = {
+            entity_id
+            for (entity_id,) in self.db.query(entities_tags.c.entity_id)
+            .filter(entities_tags.c.tag_id == room_tag.id)
+            .all()
+        }
+        f0_fee_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
+        )
+        room_fee_monthly_totals: defaultdict[tuple, defaultdict[str, Decimal]] = (
+            defaultdict(lambda: defaultdict(Decimal))
         )
         for row in fee_query_result:
-            fee_monthly_totals[(row.year, row.month)][row.currency] += row.total_amount
+            if row.to_entity_id == f0_entity.id:
+                monthly_totals = f0_fee_monthly_totals
+            elif row.to_entity_id in room_entity_ids:
+                monthly_totals = room_fee_monthly_totals
+            else:
+                continue
+            monthly_totals[(row.year, row.month)][row.currency] += row.total_amount
 
         expense_tag_ids = (rent_tag.id, utilities_tag.id)
         expense_query_result = (
@@ -604,10 +621,17 @@ class StatsService(BaseService):
             ] += row.total_amount
 
         result = []
-        all_months = set(fee_monthly_totals) | set(expense_monthly_totals)
+        all_months = (
+            set(f0_fee_monthly_totals)
+            | set(room_fee_monthly_totals)
+            | set(expense_monthly_totals)
+        )
         for year, month in sorted(all_months):
-            fee_total_usd = self._sum_amounts_usd(
-                fee_monthly_totals.get((year, month), {})
+            f0_fee_total_usd = self._sum_amounts_usd(
+                f0_fee_monthly_totals.get((year, month), {})
+            )
+            room_fee_total_usd = self._sum_amounts_usd(
+                room_fee_monthly_totals.get((year, month), {})
             )
             expenses_usd = self._sum_amounts_usd(
                 expense_monthly_totals.get((year, month), {})
@@ -616,7 +640,8 @@ class StatsService(BaseService):
                 {
                     "year": year,
                     "month": month,
-                    "fee_total_usd": fee_total_usd,
+                    "f0_fee_total_usd": f0_fee_total_usd,
+                    "room_fee_total_usd": room_fee_total_usd,
                     "expenses_usd": expenses_usd,
                 }
             )

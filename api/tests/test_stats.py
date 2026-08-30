@@ -267,22 +267,22 @@ def test_entity_stats_bundle_has_bounded_query_count(test_app: TestClient, token
     assert select_count <= 8
 
 
-def test_monthly_fee_stats_include_f0_share_of_multi_recipient_invoice(
+def test_monthly_fee_stats_separate_f0_and_room_shares_of_multi_recipient_invoice(
     test_app: TestClient, token
 ):
     billing_period = date.today().replace(day=1).isoformat()
 
-    def create_entity(name: str) -> int:
+    def create_entity(name: str, tag_ids: list[int] | None = None) -> int:
         response = test_app.post(
             "/entities",
-            json={"name": name},
+            json={"name": name, "tag_ids": tag_ids or []},
             headers={"x-token": token},
         )
         assert response.status_code == 200, response.text
         return response.json()["id"]
 
     resident = create_entity("Multi-recipient stats resident")
-    other_recipient = create_entity("Multi-recipient stats destination")
+    room_recipient = create_entity("Multi-recipient stats room", [19])
     funding_entity = create_entity("Multi-recipient stats funding")
 
     funding_response = test_app.post(
@@ -313,7 +313,7 @@ def test_monthly_fee_stats_include_f0_share_of_multi_recipient_invoice(
                     ],
                 },
                 {
-                    "to_entity_id": other_recipient,
+                    "to_entity_id": room_recipient,
                     "amounts": [
                         {"currency": "usd", "amount": "10.00"},
                         {"currency": "gel", "amount": "25.00"},
@@ -364,7 +364,7 @@ def test_monthly_fee_stats_include_f0_share_of_multi_recipient_invoice(
         "/transactions",
         json={
             "from_entity_id": 1,
-            "to_entity_id": other_recipient,
+            "to_entity_id": room_recipient,
             "amount": "30.00",
             "currency": "usd",
             "status": "completed",
@@ -407,7 +407,8 @@ def test_monthly_fee_stats_include_f0_share_of_multi_recipient_invoice(
         {
             "year": date.today().year,
             "month": date.today().month,
-            "fee_total_usd": 50.0,
+            "f0_fee_total_usd": 40.0,
+            "room_fee_total_usd": 10.0,
             "expenses_usd": 30.0,
         }
     ]
