@@ -36,6 +36,7 @@ from app.seeding import (
     ex_resident_tag,
     member_tag,
     resident_tag,
+    room_tag,
 )
 from app.services.balance import BalanceService
 from app.services.entity import EntityService
@@ -458,8 +459,13 @@ class CurrencyExchangeService:
         return result
 
     def _get_eligible_entities(self) -> list[Entity]:
-        """Return active entities tagged as resident, member, or ex-resident."""
-        target_tag_ids = [resident_tag.id, member_tag.id, ex_resident_tag.id]
+        """Return active entities eligible for automatic currency exchange."""
+        target_tag_ids = [
+            resident_tag.id,
+            member_tag.id,
+            ex_resident_tag.id,
+            room_tag.id,
+        ]
         return (
             self.db.query(Entity)
             .filter(Entity.active == True)  # noqa: E712

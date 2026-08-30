@@ -3,7 +3,13 @@
 from decimal import Decimal
 
 import pytest
-from app.seeding import ex_resident_tag, guest_tag, member_tag, resident_tag
+from app.seeding import (
+    ex_resident_tag,
+    guest_tag,
+    member_tag,
+    resident_tag,
+    room_tag,
+)
 from fastapi.testclient import TestClient
 
 FIXED_RATES = property(
@@ -348,6 +354,33 @@ class TestAutoBalanceEndpoints:
         eid = self._create_entity(
             test_app, token, "ExResidentDebtor", [ex_resident_tag.id]
         )
+        self._tx(
+            test_app,
+            token,
+            from_id=eid,
+            to_id=self.F0_ENTITY,
+            amount="50",
+            currency="GEL",
+        )
+        self._tx(
+            test_app,
+            token,
+            from_id=self.CASH_IN_ENTITY,
+            to_id=eid,
+            amount="30",
+            currency="USD",
+        )
+
+        r = test_app.get(
+            "/currency_exchange/auto_balance/preview", headers={"x-token": token}
+        )
+        assert r.status_code == 200
+        entity_ids = [p["entity_id"] for p in r.json()["plans"]]
+        assert eid in entity_ids
+
+    def test_preview_room_included(self, test_app: TestClient, token):
+        """Room entities are included in auto-balance."""
+        eid = self._create_entity(test_app, token, "RoomDebtor", [room_tag.id])
         self._tx(
             test_app,
             token,
