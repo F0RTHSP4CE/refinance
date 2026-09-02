@@ -33,6 +33,7 @@ class ServiceContainer:
         self._token_service = None
         self._notification_service = None
         self._entity_owed_service = None
+        self._fortune_service = None
 
     @property
     def tag_service(self):
@@ -289,6 +290,20 @@ class ServiceContainer:
             self._notification_service = NotificationService(config=self.config)
         return self._notification_service
 
+    @property
+    def fortune_service(self):
+        if self._fortune_service is None:
+            from app.services.fortune import FortuneService
+
+            self._fortune_service = FortuneService(
+                db=self.db,
+                transaction_service=self.transaction_service,
+                balance_service=self.balance_service,
+                currency_exchange_service=self.currency_exchange_service,
+                config=self.config,
+            )
+        return self._fortune_service
+
 
 def get_container(
     db: Session = Depends(get_uow),
@@ -387,3 +402,7 @@ def get_token_service(container: ServiceContainer = Depends(get_container)):
 
 def get_notification_service(container: ServiceContainer = Depends(get_container)):
     return container.notification_service
+
+
+def get_fortune_service(container: ServiceContainer = Depends(get_container)):
+    return container.fortune_service

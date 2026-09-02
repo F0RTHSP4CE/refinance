@@ -34,6 +34,7 @@ from app.seeding import (
     currency_exchange_entity,
     currency_exchange_tag,
     ex_resident_tag,
+    fortune_tag,
     member_tag,
     resident_tag,
     room_tag,
@@ -465,6 +466,7 @@ class CurrencyExchangeService:
             member_tag.id,
             ex_resident_tag.id,
             room_tag.id,
+            fortune_tag.id,
         ]
         return (
             self.db.query(Entity)

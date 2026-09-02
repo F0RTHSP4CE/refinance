@@ -1,5 +1,3 @@
-import random
-from decimal import Decimal
 from typing import Type
 
 from app.models.base import BaseModel
@@ -31,6 +29,7 @@ donation_tag = Tag(
 )
 automatic_tag = Tag(id=17, name="automatic", comment="automatically generated / paid")
 room_tag = Tag(id=19, name="room", comment="hackerspace rooms")
+fortune_tag = Tag(id=20, name="fortune", comment="verifiable lottery")
 # commonly used treasuries
 cash_treasury = Treasury(id=1, name="cash")
 usdt_erc20_treasury = Treasury(id=51, name="usdt/erc20")
@@ -78,6 +77,12 @@ anonymous_entity = Entity(
     comment="anonymous guest donor",
     tags=[guest_tag],
 )
+fortune_entity = Entity(
+    id=62,
+    name="fortune",
+    comment="verifiable lottery",
+    tags=[fortune_tag],
+)
 
 SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
     Tag: [
@@ -98,6 +103,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         pos_tag,
         automatic_tag,
         room_tag,
+        fortune_tag,
     ],
     Entity: [
         # hackerspace
@@ -151,6 +157,7 @@ SEEDING: dict[Type[BaseModel], list[BaseModel]] = {
         Entity(id=59, name="kitchen", tags=[room_tag]),
         Entity(id=60, name="music studio", tags=[room_tag]),
         Entity(id=61, name="chill zone", tags=[room_tag]),
+        fortune_entity,
         # residents
         #
         # Entity(

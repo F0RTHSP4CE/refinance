@@ -17,6 +17,7 @@ from app.routes.deposits import deposits_router
 from app.routes.donation import donation_router
 from app.routes.entity import entity_router
 from app.routes.fee import router as fee_router
+from app.routes.fortune import fortune_router
 from app.routes.invoice import invoice_router
 from app.routes.keepz import keepz_router
 from app.routes.notification import notification_router
@@ -148,6 +149,7 @@ app.include_router(keepz_router)
 app.include_router(notification_router)
 app.include_router(tasks_router)
 app.include_router(fee_router)
+app.include_router(fortune_router)
 app.include_router(stats_router)
 app.include_router(treasury_router)
 

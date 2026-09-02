@@ -18,6 +18,8 @@ DEFAULT_FEE_PRESETS: list[dict[str, str | int]] = [
 # Example env var value (JSON):
 # [{"tag_id":2,"items":[{"to_entity_id":1,"amounts":[{"currency":"usd","amount":"42"},{"currency":"gel","amount":"115"}]},{"to_tag_id":19,"amounts":[{"currency":"usd","amount":"8"},{"currency":"gel","amount":"20"}]}]},{"tag_id":14,"items":[{"to_entity_id":1,"amounts":[{"currency":"usd","amount":"25"},{"currency":"gel","amount":"65"}]},{"to_tag_id":19,"amounts":[{"currency":"usd","amount":"5"},{"currency":"gel","amount":"15"}]}]}]
 DEFAULT_FEE_INVOICE_ITEMS: list[dict] = []
+DEFAULT_FORTUNE_STAKE_PRESETS: list[str] = ["1", "5", "10", "25"]
+DEFAULT_FORTUNE_CURRENCIES: list[str] = ["usd", "gel", "eur"]
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -128,6 +130,34 @@ class Config:
     donation_max_amount: Decimal = field(
         default=Decimal(getenv("REFINANCE_DONATION_MAX_AMOUNT") or "3000")
     )
+    fortune_currency: str = field(default=getenv("REFINANCE_FORTUNE_CURRENCY", "usd"))
+    fortune_currencies_raw: str = field(
+        default=getenv("REFINANCE_FORTUNE_CURRENCIES", "")
+    )
+    fortune_min_stake: Decimal = field(
+        default=Decimal(getenv("REFINANCE_FORTUNE_MIN_STAKE") or "1")
+    )
+    fortune_max_stake: Decimal = field(
+        default=Decimal(getenv("REFINANCE_FORTUNE_MAX_STAKE") or "25")
+    )
+    fortune_stake_presets_raw: str = field(
+        default=getenv("REFINANCE_FORTUNE_STAKE_PRESETS", "")
+    )
+    fortune_player_tile_count: int = field(
+        default=int(getenv("REFINANCE_FORTUNE_PLAYER_TILE_COUNT", "10"))
+    )
+    fortune_boosted_player_tile_count: int = field(
+        default=int(getenv("REFINANCE_FORTUNE_BOOSTED_PLAYER_TILE_COUNT", "12"))
+    )
+    fortune_server_tile_count: int = field(
+        default=int(getenv("REFINANCE_FORTUNE_SERVER_TILE_COUNT", "1"))
+    )
+    fortune_prize_multiplier: Decimal = field(
+        default=Decimal(getenv("REFINANCE_FORTUNE_PRIZE_MULTIPLIER") or "5")
+    )
+    fortune_boost_cost_multiplier: Decimal = field(
+        default=Decimal(getenv("REFINANCE_FORTUNE_BOOST_COST_MULTIPLIER") or "1.25")
+    )
 
     @property
     def database_url(self) -> str:
@@ -183,6 +213,42 @@ class Config:
         if not isinstance(parsed, list):
             return DEFAULT_FEE_INVOICE_ITEMS
         return parsed
+
+    @property
+    def fortune_stake_presets(self) -> list[Decimal]:
+        if not self.fortune_stake_presets_raw:
+            return [Decimal(value) for value in DEFAULT_FORTUNE_STAKE_PRESETS]
+        try:
+            parsed = json.loads(self.fortune_stake_presets_raw)
+            if not isinstance(parsed, list):
+                raise ValueError
+            return [Decimal(str(value)) for value in parsed]
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            raise ValueError(
+                "REFINANCE_FORTUNE_STAKE_PRESETS must be a JSON list of amounts"
+            ) from exc
+
+    @property
+    def fortune_currencies(self) -> list[str]:
+        if not self.fortune_currencies_raw:
+            return DEFAULT_FORTUNE_CURRENCIES.copy()
+        try:
+            parsed = json.loads(self.fortune_currencies_raw)
+            if not isinstance(parsed, list):
+                raise ValueError
+            currencies = [str(value).strip().lower() for value in parsed]
+            if (
+                not currencies
+                or len(currencies) != len(set(currencies))
+                or any(len(value) != 3 or not value.isalpha() for value in currencies)
+            ):
+                raise ValueError
+            return currencies
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            raise ValueError(
+                "REFINANCE_FORTUNE_CURRENCIES must be a JSON list of unique "
+                "three-letter currency codes"
+            ) from exc
 
     @property
     def invoice_recipient_rotations(self) -> list[dict]:

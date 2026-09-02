@@ -8,6 +8,8 @@
                 href="{{ url_for('fee.index') }}">Fee</a></li>
             <li{% if request.endpoint and request.endpoint.startswith('split.') %} class="active" {% endif %}><a
                     href="{{ url_for('split.list') }}">Split</a></li>
+                <li{% if request.endpoint and request.endpoint.startswith('fortune.') %} class="active" {% endif %}><a
+                        href="{{ url_for('fortune.start') }}">Fortune</a></li>
                 <li{% if request.endpoint and request.endpoint.startswith('exchange.') %} class="active" {% endif %}><a
                         href="{{ url_for('exchange.index') }}">Exchange</a></li>
                     <li{% if request.endpoint and request.endpoint.startswith('stats.') %} class="active" {% endif %}><a

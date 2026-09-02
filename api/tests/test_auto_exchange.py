@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 from app.seeding import (
     ex_resident_tag,
+    fortune_tag,
     guest_tag,
     member_tag,
     resident_tag,
@@ -431,6 +432,33 @@ class TestAutoBalanceEndpoints:
         assert r.status_code == 200
         entity_ids = [p["entity_id"] for p in r.json()["plans"]]
         assert eid not in entity_ids, "Guest entity must not appear in auto-balance"
+
+    def test_preview_fortune_tag_included(self, test_app: TestClient, token):
+        """Fortune-tagged entities participate in the periodic auto-balance run."""
+        eid = self._create_entity(test_app, token, "FortuneDebtor", [fortune_tag.id])
+        self._tx(
+            test_app,
+            token,
+            from_id=eid,
+            to_id=self.F0_ENTITY,
+            amount="30",
+            currency="GEL",
+        )
+        self._tx(
+            test_app,
+            token,
+            from_id=self.CASH_IN_ENTITY,
+            to_id=eid,
+            amount="20",
+            currency="USD",
+        )
+
+        response = test_app.get(
+            "/currency_exchange/auto_balance/preview", headers={"x-token": token}
+        )
+
+        assert response.status_code == 200
+        assert eid in [plan["entity_id"] for plan in response.json()["plans"]]
 
     def test_preview_draft_balances_not_counted(self, test_app: TestClient, token):
         """Draft transactions must not affect the plan (only completed balances count)."""

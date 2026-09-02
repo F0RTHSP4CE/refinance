@@ -1,0 +1,233 @@
+{% extends "base.jinja2" %}
+
+{% block title %}Fortune{% endblock %}
+{% block heading %}{% endblock %}
+{% block body_class %}fortune-body{% endblock %}
+
+{% block content %}
+{% set rules = game.rules %}
+<div class="fortune-page">
+    {% if game.status == "open" %}
+    <form id="fortune-form" class="fortune-game-card" method="post" data-base-count="{{ rules.player_tile_count }}"
+        data-boost-count="{{ rules.boosted_player_tile_count }}"
+        data-base-probability="{{ rules.base_win_probability }}"
+        data-boost-probability="{{ rules.boosted_win_probability }}"
+        data-prize-multiplier="{{ rules.prize_multiplier }}"
+        data-boost-cost-multiplier="{{ rules.boost_cost_multiplier }}" data-min-stake="{{ rules.min_stake }}"
+        data-max-stake="{{ game.max_allowed_stake or rules.max_stake }}"
+        data-max-stake-by-currency='{{ game.max_allowed_stakes|tojson|safe }}'>
+        {{ form.csrf_token }}
+
+        <header class="fortune-game-header">
+            <div class="fortune-brand">
+                <span>FORTUNE</span>
+                <small>Game #{{ game.id }}</small>
+            </div>
+            <span class="fortune-odds-note">1 server tile · any match wins</span>
+        </header>
+
+        <div class="fortune-game-layout">
+            <aside class="fortune-control-panel">
+                <section class="fortune-stake-control">
+                    <div class="fortune-control-label">
+                        <label for="{{ form.stake.id }}">Stake</label>
+                        <small>{{ rules.min_stake }}–{{ rules.max_stake }}</small>
+                    </div>
+                    <div class="fortune-stake-input">
+                        {{ form.stake(min=rules.min_stake, max=rules.max_stake, step='0.01', inputmode='decimal',
+                        aria_label='Stake amount') }}
+                        {{ form.currency(class_='fortune-currency-select', aria_label='Stake currency') }}
+                    </div>
+                    <p id="fortune-max-stake-warning" class="fortune-max-stake-warning" hidden></p>
+                    <div class="fortune-presets" aria-label="Stake presets">
+                        {% for preset in rules.stake_presets %}
+                        <button type="button" class="fortune-preset" data-stake="{{ preset }}" aria-pressed="false">{{
+                            "%.0f"|format(preset|float) }}</button>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <label class="fortune-boost" for="{{ form.boosted.id }}">
+                    {{ form.boosted() }}
+                    <span class="fortune-switch" aria-hidden="true"></span>
+                    <span class="fortune-boost-copy">
+                        <strong>Boost my odds</strong>
+                        <small>{{ rules.boosted_player_tile_count }} picks · {{
+                            "%.0f"|format(rules.boosted_win_probability|float * 100) }}% chance · <span
+                                id="fortune-boost-cost">{{ rules.boost_cost_multiplier }}× stake</span></small>
+                    </span>
+                </label>
+
+                <button class="fortune-submit" type="submit" name="submit" value="play">
+                    <span class="fortune-submit-progress" aria-hidden="true"></span>
+                    <span class="fortune-submit-label">Choose your tiles</span>
+                </button>
+                <p id="fortune-win-up-to" class="fortune-win-up-to">Win up to {{
+                    "%.2f"|format(rules.stake_presets[0]|float * rules.prize_multiplier|float) }} {{
+                    rules.currency|upper }}</p>
+
+            </aside>
+
+            <section class="fortune-board" aria-labelledby="fortune-board-title">
+                <div class="fortune-board-heading">
+                    <h2 id="fortune-board-title">Pick <span id="fortune-required-count">{{ rules.player_tile_count
+                            }}</span> tiles</h2>
+                    <span class="fortune-selection-progress"><strong id="fortune-selected-count">0</strong>/<span
+                            data-fortune-required>{{ rules.player_tile_count }}</span></span>
+                </div>
+                <fieldset class="fortune-grid-fieldset">
+                    <legend class="sr-only">Choose numbered tiles</legend>
+                    <div class="fortune-grid">
+                        {% set selected = form.selected_tiles.data or [] %}
+                        {% for tile in range(1, rules.total_tiles + 1) %}
+                        <div class="fortune-tile">
+                            <input class="fortune-tile-input" type="checkbox" name="selected_tiles"
+                                id="fortune-tile-{{ tile }}" value="{{ tile }}" {% if tile in selected %}checked{% endif
+                                %}>
+                            <label for="fortune-tile-{{ tile }}">{{ tile }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </fieldset>
+            </section>
+
+            <footer class="fortune-left-footer">
+                <div class="fortune-bet-summary" aria-live="polite">
+                    <div><span>Chance</span><strong id="fortune-win-chance">{{
+                            "%.0f"|format(rules.base_win_probability|float * 100) }}%</strong></div>
+                    <div><span>Stake</span><strong id="fortune-total-cost">—</strong></div>
+                    <div><span>Prize</span><strong id="fortune-gross-prize">—</strong></div>
+                </div>
+                <p id="fortune-loss-copy" class="fortune-loss-copy">Choose a valid stake to see the possible loss.</p>
+
+                <details class="fortune-fairness">
+                    <summary>
+                        <span>Provably fair</span>
+                        <small>SHA-256 committed</small>
+                    </summary>
+                    <div class="fortune-fairness-body">
+                        <p>The server locked its tile before your selection. The exact source is revealed after play.
+                        </p>
+                        <code>{{ game.commitment_sha256 }}</code>
+                        <ul>
+                            <li>Pick exactly <span data-fortune-required>{{ rules.player_tile_count }}</span> unique
+                                tiles.</li>
+                            <li>Win if any pick matches the server tile.</li>
+                            <li>Gross prize is {{ rules.prize_multiplier }}× your entered stake; your stake is shown
+                                separately.</li>
+                        </ul>
+                    </div>
+                </details>
+            </footer>
+        </div>
+    </form>
+    {% else %}
+    <section class="fortune-game-card fortune-result {% if game.won %}is-win{% else %}is-loss{% endif %}">
+        <header class="fortune-game-header">
+            <div class="fortune-brand">
+                <span>FORTUNE</span>
+                <small>Game #{{ game.id }}</small>
+            </div>
+            <span class="fortune-result-state">Settled</span>
+        </header>
+
+        <div class="fortune-game-layout">
+            <aside class="fortune-control-panel fortune-result-panel">
+                <div class="fortune-outcome">
+                    {% if game.won %}
+                    <span class="fortune-outcome-label">You won</span>
+                    <strong>{{ game.gross_prize }} {{ game.currency|upper }}</strong>
+                    {% else %}
+                    <span class="fortune-outcome-label">No match</span>
+                    <strong>{{ game.net_change }} {{ game.currency|upper }}</strong>
+                    {% endif %}
+                    {% if game.won %}
+                    <small>Gross prize · {{ game.total_cost }} {{ game.currency|upper }} stake already deducted</small>
+                    {% else %}
+                    <small>Result after {{ game.total_cost }} {{ game.currency|upper }} stake</small>
+                    {% endif %}
+                </div>
+
+                <div class="fortune-server-pick">
+                    <span>Server tile</span>
+                    <strong>{{ game.server_tiles|join(', ') }}</strong>
+                </div>
+
+                <a class="fortune-primary-link" href="{{ url_for('fortune.start') }}">Play another game</a>
+                <a class="fortune-text-link" href="{{ url_for('transaction.detail', id=game.transaction.id) }}">View
+                    transaction #{{ game.transaction.id }}</a>
+
+                <details class="fortune-fairness fortune-result-verification">
+                    <summary>
+                        <span>Verify fair draw</span>
+                        <small id="fortune-verification-summary">Checking…</small>
+                    </summary>
+                    <div class="fortune-fairness-body">
+                        <p id="fortune-verification-status" class="fortune-verification-status" aria-live="polite">
+                            Checking SHA-256…</p>
+                        <dl>
+                            <div>
+                                <dt>Published hash</dt>
+                                <dd><code id="fortune-commitment-hash">{{ game.commitment_sha256 }}</code></dd>
+                            </div>
+                            <div>
+                                <dt>Exact source</dt>
+                                <dd><code id="fortune-commitment-source">{{ game.commitment_source }}</code></dd>
+                            </div>
+                            <div>
+                                <dt>Your tiles</dt>
+                                <dd>{{ game.selected_tiles|join(', ') }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </details>
+            </aside>
+
+            <section class="fortune-board" aria-labelledby="fortune-result-title">
+                <div class="fortune-board-heading">
+                    <h2 id="fortune-result-title">Revealed board</h2>
+                    <div class="fortune-result-legend" aria-label="Tile legend">
+                        <span><i class="is-player"></i>You</span>
+                        <span><i class="is-server"></i>Server</span>
+                        <span><i class="is-match"></i>Match</span>
+                    </div>
+                </div>
+                <div class="fortune-grid fortune-result-grid">
+                    {% for tile in range(1, rules.total_tiles + 1) %}
+                    {% set player_selected = tile in game.selected_tiles %}
+                    {% set server_selected = tile in game.server_tiles %}
+                    <div class="fortune-result-tile {% if player_selected and server_selected %}is-match{% elif server_selected %}is-server{% elif player_selected %}is-player{% endif %}"
+                        aria-label="Tile {{ tile }}{% if player_selected and server_selected %}, match{% elif server_selected %}, server selection{% elif player_selected %}, your selection{% endif %}">
+                        {{ tile }}</div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
+    {% if game.won %}
+    <div class="fortune-win-overlay" data-fortune-win-popup>
+        <section class="fortune-win-popup" role="dialog" aria-modal="true" aria-labelledby="fortune-win-title">
+            <div class="fortune-salute" aria-hidden="true">
+                <span>🎆</span><span>✦</span><span>🎉</span><span>✦</span><span>🎆</span>
+            </div>
+            <small>FORTUNE FAVORS YOU</small>
+            <strong id="fortune-win-title">YOU WON!</strong>
+            <div class="fortune-win-amount-line"
+                aria-label="Gross prize {{ game.gross_prize }} {{ game.currency|upper }}">
+                <div class="fortune-win-amount-track" aria-hidden="true">
+                    {% for repeat in range(12) %}
+                    <span>{{ game.gross_prize }} {{ game.currency|upper }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="fortune-win-actions">
+                <a class="fortune-win-play-again" href="{{ url_for('fortune.start') }}">Play again</a>
+                <button class="fortune-win-see-result" type="button" data-fortune-close-win>See my result</button>
+            </div>
+        </section>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+<script src="/static/js/fortune.js"></script>
+{% endblock %}
