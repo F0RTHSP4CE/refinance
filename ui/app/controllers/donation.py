@@ -4,12 +4,13 @@ from decimal import Decimal, InvalidOperation
 from app.config import Config
 from app.exceptions.base import ApplicationError
 from app.external.refinance import RefinanceAPI
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 donation_bp = Blueprint("donation", __name__)
 
 DONATION_CURRENCIES = ("GEL", "USD", "EUR")
 AMOUNT_PATTERN = re.compile(r"^\d+(?:[\.,]\d{1,2})?$")
+DONATION_FORM_SESSION_KEY = "donation_form"
 
 
 def _format_amount(amount: Decimal) -> str:
@@ -84,16 +85,47 @@ def _recipient_payload(recipients: list[dict], value: str) -> dict:
 
 
 def _initial_form(recipients: list[dict]) -> dict[str, str]:
-    recipient = _match_recipient(recipients, request.args.get("to"))
-    return {
+    form = {
         "type": "recurring" if Config.STRIPE_CONFIGURED else "onetime",
         "amount": "10",
         "currency": "USD",
         "comment": "",
-        "recipient": (
-            str(recipient["id"]) if recipient else _default_recipient(recipients)
-        ),
+        "recipient": _default_recipient(recipients),
     }
+
+    saved = session.get(DONATION_FORM_SESSION_KEY)
+    if isinstance(saved, dict):
+        saved_type = saved.get("type")
+        if saved_type == "onetime" or (
+            saved_type == "recurring" and Config.STRIPE_CONFIGURED
+        ):
+            form["type"] = saved_type
+
+        saved_amount = saved.get("amount")
+        if isinstance(saved_amount, str):
+            try:
+                _parse_amount(saved_amount)
+            except ValueError:
+                pass
+            else:
+                form["amount"] = saved_amount
+
+        saved_currency = saved.get("currency")
+        if saved_currency in DONATION_CURRENCIES:
+            form["currency"] = saved_currency
+
+        saved_comment = saved.get("comment")
+        if isinstance(saved_comment, str):
+            form["comment"] = saved_comment
+
+        saved_recipient = _match_recipient(recipients, saved.get("recipient"))
+        if saved_recipient:
+            form["recipient"] = str(saved_recipient["id"])
+
+    deep_link_recipient = _match_recipient(recipients, request.args.get("to"))
+    if deep_link_recipient:
+        form["recipient"] = str(deep_link_recipient["id"])
+    return form
 
 
 def _submitted_form(defaults: dict[str, str]) -> dict[str, str]:
@@ -149,8 +181,10 @@ def donate():
 
     if request.method == "POST":
         form = _submitted_form(form)
+        session[DONATION_FORM_SESSION_KEY] = form
         try:
-            return redirect(_submit_donation(form, recipients))
+            destination = _submit_donation(form, recipients)
+            return redirect(destination)
         except ValueError as exc:
             flash(str(exc), "error")
         except ApplicationError as exc:

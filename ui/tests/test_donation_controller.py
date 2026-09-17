@@ -93,6 +93,51 @@ def test_onetime_donation_posts_canonical_payload(monkeypatch):
     )
 
 
+def test_successful_submission_is_restored_on_next_visit(monkeypatch):
+    api = _API({"checkout_session_url": "https://checkout.example/session"})
+    client = _client(monkeypatch, api, stripe=True)
+
+    submitted = client.post(
+        "/donate/",
+        data={
+            "type": "recurring",
+            "amount": "12,50",
+            "currency": "EUR",
+            "comment": "Ada",
+            "recipient": "42",
+        },
+    )
+    assert submitted.status_code == 302
+
+    page = client.get("/donate/").get_data(as_text=True)
+    assert 'name="type" value="recurring"' in page
+    assert 'name="amount" value="12,50"' in page
+    assert 'name="currency" value="EUR"' in page
+    assert 'name="comment" value="Ada"' in page
+    assert 'name="recipient" value="42"' in page
+
+
+def test_deep_link_overrides_only_saved_recipient(monkeypatch):
+    api = _API({"payment_url": "https://pay.example/donation"})
+    client = _client(monkeypatch, api)
+    client.post(
+        "/donate/",
+        data={
+            "type": "onetime",
+            "amount": "15",
+            "currency": "GEL",
+            "comment": "Grace",
+            "recipient": "42",
+        },
+    )
+
+    page = client.get("/donate/?to=community-projects").get_data(as_text=True)
+    assert 'name="amount" value="15"' in page
+    assert 'name="currency" value="GEL"' in page
+    assert 'name="comment" value="Grace"' in page
+    assert 'name="recipient" value="84"' in page
+
+
 def test_recurring_donation_adds_checkout_urls(monkeypatch):
     api = _API({"checkout_session_url": "https://checkout.example/session"})
     response = _client(monkeypatch, api, stripe=True).post(
