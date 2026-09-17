@@ -1,11 +1,12 @@
 """Tests for the guest donation feature."""
 
+import json
 import uuid
 from decimal import Decimal
 
 import pytest
 from app.app import app
-from app.config import get_config
+from app.config import Config, get_config
 from app.db import DatabaseConnection
 from app.dependencies.services import ServiceContainer
 from app.routes.donation import _balance_total_usd
@@ -34,6 +35,18 @@ def test_balance_total_usd_converts_completed_currency_balances():
     )
 
     assert total == 12.0
+
+
+def test_donation_entities_config_normalizes_name_id_pairs():
+    config = Config(
+        donation_entities_raw=(
+            '[{"id":"42","name":"  Community fund  "},'
+            '{"id":42,"name":"duplicate"},{"id":0,"name":"invalid"},'
+            '{"id":43},{"name":"missing id"}]'
+        )
+    )
+
+    assert config.donation_entities == [{"id": 42, "name": "Community fund"}]
 
 
 def _patch_keepz(monkeypatch):
@@ -373,6 +386,72 @@ class TestDonationRecipients:
             headers={"x-token": token},
         )
         assert response.status_code == 200
+
+    def test_configured_entity_is_listed_with_balance_and_accepts_donations(
+        self, test_app: TestClient, token, monkeypatch
+    ):
+        created = test_app.post(
+            "/entities",
+            json={"name": "Internal community fund"},
+            headers={"x-token": token},
+        )
+        assert created.status_code == 200
+        entity_id = created.json()["id"]
+
+        funded = test_app.post(
+            "/transactions",
+            json={
+                "from_entity_id": f0_entity.id,
+                "to_entity_id": entity_id,
+                "amount": "17.00",
+                "currency": "usd",
+                "status": "completed",
+            },
+            headers={"x-token": token},
+        )
+        assert funded.status_code == 200
+
+        config = _active_config()
+        monkeypatch.setattr(
+            config,
+            "donation_entities_raw",
+            json.dumps([{"id": entity_id, "name": "Community projects"}]),
+        )
+
+        recipients = test_app.get("/donations/recipients")
+        assert recipients.status_code == 200
+        custom = next(
+            recipient for recipient in recipients.json() if recipient["id"] == entity_id
+        )
+        assert custom == {
+            "id": entity_id,
+            "name": "Community projects",
+            "general": False,
+            "balance_usd": 17.0,
+        }
+
+        donation = test_app.post(
+            "/donations",
+            json={
+                "amount": "9.00",
+                "currency": "GEL",
+                "recipient_entity_id": entity_id,
+            },
+        )
+        assert donation.status_code == 200
+
+        _complete_deposit(donation.json()["deposit_uuid"], config)
+        transfers = test_app.get(
+            "/transactions",
+            params={
+                "from_entity_id": anonymous_entity.id,
+                "to_entity_id": entity_id,
+            },
+            headers={"x-token": token},
+        )
+        assert transfers.status_code == 200
+        assert len(transfers.json()["items"]) == 1
+        assert Decimal(transfers.json()["items"][0]["amount"]) == Decimal("9.00")
 
     def test_create_donation_with_room_recipient(self, test_app: TestClient):
         """Recipient is stored on the deposit and echoed back by the API."""

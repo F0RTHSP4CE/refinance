@@ -8,6 +8,7 @@ from flask import Flask
 RECIPIENTS = [
     {"id": 1, "name": "F0RTHSP4CE", "general": True, "balance_usd": 100},
     {"id": 42, "name": "Music Studio", "general": False, "balance_usd": 25},
+    {"id": 84, "name": "Community Projects", "general": False, "balance_usd": 17},
 ]
 
 
@@ -52,6 +53,16 @@ def test_donate_renders_one_canonical_form_and_honors_room_deep_link(monkeypatch
     assert 'name="recipient" value="42"' in form
     assert "recurring_custom_amount" not in page
     assert "onetime_currency" not in page
+
+
+def test_donate_renders_and_selects_custom_api_recipient(monkeypatch):
+    response = _client(monkeypatch, _API()).get("/donate/?to=community-projects")
+    page = response.get_data(as_text=True)
+
+    assert response.status_code == 200
+    assert 'name="recipient" value="84"' in page
+    assert 'data-label="Community Projects"' in page
+    assert "$17" in page
 
 
 def test_onetime_donation_posts_canonical_payload(monkeypatch):
@@ -104,8 +115,7 @@ def test_recurring_donation_adds_checkout_urls(monkeypatch):
         "comment": "Grace",
         "recipient_entity_id": 1,
         "success_url": (
-            "http://localhost/donate/subscribed"
-            "?stripe_session_id={CHECKOUT_SESSION_ID}"
+            "http://localhost/donate/subscribed?stripe_session_id={CHECKOUT_SESSION_ID}"
         ),
         "cancel_url": "http://localhost/donate/",
     }

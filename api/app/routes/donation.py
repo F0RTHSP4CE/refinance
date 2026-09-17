@@ -3,6 +3,7 @@
 from decimal import Decimal
 from uuid import UUID
 
+from app.config import Config, get_config
 from app.dependencies.services import (
     get_balance_service,
     get_currency_exchange_service,
@@ -46,16 +47,20 @@ def _payment_url(deposit) -> str | None:
 
 
 def _resolve_recipient(
-    recipient_entity_id: int | None, entity_service: EntityService
+    recipient_entity_id: int | None,
+    entity_service: EntityService,
+    config: Config,
 ) -> Entity:
-    """Validate a donation recipient: F0 (the default) or an active room entity."""
+    """Validate a donation recipient: F0, an active room, or a configured entity."""
     if recipient_entity_id is None or recipient_entity_id == f0_entity.id:
         return entity_service.get(f0_entity.id)
     try:
         entity = entity_service.get(recipient_entity_id)
     except NotFoundError:
         raise HTTPException(status_code=422, detail="Unknown donation recipient")
-    if not entity.active or not any(tag.id == room_tag.id for tag in entity.tags):
+    custom_ids = {int(item["id"]) for item in config.donation_entities}
+    is_room = any(tag.id == room_tag.id for tag in entity.tags)
+    if not entity.active or (not is_room and entity.id not in custom_ids):
         raise HTTPException(status_code=422, detail="Unknown donation recipient")
     return entity
 
@@ -109,28 +114,45 @@ def list_donation_recipients(
     currency_exchange_service: CurrencyExchangeService = Depends(
         get_currency_exchange_service
     ),
+    config: Config = Depends(get_config),
 ):
-    """Public list of entities a guest donation can be routed to: F0 + rooms."""
+    """Public donation destinations: F0, rooms, and configured custom entities."""
     f0 = entity_service.get(f0_entity.id)
     rooms = entity_service.get_all(
         EntityFiltersSchema(active=True, tags_ids=[room_tag.id]), skip=0, limit=100
     ).items
-    recipients = [f0] + [
-        room
+    recipients: list[tuple[Entity, str]] = [(f0, f0.name)] + [
+        (room, room.name)
         for room in sorted(rooms, key=lambda room: room.name.lower())
         if room.id != f0_entity.id
     ]
-    balances = balance_service.get_balances_many([entity.id for entity in recipients])
+    recipient_ids = {entity.id for entity, _name in recipients}
+    for configured in config.donation_entities:
+        entity_id = int(configured["id"])
+        if entity_id in recipient_ids:
+            continue
+        try:
+            entity = entity_service.get(entity_id)
+        except NotFoundError:
+            continue
+        if not entity.active:
+            continue
+        recipients.append((entity, str(configured["name"])))
+        recipient_ids.add(entity.id)
+
+    balances = balance_service.get_balances_many(
+        [entity.id for entity, _name in recipients]
+    )
     return [
         DonationRecipientSchema(
             id=entity.id,
-            name=entity.name,
+            name=name,
             general=entity.id == f0.id,
             balance_usd=_balance_total_usd(
                 balances[entity.id].completed, currency_exchange_service
             ),
         )
-        for entity in recipients
+        for entity, name in recipients
     ]
 
 
@@ -141,8 +163,9 @@ def create_donation(
         get_keepz_deposit_provider_service
     ),
     entity_service: EntityService = Depends(get_entity_service),
+    config: Config = Depends(get_config),
 ):
-    recipient = _resolve_recipient(schema.recipient_entity_id, entity_service)
+    recipient = _resolve_recipient(schema.recipient_entity_id, entity_service, config)
     keepz_schema = KeepzDepositCreateSchema(
         to_entity_id=anonymous_entity.id,
         amount=schema.amount,
@@ -203,8 +226,9 @@ def create_subscription_donation(
         get_stripe_authorization_service
     ),
     entity_service: EntityService = Depends(get_entity_service),
+    config: Config = Depends(get_config),
 ):
-    recipient = _resolve_recipient(schema.recipient_entity_id, entity_service)
+    recipient = _resolve_recipient(schema.recipient_entity_id, entity_service, config)
     setup_schema = StripeAuthorizationSetupSchema(
         entity_id=anonymous_entity.id,
         mode="guest_static",

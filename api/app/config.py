@@ -130,6 +130,9 @@ class Config:
     donation_max_amount: Decimal = field(
         default=Decimal(getenv("REFINANCE_DONATION_MAX_AMOUNT") or "3000")
     )
+    donation_entities_raw: str = field(
+        default=getenv("REFINANCE_DONATION_ENTITIES", "")
+    )
     fortune_currency: str = field(default=getenv("REFINANCE_FORTUNE_CURRENCY", "usd"))
     fortune_currencies_raw: str = field(
         default=getenv("REFINANCE_FORTUNE_CURRENCIES", "")
@@ -287,6 +290,38 @@ class Config:
                     "entity_ids": entity_ids,
                 }
             )
+        return normalized
+
+    @property
+    def donation_entities(self) -> list[dict[str, int | str]]:
+        """Extra public donation recipients configured as name/id pairs."""
+        if not self.donation_entities_raw:
+            return []
+        try:
+            parsed = json.loads(self.donation_entities_raw)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(parsed, list):
+            return []
+
+        normalized: list[dict[str, int | str]] = []
+        seen_ids: set[int] = set()
+        for entry in parsed:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                raw_entity_id = entry["id"]
+                raw_name = entry["name"]
+                if isinstance(raw_entity_id, bool) or not isinstance(raw_name, str):
+                    continue
+                entity_id = int(raw_entity_id)
+                name = raw_name.strip()
+            except (KeyError, TypeError, ValueError):
+                continue
+            if entity_id <= 0 or not name or entity_id in seen_ids:
+                continue
+            normalized.append({"id": entity_id, "name": name})
+            seen_ids.add(entity_id)
         return normalized
 
 

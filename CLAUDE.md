@@ -74,4 +74,5 @@ Configuration is `dataclass`-based (`api/app/config.py`, `ui/app/config.py`) —
 
 - `REFINANCE_FEE_PRESETS` — JSON list of `{tag_id, currency, amount}` overrides for monthly fees (defaults in `DEFAULT_FEE_PRESETS`).
 - `REFINANCE_DONATION_MIN_AMOUNT` / `REFINANCE_DONATION_MAX_AMOUNT` — guest donation limits (enforced in both api and ui).
+- `REFINANCE_DONATION_ENTITIES` — optional JSON list of extra donation destinations as `{id, name}` objects; the API validates them and supplies their balances to the public donation page.
 - `REFINANCE_KEEPZ_*`, `REFINANCE_CRYPTAPI_ADDRESS_*` — deposit provider config for the polling tasks.
