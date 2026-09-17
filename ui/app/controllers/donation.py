@@ -125,6 +125,25 @@ def _initial_form(recipients: list[dict]) -> dict[str, str]:
     deep_link_recipient = _match_recipient(recipients, request.args.get("to"))
     if deep_link_recipient:
         form["recipient"] = str(deep_link_recipient["id"])
+
+    query_amount = (request.args.get("amount") or "").strip()
+    if query_amount:
+        try:
+            _parse_amount(query_amount)
+        except ValueError:
+            pass
+        else:
+            form["amount"] = query_amount
+
+    query_currency = (request.args.get("currency") or "").strip().upper()
+    if query_currency in DONATION_CURRENCIES:
+        form["currency"] = query_currency
+
+    query_type = (request.args.get("type") or "").strip().lower()
+    if query_type == "onetime" or (
+        query_type == "recurring" and Config.STRIPE_CONFIGURED
+    ):
+        form["type"] = query_type
     return form
 
 

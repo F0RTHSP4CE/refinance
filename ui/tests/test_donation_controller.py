@@ -117,9 +117,9 @@ def test_successful_submission_is_restored_on_next_visit(monkeypatch):
     assert 'name="recipient" value="42"' in page
 
 
-def test_deep_link_overrides_only_saved_recipient(monkeypatch):
+def test_deep_link_overrides_saved_form_values(monkeypatch):
     api = _API({"payment_url": "https://pay.example/donation"})
-    client = _client(monkeypatch, api)
+    client = _client(monkeypatch, api, stripe=True)
     client.post(
         "/donate/",
         data={
@@ -131,11 +131,41 @@ def test_deep_link_overrides_only_saved_recipient(monkeypatch):
         },
     )
 
-    page = client.get("/donate/?to=community-projects").get_data(as_text=True)
-    assert 'name="amount" value="15"' in page
-    assert 'name="currency" value="GEL"' in page
+    page = client.get(
+        "/donate/",
+        query_string={
+            "to": "community-projects",
+            "amount": "25.50",
+            "currency": "usd",
+            "type": "recurring",
+        },
+    ).get_data(as_text=True)
+    assert 'name="type" value="recurring"' in page
+    assert 'name="amount" value="25.50"' in page
+    assert 'name="currency" value="USD"' in page
     assert 'name="comment" value="Grace"' in page
     assert 'name="recipient" value="84"' in page
+
+
+def test_invalid_deep_link_values_are_ignored(monkeypatch):
+    page = (
+        _client(monkeypatch, _API())
+        .get(
+            "/donate/",
+            query_string={
+                "to": "unknown",
+                "amount": "0",
+                "currency": "BTC",
+                "type": "recurring",
+            },
+        )
+        .get_data(as_text=True)
+    )
+
+    assert 'name="type" value="onetime"' in page
+    assert 'name="amount" value="10"' in page
+    assert 'name="currency" value="USD"' in page
+    assert 'name="recipient" value="1"' in page
 
 
 def test_recurring_donation_adds_checkout_urls(monkeypatch):
