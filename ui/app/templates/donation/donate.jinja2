@@ -545,12 +545,11 @@ letter-spacing: 0.03em;
 }
 {% endblock %}
 
-{% set is_recurring = form_data.type == 'recurring' and stripe_configured %}
-{% set amount = (form_data.recurring_custom_amount or form_data.recurring_preset_amount) if is_recurring else
-(form_data.custom_amount or form_data.preset_amount) %}
-{% set currency = form_data.recurring_currency if is_recurring else form_data.onetime_currency %}
-{% set comment = form_data.recurring_comment if is_recurring else form_data.comment %}
-{% set recipient = form_data.recurring_recipient if is_recurring else form_data.onetime_recipient %}
+{% set is_recurring = form.type == 'recurring' and stripe_configured %}
+{% set amount = form.amount %}
+{% set currency = form.currency %}
+{% set comment = form.comment %}
+{% set recipient = form.recipient %}
 {% set symbols = {"USD": "$", "EUR": "€", "GEL": "₾"} %}
 {% set ns = namespace(room="whole hackerspace") %}
 {% for r in recipients %}{% if recipient == r.id|string and not r.general %}{% set ns.room = r.name %}{% endif %}{%
