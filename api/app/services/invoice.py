@@ -429,6 +429,7 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                 if not payable:
                     continue
 
+                invoice_tag_ids = {tag.id for tag in invoice.tags}
                 for item, currency, amount in selections:
                     tx_schema = TransactionCreateSchema(
                         to_entity_id=item.to_entity_id,
@@ -436,9 +437,10 @@ class InvoiceService(TaggableServiceMixin[Invoice], BaseService[Invoice]):
                         amount=amount,
                         currency=currency,
                         status=TransactionStatus.COMPLETED,
+                        invoice_id=invoice.id,
                         invoice_item_id=item.id,
                         comment=item.comment or invoice.comment,
-                        tag_ids=[automatic_tag.id],
+                        tag_ids=list(invoice_tag_ids | {automatic_tag.id}),
                     )
                     self._transaction_service.create(
                         tx_schema,

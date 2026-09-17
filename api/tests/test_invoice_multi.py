@@ -7,6 +7,7 @@ from app.app import app
 from app.config import get_config
 from app.db import DatabaseConnection
 from app.dependencies.services import ServiceContainer
+from app.seeding import automatic_tag
 from app.uow import UnitOfWork
 from fastapi.testclient import TestClient
 
@@ -567,22 +568,27 @@ class TestMultiItemInvoiceAutoPayAndLifecycle:
         payer = _entity(test_app, token, "mi-payer-autopay")
         to1 = _entity(test_app, token, "mi-to1-autopay")
         to2 = _entity(test_app, token, "mi-to2-autopay")
+        invoice_tag_1 = _tag(test_app, token, "mi-autopay-invoice-tag-1")
+        invoice_tag_2 = _tag(test_app, token, "mi-autopay-invoice-tag-2")
         _fund(test_app, token, payer, "50.00", "usd")
 
-        r = _create_multi_invoice(
-            test_app,
-            token,
-            payer,
-            [
-                {
-                    "to_entity_id": to1,
-                    "amounts": [{"currency": "usd", "amount": "10.00"}],
-                },
-                {
-                    "to_entity_id": to2,
-                    "amounts": [{"currency": "usd", "amount": "15.00"}],
-                },
-            ],
+        r = test_app.post(
+            "/invoices",
+            json={
+                "from_entity_id": payer,
+                "tag_ids": [invoice_tag_1, invoice_tag_2],
+                "items": [
+                    {
+                        "to_entity_id": to1,
+                        "amounts": [{"currency": "usd", "amount": "10.00"}],
+                    },
+                    {
+                        "to_entity_id": to2,
+                        "amounts": [{"currency": "usd", "amount": "15.00"}],
+                    },
+                ],
+            },
+            headers={"x-token": token},
         )
         assert r.status_code == 200
         invoice_id = r.json()["id"]
@@ -594,6 +600,17 @@ class TestMultiItemInvoiceAutoPayAndLifecycle:
             f"/invoices/{invoice_id}", headers={"x-token": token}
         ).json()
         assert updated["status"] == "paid"
+        expected_tag_ids = {invoice_tag_1, invoice_tag_2}
+        for item in updated["items"]:
+            transaction = test_app.get(
+                f"/transactions/{item['transaction_id']}",
+                headers={"x-token": token},
+            ).json()
+            assert transaction["invoice_id"] == invoice_id
+            assert transaction["invoice_item_id"] == item["id"]
+            transaction_tag_ids = {tag["id"] for tag in transaction["tags"]}
+            assert expected_tag_ids <= transaction_tag_ids
+            assert automatic_tag.id in transaction_tag_ids
 
     def test_auto_pay_skips_multi_item_with_missing_entity(
         self, test_app: TestClient, token
