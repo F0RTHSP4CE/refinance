@@ -13,7 +13,16 @@ from app.schemas import (
     Transaction,
 )
 from app.stats_helpers import fetch_stats_bundle
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_wtf import FlaskForm
 from wtforms import (
     BooleanField,
@@ -355,7 +364,11 @@ def detail(id):
     stats_limit = max(1, stats_limit)
 
     api = get_refinance_api_client()
+    is_owner = bool(g.get("actor_entity") and g.actor_entity.get("id") == id)
     if request.method == "POST":
+        if not is_owner:
+            flash("You can only manage your own cards.", "error")
+            return redirect(url_for("entity.detail", id=id))
         action = (request.form.get("stripe_action") or "").strip().lower()
         try:
             if action == "add":
@@ -480,7 +493,7 @@ def detail(id):
         .get("total", 0)
     )
 
-    if Config.STRIPE_CONFIGURED:
+    if Config.STRIPE_CONFIGURED and is_owner:
         authorizations_resp = api.http(
             "GET",
             "deposits/providers/stripe/authorizations",
