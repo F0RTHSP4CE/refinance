@@ -136,12 +136,14 @@ class StripeService:
         success_url: str,
         cancel_url: str,
         donation_comment: str | None = None,
+        automatic_charges: bool = True,
     ) -> stripe.checkout.Session:
         metadata = {
             "entity_id": str(entity_id),
             "mode": mode,
             "static_amount": str(static_amount.quantize(Decimal("0.01"))),
             "static_currency": (static_currency or ""),
+            "automatic_charges": str(automatic_charges).lower(),
         }
         if donation_comment:
             metadata["donation_comment"] = donation_comment
