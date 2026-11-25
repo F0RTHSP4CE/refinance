@@ -3,10 +3,11 @@
 import random
 import string
 from decimal import Decimal
-from typing import Any
 
 from app.config import Config, get_config
 from app.dependencies.services import get_deposit_service, get_keepz_service
+from app.errors.keepz import KeepzPaymentLinkMissing
+from app.libs.keepz_cli.keepz_api import KeepzApiError, Transaction
 from app.models.deposit import Deposit, DepositStatus
 from app.models.entity import Entity
 from app.schemas.deposit import (
@@ -21,6 +22,7 @@ from app.services.deposit import DepositService
 from app.services.keepz import KeepzService
 from app.uow import get_uow
 from fastapi import Depends
+from requests import RequestException
 from sqlalchemy.orm import Session
 
 
@@ -65,14 +67,16 @@ class KeepzDepositProviderService(BaseService[Entity]):
                 or payload.get("short_url")
                 or payload.get("url")
             )
-        if short_url:
-            details["keepz"]["payment_short_url"] = short_url
-            try:
-                details["keepz"]["payment_url"] = (
-                    self.keepz_service.resolve_payment_url(short_url)
-                )
-            except Exception:
-                details["keepz"]["payment_url"] = short_url
+        if not isinstance(short_url, str) or not short_url.strip():
+            raise KeepzPaymentLinkMissing
+
+        details["keepz"]["payment_short_url"] = short_url
+        try:
+            details["keepz"]["payment_url"] = self.keepz_service.resolve_payment_url(
+                short_url
+            )
+        except (KeepzApiError, RequestException):
+            details["keepz"]["payment_url"] = short_url
         if isinstance(payload, dict):
             details["keepz"]["create_response"] = payload
 
@@ -90,22 +94,28 @@ class KeepzDepositProviderService(BaseService[Entity]):
         )
 
     def poll_pending_deposits(self) -> int:
-        pending = self._list_pending_deposits()
-        if not pending:
-            return 0
+        pending = [
+            (deposit.id, (deposit.details or {}).get("keepz") or {})
+            for deposit in self._list_pending_deposits()
+        ]
 
-        transactions_payload = self.keepz_service.list_transactions()
-        transactions_by_note = self._index_transactions_by_note(transactions_payload)
+        transactions_by_note: dict[str, Transaction] = {}
+        if any(
+            details.get("note") and details.get("transaction_id") is None
+            for _, details in pending
+        ):
+            for tx in self.keepz_service.list_transactions():
+                if tx.note and tx.isReceived is not False and tx.isSent is not True:
+                    transactions_by_note.setdefault(tx.note, tx)
 
         processed = 0
-        for deposit in pending:
-            note = (deposit.details or {}).get("keepz", {}).get("note")
-            if not note:
-                continue
-            tx = transactions_by_note.get(note)
-            if tx is None:
-                continue
-            if self._apply_transaction_to_deposit(deposit, tx):
+        for deposit_id, details in pending:
+            transaction_id = details.get("transaction_id")
+            if transaction_id is None:
+                tx = transactions_by_note.get(details.get("note"))
+            else:
+                tx = self.keepz_service.get_transaction(transaction_id)
+            if tx is not None and self._apply_transaction_to_deposit(deposit_id, tx):
                 processed += 1
         return processed
 
@@ -135,18 +145,28 @@ class KeepzDepositProviderService(BaseService[Entity]):
         pool = string.digits if random.choice([True, False]) else string.ascii_lowercase
         return "".join(random.choice(pool) for _ in range(5))
 
-    def _index_transactions_by_note(self, payload: Any) -> dict[str, Any]:
-        page = payload.transactionsPage
-        items = page.content or []
-        return {tx.note: tx for tx in items if tx.note}
+    def _apply_transaction_to_deposit(self, deposit_id: int, tx: Transaction) -> bool:
+        if tx.id is None or tx.isReceived is False or tx.isSent is True:
+            return False
+        deposit = (
+            self.db.query(Deposit)
+            .filter(Deposit.id == deposit_id, Deposit.status == DepositStatus.PENDING)
+            .populate_existing()
+            .with_for_update()
+            .first()
+        )
+        if deposit is None:
+            return False
 
-    def _apply_transaction_to_deposit(self, deposit: Deposit, tx: Any) -> bool:
-        tx_dict = tx.model_dump()
         status = str(tx.status or "").upper()
         amount_value = tx.amount or tx.initialAmount
         currency = tx.currencyCode
-        details = deposit.details or {}
-        keepz_details = details.get("keepz") or {}
+        if currency and currency.upper() != deposit.currency.upper():
+            return False
+        details = dict(deposit.details or {})
+        keepz_details = dict(details.get("keepz") or {})
+        if keepz_details.get("transaction_id") not in (None, tx.id, str(tx.id)):
+            return False
         keepz_details.update(
             {
                 "transaction_id": tx.id,
@@ -155,7 +175,7 @@ class KeepzDepositProviderService(BaseService[Entity]):
                 "amount_received": (
                     str(amount_value) if amount_value is not None else None
                 ),
-                "transaction": tx_dict,
+                "transaction": tx.model_dump(mode="json"),
             }
         )
         details["keepz"] = keepz_details
