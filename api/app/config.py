@@ -55,12 +55,7 @@ class Config:
     keepz_base_url: str | None = field(
         default=getenv("REFINANCE_KEEPZ_BASE_URL", "https://gateway.keepz.me")
     )
-    keepz_user_agent: str | None = field(
-        default=getenv(
-            "REFINANCE_KEEPZ_USER_AGENT",
-            "keepz/10 CFNetwork/3860.300.31 Darwin/25.2.0",
-        )
-    )
+    keepz_user_agent: str | None = field(default=getenv("REFINANCE_KEEPZ_USER_AGENT"))
     keepz_poll_interval_seconds: int = field(
         default=int(getenv("REFINANCE_KEEPZ_POLL_INTERVAL_SECONDS", "60"))
     )
