@@ -342,4 +342,55 @@ nav.site-nav {
   .mobile-menu-toggle {
     display: none;
   }
+
+  /* Grid instead of flex: the wrapping list gets a definite column width
+     rather than being a flex-basis:0 flex item, and the user block keeps its
+     own column, so wrapped rows size consistently across engines. */
+  nav.site-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .desktop-nav {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* Keep focus rings inside the clipped list */
+  .desktop-nav a:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* Align the user block with the first nav row (37px row, 34px block) */
+  .desktop-nav-user {
+    justify-self: end;
+    align-self: start;
+    margin-top: 1.5px;
+  }
+
+  /* The divider is drawn as a pseudo-element left of the item after the
+     separator; overflow clips it when that item starts a wrapped row, and the
+     hidden separator can never dangle at the end of a row. */
+  .desktop-nav .nav-separator {
+    display: none;
+  }
+
+  .desktop-nav li:has(+ .nav-separator) {
+    margin-right: calc(0.5rem + 2px);
+  }
+
+  .desktop-nav .nav-separator + li {
+    position: relative;
+  }
+
+  .desktop-nav .nav-separator + li::before {
+    content: "";
+    position: absolute;
+    left: calc(-0.5rem - 2px);
+    top: 0.25rem;
+    bottom: 0.25rem;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+  }
 }
