@@ -173,6 +173,9 @@ class StripeAuthorizationService:
                     schema.cancel_url, target_entity_id
                 ),
                 donation_comment=schema.donation_comment or None,
+                **(
+                    {"automatic_charges": False} if not schema.automatic_charges else {}
+                ),
             )
         return session.id, session.url
 
@@ -253,6 +256,7 @@ class StripeAuthorizationService:
         now = datetime.datetime.now()
         donation_comment = metadata.get("donation_comment") or None
         donation_recipient_id = _metadata_recipient_id(metadata)
+        automatic_charges = metadata.get("automatic_charges") != "false"
         if auth is None:
             auth = StripeAuthorization(
                 entity_id=entity_id,
@@ -261,7 +265,7 @@ class StripeAuthorizationService:
                 mode=mode,
                 static_amount=resolved_amount,
                 static_currency=resolved_currency,
-                active=True,
+                active=automatic_charges,
                 priority=self._next_priority(entity_id),
                 consecutive_error_count=0,
                 last_error=None,
@@ -277,7 +281,8 @@ class StripeAuthorizationService:
             auth.mode = mode
             auth.static_amount = resolved_amount
             auth.static_currency = resolved_currency
-            auth.active = True
+            if automatic_charges:
+                auth.active = True
             auth.consecutive_error_count = 0
             auth.last_error = None
             auth.last_success_at = now
@@ -692,10 +697,15 @@ class StripeAuthorizationService:
         entity_id: int,
         amount: Decimal,
         currency: str,
+        authorization_id: int | None = None,
     ):
-        """Immediately charge the highest-priority active entity_dynamic card."""
-        authorizations = self._list_active_authorizations(
-            entity_id=entity_id, mode=StripeAuthorizationMode.ENTITY_DYNAMIC
+        """Charge the selected card, or try active cards in priority order."""
+        authorizations = (
+            [self.get_for_entity(authorization_id, entity_id)]
+            if authorization_id is not None
+            else self._list_active_authorizations(
+                entity_id=entity_id, mode=StripeAuthorizationMode.ENTITY_DYNAMIC
+            )
         )
         if not authorizations:
             raise NotFoundError(f"No active Stripe card for entity {entity_id}")
@@ -732,6 +742,8 @@ class StripeAuthorizationService:
                     },
                 )
                 pi = self.stripe_service.normalize_payment_intent(pi_raw)
+                if pi.status != "succeeded":
+                    raise StripeRequestError(f"Payment intent status: {pi.status}")
                 attempts.append(
                     {
                         "authorization_id": auth.id,
@@ -740,7 +752,10 @@ class StripeAuthorizationService:
                         "status": pi.status,
                     }
                 )
+                was_active = auth.active
                 self._record_charge_success(auth)
+                if authorization_id is not None:
+                    auth.active = was_active
                 self._update_deposit_details(
                     deposit,
                     attempts,

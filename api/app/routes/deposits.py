@@ -33,7 +33,7 @@ from app.services.deposit_providers.cryptapi import CryptAPIDepositProviderServi
 from app.services.deposit_providers.keepz import KeepzDepositProviderService
 from app.services.deposit_providers.stripe import StripeDepositProviderService
 from app.services.stripe_authorization import StripeAuthorizationService
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 deposits_router = APIRouter(prefix="/deposits", tags=["DepositProviders"])
 
@@ -159,10 +159,15 @@ def stripe_charge_authorization(
     actor_entity: Entity = Depends(get_entity_from_token),
 ):
     entity_id = schema.entity_id or actor_entity.id
+    if schema.authorization_id is not None and entity_id != actor_entity.id:
+        raise HTTPException(
+            status_code=403, detail="Cannot charge another entity's card"
+        )
     return stripe_authorization_service.charge_on_demand(
         entity_id=entity_id,
         amount=schema.amount,
         currency=schema.currency,
+        authorization_id=schema.authorization_id,
     )
 
 

@@ -36,6 +36,7 @@ class StripeAuthorizationSchema(BaseReadSchema):
 
 class StripeAuthorizationSetupSchema(BaseSchema):
     mode: Literal["entity_dynamic", "guest_static"] = "entity_dynamic"
+    automatic_charges: bool = True
     static_amount: Decimal | None = None
     static_currency: str | None = None
     entity_id: int | None = None
@@ -80,6 +81,7 @@ class StripeAuthorizationListSchema(BaseSchema):
 
 class StripeAuthorizationChargeSchema(BaseSchema):
     entity_id: int | None = None
+    authorization_id: int | None = None
     amount: Decimal
     currency: str
 
