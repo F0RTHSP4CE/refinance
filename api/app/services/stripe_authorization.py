@@ -752,10 +752,7 @@ class StripeAuthorizationService:
                         "status": pi.status,
                     }
                 )
-                was_active = auth.active
                 self._record_charge_success(auth)
-                if authorization_id is not None:
-                    auth.active = was_active
                 self._update_deposit_details(
                     deposit,
                     attempts,
